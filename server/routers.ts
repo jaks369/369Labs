@@ -102,7 +102,7 @@ export const appRouter = router({
     getToken: protectedProcedure.query(async ({ ctx }) => {
       try {
         const token = await db.getDerivTokenByUserId(ctx.user.id);
-        return token ? { token: token.token, accountId: token.accountId, accountType: token.accountType } : null;
+        return token ? { token: `•••${token.token.slice(-4)}`, accountId: token.accountId, accountType: token.accountType } : null;
       } catch (error) {
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
@@ -151,9 +151,9 @@ export const appRouter = router({
 
     get: protectedProcedure
       .input(z.object({ id: z.number() }))
-      .query(async ({ input }) => {
+      .query(async ({ ctx, input }) => {
         try {
-          return await db.getStrategyById(input.id);
+          return await db.getStrategyById(input.id, ctx.user.id);
         } catch (error) {
           throw new TRPCError({
             code: "INTERNAL_SERVER_ERROR",

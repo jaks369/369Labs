@@ -23,8 +23,8 @@ class DerivWebSocketService {
   private ws: WebSocket | null = null;
   private listeners: Set<TickStreamListener> = new Set();
   private reconnectAttempts = 0;
-  private maxReconnectAttempts = 2;
-  private reconnectDelay = 3000;
+  private maxReconnectAttempts = 5;
+  private baseReconnectDelay = 3000;
   private messageId = 1;
   private apiToken: string | null = null;
   private activeSubscriptions: Map<number, NodeJS.Timeout> = new Map();
@@ -37,7 +37,7 @@ class DerivWebSocketService {
   private setupWebSocket() {
     try {
       // Using Deriv's WebSocket endpoint
-      const endpoint = "wss://ws.derivws.com/websockets/v3";
+      const endpoint = "wss://ws.derivws.com/websockets/v3?app_id=1089";
 
       this.ws = new WebSocket(endpoint);
 
@@ -128,7 +128,7 @@ class DerivWebSocketService {
       console.log(
         `[Deriv WS] Reconnecting... (attempt ${this.reconnectAttempts}/${this.maxReconnectAttempts})`
       );
-      setTimeout(() => this.setupWebSocket(), this.reconnectDelay);
+      setTimeout(() => this.setupWebSocket(), this.baseReconnectDelay * (2 ** (this.reconnectAttempts - 1)));
     } else {
       console.log("[Deriv WS] Switching to simulated tick data for demo");
       this.simulationActive = true;

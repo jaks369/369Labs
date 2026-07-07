@@ -24,6 +24,7 @@ import {
   InsertNotificationSettings,
 } from "../drizzle/schema";
 import { ENV } from './_core/env';
+import { encrypt, decrypt } from './_core/encryption';
 
 let _db: ReturnType<typeof drizzle> | null = null;
 
@@ -91,7 +92,8 @@ export async function saveDerivToken(token: InsertDerivToken): Promise<DerivToke
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   
-  const result = await db.insert(derivTokens).values(token);
+  const encryptedToken = encrypt(token.token);
+  const result = await db.insert(derivTokens).values({ ...token, token: encryptedToken });
   const id = result[0].insertId;
   return (await db.select().from(derivTokens).where(eq(derivTokens.id, id as number)).limit(1))[0];
 }
@@ -101,7 +103,12 @@ export async function getDerivTokenByUserId(userId: number): Promise<DerivToken 
   if (!db) return undefined;
   
   const result = await db.select().from(derivTokens).where(and(eq(derivTokens.userId, userId), eq(derivTokens.isActive, true))).limit(1);
-  return result.length > 0 ? result[0] : undefined;
+  if (result.length > 0) {
+    const decryptedToken = decrypt(result[0].token);
+    return { ...result[0], token: decryptedToken };
+  } else {
+    return undefined;
+  }
 }
 
 // Strategy queries
@@ -121,11 +128,11 @@ export async function getStrategiesByUserId(userId: number): Promise<Strategy[]>
   return db.select().from(strategies).where(eq(strategies.userId, userId));
 }
 
-export async function getStrategyById(id: number): Promise<Strategy | undefined> {
+export async function getStrategyById(id: number, userId: number): Promise<Strategy | undefined> {
   const db = await getDb();
   if (!db) return undefined;
   
-  const result = await db.select().from(strategies).where(eq(strategies.id, id)).limit(1);
+  const result = await db.select().from(strategies).where(and(eq(strategies.id, id), eq(strategies.userId, userId))).limit(1);
   return result.length > 0 ? result[0] : undefined;
 }
 
