@@ -1,0 +1,9 @@
+.git
+.github
+coverage
+docs
+node_modules
+*.log
+server/**/*.test.ts
+server/**/*.spec.ts
+scripts

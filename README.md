@@ -15,5 +15,8 @@ Automated Trading Bot Platform built for the Deriv API.
 3. Set up environment variables in `.env`
 4. Run dev server: `pnpm dev`
 
+## RuFlo Agent Orchestration
+RuFlo is available as a server-side AI agent orchestration layer. See `docs/ruflo.md` for configuration, local usage, GitHub CI, and Vercel deployment notes.
+
 ## Deployment
 This project is ready for deployment on Vercel.
