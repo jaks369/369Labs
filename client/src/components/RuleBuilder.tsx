@@ -17,6 +17,7 @@ export interface StrategyRule {
     indicator: string; // e.g. "digit_over", "digit_under", "consecutive_rise"
     comparison: string; // e.g. "appears", "appears_consecutively"
     count: number; // e.g. 5 times
+    barrier?: number; // 0-9, required by Deriv for digit_over / digit_under
   };
   action: {
     tradeType: string; // e.g. "buy_under", "buy_over", "buy_rise", "buy_fall"
@@ -29,7 +30,7 @@ export interface StrategyRule {
 }
 
 export const DEFAULT_RULE: StrategyRule = {
-  condition: { indicator: "digit_over", comparison: "appears", count: 5 },
+  condition: { indicator: "digit_over", comparison: "appears", count: 5, barrier: 5 },
   action: { tradeType: "buy_under" },
   params: { stake: 1, stopLoss: 20, takeProfit: 50 },
 };
@@ -134,6 +135,29 @@ export default function RuleBuilder({ rule, onChange }: RuleBuilderProps) {
             />
           </div>
         </div>
+        {(rule.condition.indicator === "digit_over" || rule.condition.indicator === "digit_under") && (
+          <div className="mt-3 max-w-[200px]">
+            <label className="text-[10px] text-[#00FFFF]/70 uppercase tracking-wider block mb-1">
+              Barrier Digit (0-9)
+            </label>
+            <Input
+              type="number"
+              min={0}
+              max={9}
+              value={rule.condition.barrier ?? 5}
+              onChange={(e) =>
+                onChange({
+                  ...rule,
+                  condition: {
+                    ...rule.condition,
+                    barrier: Math.min(9, Math.max(0, parseInt(e.target.value) || 0)),
+                  },
+                })
+              }
+              className="border-[#00FFFF]/40 text-[#00FFFF]"
+            />
+          </div>
+        )}
       </div>
 
       {/* Connector Arrow */}
@@ -243,5 +267,9 @@ export function summarizeRule(rule: StrategyRule): string {
   const indicator = INDICATORS.find((i) => i.value === rule.condition.indicator)?.label || rule.condition.indicator;
   const comparison = COMPARISONS.find((c) => c.value === rule.condition.comparison)?.label || rule.condition.comparison;
   const action = TRADE_TYPES.find((t) => t.value === rule.action.tradeType)?.label || rule.action.tradeType;
-  return `IF ${indicator} ${comparison} ${rule.condition.count} times THEN ${action} — Stake $${rule.params.stake}, SL $${rule.params.stopLoss}, TP $${rule.params.takeProfit}`;
+  const barrierPart =
+    rule.condition.indicator === "digit_over" || rule.condition.indicator === "digit_under"
+      ? ` ${rule.condition.barrier ?? 5}`
+      : "";
+  return `IF ${indicator}${barrierPart} ${comparison} ${rule.condition.count} times THEN ${action} — Stake $${rule.params.stake}, SL $${rule.params.stopLoss}, TP $${rule.params.takeProfit}`;
 }

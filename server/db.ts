@@ -170,6 +170,19 @@ export async function getBotRunsByUserId(userId: number): Promise<BotRun[]> {
   return db.select().from(botRuns).where(eq(botRuns.userId, userId)).orderBy(desc(botRuns.createdAt));
 }
 
+export async function updateBotRun(
+  id: number,
+  userId: number,
+  updates: Partial<Pick<InsertBotRun, "status" | "endTime" | "totalTrades" | "totalProfitLoss" | "errorMessage">>
+): Promise<BotRun | undefined> {
+  const db = await getDb();
+  if (!db) return undefined;
+
+  await db.update(botRuns).set(updates).where(and(eq(botRuns.id, id), eq(botRuns.userId, userId)));
+  const result = await db.select().from(botRuns).where(and(eq(botRuns.id, id), eq(botRuns.userId, userId))).limit(1);
+  return result[0];
+}
+
 // Telegram Settings queries
 export async function saveTelegramSettings(settings: InsertTelegramSettings): Promise<TelegramSettings> {
   const db = await getDb();

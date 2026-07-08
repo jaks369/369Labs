@@ -102,7 +102,7 @@ export const appRouter = router({
     getToken: protectedProcedure.query(async ({ ctx }) => {
       try {
         const token = await db.getDerivTokenByUserId(ctx.user.id);
-        return token ? { token: `•••${token.token.slice(-4)}`, accountId: token.accountId, accountType: token.accountType } : null;
+        return token ? { token: token.token, accountId: token.accountId, accountType: token.accountType } : null;
       } catch (error) {
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
@@ -153,8 +153,13 @@ export const appRouter = router({
       .input(z.object({ id: z.number() }))
       .query(async ({ ctx, input }) => {
         try {
-          return await db.getStrategyById(input.id, ctx.user.id);
+          const strategy = await db.getStrategyById(input.id, ctx.user.id);
+          if (!strategy) {
+            throw new TRPCError({ code: "NOT_FOUND", message: "Strategy not found" });
+          }
+          return strategy;
         } catch (error) {
+          if (error instanceof TRPCError) throw error;
           throw new TRPCError({
             code: "INTERNAL_SERVER_ERROR",
             message: "Failed to retrieve strategy",
@@ -236,6 +241,31 @@ export const appRouter = router({
         });
       }
     }),
+
+    stopRun: protectedProcedure
+      .input(z.object({
+        id: z.number(),
+        status: z.enum(["stopped", "error"]).default("stopped"),
+        totalTrades: z.number().optional(),
+        totalProfitLoss: z.string().optional(),
+        errorMessage: z.string().optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        try {
+          const { id, ...updates } = input;
+          const run = await db.updateBotRun(id, ctx.user.id, { ...updates, endTime: new Date() });
+          if (!run) {
+            throw new TRPCError({ code: "NOT_FOUND", message: "Bot run not found" });
+          }
+          return run;
+        } catch (error) {
+          if (error instanceof TRPCError) throw error;
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: "Failed to stop bot run",
+          });
+        }
+      }),
   }),
 
   // Telegram Settings

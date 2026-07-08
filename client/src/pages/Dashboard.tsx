@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { useLocation } from "wouter";
 import TickChart from "@/components/TickChart";
+import DigitStats from "@/components/DigitStats";
 
 export default function Dashboard() {
   const { user, isAuthenticated } = useAuth();
@@ -219,6 +220,18 @@ export default function Dashboard() {
                 <LayoutGrid className="w-4 h-4" /> Browse Marketplace
               </Button>
             </div>
+          </div>
+
+          {/* Live Digit Analysis (Dollar Printer Style) */}
+          <div className="bloomberg-panel p-6 border-l-4 border-l-purple-600">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-xs font-bold text-slate-500 uppercase tracking-widest">Live Digit Analysis</h3>
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 bg-purple-500 rounded-full animate-pulse" />
+                <span className="text-[9px] font-bold text-purple-500 uppercase">Live</span>
+              </div>
+            </div>
+            <DigitStats symbol={selectedSymbol} />
           </div>
 
           {/* Market Status */}
