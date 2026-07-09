@@ -185,10 +185,19 @@ export class BotEngine {
     return occurrences >= count;
   }
 
-  private async executeTrade() {
+      private async executeTrade() {
     if (!this.config) return;
     const currentTick = this.tickHistory[this.tickHistory.length - 1];
     const { stake } = this.config.strategy.params;
+
+    const decimalRegex = /^\d+(\.\d{1,8})?$/;
+    if (!decimalRegex.test(stake.toString())) {
+      throw new Error(`Invalid stake amount: ${stake} must be a valid decimal number`);
+    }
+    const numStake = parseFloat(stake);
+    if (numStake < 0.35 || numStake > 999999) {
+      throw new Error(`Invalid stake amount: ${numStake} must be between 0.35 and 999999`);
+    }
 
     let contractType: DerivContractType;
     let barrier: number | undefined;

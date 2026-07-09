@@ -191,7 +191,12 @@ export const appRouter = router({
         exitTime: z.date().optional(),
         entryPrice: z.string(),
         exitPrice: z.string().optional(),
-        stake: z.string(),
+        stake: z.string().refine((val) => {
+          const decimalRegex = /^\d+(\.\d{1,8})?$/;
+          if (!decimalRegex.test(val)) return false;
+          const num = parseFloat(val);
+          return num >= 0.35 && num <= 999999;
+        }, "Stake must be a valid decimal number between 0.35 and 999999"),
         profitLoss: z.string().optional(),
         result: z.enum(["win", "loss", "pending"]),
         contractId: z.string().optional(),

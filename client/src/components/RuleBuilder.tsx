@@ -11,6 +11,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useState } from "react";
 
 export interface StrategyRule {
   condition: {
@@ -64,6 +65,8 @@ interface RuleBuilderProps {
 }
 
 export default function RuleBuilder({ rule, onChange }: RuleBuilderProps) {
+  const [stakeError, setStakeError] = useState<string | null>(null);
+
   return (
     <div className="space-y-4">
       {/* IF Block */}
@@ -207,14 +210,26 @@ export default function RuleBuilder({ rule, onChange }: RuleBuilderProps) {
               min={0.35}
               step={0.01}
               value={rule.params.stake}
-              onChange={(e) =>
+              onChange={(e) => {
+                const value = parseFloat(e.target.value) || 0;
+                const error = validateStake(value);
+                setStakeError(error);
                 onChange({
                   ...rule,
-                  params: { ...rule.params, stake: parseFloat(e.target.value) || 0 },
-                })
-              }
+                  params: { ...rule.params, stake: value },
+                });
+              }}
+              onBlur={() => {
+                const error = validateStake(rule.params.stake);
+                setStakeError(error);
+              }}
               className="border-[#00FF00]/40 text-[#00FF00]"
             />
+            {stakeError && (
+              <div className="text-[#FF0000] text-xs mt-1">
+                {stakeError}
+              </div>
+            )}
           </div>
           <div>
             <label className="text-[10px] text-[#FF0000]/70 uppercase tracking-wider block mb-1">
@@ -272,4 +287,18 @@ export function summarizeRule(rule: StrategyRule): string {
       ? ` ${rule.condition.barrier ?? 5}`
       : "";
   return `IF ${indicator}${barrierPart} ${comparison} ${rule.condition.count} times THEN ${action} — Stake $${rule.params.stake}, SL $${rule.params.stopLoss}, TP $${rule.params.takeProfit}`;
+}
+
+function validateStake(value: number): string | null {
+  const decimalRegex = /^\d+(\.\d{1,8})?$/;
+  if (!decimalRegex.test(value.toString())) {
+    return "Stake must be a valid decimal number";
+  }
+  if (value < 0.35) {
+    return "Stake must be at least $0.35 (Deriv minimum)";
+  }
+  if (value > 999999) {
+    return "Stake cannot exceed $999,999";
+  }
+  return null;
 }

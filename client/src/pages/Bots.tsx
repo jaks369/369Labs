@@ -111,6 +111,10 @@ export default function Bots() {
             result: trade.result,
             contractId: trade.contractId ? String(trade.contractId) : undefined,
           });
+          const decimalRegex = /^\d+(\.\d{1,8})?$/;
+          if (!decimalRegex.test(trade.stake.toString())) {
+            console.warn(`Trade saved with unexpected stake format: ${trade.stake}`);
+          }
         },
         onLog: (message) => updateBot(botRun.id, { lastLog: message }),
       });
