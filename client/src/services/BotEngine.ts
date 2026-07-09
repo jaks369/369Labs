@@ -194,7 +194,7 @@ export class BotEngine {
     if (!decimalRegex.test(stake.toString())) {
       throw new Error(`Invalid stake amount: ${stake} must be a valid decimal number`);
     }
-    const numStake = parseFloat(stake);
+    const numStake = stake;
     if (numStake < 0.35 || numStake > 999999) {
       throw new Error(`Invalid stake amount: ${numStake} must be between 0.35 and 999999`);
     }

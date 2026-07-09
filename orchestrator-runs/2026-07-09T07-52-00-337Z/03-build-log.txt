@@ -1,0 +1,27 @@
+Here's a summary of the changes made to implement input validation for the trade stake field:
+
+## Changes Made
+
+**1. Server-side validation (`server/routers.ts:194`)**
+- Added Zod schema refinement using regex to validate decimal format (`^\d+(\.\d{1,8})?$`)
+- Added min/max validation checking range is between 0.35 and 999999
+- Clear error message for invalid stake values
+
+**2. Client-side validation feedback (`client/src/components/RuleBuilder.tsx:205-217`)**
+- Added `useState` import and `stakeError` state variable
+- Added `validateStake` helper function for consistent validation logic
+- Enhanced stake input with change/blur validation
+- Display red error text below input when invalid
+- Error message includes all validation constraints
+
+**3. Server-side runtime guard (`BotEngine.ts:191`)**
+- Added validation logic in `executeTrade()` before stake is used
+- Checks decimal format and min/max range
+- Throws descriptive error if validation fails
+
+**4. Client-side trade save validation (`client/src/pages/Bots.tsx:109`)**
+- Added validation before tRPC mutation
+- Checks decimal format and min/max range
+- Skips saving invalid stakes with console error
+
+All changes use the same validation criteria: decimal format with up to 8 decimal places, minimum of 0.35, maximum of 999999. The implementation provides consistent validation across all four layers.
