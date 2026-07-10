@@ -14,6 +14,9 @@ import {
 import { useState } from "react";
 
 export interface StrategyRule {
+  // Deriv instrument symbol, e.g. "R_100" (Volatility 100), "R_75" (Volatility 75).
+  // Optional for backward compatibility with strategies saved before this field existed.
+  symbol?: string;
   condition: {
     indicator: string; // e.g. "digit_over", "digit_under", "consecutive_rise"
     comparison: string; // e.g. "appears", "appears_consecutively"
@@ -31,6 +34,7 @@ export interface StrategyRule {
 }
 
 export const DEFAULT_RULE: StrategyRule = {
+  symbol: "R_100",
   condition: { indicator: "digit_over", comparison: "appears", count: 5, barrier: 5 },
   action: { tradeType: "buy_under" },
   params: { stake: 1, stopLoss: 20, takeProfit: 50 },

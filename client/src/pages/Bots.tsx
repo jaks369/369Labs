@@ -123,7 +123,7 @@ export default function Bots() {
         runId: botRun.id,
         strategyId: strategy.id,
         name: strategy.name,
-        symbol: DEFAULT_SYMBOL,
+        symbol: rule.symbol || DEFAULT_SYMBOL,
         engine,
         status: "running",
         pnl: 0,
@@ -131,7 +131,7 @@ export default function Bots() {
       };
       setRunningBots((prev) => [...prev, newBot]);
 
-      engine.start({ symbol: DEFAULT_SYMBOL, strategy: rule });
+      engine.start({ symbol: rule.symbol || DEFAULT_SYMBOL, strategy: rule });
     } catch (error) {
       alert(error instanceof Error ? error.message : "Failed to deploy bot");
     } finally {
