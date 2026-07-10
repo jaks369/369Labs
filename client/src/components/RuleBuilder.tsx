@@ -49,6 +49,19 @@ const INDICATORS = [
   { value: "consecutive_fall", label: "Consecutive FALL" },
 ];
 
+const SYMBOLS = [
+  { value: "R_10", label: "Volatility 10 Index" },
+  { value: "R_25", label: "Volatility 25 Index" },
+  { value: "R_50", label: "Volatility 50 Index" },
+  { value: "R_75", label: "Volatility 75 Index" },
+  { value: "R_100", label: "Volatility 100 Index" },
+  { value: "1HZ10V", label: "Volatility 10 (1s) Index" },
+  { value: "1HZ25V", label: "Volatility 25 (1s) Index" },
+  { value: "1HZ50V", label: "Volatility 50 (1s) Index" },
+  { value: "1HZ75V", label: "Volatility 75 (1s) Index" },
+  { value: "1HZ100V", label: "Volatility 100 (1s) Index" },
+];
+
 const COMPARISONS = [
   { value: "appears", label: "appears" },
   { value: "appears_consecutively", label: "appears consecutively" },
@@ -73,6 +86,33 @@ export default function RuleBuilder({ rule, onChange }: RuleBuilderProps) {
 
   return (
     <div className="space-y-4">
+      {/* Symbol selector */}
+      <div className="relative border border-[#FF00FF]/50 bg-[#0F1629] p-4 rounded">
+        <div className="absolute -top-3 left-4 bg-[#0A0E27] px-2 text-sm font-bold text-[#FF00FF]">
+          SYMBOL
+        </div>
+        <div className="mt-2">
+          <label className="text-[10px] text-[#FF00FF]/70 uppercase tracking-wider block mb-1">
+            Instrument
+          </label>
+          <Select
+            value={rule.symbol ?? "R_100"}
+            onValueChange={(v) => onChange({ ...rule, symbol: v })}
+          >
+            <SelectTrigger className="border-[#FF00FF]/40 text-[#FF00FF]">
+              <SelectValue placeholder="Select symbol" />
+            </SelectTrigger>
+            <SelectContent>
+              {SYMBOLS.map((s) => (
+                <SelectItem key={s.value} value={s.value}>
+                  {s.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
       {/* IF Block */}
       <div className="relative border border-[#00FFFF]/50 bg-[#0F1629] p-4 rounded">
         <div className="absolute -top-3 left-4 bg-[#0A0E27] px-2 text-sm font-bold text-[#00FFFF]">
