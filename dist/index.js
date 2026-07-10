@@ -16,7 +16,7 @@ __export(vite_config_exports, {
 import { jsxLocPlugin } from "@builder.io/vite-plugin-jsx-loc";
 import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
-import path from "node:path";
+import path2 from "node:path";
 import { defineConfig } from "vite";
 import { vitePluginManusRuntime } from "vite-plugin-manus-runtime";
 var plugins, vite_config_default;
@@ -28,16 +28,16 @@ var init_vite_config = __esm({
       plugins,
       resolve: {
         alias: {
-          "@": path.resolve(import.meta.dirname, "client", "src"),
-          "@shared": path.resolve(import.meta.dirname, "shared"),
-          "@assets": path.resolve(import.meta.dirname, "attached_assets")
+          "@": path2.resolve(import.meta.dirname, "client", "src"),
+          "@shared": path2.resolve(import.meta.dirname, "shared"),
+          "@assets": path2.resolve(import.meta.dirname, "attached_assets")
         }
       },
-      envDir: path.resolve(import.meta.dirname),
-      root: path.resolve(import.meta.dirname, "client"),
-      publicDir: path.resolve(import.meta.dirname, "client", "public"),
+      envDir: path2.resolve(import.meta.dirname),
+      root: path2.resolve(import.meta.dirname, "client"),
+      publicDir: path2.resolve(import.meta.dirname, "client", "public"),
       build: {
-        outDir: path.resolve(import.meta.dirname, "dist/public"),
+        outDir: path2.resolve(import.meta.dirname, "dist/public"),
         emptyOutDir: true
       },
       server: {
@@ -57,6 +57,58 @@ var init_vite_config = __esm({
         }
       }
     });
+  }
+});
+
+// server/_core/vite.ts
+var vite_exports = {};
+__export(vite_exports, {
+  setupVite: () => setupVite
+});
+import fs2 from "fs";
+import { nanoid } from "nanoid";
+import path3 from "path";
+async function setupVite(app, server) {
+  const { createServer: createViteServer } = await import("vite");
+  const { default: viteConfig } = await Promise.resolve().then(() => (init_vite_config(), vite_config_exports));
+  const serverOptions = {
+    middlewareMode: true,
+    hmr: { server },
+    allowedHosts: true
+  };
+  const vite = await createViteServer({
+    ...viteConfig,
+    configFile: false,
+    server: serverOptions,
+    appType: "custom"
+  });
+  app.use(vite.middlewares);
+  app.use("*", async (req, res, next) => {
+    const url = req.originalUrl;
+    try {
+      const clientTemplate = path3.resolve(
+        import.meta.dirname,
+        "..",
+        "..",
+        "client",
+        "index.html"
+      );
+      let template = await fs2.promises.readFile(clientTemplate, "utf-8");
+      template = template.replace(
+        `src="/src/main.tsx"`,
+        `src="/src/main.tsx?v=${nanoid()}"`
+      );
+      const page = await vite.transformIndexHtml(url, template);
+      res.status(200).set({ "Content-Type": "text/html" }).end(page);
+    } catch (e) {
+      vite.ssrFixStacktrace(e);
+      next(e);
+    }
+  });
+}
+var init_vite = __esm({
+  "server/_core/vite.ts"() {
+    "use strict";
   }
 });
 
@@ -933,51 +985,12 @@ async function createContext(opts) {
   };
 }
 
-// server/_core/vite.ts
+// server/_core/staticServe.ts
 import express from "express";
 import fs from "fs";
-import { nanoid } from "nanoid";
-import path2 from "path";
-async function setupVite(app, server) {
-  const { createServer: createViteServer } = await import("vite");
-  const { default: viteConfig } = await Promise.resolve().then(() => (init_vite_config(), vite_config_exports));
-  const serverOptions = {
-    middlewareMode: true,
-    hmr: { server },
-    allowedHosts: true
-  };
-  const vite = await createViteServer({
-    ...viteConfig,
-    configFile: false,
-    server: serverOptions,
-    appType: "custom"
-  });
-  app.use(vite.middlewares);
-  app.use("*", async (req, res, next) => {
-    const url = req.originalUrl;
-    try {
-      const clientTemplate = path2.resolve(
-        import.meta.dirname,
-        "..",
-        "..",
-        "client",
-        "index.html"
-      );
-      let template = await fs.promises.readFile(clientTemplate, "utf-8");
-      template = template.replace(
-        `src="/src/main.tsx"`,
-        `src="/src/main.tsx?v=${nanoid()}"`
-      );
-      const page = await vite.transformIndexHtml(url, template);
-      res.status(200).set({ "Content-Type": "text/html" }).end(page);
-    } catch (e) {
-      vite.ssrFixStacktrace(e);
-      next(e);
-    }
-  });
-}
+import path from "path";
 function serveStatic(app) {
-  const distPath = path2.resolve(import.meta.dirname, "public");
+  const distPath = path.resolve(import.meta.dirname, "public");
   if (!fs.existsSync(distPath)) {
     throw new Error(
       `Could not find the build directory: ${distPath}, make sure to build the client first`
@@ -985,7 +998,7 @@ function serveStatic(app) {
   }
   app.use(express.static(distPath));
   app.use("*", (_req, res) => {
-    res.sendFile(path2.resolve(distPath, "index.html"));
+    res.sendFile(path.resolve(distPath, "index.html"));
   });
 }
 
@@ -1021,7 +1034,8 @@ async function startServer() {
     })
   );
   if (process.env.NODE_ENV === "development") {
-    await setupVite(app, server);
+    const { setupVite: setupVite2 } = await Promise.resolve().then(() => (init_vite(), vite_exports));
+    await setupVite2(app, server);
   } else {
     serveStatic(app);
   }

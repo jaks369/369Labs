@@ -1,13 +1,10 @@
-import express, { type Express } from "express";
+import { type Express } from "express";
 import fs from "fs";
 import { type Server } from "http";
 import { nanoid } from "nanoid";
 import path from "path";
 
 export async function setupVite(app: Express, server: Server) {
-  // Dynamically imported so production (which never calls this function)
-  // never pulls in Vite/Rollup at all — avoids a native-binary resolution
-  // failure in serverless environments where devDependencies aren't installed.
   const { createServer: createViteServer } = await import("vite");
   const { default: viteConfig } = await import("../../vite.config");
 
@@ -45,20 +42,5 @@ export async function setupVite(app: Express, server: Server) {
       vite.ssrFixStacktrace(e as Error);
       next(e);
     }
-  });
-}
-
-export function serveStatic(app: Express) {
-  const distPath = path.resolve(import.meta.dirname, "public");
-
-  if (!fs.existsSync(distPath)) {
-    throw new Error(
-      `Could not find the build directory: ${distPath}, make sure to build the client first`
-    );
-  }
-
-  app.use(express.static(distPath));
-  app.use("*", (_req, res) => {
-    res.sendFile(path.resolve(distPath, "index.html"));
   });
 }
