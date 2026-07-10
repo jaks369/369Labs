@@ -141,13 +141,25 @@ export default function Bots() {
 
   const handleStop = async (bot: RunningBot) => {
     bot.engine.stop();
+
+    if (bot.engine.hasPendingTrade()) {
+      updateBot(bot.runId, { lastLog: "Stopping — waiting for open trade to settle..." });
+      await bot.engine.waitForOpenTradeToSettle();
+    }
+
+    // Read final totals directly from the engine (single source of truth for
+    // settled trades) rather than the UI's separately-accumulated state, so
+    // a trade that settled during the wait above is correctly included.
+    const finalTrades = bot.engine.getTrades().length;
+    const finalPnl = bot.engine.getTotalPnl();
+
     setRunningBots((prev) => prev.filter((b) => b.runId !== bot.runId));
     try {
       await stopRunMutation.mutateAsync({
         id: bot.runId,
         status: bot.status === "error" ? "error" : "stopped",
-        totalTrades: bot.trades,
-        totalProfitLoss: bot.pnl.toFixed(2),
+        totalTrades: finalTrades,
+        totalProfitLoss: finalPnl.toFixed(2),
       });
     } catch {
       // Non-fatal — the bot is already stopped client-side.

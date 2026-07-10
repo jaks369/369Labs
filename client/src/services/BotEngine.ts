@@ -51,6 +51,9 @@ export class BotEngine {
   private trades: BotTrade[] = [];
   private hasOpenTrade = false;
   private stopRequested = false;
+  // Resolved when the currently-open trade settles, so callers can wait for
+  // a clean stop instead of tearing down state mid-trade.
+  private stopWaiters: Array<() => void> = [];
 
   // Rolling history used to evaluate conditions like "digit over 5 appeared 5 times"
   // or "3 consecutive rises". Capped so memory doesn't grow unbounded on long runs.
@@ -194,7 +197,7 @@ export class BotEngine {
     if (!decimalRegex.test(stake.toString())) {
       throw new Error(`Invalid stake amount: ${stake} must be a valid decimal number`);
     }
-    const numStake = parseFloat(stake);
+    const numStake = stake;
     if (numStake < 0.35 || numStake > 999999) {
       throw new Error(`Invalid stake amount: ${numStake} must be between 0.35 and 999999`);
     }
@@ -261,6 +264,10 @@ export class BotEngine {
     this.totalPnl += update.profit;
     this.onTrade?.(trade);
 
+    const waiters = this.stopWaiters;
+    this.stopWaiters = [];
+    waiters.forEach((resolve) => resolve());
+
     this.log(`Contract ${trade.contractId} settled: ${trade.result} ($${trade.pnl})`);
 
     if (!this.config) return;
@@ -285,6 +292,31 @@ export class BotEngine {
   private log(message: string) {
     console.log(`[BotEngine] ${message}`);
     this.onLog?.(message);
+  }
+
+  /** True if a trade is currently open and hasn't settled yet. */
+  public hasPendingTrade(): boolean {
+    return this.hasOpenTrade;
+  }
+
+  /**
+   * Resolves once the currently-open trade settles, or immediately if none is
+   * open. Times out after 30s as a safety net so a caller (e.g. a Stop button)
+   * never hangs indefinitely if a settlement update never arrives.
+   */
+  public waitForOpenTradeToSettle(timeoutMs = 30000): Promise<void> {
+    if (!this.hasOpenTrade) return Promise.resolve();
+    return new Promise((resolve) => {
+      const onSettle = () => {
+        clearTimeout(timer);
+        resolve();
+      };
+      const timer = setTimeout(() => {
+        this.stopWaiters = this.stopWaiters.filter((w) => w !== onSettle);
+        resolve();
+      }, timeoutMs);
+      this.stopWaiters.push(onSettle);
+    });
   }
 
   public getStatus() {
