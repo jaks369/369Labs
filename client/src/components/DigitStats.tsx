@@ -3,9 +3,12 @@ import { derivWS, Tick } from "@/services/derivWebSocket";
 
 interface DigitStatsProps {
   symbol: string;
+  // Matches BotEngine's decimalPlaces so digit stats reflect the same last
+  // digit the bot actually trades on. Defaults to 2, same as BotEngine.
+  decimalPlaces?: number;
 }
 
-export default function DigitStats({ symbol }: DigitStatsProps) {
+export default function DigitStats({ symbol, decimalPlaces = 2 }: DigitStatsProps) {
   const [digits, setDigits] = useState<number[]>([]);
   const [stats, setStats] = useState({
     even: 0,
@@ -19,7 +22,8 @@ export default function DigitStats({ symbol }: DigitStatsProps) {
     const handleTick = (tick: Tick) => {
       if (tick.symbol !== symbol) return;
       
-      const lastDigit = Math.floor((tick.price * 10000) % 10);
+      const fixed = tick.price.toFixed(decimalPlaces);
+      const lastDigit = parseInt(fixed[fixed.length - 1], 10);
       setDigits((prev) => {
         const next = [...prev, lastDigit].slice(-100);
         
