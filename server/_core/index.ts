@@ -37,3 +37,13 @@ export default async (req: any, res: any) => {
   const app = await appPromise;
   return app(req, res);
 };
+
+// Global safety net: log the full error for ANY uncaught exception or
+// unhandled promise rejection, so Vercel's logs show the real cause instead
+// of a bare 500 with no detail.
+process.on("unhandledRejection", (reason) => {
+  console.error("[UNHANDLED REJECTION]", reason);
+});
+process.on("uncaughtException", (err) => {
+  console.error("[UNCAUGHT EXCEPTION]", err);
+});
