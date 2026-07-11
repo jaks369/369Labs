@@ -17,11 +17,6 @@
       "dest": "dist/index.js"
     },
     {
-      "src": "/(.*)",
-      "dest": "/$1",
-      "continue": true
-    },
-    {
       "handle": "filesystem"
     },
     {
