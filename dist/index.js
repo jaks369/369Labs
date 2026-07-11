@@ -1020,9 +1020,8 @@ async function findAvailablePort(startPort = 3e3) {
   }
   throw new Error(`No available port found starting from ${startPort}`);
 }
-async function startServer() {
+async function createApp() {
   const app = express2();
-  const server = createServer(app);
   app.use(express2.json({ limit: "50mb" }));
   app.use(express2.urlencoded({ limit: "50mb", extended: true }));
   registerStorageProxy(app);
@@ -1034,18 +1033,33 @@ async function startServer() {
     })
   );
   if (process.env.NODE_ENV === "development") {
+    const server = createServer(app);
     const { setupVite: setupVite2 } = await Promise.resolve().then(() => (init_vite(), vite_exports));
     await setupVite2(app, server);
+    const preferredPort = parseInt(process.env.PORT || "3000");
+    const port = await findAvailablePort(preferredPort);
+    if (port !== preferredPort) {
+      console.log(`Port ${preferredPort} is busy, using port ${port} instead`);
+    }
+    server.listen(port, () => {
+      console.log(`Server running on http://localhost:${port}/`);
+    });
   } else {
-    serveStatic(app);
+    if (!process.env.VERCEL) {
+      serveStatic(app);
+      const port = parseInt(process.env.PORT || "3000");
+      app.listen(port, () => {
+        console.log(`Server running on http://localhost:${port}/`);
+      });
+    }
   }
-  const preferredPort = parseInt(process.env.PORT || "3000");
-  const port = await findAvailablePort(preferredPort);
-  if (port !== preferredPort) {
-    console.log(`Port ${preferredPort} is busy, using port ${port} instead`);
-  }
-  server.listen(port, () => {
-    console.log(`Server running on http://localhost:${port}/`);
-  });
+  return app;
 }
-startServer().catch(console.error);
+var appPromise = createApp();
+var index_default = async (req, res) => {
+  const app = await appPromise;
+  return app(req, res);
+};
+export {
+  index_default as default
+};
