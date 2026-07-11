@@ -1,122 +1,6 @@
-var __defProp = Object.defineProperty;
-var __getOwnPropNames = Object.getOwnPropertyNames;
-var __esm = (fn, res) => function __init() {
-  return fn && (res = (0, fn[__getOwnPropNames(fn)[0]])(fn = 0)), res;
-};
-var __export = (target, all) => {
-  for (var name in all)
-    __defProp(target, name, { get: all[name], enumerable: true });
-};
-
-// vite.config.ts
-var vite_config_exports = {};
-__export(vite_config_exports, {
-  default: () => vite_config_default
-});
-import { jsxLocPlugin } from "@builder.io/vite-plugin-jsx-loc";
-import tailwindcss from "@tailwindcss/vite";
-import react from "@vitejs/plugin-react";
-import path2 from "node:path";
-import { defineConfig } from "vite";
-import { vitePluginManusRuntime } from "vite-plugin-manus-runtime";
-var plugins, vite_config_default;
-var init_vite_config = __esm({
-  "vite.config.ts"() {
-    "use strict";
-    plugins = [react(), tailwindcss(), jsxLocPlugin(), vitePluginManusRuntime()];
-    vite_config_default = defineConfig({
-      plugins,
-      resolve: {
-        alias: {
-          "@": path2.resolve(import.meta.dirname, "client", "src"),
-          "@shared": path2.resolve(import.meta.dirname, "shared"),
-          "@assets": path2.resolve(import.meta.dirname, "attached_assets")
-        }
-      },
-      envDir: path2.resolve(import.meta.dirname),
-      root: path2.resolve(import.meta.dirname, "client"),
-      publicDir: path2.resolve(import.meta.dirname, "client", "public"),
-      build: {
-        outDir: path2.resolve(import.meta.dirname, "dist/public"),
-        emptyOutDir: true
-      },
-      server: {
-        host: true,
-        allowedHosts: [
-          ".manuspre.computer",
-          ".manus.computer",
-          ".manus-asia.computer",
-          ".manuscomputer.ai",
-          ".manusvm.computer",
-          "localhost",
-          "127.0.0.1"
-        ],
-        fs: {
-          strict: true,
-          deny: ["**/.*"]
-        }
-      }
-    });
-  }
-});
-
-// server/_core/vite.ts
-var vite_exports = {};
-__export(vite_exports, {
-  setupVite: () => setupVite
-});
-import fs2 from "fs";
-import { nanoid } from "nanoid";
-import path3 from "path";
-async function setupVite(app, server) {
-  const { createServer: createViteServer } = await import("vite");
-  const { default: viteConfig } = await Promise.resolve().then(() => (init_vite_config(), vite_config_exports));
-  const serverOptions = {
-    middlewareMode: true,
-    hmr: { server },
-    allowedHosts: true
-  };
-  const vite = await createViteServer({
-    ...viteConfig,
-    configFile: false,
-    server: serverOptions,
-    appType: "custom"
-  });
-  app.use(vite.middlewares);
-  app.use("*", async (req, res, next) => {
-    const url = req.originalUrl;
-    try {
-      const clientTemplate = path3.resolve(
-        import.meta.dirname,
-        "..",
-        "..",
-        "client",
-        "index.html"
-      );
-      let template = await fs2.promises.readFile(clientTemplate, "utf-8");
-      template = template.replace(
-        `src="/src/main.tsx"`,
-        `src="/src/main.tsx?v=${nanoid()}"`
-      );
-      const page = await vite.transformIndexHtml(url, template);
-      res.status(200).set({ "Content-Type": "text/html" }).end(page);
-    } catch (e) {
-      vite.ssrFixStacktrace(e);
-      next(e);
-    }
-  });
-}
-var init_vite = __esm({
-  "server/_core/vite.ts"() {
-    "use strict";
-  }
-});
-
 // server/_core/index.ts
 import "dotenv/config";
 import express2 from "express";
-import { createServer } from "http";
-import net from "net";
 import { createExpressMiddleware } from "@trpc/server/adapters/express";
 
 // server/_core/env.ts
@@ -1003,23 +887,6 @@ function serveStatic(app) {
 }
 
 // server/_core/index.ts
-function isPortAvailable(port) {
-  return new Promise((resolve) => {
-    const server = net.createServer();
-    server.listen(port, () => {
-      server.close(() => resolve(true));
-    });
-    server.on("error", () => resolve(false));
-  });
-}
-async function findAvailablePort(startPort = 3e3) {
-  for (let port = startPort; port < startPort + 20; port++) {
-    if (await isPortAvailable(port)) {
-      return port;
-    }
-  }
-  throw new Error(`No available port found starting from ${startPort}`);
-}
 async function createApp() {
   const app = express2();
   app.use(express2.json({ limit: "50mb" }));
@@ -1032,26 +899,12 @@ async function createApp() {
       createContext
     })
   );
-  if (process.env.NODE_ENV === "development") {
-    const server = createServer(app);
-    const { setupVite: setupVite2 } = await Promise.resolve().then(() => (init_vite(), vite_exports));
-    await setupVite2(app, server);
-    const preferredPort = parseInt(process.env.PORT || "3000");
-    const port = await findAvailablePort(preferredPort);
-    if (port !== preferredPort) {
-      console.log(`Port ${preferredPort} is busy, using port ${port} instead`);
-    }
-    server.listen(port, () => {
+  if (!process.env.VERCEL && process.env.NODE_ENV !== "development") {
+    serveStatic(app);
+    const port = parseInt(process.env.PORT || "3000");
+    app.listen(port, () => {
       console.log(`Server running on http://localhost:${port}/`);
     });
-  } else {
-    if (!process.env.VERCEL) {
-      serveStatic(app);
-      const port = parseInt(process.env.PORT || "3000");
-      app.listen(port, () => {
-        console.log(`Server running on http://localhost:${port}/`);
-      });
-    }
   }
   return app;
 }
@@ -1061,5 +914,6 @@ var index_default = async (req, res) => {
   return app(req, res);
 };
 export {
+  createApp,
   index_default as default
 };
