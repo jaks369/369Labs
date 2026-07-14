@@ -10,6 +10,7 @@ import StrategyBuilder from "./pages/StrategyBuilder";
 import Settings from "./pages/Settings";
 import AIAssistant from "./pages/AIAssistant";
 import Bots from "./pages/Bots";
+import DashboardLayout from "./components/DashboardLayout";
 import TradeHistory from "./pages/TradeHistory";
 import Login from "./pages/Login";
 

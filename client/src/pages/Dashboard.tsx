@@ -83,7 +83,7 @@ export default function Dashboard() {
                 className="bg-[#161B22] border-[#30363D] pl-10 pr-4 py-2 rounded-lg text-sm focus:border-blue-500 transition-colors w-64"
               />
            </div>
-           <Button className="btn-primary">Connect Account</Button>
+           <Button className="btn-primary" onClick={() => navigate("/settings")}>Connect Account</Button>
         </div>
       </div>
 
