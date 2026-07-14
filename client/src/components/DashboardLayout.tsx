@@ -32,7 +32,9 @@ import {
   BarChart4, 
   Cloud, 
   Settings,
-  Activity
+  Activity,
+  Bell,
+  MessageCircle
 } from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
