@@ -1,4 +1,11 @@
 import { useAuth } from "@/_core/hooks/useAuth";
+  useEffect(() => {
+    const unsub = derivWS.onBalance((b) => {
+      const acct = b.accounts?.[0] || b;
+      setBalance(parseFloat(acct?.balance || acct?.display_balance || "0"));
+    });
+    return () => {};
+  }, []);
 import { useEffect, useState } from "react";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
@@ -17,6 +24,7 @@ import {
   Brain
 } from "lucide-react";
 import { useLocation } from "wouter";
+import { derivWS } from "@/services/derivWebSocket";
 import TickChart from "@/components/TickChart";
 import DigitStats from "@/components/DigitStats";
 import { derivWS } from "@/services/derivWebSocket";
@@ -35,11 +43,25 @@ export default function Dashboard() {
   const botRunsQuery = trpc.bot.getRuns.useQuery();
 
   useEffect(() => {
+    const unsub = derivWS.onBalance((b) => {
+      const acct = b.accounts?.[0] || b;
+      setBalance(parseFloat(acct?.balance || acct?.display_balance || "0"));
+    });
+    return () => {};
+  }, []);
+  useEffect(() => {
     if (!isAuthenticated) {
       navigate("/");
     }
   }, [isAuthenticated, navigate]);
 
+  useEffect(() => {
+    const unsub = derivWS.onBalance((b) => {
+      const acct = b.accounts?.[0] || b;
+      setBalance(parseFloat(acct?.balance || acct?.display_balance || "0"));
+    });
+    return () => {};
+  }, []);
   useEffect(() => {
     if (tradesQuery.data) {
       const totalPnl = tradesQuery.data.reduce((sum, trade) => {
@@ -51,12 +73,26 @@ export default function Dashboard() {
   }, [tradesQuery.data]);
 
   useEffect(() => {
+    const unsub = derivWS.onBalance((b) => {
+      const acct = b.accounts?.[0] || b;
+      setBalance(parseFloat(acct?.balance || acct?.display_balance || "0"));
+    });
+    return () => {};
+  }, []);
+  useEffect(() => {
     if (botRunsQuery.data) {
       const running = botRunsQuery.data.some(run => run.status === "running");
       setBotRunning(running);
     }
   }, [botRunsQuery.data]);
 
+  useEffect(() => {
+    const unsub = derivWS.onBalance((b) => {
+      const acct = b.accounts?.[0] || b;
+      setBalance(parseFloat(acct?.balance || acct?.display_balance || "0"));
+    });
+    return () => {};
+  }, []);
   useEffect(() => {
     setDerivConnected(derivWS.isAuthorized());
     derivWS.onBalance((b) => {
