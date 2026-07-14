@@ -30,7 +30,11 @@ export default function Settings() {
 
   useEffect(() => {
     if (derivTokenQuery.data?.token) {
-      setDerivToken(derivTokenQuery.data.token.substring(0, 10) + "...");
+      const raw = derivTokenQuery.data.token;
+      // Only set if it's not already a masked value (ending with ...)
+      if (!raw.endsWith("...")) {
+        setDerivToken(raw);
+      }
     }
   }, [derivTokenQuery.data]);
 
@@ -64,7 +68,7 @@ export default function Settings() {
         accountType: "demo",
       });
       derivWS.setApiToken(derivToken);
-      alert("Deriv token saved and connected successfully!");
+      alert("Deriv token saved and connected!");
     } catch (error) {
       alert("Failed to save Deriv token");
     }
@@ -97,32 +101,37 @@ export default function Settings() {
   return (
     <div className="min-h-screen bg-[#0A0E27] text-[#00FFFF] p-8">
       <div className="max-w-2xl mx-auto">
-        {/* Header */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-[#FF00FF] mb-2">SETTINGS</h1>
           <p className="text-[#00FFFF] text-sm">Configure your trading bot platform</p>
         </div>
 
-        {/* Deriv API Token */}
         <div className="hud-panel mb-6">
           <h2 className="text-lg font-bold text-[#FF00FF] mb-4">DERIV API TOKEN</h2>
           <div className="space-y-4">
             <div>
               <label className="text-sm text-[#00FFFF] block mb-2">API Token</label>
-              <Input
-                type="password"
-                placeholder="Enter your Deriv API token"
-                value={derivToken}
-                onChange={(e) => setDerivToken(e.target.value)}
-              />
+              <div className="relative" autoComplete="off">
+                <input
+                  type="password"
+                  autoComplete="new-password"
+                  placeholder="Enter your Deriv API token"
+                  value={derivToken}
+                  onChange={(e) => setDerivToken(e.target.value)}
+                  className="flex h-10 w-full rounded-md border border-[#00FFFF]/40 bg-[#0A0E27] px-3 py-2 text-sm text-[#00FFFF] placeholder:text-[#00FFFF]/30 focus:outline-none focus:ring-2 focus:ring-[#00FFFF] focus:ring-offset-2 focus:ring-offset-[#0A0E27] disabled:cursor-not-allowed disabled:opacity-50"
+                />
+              </div>
               <p className="text-xs text-[#00FFFF]/60 mt-2">
-                Get your token from https://app.deriv.com/account/api-token
+                Get your token from{' '}
+                <a href="https://app.deriv.com/account/api-token" target="_blank" rel="noopener noreferrer" className="underline">
+                  app.deriv.com/account/api-token
+                </a>
               </p>
             </div>
             <Button
               onClick={handleSaveDerivToken}
               disabled={saveDerivTokenMutation.isPending}
-              className="w-full btn-neon-cyan"
+              className="w-full bg-[#00FFFF] text-[#0A0E27] hover:bg-[#00FFFF]/80 font-bold py-2 px-4 rounded"
             >
               {saveDerivTokenMutation.isPending ? (
                 <>
@@ -139,7 +148,6 @@ export default function Settings() {
           </div>
         </div>
 
-        {/* Telegram Settings */}
         <div className="hud-panel mb-6">
           <h2 className="text-lg font-bold text-[#FF00FF] mb-4">TELEGRAM NOTIFICATIONS</h2>
           <div className="space-y-4">
@@ -149,6 +157,7 @@ export default function Settings() {
                 placeholder="Enter your Telegram Chat ID"
                 value={chatId}
                 onChange={(e) => setChatId(e.target.value)}
+                className="border-[#00FFFF]/40 text-[#00FFFF]"
               />
               <p className="text-xs text-[#00FFFF]/60 mt-2">
                 Get your Chat ID by messaging @userinfobot on Telegram
@@ -157,7 +166,7 @@ export default function Settings() {
             <Button
               onClick={handleSaveTelegram}
               disabled={saveTelegramMutation.isPending}
-              className="w-full btn-neon-cyan"
+              className="w-full bg-[#00FFFF] text-[#0A0E27] hover:bg-[#00FFFF]/80 font-bold py-2 px-4 rounded"
             >
               {saveTelegramMutation.isPending ? (
                 <>
@@ -174,7 +183,6 @@ export default function Settings() {
           </div>
         </div>
 
-        {/* Notification Preferences */}
         <div className="hud-panel mb-6">
           <h2 className="text-lg font-bold text-[#FF00FF] mb-4">NOTIFICATION PREFERENCES</h2>
           <div className="space-y-4">
@@ -229,7 +237,7 @@ export default function Settings() {
             <Button
               onClick={handleSaveNotifications}
               disabled={saveNotificationsMutation.isPending}
-              className="w-full btn-neon-cyan mt-4"
+              className="w-full bg-[#00FFFF] text-[#0A0E27] hover:bg-[#00FFFF]/80 font-bold py-2 px-4 rounded mt-4"
             >
               {saveNotificationsMutation.isPending ? (
                 <>
