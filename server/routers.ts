@@ -150,6 +150,16 @@ export const appRouter = router({
       }
     }),
 
+    marketplace: protectedProcedure.query(async ({ ctx }) => {
+      const db = await getDb();
+      if (!db) return [];
+      return db.select().from(strategies).where(eq(strategies.published, true)).orderBy(desc(strategies.createdAt));
+    }),
+
+    marketplace: publicProcedure.query(async () => {
+      return await db.getMarketplaceStrategies();
+    }),
+
     get: protectedProcedure
       .input(z.object({ id: z.number() }))
       .query(async ({ ctx, input }) => {

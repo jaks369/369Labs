@@ -150,6 +150,12 @@ export async function getStrategiesByUserId(userId: number): Promise<Strategy[]>
   return db.select().from(strategies).where(eq(strategies.userId, userId));
 }
 
+export async function getMarketplaceStrategies(): Promise<Strategy[]> {
+  const d = await getDb();
+  if (!d) return [];
+  return d.select().from(strategies).where(eq(strategies.published, true)).orderBy(desc(strategies.createdAt));
+}
+
 export async function getStrategyById(id: number, userId: number): Promise<Strategy | undefined> {
   const db = await getDb();
   if (!db) return undefined;

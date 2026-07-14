@@ -36,6 +36,7 @@ export default function StrategyBuilder() {
   const [rule, setRule] = useState<StrategyRule>(DEFAULT_RULE);
   const [builderMode, setBuilderMode] = useState<"visual" | "blocks">("blocks");
 
+  const publishMutation = trpc.strategies.publish.useMutation();
   const saveStrategyMutation = trpc.strategies.save.useMutation();
   const strategiesQuery = trpc.strategies.list.useQuery();
 

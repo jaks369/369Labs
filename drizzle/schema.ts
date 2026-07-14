@@ -32,6 +32,7 @@ export const derivTokens = mysqlTable("derivTokens", {
   accountId: varchar("accountId", { length: 64 }),
   accountType: varchar("accountType", { length: 32 }), // e.g., "demo", "real"
   isActive: boolean("isActive").default(true).notNull(),
+  published: boolean("published").default(false).notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
@@ -47,6 +48,7 @@ export const strategies = mysqlTable("strategies", {
   description: text("description"),
   config: json("config").notNull(), // JSON config of the strategy blocks
   isActive: boolean("isActive").default(true).notNull(),
+  published: boolean("published").default(false).notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
