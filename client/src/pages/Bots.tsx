@@ -111,8 +111,6 @@ export default function Bots() {
             result: trade.result,
             symbol: trade.symbol,
             contractType: trade.contractType,
-            symbol: trade.symbol,
-            contractType: trade.contractType,
             contractId: trade.contractId ? String(trade.contractId) : undefined,
           });
           const decimalRegex = /^\d+(\.\d{1,8})?$/;

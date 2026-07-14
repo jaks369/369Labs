@@ -72,10 +72,6 @@ export const trades = mysqlTable("trades", {
   contractType: varchar("contractType", { length: 32 }).default("CALL"),
   symbol: varchar("symbol", { length: 32 }).notNull().default("R_100"),
   contractType: varchar("contractType", { length: 32 }).default("CALL"),
-  result: mysqlEnum("result", ["win", "loss", "pending"]).default("pending").notNull(),
-  symbol: varchar("symbol", { length: 32 }).notNull().default("R_100"),
-  contractType: varchar("contractType", { length: 32 }).default("CALL"),
-  contractId: varchar("contractId", { length: 64 }),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });

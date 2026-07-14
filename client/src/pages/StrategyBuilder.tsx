@@ -96,7 +96,6 @@ export default function StrategyBuilder() {
         description,
         config: builderMode === "visual" ? { rule: rule as any, summary: summarizeRule(rule) } : { blocks },
         published: publishToMarketplace,
-        published: publishToMarketplace,
       });
       alert("Strategy saved successfully!");
       setStrategyName("");
