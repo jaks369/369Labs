@@ -129,6 +129,12 @@ class DerivWebSocketService {
       this.processPendingSubscriptions();
       return;
     }
+    if (data.msg_type === "balance") {
+      console.log("[Deriv WS] Balance:", data.balance);
+      this.notifyBalance(data.balance);
+      return;
+    }
+
     if (data.error) {
       const msg = data.error.message || JSON.stringify(data.error);
       console.error("[Deriv WS] API Error:", msg);
@@ -179,6 +185,20 @@ class DerivWebSocketService {
       setTimeout(() => this.setupWebSocket(), this.baseReconnectDelay * (2 ** (this.reconnectAttempts - 1)));
     }
   }
+
+  private fetchBalance() {
+    if (!this.ws || !this.authorized) return;
+    try {
+      this.ws.send(JSON.stringify({ balance: 1, account: "all", req_id: this.msgId++ }));
+    } catch (error) { console.error("[Deriv WS] Failed to fetch balance:", error); }
+  }
+
+  private lastBalance: any = null;
+  private balanceListeners: Set<(b: any) => void> = new Set();
+
+  public onBalance(cb: (b: any) => void): void { this.balanceListeners.add(cb); if (this.lastBalance) cb(this.lastBalance); }
+  private notifyBalance(b: any): void { this.balanceListeners.forEach(cb => { try { cb(b); } catch {} }); }
+
 
   public subscribe(symbol: string): number {
     const subId = this.msgId++;
