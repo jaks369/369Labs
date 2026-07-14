@@ -85,7 +85,6 @@ class DerivWebSocketService {
         if (this.apiToken) {
           this.authorize();
         }
-        // Process any subscriptions queued while connecting
         this.processPendingSubscriptions();
       };
 
@@ -179,8 +178,9 @@ class DerivWebSocketService {
     }
 
     if (data.error) {
-      console.error("[Deriv WS] API Error:", data.error);
-      this.notifyError(new Error(data.error.message || "Unknown error"));
+      const msg = data.error.message || JSON.stringify(data.error);
+      console.error("[Deriv WS] API Error:", msg);
+      this.notifyError(new Error(msg));
     }
   }
 
@@ -230,9 +230,6 @@ class DerivWebSocketService {
     }
     if (!this.authorized) {
       throw new Error("Not authorized — set a valid Deriv API token before trading");
-    }
-    if ((params.contractType === "DIGITOVER" || params.contractType === "DIGITUNDER") && params.barrier === undefined) {
-      throw new Error(`${params.contractType} requires a barrier digit (0-9)`);
     }
 
     const proposalReq: Record<string, any> = {
@@ -299,7 +296,6 @@ class DerivWebSocketService {
         return id;
       }
       console.warn(`[Deriv WS] Cannot subscribe to ${symbol} — no API token set`);
-      // Still return a valid ID, components will just get no ticks until token is set
       return id;
     }
     return this.doSubscribe(symbol);
@@ -411,10 +407,6 @@ class DerivWebSocketService {
     if (this.ws && this.ws.readyState === WebSocket.OPEN) {
       this.authorize();
     }
-  }
-
-  public setToken(token: string): void {
-    this.setApiToken(token);
   }
 }
 
