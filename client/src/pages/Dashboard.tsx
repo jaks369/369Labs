@@ -79,7 +79,7 @@ export default function Dashboard() {
     return () => {};
   }, []);
 
-  const const marketFilter = marketSearch.toLowerCase();
+  const marketFilter = marketSearch.toLowerCase();
   const filteredSymbols = symbols.filter(s => s.symbol.toLowerCase().includes(marketFilter) || s.displayName.toLowerCase().includes(marketFilter));
   const volatilitySymbols = filteredSymbols.filter(s => s.market === "volatility" || IT_SYMBOLS.includes(s.symbol));
   const forexSymbols = symbols.filter(s => s.market === "forex");
