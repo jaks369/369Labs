@@ -39,7 +39,6 @@ export interface ContractUpdate {
   entry_tick?: number;
   exit_tick?: number;
 }
-
 export interface DerivSymbol {
   symbol: string;
   displayName: string;
@@ -160,24 +159,40 @@ class DerivWebSocketService {
 
   private fetchActiveSymbols() {
     if (!this.ws || !this.authorized) return;
-    try {
-      this.ws.send(JSON.stringify({ active_symbols: "brief", product_type: "basic", req_id: this.msgId++ }));
-    } catch (error) { console.error("[Deriv WS] Failed to fetch active symbols:", error); }
+    try { this.ws.send(JSON.stringify({ active_symbols: "brief", product_type: "basic", req_id: this.msgId++ })); }
+    catch (error) { console.error("[Deriv WS] Failed to fetch active symbols:", error); }
   }
 
   private processPendingSubscriptions() {
     const pending = [...this.pendingSubscriptionSymbols];
     this.pendingSubscriptionSymbols = [];
-    for (const symbol of pending) {
-      if (!this.subscribedSymbols.has(symbol)) this.doSubscribe(symbol);
-    }
+    for (const symbol of pending) { if (!this.subscribedSymbols.has(symbol)) this.doSubscribe(symbol); }
   }
 
   private fetchBalance() {
     if (!this.ws || !this.authorized) return;
-    try {
-      this.ws.send(JSON.stringify({ balance: 1, account: "all", req_id: this.msgId++ }));
-    } catch (error) { console.error("[Deriv WS] Failed to fetch balance:", error); }
+    try { this.ws.send(JSON.stringify({ balance: 1, account: "all", req_id: this.msgId++ })); }
+    catch (error) { console.error("[Deriv WS] Failed to fetch balance:", error); }
+  }
+
+  public async fetchTickHistory(symbol: string, start: number, end: number): Promise<Tick[]> {
+    const res = await this.sendRequest({
+      ticks_history: symbol,
+      start,
+      end,
+      style: "ticks",
+      adjust_start_time: 1,
+    }, 30000);
+    const history = res?.history || res?.ticks_history?.history;
+    if (!history?.times || !history?.prices) {
+      console.warn("[Deriv WS] Unexpected tick history response format", res);
+      return [];
+    }
+    const ticks: Tick[] = [];
+    for (let i = 0; i < history.times.length; i++) {
+      ticks.push({ symbol, price: Number(history.prices[i]), timestamp: history.times[i] * 1000 });
+    }
+    return ticks;
   }
 
   private sendRequest(payload: Record<string, any>, timeoutMs = 15000): Promise<any> {
@@ -219,15 +234,8 @@ class DerivWebSocketService {
   public subscribe(symbol: string): number {
     const subId = this.msgId++;
     if (this.subscribedSymbols.has(symbol)) return subId;
-    if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
-      this.pendingSubscriptionSymbols.push(symbol);
-      return subId;
-    }
-    if (!this.authorized) {
-      if (this.apiToken) { this.pendingSubscriptionSymbols.push(symbol); return subId; }
-      console.warn(`[Deriv WS] No token set, cannot subscribe to ${symbol}`);
-      return subId;
-    }
+    if (!this.ws || this.ws.readyState !== WebSocket.OPEN) { this.pendingSubscriptionSymbols.push(symbol); return subId; }
+    if (!this.authorized) { if (this.apiToken) { this.pendingSubscriptionSymbols.push(symbol); return subId; } console.warn(`[Deriv WS] No token set, cannot subscribe to ${symbol}`); return subId; }
     this.doSubscribe(symbol);
     return subId;
   }
@@ -236,22 +244,12 @@ class DerivWebSocketService {
     if (this.subscribedSymbols.has(symbol)) return;
     this.subscribedSymbols.add(symbol);
     const reqId = this.msgId++;
-    try {
-      this.ws!.send(JSON.stringify({ ticks: symbol, subscribe: 1, req_id: reqId }));
-      console.log(`[Deriv WS] Subscribed to ${symbol}`);
-    } catch (error) {
-      console.error("[Deriv WS] Failed to subscribe:", error);
-      this.subscribedSymbols.delete(symbol);
-    }
+    try { this.ws!.send(JSON.stringify({ ticks: symbol, subscribe: 1, req_id: reqId })); console.log(`[Deriv WS] Subscribed to ${symbol}`); }
+    catch (error) { console.error("[Deriv WS] Failed to subscribe:", error); this.subscribedSymbols.delete(symbol); }
   }
 
   public unsubscribe(subscriptionId: number): void {}
-  public addListener(listener: TickStreamListener): void {
-    this.listeners.add(listener);
-    if (this.ws && this.ws.readyState === WebSocket.OPEN) {
-      try { listener.onConnect?.(); } catch {}
-    }
-  }
+  public addListener(listener: TickStreamListener): void { this.listeners.add(listener); if (this.ws && this.ws.readyState === WebSocket.OPEN) { try { listener.onConnect?.(); } catch {} } }
   public removeListener(listener: TickStreamListener): void { this.listeners.delete(listener); }
   private notifyTick(tick: Tick): void { this.listeners.forEach(l => { try { l.onTick(tick); } catch {} }); }
   private notifyError(error: Error): void { this.listeners.forEach(l => { try { l.onError?.(error); } catch {} }); }
@@ -263,20 +261,8 @@ class DerivWebSocketService {
   public onSymbols(cb: (symbols: DerivSymbol[]) => void): void { this.symbolListeners.add(cb); if (this._activeSymbols.length > 0) cb(this._activeSymbols); }
   public get activeSymbols(): DerivSymbol[] { return this._activeSymbols; }
   private notifyBalance(b: any): void { this.balanceListeners.forEach(cb => { try { cb(b); } catch {} }); }
-
-  public disconnect(): void {
-    this.intentionallyDisconnected = true;
-    if (this.ws) { this.ws.close(); this.ws = null; }
-    this.contractListeners.clear();
-    this.pendingRequests.forEach(p => p.reject(new Error("Connection closed")));
-    this.pendingRequests.clear();
-  }
-
-  public setApiToken(token: string): void {
-    if (this.apiToken !== token) this.authorized = false;
-    this.apiToken = token;
-    if (this.ws && this.ws.readyState === WebSocket.OPEN) this.authorize();
-  }
+  public disconnect(): void { this.intentionallyDisconnected = true; if (this.ws) { this.ws.close(); this.ws = null; } this.contractListeners.clear(); this.pendingRequests.forEach(p => p.reject(new Error("Connection closed"))); this.pendingRequests.clear(); }
+  public setApiToken(token: string): void { if (this.apiToken !== token) this.authorized = false; this.apiToken = token; if (this.ws && this.ws.readyState === WebSocket.OPEN) this.authorize(); }
 }
 
 export const derivWS = new DerivWebSocketService();
