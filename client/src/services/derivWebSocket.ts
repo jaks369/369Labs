@@ -68,6 +68,7 @@ class DerivWebSocketService {
   private apiToken: string | null = null;
   private authorized = false;
   private activeSubscriptions: Map<number, NodeJS.Timeout> = new Map();
+  private pendingSubscriptionSymbols: string[] = [];
   private simulationActive = false;
   private pendingRequests: Map<number, { resolve: (v: any) => void; reject: (e: Error) => void }> = new Map();
   private contractListeners: Map<number, (c: ContractUpdate) => void> = new Map();
