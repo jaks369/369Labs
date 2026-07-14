@@ -119,8 +119,6 @@ export default function Dashboard() {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
             <input type="text" value={marketSearch}
             onChange={e => setMarketSearch(e.target.value)}
-            value={marketSearch}
-            onChange={e => setMarketSearch(e.target.value)}
             placeholder="Search markets..." className="bg-[#161B22] border-[#30363D] pl-10 pr-4 py-2 rounded-lg text-sm focus:border-blue-500 transition-colors w-64" />
           </div>
           <Button className="btn-primary" onClick={() => navigate("/settings")}>Connect Account</Button>
