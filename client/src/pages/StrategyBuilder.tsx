@@ -63,6 +63,19 @@ export default function StrategyBuilder() {
     setBlocks(blocks.map(b => b.id === id ? { ...b, value } : b));
   };
 
+  const handleSaveAndDeploy = async () => {
+    if (!strategyName) { alert("Please enter a strategy name"); return; }
+    try {
+      await saveStrategyMutation.mutateAsync({
+        name: strategyName,
+        description,
+        config: builderMode === "visual" ? { rule: rule as any, summary: summarizeRule(rule) } : { blocks },
+        published: publishToMarketplace,
+      });
+      navigate("/bots");
+    } catch { alert("Failed to save strategy"); }
+  };
+
   const handleSaveStrategy = async () => {
     if (!strategyName) {
       alert("Please enter a strategy name");
