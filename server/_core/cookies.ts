@@ -16,13 +16,15 @@ function isSecureRequest(req: Request) {
 export function getSessionCookieOptions(req: Request): {
   httpOnly: boolean;
   path: string;
-  sameSite: "none";
+  sameSite: "lax" | "none";
   secure: boolean;
 } {
+  const secure = isSecureRequest(req);
+
   return {
     httpOnly: true,
     path: "/",
-    sameSite: "none",
-    secure: isSecureRequest(req),
+    sameSite: secure ? "lax" : "none",
+    secure,
   };
 }
