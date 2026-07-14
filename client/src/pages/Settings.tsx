@@ -31,7 +31,6 @@ export default function Settings() {
   useEffect(() => {
     if (derivTokenQuery.data?.token) {
       const raw = derivTokenQuery.data.token;
-      // Only set if it's not already a masked value (ending with ...)
       if (!raw.endsWith("...")) {
         setDerivToken(raw);
       }
@@ -111,16 +110,14 @@ export default function Settings() {
           <div className="space-y-4">
             <div>
               <label className="text-sm text-[#00FFFF] block mb-2">API Token</label>
-              <div className="relative" autoComplete="off">
-                <input
-                  type="password"
-                  autoComplete="new-password"
-                  placeholder="Enter your Deriv API token"
-                  value={derivToken}
-                  onChange={(e) => setDerivToken(e.target.value)}
-                  className="flex h-10 w-full rounded-md border border-[#00FFFF]/40 bg-[#0A0E27] px-3 py-2 text-sm text-[#00FFFF] placeholder:text-[#00FFFF]/30 focus:outline-none focus:ring-2 focus:ring-[#00FFFF] focus:ring-offset-2 focus:ring-offset-[#0A0E27] disabled:cursor-not-allowed disabled:opacity-50"
-                />
-              </div>
+              <input
+                type="text"
+                autoComplete="off"
+                placeholder="Paste your full Deriv API token here"
+                value={derivToken}
+                onChange={(e) => setDerivToken(e.target.value)}
+                className="flex h-10 w-full rounded-md border border-[#00FFFF]/40 bg-[#0A0E27] px-3 py-2 text-sm text-[#00FFFF] placeholder:text-[#00FFFF]/30 focus:outline-none focus:ring-2 focus:ring-[#00FFFF]"
+              />
               <p className="text-xs text-[#00FFFF]/60 mt-2">
                 Get your token from{' '}
                 <a href="https://app.deriv.com/account/api-token" target="_blank" rel="noopener noreferrer" className="underline">
