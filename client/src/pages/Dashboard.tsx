@@ -223,8 +223,8 @@ export default function Dashboard() {
                 <tbody className="divide-y divide-[#30363D]">
                   {tradesQuery.data?.slice(0, 8).map(trade => (
                     <tr key={trade.id} className="hover:bg-white/5 transition-colors">
-                      <td className="p-4 font-semibold text-white">R_50</td>
-                      <td className="p-4 text-slate-400">RISE</td>
+                      <td className="p-4 font-semibold text-white">{trade.symbol || "—"}</td>
+                      <td className="p-4 text-slate-400">{trade.contractType || "—"}</td>
                       <td className="p-4 text-slate-400">${trade.stake}</td>
                       <td className="p-4 text-slate-400">{trade.entryPrice}</td>
                       <td className="p-4">

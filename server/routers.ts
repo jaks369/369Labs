@@ -199,6 +199,8 @@ export const appRouter = router({
         }, "Stake must be a valid decimal number between 0.35 and 999999"),
         profitLoss: z.string().optional(),
         result: z.enum(["win", "loss", "pending"]),
+        symbol: z.string().optional(),
+        contractType: z.string().optional(),
         contractId: z.string().optional(),
       }))
       .mutation(async ({ ctx, input }) => {
