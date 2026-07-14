@@ -15,6 +15,13 @@
       "when": 1783401274346,
       "tag": "0001_blushing_bishop",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "5",
+      "when": 1784042884105,
+      "tag": "0002_clumsy_talos",
+      "breakpoints": true
     }
   ]
 }

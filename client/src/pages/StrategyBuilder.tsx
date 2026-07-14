@@ -133,7 +133,7 @@ export default function StrategyBuilder() {
             <Button onClick={handleSaveStrategy} disabled={saveStrategyMutation.isPending} className="btn-secondary">
               {saveStrategyMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : "Save Draft"}
             </Button>
-            <Button className="btn-primary flex items-center gap-2">
+            <Button onClick={() => navigate("/bots")} className="btn-primary flex items-center gap-2">
               <Play className="w-4 h-4" /> Deploy to Cloud
             </Button>
           </div>

@@ -12,6 +12,7 @@ export default function Settings() {
   const { user, isAuthenticated } = useAuth();
   const [, navigate] = useLocation();
   const [derivToken, setDerivToken] = useState("");
+  const [tokenChanged, setTokenChanged] = useState(false);
   const [chatId, setChatId] = useState("");
   const [notificationSettings, setNotificationSettings] = useState({
     tradeExecuted: true,
@@ -115,7 +116,7 @@ export default function Settings() {
                 autoComplete="off"
                 placeholder="Paste your full Deriv API token here"
                 value={derivToken}
-                onChange={(e) => setDerivToken(e.target.value)}
+                onChange={(e) => { setDerivToken(e.target.value); setTokenChanged(true); }}
                 className="flex h-10 w-full rounded-md border border-[#00FFFF]/40 bg-[#0A0E27] px-3 py-2 text-sm text-[#00FFFF] placeholder:text-[#00FFFF]/30 focus:outline-none focus:ring-2 focus:ring-[#00FFFF]"
               />
               <p className="text-xs text-[#00FFFF]/60 mt-2">

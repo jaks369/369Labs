@@ -33,6 +33,7 @@ export default function Dashboard() {
   const [selectedSymbol, setSelectedSymbol] = useState("R_50");
   const [marketSearch, setMarketSearch] = useState("");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+  const [searchTerm, setSearchTerm] = useState("");
   const [symbols, setSymbols] = useState<DerivSymbol[]>([]);
   const [showSymbolPicker, setShowSymbolPicker] = useState(false);
   const [searchSymbol, setSearchSymbol] = useState("");

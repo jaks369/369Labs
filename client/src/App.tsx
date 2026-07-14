@@ -62,6 +62,15 @@ function Router() {
       <Route path={"/ai-assistant"}>
         <AppLayout><AIAssistant /></AppLayout>
       </Route>
+      <Route path={"/backtesting"}>
+        <AppLayout><Bots /></AppLayout>
+      </Route>
+      <Route path={"/analytics"}>
+        <AppLayout><Dashboard /></AppLayout>
+      </Route>
+      <Route path={"/cloud-bots"}>
+        <AppLayout><Bots /></AppLayout>
+      </Route>
       <Route path={"/trades"}>
         <AppLayout><TradeHistory /></AppLayout>
       </Route>
