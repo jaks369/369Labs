@@ -48,6 +48,7 @@ const menuItems = [
   { icon: ShoppingBag, label: "Marketplace", path: "/marketplace" },
   { icon: BarChart4, label: "Analytics", path: "/analytics" },
   { icon: Cloud, label: "Cloud Bots", path: "/cloud-bots" },
+  { icon: Bell, label: "Notifications", path: "/notifications" },
   { icon: Settings, label: "Settings", path: "/settings" },
 ];
 

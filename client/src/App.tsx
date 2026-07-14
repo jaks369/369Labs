@@ -11,6 +11,7 @@ import StrategyBuilder from "./pages/StrategyBuilder";
 import Settings from "./pages/Settings";
 import AIAssistant from "./pages/AIAssistant";
 import Marketplace from "./pages/Marketplace";
+import Notifications from "./pages/Notifications";
 import Backtesting from "./pages/Backtesting";
 import Analytics from "./pages/Analytics";
 import CloudBots from "./pages/CloudBots";
@@ -35,6 +36,9 @@ function Router() {
       </Route>
       <Route path={"/strategy-builder"}>
         <AppLayout><StrategyBuilder /></AppLayout>
+      </Route>
+      <Route path={"/notifications"}>
+        <AppLayout><Notifications /></AppLayout>
       </Route>
       <Route path={"/settings"}>
         <AppLayout><Settings /></AppLayout>
