@@ -70,7 +70,6 @@ export const trades = mysqlTable("trades", {
   profitLoss: decimal("profitLoss", { precision: 18, scale: 8 }),
   symbol: varchar("symbol", { length: 32 }).notNull().default("R_100"),
   contractType: varchar("contractType", { length: 32 }).default("CALL"),
-  symbol: varchar("symbol", { length: 32 }).notNull().default("R_100"),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
 

@@ -3,7 +3,6 @@ import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, router, protectedProcedure } from "./_core/trpc";
 import { z } from "zod";
-import { TRPCError } from "@trpc/server";
 import * as db from "./db";
 import { TRPCError } from "@trpc/server";
 import { hashPassword, verifyPassword, createSessionToken } from "./_core/auth";
@@ -120,8 +119,6 @@ export const appRouter = router({
         name: z.string().min(1),
         description: z.string().optional(),
         config: z.record(z.string(), z.any()),
-        published: z.boolean().optional(),
-        published: z.boolean().optional(),
       }))
       .mutation(async ({ ctx, input }) => {
         try {
@@ -150,16 +147,6 @@ export const appRouter = router({
           message: "Failed to retrieve strategies",
         });
       }
-    }),
-
-    marketplace: protectedProcedure.query(async ({ ctx }) => {
-      const db = await getDb();
-      if (!db) return [];
-      return db.select().from(strategies).where(eq(strategies.published, true)).orderBy(desc(strategies.createdAt));
-    }),
-
-    marketplace: publicProcedure.query(async () => {
-      return await db.getMarketplaceStrategies();
     }),
 
     get: protectedProcedure
@@ -212,10 +199,6 @@ export const appRouter = router({
         }, "Stake must be a valid decimal number between 0.35 and 999999"),
         profitLoss: z.string().optional(),
         result: z.enum(["win", "loss", "pending"]),
-        symbol: z.string().optional(),
-        contractType: z.string().optional(),
-        symbol: z.string().optional(),
-        contractType: z.string().optional(),
         contractId: z.string().optional(),
       }))
       .mutation(async ({ ctx, input }) => {
@@ -361,3 +344,32 @@ export const appRouter = router({
       }
     }),
   }),
+
+  // AI Assistant
+  ai: router({
+    ask: protectedProcedure
+      .input(z.object({ message: z.string().min(1) }))
+      .query(async ({ ctx, input }) => {
+        const msg = input.message.toLowerCase();
+        if (msg.includes("strategy") || msg.includes("build") || msg.includes("create"))
+          return { reply: "Head to the **Strategy Builder** and switch to **IF/THEN** mode. Set your condition and action, save it, then deploy from the **Bots** page." };
+        if (msg.includes("backtest") || msg.includes("test") || msg.includes("history"))
+          return { reply: "Go to **Backtesting**, pick a symbol and date range, select your saved strategy, and click **Run Backtest**." };
+        if (msg.includes("token") || msg.includes("api") || msg.includes("connect"))
+          return { reply: "Go to **Settings** and paste your Deriv API token." };
+        if (msg.includes("balance") || msg.includes("account"))
+          return { reply: "Your live Deriv balance appears on the **Dashboard** after adding your API token." };
+        if (msg.includes("market") || msg.includes("symbol"))
+          return { reply: "Select any symbol from the **Dashboard** market picker — Volatility indices, Boom & Crash, Forex." };
+        if (msg.includes("risk") || msg.includes("martingale") || msg.includes("money"))
+          return { reply: "Configure risk in **Strategy Builder** (IF/THEN mode). Start small — $1–$10 per trade." };
+        if (msg.includes("profit") || msg.includes("pnl") || msg.includes("win"))
+          return { reply: "Check **Analytics** for P&L breakdown, win rate, and trade history." };
+        if (msg.includes("cloud") || msg.includes("deploy") || msg.includes("bot"))
+          return { reply: "Save a strategy, then go to **Bots** and click **Deploy Bot**." };
+        return { reply: "I can help with: **Strategy Builder**, **Backtesting**, **Deploying bots**, **Analytics**, **Token setup**." };
+      }),
+  }),
+});
+
+export type AppRouter = typeof appRouter;
