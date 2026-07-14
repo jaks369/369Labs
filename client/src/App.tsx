@@ -11,6 +11,9 @@ import StrategyBuilder from "./pages/StrategyBuilder";
 import Settings from "./pages/Settings";
 import AIAssistant from "./pages/AIAssistant";
 import Marketplace from "./pages/Marketplace";
+import Backtesting from "./pages/Backtesting";
+import Analytics from "./pages/Analytics";
+import CloudBots from "./pages/CloudBots";
 import Bots from "./pages/Bots";
 import TradeHistory from "./pages/TradeHistory";
 import Login from "./pages/Login";
@@ -37,6 +40,15 @@ function Router() {
         <AppLayout><Settings /></AppLayout>
       </Route>
       <Route path={"/marketplace"}>
+      <Route path={"/backtesting"}>
+        <AppLayout><Backtesting /></AppLayout>
+      </Route>
+      <Route path={"/analytics"}>
+        <AppLayout><Analytics /></AppLayout>
+      </Route>
+      <Route path={"/cloud-bots"}>
+        <AppLayout><CloudBots /></AppLayout>
+      </Route>
         <AppLayout><Marketplace /></AppLayout>
       </Route>
       <Route path={"/ai-assistant"}>
