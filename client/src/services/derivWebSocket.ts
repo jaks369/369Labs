@@ -1,7 +1,6 @@
 /**
  * Deriv WebSocket Service for Real-time Tick Streaming
  * Connects to Deriv API and streams live market data
- * Falls back to simulated data if connection fails
  */
 
 export interface Tick {
@@ -19,10 +18,9 @@ export interface TickStreamListener {
   onDisconnect?: () => void;
 }
 
-// Deriv real contract types this app can place. DIGITOVER/DIGITUNDER require a barrier (0-9).
 export type DerivContractType =
-  | "CALL" // rise
-  | "PUT" // fall
+  | "CALL"
+  | "PUT"
   | "DIGITEVEN"
   | "DIGITODD"
   | "DIGITOVER"
@@ -34,7 +32,7 @@ export interface PurchaseParams {
   amount: number;
   duration: number;
   durationUnit?: "t" | "s" | "m";
-  barrier?: number; // required for DIGITOVER / DIGITUNDER
+  barrier?: number;
 }
 
 export interface PurchaseResult {
@@ -54,8 +52,6 @@ export interface ContractUpdate {
   exit_tick?: number;
 }
 
-// Deriv requires an app_id on every connection. 1089 is Deriv's public demo app_id;
-// register your own at https://developers.deriv.com for production use.
 const DERIV_APP_ID = (import.meta as any).env?.VITE_DERIV_APP_ID || "1089";
 
 class DerivWebSocketService {
@@ -69,9 +65,9 @@ class DerivWebSocketService {
   private authorized = false;
   private activeSubscriptions: Map<number, NodeJS.Timeout> = new Map();
   private pendingSubscriptionSymbols: string[] = [];
-  private simulationActive = false;
   private pendingRequests: Map<number, { resolve: (v: any) => void; reject: (e: Error) => void }> = new Map();
   private contractListeners: Map<number, (c: ContractUpdate) => void> = new Map();
+  private intentionallyDisconnected = false;
 
   constructor() {
     this.setupWebSocket();
@@ -80,17 +76,17 @@ class DerivWebSocketService {
   private setupWebSocket() {
     try {
       const endpoint = `wss://ws.derivws.com/websockets/v3?app_id=${DERIV_APP_ID}`;
-
       this.ws = new WebSocket(endpoint);
 
       this.ws.onopen = () => {
         console.log("[Deriv WS] Connected to Deriv API");
         this.reconnectAttempts = 0;
-        this.simulationActive = false;
         this.notifyConnect();
         if (this.apiToken) {
           this.authorize();
         }
+        // Process any subscriptions queued while connecting
+        this.processPendingSubscriptions();
       };
 
       this.ws.onmessage = (event) => {
@@ -102,22 +98,20 @@ class DerivWebSocketService {
         }
       };
 
-      this.ws.onerror = (error) => {
-        console.warn("[Deriv WS] Connection error - switching to simulated mode");
-        this.simulationActive = true;
-        this.notifyConnect(); // Notify as connected to allow UI to show data
+      this.ws.onerror = () => {
+        console.warn("[Deriv WS] Connection error");
       };
 
       this.ws.onclose = () => {
         console.log("[Deriv WS] Disconnected");
         this.authorized = false;
         this.notifyDisconnect();
-        this.attemptReconnect();
+        if (!this.intentionallyDisconnected) {
+          this.attemptReconnect();
+        }
       };
     } catch (error) {
-      console.warn("[Deriv WS] Setup failed - using simulated mode:", error);
-      this.simulationActive = true;
-      this.notifyConnect();
+      console.error("[Deriv WS] Setup failed:", error);
     }
   }
 
@@ -125,12 +119,10 @@ class DerivWebSocketService {
     if (!this.ws || this.ws.readyState !== WebSocket.OPEN || !this.apiToken) {
       return;
     }
-
     const message = {
       authorize: this.apiToken,
       id: this.messageId++,
     };
-
     try {
       this.ws.send(JSON.stringify(message));
       console.log("[Deriv WS] Authorization sent");
@@ -140,7 +132,6 @@ class DerivWebSocketService {
   }
 
   private handleMessage(data: any) {
-    // Resolve/reject any pending request/response pair (proposal, buy, etc.)
     if (data.req_id !== undefined && this.pendingRequests.has(data.req_id)) {
       const pending = this.pendingRequests.get(data.req_id)!;
       this.pendingRequests.delete(data.req_id);
@@ -149,7 +140,6 @@ class DerivWebSocketService {
       } else {
         pending.resolve(data);
       }
-      // Don't return early — a message can also carry tick/contract payloads below.
     }
 
     if (data.tick) {
@@ -182,13 +172,10 @@ class DerivWebSocketService {
       }
     }
 
-    if (data.subscription) {
-      console.log("[Deriv WS] Subscription confirmed:", data.subscription);
-    }
-
     if (data.authorize) {
       console.log("[Deriv WS] Authorized successfully");
       this.authorized = true;
+      this.processPendingSubscriptions();
     }
 
     if (data.error) {
@@ -197,10 +184,15 @@ class DerivWebSocketService {
     }
   }
 
-  /**
-   * Sends a request and resolves with the matching response, correlated via req_id.
-   * Rejects if the connection isn't live, on API error, or after timeout.
-   */
+  private processPendingSubscriptions() {
+    if (this.pendingSubscriptionSymbols.length === 0) return;
+    const pending = [...this.pendingSubscriptionSymbols];
+    this.pendingSubscriptionSymbols = [];
+    for (const symbol of pending) {
+      this.doSubscribe(symbol);
+    }
+  }
+
   private sendRequest(payload: Record<string, any>, timeoutMs = 15000): Promise<any> {
     return new Promise((resolve, reject) => {
       if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
@@ -212,7 +204,6 @@ class DerivWebSocketService {
         this.pendingRequests.delete(reqId);
         reject(new Error("Deriv API request timed out"));
       }, timeoutMs);
-
       this.pendingRequests.set(reqId, {
         resolve: (v) => {
           clearTimeout(timer);
@@ -223,7 +214,6 @@ class DerivWebSocketService {
           reject(e);
         },
       });
-
       try {
         this.ws.send(JSON.stringify({ ...payload, req_id: reqId }));
       } catch (error) {
@@ -234,13 +224,9 @@ class DerivWebSocketService {
     });
   }
 
-  /**
-   * Places a real trade on Deriv: requests a price proposal, then buys it.
-   * Throws if not connected/authorized (simulation mode has no real money to trade with).
-   */
   public async purchaseContract(params: PurchaseParams): Promise<PurchaseResult> {
-    if (this.simulationActive || !this.ws || this.ws.readyState !== WebSocket.OPEN) {
-      throw new Error("Cannot place a real trade while in simulated/offline mode");
+    if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
+      throw new Error("Deriv WebSocket is not connected");
     }
     if (!this.authorized) {
       throw new Error("Not authorized — set a valid Deriv API token before trading");
@@ -272,9 +258,6 @@ class DerivWebSocketService {
     return { contractId: buy.contract_id, buyPrice: buy.buy_price, longcode: buy.longcode };
   }
 
-  /**
-   * Subscribes to live updates for an open contract until it's sold, then auto-unsubscribes.
-   */
   public subscribeToContract(contractId: number, onUpdate: (c: ContractUpdate) => void): void {
     this.contractListeners.set(contractId, onUpdate);
     if (!this.ws || this.ws.readyState !== WebSocket.OPEN) return;
@@ -295,67 +278,50 @@ class DerivWebSocketService {
   private attemptReconnect() {
     if (this.reconnectAttempts < this.maxReconnectAttempts) {
       this.reconnectAttempts++;
-      console.log(
-        `[Deriv WS] Reconnecting... (attempt ${this.reconnectAttempts}/${this.maxReconnectAttempts})`
-      );
+      console.log(`[Deriv WS] Reconnecting... (attempt ${this.reconnectAttempts}/${this.maxReconnectAttempts})`);
       setTimeout(() => this.setupWebSocket(), this.baseReconnectDelay * (2 ** (this.reconnectAttempts - 1)));
     } else {
-      console.log("[Deriv WS] Switching to simulated tick data for demo");
-      this.simulationActive = true;
-      this.notifyConnect();
+      console.log("[Deriv WS] Max reconnect attempts reached");
     }
   }
 
   public subscribe(symbol: string): number {
     const id = this.messageId++;
-    const subscriptionId = id;
-
-    if (this.simulationActive || !this.ws || this.ws.readyState !== WebSocket.OPEN) {
-      // Use simulated data
-      this.startSimulation(subscriptionId, symbol);
-      return subscriptionId;
+    if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
+      console.log(`[Deriv WS] Queuing ${symbol} — connection not ready`);
+      this.pendingSubscriptionSymbols.push(symbol);
+      return id;
     }
+    if (!this.authorized) {
+      if (this.apiToken) {
+        console.log(`[Deriv WS] Queuing ${symbol} — waiting for authorization`);
+        this.pendingSubscriptionSymbols.push(symbol);
+        return id;
+      }
+      console.warn(`[Deriv WS] Cannot subscribe to ${symbol} — no API token set`);
+      // Still return a valid ID, components will just get no ticks until token is set
+      return id;
+    }
+    return this.doSubscribe(symbol);
+  }
 
-    this.activeSubscriptions.set(subscriptionId, null as any);
-
+  private doSubscribe(symbol: string): number {
+    const id = this.messageId++;
+    this.activeSubscriptions.set(id, null as any);
     const message = {
       ticks: symbol,
       subscribe: 1,
       id: id,
     };
-
     try {
-      this.ws.send(JSON.stringify(message));
-      console.log(`[Deriv WS] Subscribed to ${symbol} (ID: ${subscriptionId})`);
-      return subscriptionId;
+      this.ws!.send(JSON.stringify(message));
+      console.log(`[Deriv WS] Subscribed to ${symbol} (ID: ${id})`);
+      return id;
     } catch (error) {
       console.error("[Deriv WS] Failed to subscribe:", error);
-      this.activeSubscriptions.delete(subscriptionId);
+      this.activeSubscriptions.delete(id);
       return -1;
     }
-  }
-
-  private startSimulation(subscriptionId: number, symbol: string) {
-    console.log(`[Deriv WS] Using simulated data for ${symbol} (connected=${this.ws?.readyState === WebSocket.OPEN}, authorized=${this.authorized})`);
-    const basePrice = Math.random() * 100 + 50;
-    let currentPrice = basePrice;
-
-    const interval = setInterval(() => {
-      const change = (Math.random() - 0.5) * 2;
-      currentPrice += change;
-
-      const tick: Tick = {
-        symbol,
-        price: parseFloat(currentPrice.toFixed(4)),
-        timestamp: Date.now(),
-        bid: parseFloat((currentPrice - 0.01).toFixed(4)),
-        ask: parseFloat((currentPrice + 0.01).toFixed(4)),
-      };
-
-      this.notifyTick(tick);
-    }, 1000);
-
-    this.activeSubscriptions.set(subscriptionId, interval);
   }
 
   public unsubscribe(subscriptionId: number): void {
@@ -363,7 +329,6 @@ class DerivWebSocketService {
     if (interval) {
       clearInterval(interval);
       this.activeSubscriptions.delete(subscriptionId);
-      console.log(`[Deriv WS] Unsubscribed (ID: ${subscriptionId})`);
     }
   }
 
@@ -416,15 +381,15 @@ class DerivWebSocketService {
   }
 
   public isConnected(): boolean {
-    return this.simulationActive || (this.ws !== null && this.ws.readyState === WebSocket.OPEN);
+    return this.ws !== null && this.ws.readyState === WebSocket.OPEN;
   }
 
-  /** True once the API token has been accepted by Deriv on this connection. */
   public isAuthorized(): boolean {
     return this.authorized;
   }
 
   public disconnect(): void {
+    this.intentionallyDisconnected = true;
     if (this.ws) {
       this.ws.close();
       this.ws = null;
@@ -446,6 +411,10 @@ class DerivWebSocketService {
     if (this.ws && this.ws.readyState === WebSocket.OPEN) {
       this.authorize();
     }
+  }
+
+  public setToken(token: string): void {
+    this.setApiToken(token);
   }
 }
 
