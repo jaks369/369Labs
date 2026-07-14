@@ -209,7 +209,12 @@ class DerivWebSocketService {
   }
 
   public unsubscribe(subscriptionId: number): void {}
-  public addListener(listener: TickStreamListener): void { this.listeners.add(listener); }
+  public addListener(listener: TickStreamListener): void {
+    this.listeners.add(listener);
+    if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+      try { listener.onConnect?.(); } catch {}
+    }
+  }
   public removeListener(listener: TickStreamListener): void { this.listeners.delete(listener); }
   private notifyTick(tick: Tick): void { this.listeners.forEach(l => { try { l.onTick(tick); } catch {} }); }
   private notifyError(error: Error): void { this.listeners.forEach(l => { try { l.onError?.(error); } catch {} }); }
