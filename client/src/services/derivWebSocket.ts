@@ -1,6 +1,5 @@
 /**
  * Deriv WebSocket Service for Real-time Tick Streaming
- * Connects to Deriv API and streams live market data
  */
 
 export interface Tick {
@@ -19,12 +18,7 @@ export interface TickStreamListener {
 }
 
 export type DerivContractType =
-  | "CALL"
-  | "PUT"
-  | "DIGITEVEN"
-  | "DIGITODD"
-  | "DIGITOVER"
-  | "DIGITUNDER";
+  | "CALL" | "PUT" | "DIGITEVEN" | "DIGITODD" | "DIGITOVER" | "DIGITUNDER";
 
 export interface PurchaseParams {
   symbol: string;
@@ -60,7 +54,7 @@ class DerivWebSocketService {
   private reconnectAttempts = 0;
   private maxReconnectAttempts = 5;
   private baseReconnectDelay = 3000;
-  private messageId = 1;
+  private msgId = 1;
   private apiToken: string | null = null;
   private authorized = false;
   private activeSubscriptions: Map<number, NodeJS.Timeout> = new Map();
@@ -79,12 +73,10 @@ class DerivWebSocketService {
       this.ws = new WebSocket(endpoint);
 
       this.ws.onopen = () => {
-        console.log("[Deriv WS] Connected to Deriv API");
+        console.log("[Deriv WS] Connected");
         this.reconnectAttempts = 0;
         this.notifyConnect();
-        if (this.apiToken) {
-          this.authorize();
-        }
+        if (this.apiToken) this.authorize();
         this.processPendingSubscriptions();
       };
 
@@ -93,21 +85,17 @@ class DerivWebSocketService {
           const data = JSON.parse(event.data);
           this.handleMessage(data);
         } catch (error) {
-          console.error("[Deriv WS] Failed to parse message:", error);
+          console.error("[Deriv WS] Parse error:", error);
         }
       };
 
-      this.ws.onerror = () => {
-        console.warn("[Deriv WS] Connection error");
-      };
+      this.ws.onerror = () => console.warn("[Deriv WS] Connection error");
 
       this.ws.onclose = () => {
         console.log("[Deriv WS] Disconnected");
         this.authorized = false;
         this.notifyDisconnect();
-        if (!this.intentionallyDisconnected) {
-          this.attemptReconnect();
-        }
+        if (!this.intentionallyDisconnected) this.attemptReconnect();
       };
     } catch (error) {
       console.error("[Deriv WS] Setup failed:", error);
@@ -115,22 +103,19 @@ class DerivWebSocketService {
   }
 
   private authorize() {
-    if (!this.ws || this.ws.readyState !== WebSocket.OPEN || !this.apiToken) {
-      return;
-    }
-    const message = {
-      authorize: this.apiToken,
-      id: this.messageId++,
-    };
+    if (!this.ws || this.ws.readyState !== WebSocket.OPEN || !this.apiToken) return;
+    const reqId = this.msgId++;
+    const msg = { authorize: this.apiToken, req_id: reqId };
     try {
-      this.ws.send(JSON.stringify(message));
-      console.log("[Deriv WS] Authorization sent");
+      this.ws.send(JSON.stringify(msg));
+      console.log("[Deriv WS] Authorization sent (req_id:", reqId + ")");
     } catch (error) {
       console.error("[Deriv WS] Failed to authorize:", error);
     }
   }
 
   private handleMessage(data: any) {
+    // Resolve pending requests
     if (data.req_id !== undefined && this.pendingRequests.has(data.req_id)) {
       const pending = this.pendingRequests.get(data.req_id)!;
       this.pendingRequests.delete(data.req_id);
@@ -141,17 +126,18 @@ class DerivWebSocketService {
       }
     }
 
+    // Ticks
     if (data.tick) {
-      const tick: Tick = {
+      this.notifyTick({
         symbol: data.tick.symbol || "UNKNOWN",
         price: data.tick.quote || 0,
         timestamp: (data.tick.epoch || Date.now() / 1000) * 1000,
         bid: data.tick.bid,
         ask: data.tick.ask,
-      };
-      this.notifyTick(tick);
+      });
     }
 
+    // Contract updates
     if (data.proposal_open_contract) {
       const c = data.proposal_open_contract;
       const update: ContractUpdate = {
@@ -166,17 +152,24 @@ class DerivWebSocketService {
       };
       const cb = this.contractListeners.get(c.contract_id);
       cb?.(update);
-      if (c.is_sold) {
-        this.contractListeners.delete(c.contract_id);
-      }
+      if (c.is_sold) this.contractListeners.delete(c.contract_id);
     }
 
-    if (data.authorize) {
+    // Authorization success
+    if (data.msg_type === "authorize") {
       console.log("[Deriv WS] Authorized successfully");
       this.authorized = true;
+      this.notifyConnect();
       this.processPendingSubscriptions();
+      return;
     }
 
+    // Subscription confirmation
+    if (data.msg_type === "tick") {
+      // ticks come in via data.tick above
+    }
+
+    // Errors
     if (data.error) {
       const msg = data.error.message || JSON.stringify(data.error);
       console.error("[Deriv WS] API Error:", msg);
@@ -188,31 +181,23 @@ class DerivWebSocketService {
     if (this.pendingSubscriptionSymbols.length === 0) return;
     const pending = [...this.pendingSubscriptionSymbols];
     this.pendingSubscriptionSymbols = [];
-    for (const symbol of pending) {
-      this.doSubscribe(symbol);
-    }
+    for (const symbol of pending) this.doSubscribe(symbol);
   }
 
   private sendRequest(payload: Record<string, any>, timeoutMs = 15000): Promise<any> {
     return new Promise((resolve, reject) => {
       if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
-        reject(new Error("Deriv WebSocket is not connected"));
+        reject(new Error("WebSocket not connected"));
         return;
       }
-      const reqId = this.messageId++;
+      const reqId = this.msgId++;
       const timer = setTimeout(() => {
         this.pendingRequests.delete(reqId);
         reject(new Error("Deriv API request timed out"));
       }, timeoutMs);
       this.pendingRequests.set(reqId, {
-        resolve: (v) => {
-          clearTimeout(timer);
-          resolve(v);
-        },
-        reject: (e) => {
-          clearTimeout(timer);
-          reject(e);
-        },
+        resolve: (v) => { clearTimeout(timer); resolve(v); },
+        reject: (e) => { clearTimeout(timer); reject(e); },
       });
       try {
         this.ws.send(JSON.stringify({ ...payload, req_id: reqId }));
@@ -225,48 +210,29 @@ class DerivWebSocketService {
   }
 
   public async purchaseContract(params: PurchaseParams): Promise<PurchaseResult> {
-    if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
-      throw new Error("Deriv WebSocket is not connected");
-    }
-    if (!this.authorized) {
-      throw new Error("Not authorized — set a valid Deriv API token before trading");
-    }
+    if (!this.ws || this.ws.readyState !== WebSocket.OPEN) throw new Error("WebSocket not connected");
+    if (!this.authorized) throw new Error("Not authorized");
 
-    const proposalReq: Record<string, any> = {
-      proposal: 1,
-      amount: params.amount,
-      basis: "stake",
-      contract_type: params.contractType,
-      currency: "USD",
-      duration: params.duration,
-      duration_unit: params.durationUnit || "t",
+    const proposalRes = await this.sendRequest({
+      proposal: 1, amount: params.amount, basis: "stake",
+      contract_type: params.contractType, currency: "USD",
+      duration: params.duration, duration_unit: params.durationUnit || "t",
       symbol: params.symbol,
-    };
-    if (params.barrier !== undefined) proposalReq.barrier = String(params.barrier);
+      ...(params.barrier !== undefined ? { barrier: String(params.barrier) } : {}),
+    });
+    if (!proposalRes.proposal) throw new Error("No proposal returned");
 
-    const proposalRes = await this.sendRequest(proposalReq);
-    const proposal = proposalRes.proposal;
-    if (!proposal) throw new Error("Deriv did not return a proposal");
-
-    const buyRes = await this.sendRequest({ buy: proposal.id, price: proposal.ask_price });
-    const buy = buyRes.buy;
-    if (!buy) throw new Error("Deriv buy request failed");
-
-    return { contractId: buy.contract_id, buyPrice: buy.buy_price, longcode: buy.longcode };
+    const buyRes = await this.sendRequest({ buy: proposalRes.proposal.id, price: proposalRes.proposal.ask_price });
+    if (!buyRes.buy) throw new Error("Buy request failed");
+    return { contractId: buyRes.buy.contract_id, buyPrice: buyRes.buy.buy_price, longcode: buyRes.buy.longcode };
   }
 
   public subscribeToContract(contractId: number, onUpdate: (c: ContractUpdate) => void): void {
     this.contractListeners.set(contractId, onUpdate);
     if (!this.ws || this.ws.readyState !== WebSocket.OPEN) return;
+    const reqId = this.msgId++;
     try {
-      this.ws.send(
-        JSON.stringify({
-          proposal_open_contract: 1,
-          contract_id: contractId,
-          subscribe: 1,
-          req_id: this.messageId++,
-        })
-      );
+      this.ws.send(JSON.stringify({ proposal_open_contract: 1, contract_id: contractId, subscribe: 1, req_id: reqId }));
     } catch (error) {
       console.error("[Deriv WS] Failed to subscribe to contract:", error);
     }
@@ -275,48 +241,37 @@ class DerivWebSocketService {
   private attemptReconnect() {
     if (this.reconnectAttempts < this.maxReconnectAttempts) {
       this.reconnectAttempts++;
-      console.log(`[Deriv WS] Reconnecting... (attempt ${this.reconnectAttempts}/${this.maxReconnectAttempts})`);
+      console.log(`[Deriv WS] Reconnect attempt ${this.reconnectAttempts}/${this.maxReconnectAttempts}`);
       setTimeout(() => this.setupWebSocket(), this.baseReconnectDelay * (2 ** (this.reconnectAttempts - 1)));
-    } else {
-      console.log("[Deriv WS] Max reconnect attempts reached");
     }
   }
 
   public subscribe(symbol: string): number {
-    const id = this.messageId++;
+    const subId = this.msgId++;
     if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
-      console.log(`[Deriv WS] Queuing ${symbol} — connection not ready`);
       this.pendingSubscriptionSymbols.push(symbol);
-      return id;
+      return subId;
     }
     if (!this.authorized) {
       if (this.apiToken) {
-        console.log(`[Deriv WS] Queuing ${symbol} — waiting for authorization`);
         this.pendingSubscriptionSymbols.push(symbol);
-        return id;
+        return subId;
       }
-      console.warn(`[Deriv WS] Cannot subscribe to ${symbol} — no API token set`);
-      return id;
+      return subId;
     }
-    return this.doSubscribe(symbol);
+    this.doSubscribe(symbol);
+    return subId;
   }
 
-  private doSubscribe(symbol: string): number {
-    const id = this.messageId++;
-    this.activeSubscriptions.set(id, null as any);
-    const message = {
-      ticks: symbol,
-      subscribe: 1,
-      id: id,
-    };
+  private doSubscribe(symbol: string) {
+    const reqId = this.msgId++;
+    this.activeSubscriptions.set(reqId, null as any);
+    const msg = { ticks: symbol, subscribe: 1, req_id: reqId };
     try {
-      this.ws!.send(JSON.stringify(message));
-      console.log(`[Deriv WS] Subscribed to ${symbol} (ID: ${id})`);
-      return id;
+      this.ws!.send(JSON.stringify(msg));
+      console.log(`[Deriv WS] Subscribed to ${symbol}`);
     } catch (error) {
       console.error("[Deriv WS] Failed to subscribe:", error);
-      this.activeSubscriptions.delete(id);
-      return -1;
     }
   }
 
@@ -328,85 +283,29 @@ class DerivWebSocketService {
     }
   }
 
-  public addListener(listener: TickStreamListener): void {
-    this.listeners.add(listener);
-  }
+  public addListener(listener: TickStreamListener): void { this.listeners.add(listener); }
+  public removeListener(listener: TickStreamListener): void { this.listeners.delete(listener); }
+  private notifyTick(tick: Tick): void { this.listeners.forEach(l => { try { l.onTick(tick); } catch {} }); }
+  private notifyError(error: Error): void { this.listeners.forEach(l => { try { l.onError?.(error); } catch {} }); }
+  private notifyConnect(): void { this.listeners.forEach(l => { try { l.onConnect?.(); } catch {} }); }
+  private notifyDisconnect(): void { this.listeners.forEach(l => { try { l.onDisconnect?.(); } catch {} }); }
 
-  public removeListener(listener: TickStreamListener): void {
-    this.listeners.delete(listener);
-  }
-
-  private notifyTick(tick: Tick): void {
-    this.listeners.forEach((listener) => {
-      try {
-        listener.onTick(tick);
-      } catch (error) {
-        console.error("[Deriv WS] Listener error:", error);
-      }
-    });
-  }
-
-  private notifyError(error: Error): void {
-    this.listeners.forEach((listener) => {
-      try {
-        listener.onError?.(error);
-      } catch (e) {
-        console.error("[Deriv WS] Error listener failed:", e);
-      }
-    });
-  }
-
-  private notifyConnect(): void {
-    this.listeners.forEach((listener) => {
-      try {
-        listener.onConnect?.();
-      } catch (error) {
-        console.error("[Deriv WS] Connect listener failed:", error);
-      }
-    });
-  }
-
-  private notifyDisconnect(): void {
-    this.listeners.forEach((listener) => {
-      try {
-        listener.onDisconnect?.();
-      } catch (error) {
-        console.error("[Deriv WS] Disconnect listener failed:", error);
-      }
-    });
-  }
-
-  public isConnected(): boolean {
-    return this.ws !== null && this.ws.readyState === WebSocket.OPEN;
-  }
-
-  public isAuthorized(): boolean {
-    return this.authorized;
-  }
+  public isConnected(): boolean { return this.ws !== null && this.ws.readyState === WebSocket.OPEN; }
+  public isAuthorized(): boolean { return this.authorized; }
 
   public disconnect(): void {
     this.intentionallyDisconnected = true;
-    if (this.ws) {
-      this.ws.close();
-      this.ws = null;
-    }
-    this.activeSubscriptions.forEach((interval) => {
-      if (interval) clearInterval(interval);
-    });
+    if (this.ws) { this.ws.close(); this.ws = null; }
     this.activeSubscriptions.clear();
     this.contractListeners.clear();
-    this.pendingRequests.forEach((p) => p.reject(new Error("Connection closed")));
+    this.pendingRequests.forEach(p => p.reject(new Error("Connection closed")));
     this.pendingRequests.clear();
   }
 
   public setApiToken(token: string): void {
-    if (this.apiToken !== token) {
-      this.authorized = false;
-    }
+    if (this.apiToken !== token) this.authorized = false;
     this.apiToken = token;
-    if (this.ws && this.ws.readyState === WebSocket.OPEN) {
-      this.authorize();
-    }
+    if (this.ws && this.ws.readyState === WebSocket.OPEN) this.authorize();
   }
 }
 
