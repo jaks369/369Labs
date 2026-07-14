@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { trpc } from "@/lib/trpc";
 import { Cloud, Server, Power, PowerOff, Globe, Clock, Activity, Loader2 } from "lucide-react";
@@ -7,6 +8,8 @@ export default function CloudBots() {
   const { isAuthenticated } = useAuth();
   const [, navigate] = useLocation();
   const botRunsQuery = trpc.bot.getRuns.useQuery();
+  const stopRunMutation = trpc.bot.stopRun.useMutation();
+  const [stoppingId, setStoppingId] = useState<number | null>(null);
 
   if (!isAuthenticated) { navigate("/login"); return null; }
 

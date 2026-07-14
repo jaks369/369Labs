@@ -60,7 +60,7 @@ export default function Marketplace() {
                 <p className="text-slate-400 text-sm leading-relaxed mb-4">{s.description || "No description"}</p>
                 <div className="flex items-center justify-between mt-4 pt-3 border-t border-[#30363D]">
                   <span className="text-xs text-slate-500"><Clock className="w-3 h-3 inline" /> {new Date(s.createdAt).toLocaleDateString()}</span>
-                  <Button onClick={() => navigate("/strategy-builder")} className="bg-blue-600 hover:bg-blue-700 text-white text-xs px-4 py-2 rounded-lg flex items-center gap-1">
+                  <Button onClick={() => navigate("/strategy-builder?id=" + s.id)} className="bg-blue-600 hover:bg-blue-700 text-white text-xs px-4 py-2 rounded-lg flex items-center gap-1">
                     Use Strategy <ArrowUpRight className="w-3 h-3" />
                   </Button>
                 </div>

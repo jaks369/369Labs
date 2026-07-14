@@ -18,7 +18,7 @@ import {
   Zap,
   ShieldCheck
 } from "lucide-react";
-import { useLocation } from "wouter";
+import { useLocation, useSearch } from "wouter";
 import RuleBuilder, { StrategyRule, DEFAULT_RULE, summarizeRule } from "@/components/RuleBuilder";
 
 interface StrategyBlock {
@@ -40,6 +40,14 @@ export default function StrategyBuilder() {
   const saveStrategyMutation = trpc.strategies.save.useMutation();
   const strategiesQuery = trpc.strategies.list.useQuery();
 
+  useEffect(() => {
+    if (editQuery.data) {
+      setStrategyName(editQuery.data.name);
+      setDescription(editQuery.data.description || "");
+      const config = editQuery.data.config as any;
+      if (config?.rule) { setRule(config.rule); setBuilderMode("visual"); }
+    }
+  }, [editQuery.data]);
   useEffect(() => {
     if (!isAuthenticated) {
       navigate("/");
