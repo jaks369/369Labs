@@ -74,8 +74,8 @@ export default function TickChart({ symbol, maxDataPoints = 100 }: TickChartProp
     // Cleanup
     return () => {
       derivWS.removeListener(listener);
-      if (subscriptionId > 0) {
-        derivWS.unsubscribe(subscriptionId);
+      if (id > 0) {
+        derivWS.unsubscribe(id);
       }
     };
   }, [symbol, maxDataPoints]);
