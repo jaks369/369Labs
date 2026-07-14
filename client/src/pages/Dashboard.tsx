@@ -80,15 +80,14 @@ export default function Dashboard() {
     return () => {};
   }, []);
 
-  const marketFilter = marketSearch.toLowerCase();
-  const volatilitySymbols = filteredSymbols.filter(s => s.market === "volatility" || IT_SYMBOLS.includes(s.symbol));
-  const forexSymbols = symbols.filter(s => s.market === "forex");
-  const otherSymbols = symbols.filter(s => s.market !== "volatility" && s.market !== "forex");
 
   const filteredSymbols = symbols.filter(s =>
     s.symbol.toLowerCase().includes(searchSymbol.toLowerCase()) ||
     s.displayName.toLowerCase().includes(searchSymbol.toLowerCase())
   );
+  const volatilitySymbols = filteredSymbols.filter(s => s.market === "volatility" || IT_SYMBOLS.includes(s.symbol));
+  const forexSymbols = symbols.filter(s => s.market === "forex");
+  const otherSymbols = symbols.filter(s => s.market !== "volatility" && s.market !== "forex");
 
   const groupedSymbols = [
     { label: "Volatility", items: volatilitySymbols },
