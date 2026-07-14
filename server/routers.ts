@@ -201,6 +201,8 @@ export const appRouter = router({
         result: z.enum(["win", "loss", "pending"]),
         symbol: z.string().optional(),
         contractType: z.string().optional(),
+        symbol: z.string().optional(),
+        contractType: z.string().optional(),
         contractId: z.string().optional(),
       }))
       .mutation(async ({ ctx, input }) => {
