@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Loader2, Save } from "lucide-react";
 import { useLocation } from "wouter";
+import { derivWS } from "@/services/derivWebSocket";
 
 export default function Settings() {
   const { user, isAuthenticated } = useAuth();
@@ -62,7 +63,8 @@ export default function Settings() {
         token: derivToken,
         accountType: "demo",
       });
-      alert("Deriv token saved successfully!");
+      derivWS.setApiToken(derivToken);
+      alert("Deriv token saved and connected successfully!");
     } catch (error) {
       alert("Failed to save Deriv token");
     }
