@@ -74,6 +74,8 @@ export default function StrategyBuilder() {
         name: strategyName,
         description,
         config: builderMode === "visual" ? { rule: rule as any, summary: summarizeRule(rule) } : { blocks },
+        published: publishToMarketplace,
+        published: publishToMarketplace,
       });
       alert("Strategy saved successfully!");
       setStrategyName("");
@@ -104,6 +106,10 @@ export default function StrategyBuilder() {
             <p className="text-slate-500 text-sm font-medium">Design professional trading algorithms without code.</p>
           </div>
           <div className="flex items-center gap-3">
+            <label className="flex items-center gap-2 text-xs text-slate-400">
+              <input type="checkbox" checked={publishToMarketplace} onChange={e => setPublishToMarketplace(e.target.checked)} className="rounded" />
+              Publish to Marketplace
+            </label>
             <Button onClick={handleSaveStrategy} disabled={saveStrategyMutation.isPending} className="btn-secondary">
               {saveStrategyMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : "Save Draft"}
             </Button>

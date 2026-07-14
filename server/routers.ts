@@ -120,6 +120,8 @@ export const appRouter = router({
         name: z.string().min(1),
         description: z.string().optional(),
         config: z.record(z.string(), z.any()),
+        published: z.boolean().optional(),
+        published: z.boolean().optional(),
       }))
       .mutation(async ({ ctx, input }) => {
         try {
