@@ -31,6 +31,7 @@ export default function Dashboard() {
   const [balance, setBalance] = useState(0);
   const [botRunning, setBotRunning] = useState(false);
   const [selectedSymbol, setSelectedSymbol] = useState("R_50");
+  const [marketSearch, setMarketSearch] = useState("");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [symbols, setSymbols] = useState<DerivSymbol[]>([]);
   const [showSymbolPicker, setShowSymbolPicker] = useState(false);
@@ -117,6 +118,8 @@ export default function Dashboard() {
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
             <input type="text" value={marketSearch}
+            onChange={e => setMarketSearch(e.target.value)}
+            value={marketSearch}
             onChange={e => setMarketSearch(e.target.value)}
             placeholder="Search markets..." className="bg-[#161B22] border-[#30363D] pl-10 pr-4 py-2 rounded-lg text-sm focus:border-blue-500 transition-colors w-64" />
           </div>
