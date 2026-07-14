@@ -335,7 +335,7 @@ class DerivWebSocketService {
   }
 
   private startSimulation(subscriptionId: number, symbol: string) {
-    console.log(`[Deriv WS] Starting simulated tick data for ${symbol}`);
+    console.log(`[Deriv WS] Using simulated data for ${symbol} (connected=${this.ws?.readyState === WebSocket.OPEN}, authorized=${this.authorized})`);
     const basePrice = Math.random() * 100 + 50;
     let currentPrice = basePrice;
 
