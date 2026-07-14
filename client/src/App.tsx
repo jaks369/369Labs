@@ -10,6 +10,7 @@ import StrategyBuilder from "./pages/StrategyBuilder";
 import Settings from "./pages/Settings";
 import AIAssistant from "./pages/AIAssistant";
 import Bots from "./pages/Bots";
+import Marketplace from "./pages/Marketplace";
 import DashboardLayout from "./components/DashboardLayout";
 import TradeHistory from "./pages/TradeHistory";
 import Login from "./pages/Login";
@@ -24,6 +25,9 @@ function Router() {
       <Route path={"/bots"} component={Bots} />
       <Route path={"/strategy-builder"} component={StrategyBuilder} />
       <Route path={"/settings"} component={Settings} />
+      <Route path={"/marketplace"}>
+        <AppLayout><Marketplace /></AppLayout>
+      </Route>
       <Route path={"/ai-assistant"} component={AIAssistant} />
       <Route path={"/trades"} component={TradeHistory} />
       <Route path={"/404"} component={NotFound} />
