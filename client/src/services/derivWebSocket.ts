@@ -39,7 +39,16 @@ export interface ContractUpdate {
   entry_tick?: number;
   exit_tick?: number;
 }
+
+export interface DerivSymbol {
+  symbol: string;
+  displayName: string;
+  market: string;
+  submarket: string;
+}
+
 const DERIV_APP_ID = (import.meta as any).env?.VITE_DERIV_APP_ID || "1089";
+
 class DerivWebSocketService {
   private ws: WebSocket | null = null;
   private listeners: Set<TickStreamListener> = new Set();
@@ -56,7 +65,11 @@ class DerivWebSocketService {
   private intentionallyDisconnected = false;
   private lastBalance: any = null;
   private balanceListeners: Set<(b: any) => void> = new Set();
+  private _activeSymbols: DerivSymbol[] = [];
+  private symbolListeners: Set<(symbols: DerivSymbol[]) => void> = new Set();
+
   constructor() { this.setupWebSocket(); }
+
   private setupWebSocket() {
     try {
       const endpoint = `wss://ws.derivws.com/websockets/v3?app_id=${DERIV_APP_ID}`;
@@ -81,6 +94,7 @@ class DerivWebSocketService {
       };
     } catch (error) { console.error("[Deriv WS] Setup failed:", error); }
   }
+
   private authorize() {
     if (!this.ws || this.ws.readyState !== WebSocket.OPEN || !this.apiToken) return;
     const reqId = this.msgId++;
@@ -89,6 +103,7 @@ class DerivWebSocketService {
       console.log("[Deriv WS] Authorization sent");
     } catch (error) { console.error("[Deriv WS] Failed to authorize:", error); }
   }
+
   private handleMessage(data: any) {
     if (data.req_id !== undefined && this.pendingRequests.has(data.req_id)) {
       const pending = this.pendingRequests.get(data.req_id)!;
@@ -116,13 +131,24 @@ class DerivWebSocketService {
       this.authorized = true;
       this.notifyConnect();
       this.fetchBalance();
+      this.fetchActiveSymbols();
       this.processPendingSubscriptions();
       return;
     }
     if (data.msg_type === "balance") {
-      console.log("[Deriv WS] Balance:", data.balance);
       this.lastBalance = data.balance;
       this.notifyBalance(data.balance);
+      return;
+    }
+    if (data.msg_type === "active_symbols") {
+      const symbols: DerivSymbol[] = (data.active_symbols || []).map((s: any) => ({
+        symbol: s.symbol,
+        displayName: s.display_name || s.symbol,
+        market: s.market || s.market,
+        submarket: s.submarket || "",
+      }));
+      this._activeSymbols = symbols;
+      this.symbolListeners.forEach(cb => { try { cb(symbols); } catch {} });
       return;
     }
     if (data.error) {
@@ -131,6 +157,14 @@ class DerivWebSocketService {
       this.notifyError(new Error(msg));
     }
   }
+
+  private fetchActiveSymbols() {
+    if (!this.ws || !this.authorized) return;
+    try {
+      this.ws.send(JSON.stringify({ active_symbols: "brief", product_type: "basic", req_id: this.msgId++ }));
+    } catch (error) { console.error("[Deriv WS] Failed to fetch active symbols:", error); }
+  }
+
   private processPendingSubscriptions() {
     const pending = [...this.pendingSubscriptionSymbols];
     this.pendingSubscriptionSymbols = [];
@@ -138,12 +172,14 @@ class DerivWebSocketService {
       if (!this.subscribedSymbols.has(symbol)) this.doSubscribe(symbol);
     }
   }
+
   private fetchBalance() {
     if (!this.ws || !this.authorized) return;
     try {
       this.ws.send(JSON.stringify({ balance: 1, account: "all", req_id: this.msgId++ }));
     } catch (error) { console.error("[Deriv WS] Failed to fetch balance:", error); }
   }
+
   private sendRequest(payload: Record<string, any>, timeoutMs = 15000): Promise<any> {
     return new Promise((resolve, reject) => {
       if (!this.ws || this.ws.readyState !== WebSocket.OPEN) { reject(new Error("WebSocket not connected")); return; }
@@ -154,6 +190,7 @@ class DerivWebSocketService {
       catch (error) { clearTimeout(timer); this.pendingRequests.delete(reqId); reject(error instanceof Error ? error : new Error(String(error))); }
     });
   }
+
   public async purchaseContract(params: PurchaseParams): Promise<PurchaseResult> {
     if (!this.ws || this.ws.readyState !== WebSocket.OPEN) throw new Error("WebSocket not connected");
     if (!this.authorized) throw new Error("Not authorized");
@@ -163,12 +200,14 @@ class DerivWebSocketService {
     if (!buyRes.buy) throw new Error("Buy request failed");
     return { contractId: buyRes.buy.contract_id, buyPrice: buyRes.buy.buy_price, longcode: buyRes.buy.longcode };
   }
+
   public subscribeToContract(contractId: number, onUpdate: (c: ContractUpdate) => void): void {
     this.contractListeners.set(contractId, onUpdate);
     if (!this.ws || this.ws.readyState !== WebSocket.OPEN) return;
     try { this.ws.send(JSON.stringify({ proposal_open_contract: 1, contract_id: contractId, subscribe: 1, req_id: this.msgId++ })); }
     catch (error) { console.error("[Deriv WS] Failed to subscribe to contract:", error); }
   }
+
   private attemptReconnect() {
     if (this.reconnectAttempts < this.maxReconnectAttempts) {
       this.reconnectAttempts++;
@@ -176,6 +215,7 @@ class DerivWebSocketService {
       setTimeout(() => this.setupWebSocket(), this.baseReconnectDelay * (2 ** (this.reconnectAttempts - 1)));
     }
   }
+
   public subscribe(symbol: string): number {
     const subId = this.msgId++;
     if (this.subscribedSymbols.has(symbol)) return subId;
@@ -191,6 +231,7 @@ class DerivWebSocketService {
     this.doSubscribe(symbol);
     return subId;
   }
+
   private doSubscribe(symbol: string) {
     if (this.subscribedSymbols.has(symbol)) return;
     this.subscribedSymbols.add(symbol);
@@ -203,6 +244,7 @@ class DerivWebSocketService {
       this.subscribedSymbols.delete(symbol);
     }
   }
+
   public unsubscribe(subscriptionId: number): void {}
   public addListener(listener: TickStreamListener): void {
     this.listeners.add(listener);
@@ -218,7 +260,10 @@ class DerivWebSocketService {
   public isConnected(): boolean { return this.ws !== null && this.ws.readyState === WebSocket.OPEN; }
   public isAuthorized(): boolean { return this.authorized; }
   public onBalance(cb: (b: any) => void): void { this.balanceListeners.add(cb); if (this.lastBalance) cb(this.lastBalance); }
+  public onSymbols(cb: (symbols: DerivSymbol[]) => void): void { this.symbolListeners.add(cb); if (this._activeSymbols.length > 0) cb(this._activeSymbols); }
+  public get activeSymbols(): DerivSymbol[] { return this._activeSymbols; }
   private notifyBalance(b: any): void { this.balanceListeners.forEach(cb => { try { cb(b); } catch {} }); }
+
   public disconnect(): void {
     this.intentionallyDisconnected = true;
     if (this.ws) { this.ws.close(); this.ws = null; }
@@ -226,10 +271,12 @@ class DerivWebSocketService {
     this.pendingRequests.forEach(p => p.reject(new Error("Connection closed")));
     this.pendingRequests.clear();
   }
+
   public setApiToken(token: string): void {
     if (this.apiToken !== token) this.authorized = false;
     this.apiToken = token;
     if (this.ws && this.ws.readyState === WebSocket.OPEN) this.authorize();
   }
 }
+
 export const derivWS = new DerivWebSocketService();

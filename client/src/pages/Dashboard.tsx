@@ -1,11 +1,4 @@
 import { useAuth } from "@/_core/hooks/useAuth";
-  useEffect(() => {
-    const unsub = derivWS.onBalance((b) => {
-      const acct = b.accounts?.[0] || b;
-      setBalance(parseFloat(acct?.balance || acct?.display_balance || "0"));
-    });
-    return () => {};
-  }, []);
 import { useEffect, useState } from "react";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
@@ -21,13 +14,15 @@ import {
   LayoutGrid,
   List,
   Zap,
-  Brain
+  Brain,
+  ChevronDown
 } from "lucide-react";
 import { useLocation } from "wouter";
-import { derivWS } from "@/services/derivWebSocket";
 import TickChart from "@/components/TickChart";
 import DigitStats from "@/components/DigitStats";
-import { derivWS } from "@/services/derivWebSocket";
+import { derivWS, DerivSymbol } from "@/services/derivWebSocket";
+
+const IT_SYMBOLS = ["R_10","R_25","R_50","R_75","R_100","R_150","R_200"];
 
 export default function Dashboard() {
   const { user, isAuthenticated } = useAuth();
@@ -37,31 +32,17 @@ export default function Dashboard() {
   const [botRunning, setBotRunning] = useState(false);
   const [selectedSymbol, setSelectedSymbol] = useState("R_50");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
-  const [derivConnected, setDerivConnected] = useState(false);
+  const [symbols, setSymbols] = useState<DerivSymbol[]>([]);
+  const [showSymbolPicker, setShowSymbolPicker] = useState(false);
+  const [searchSymbol, setSearchSymbol] = useState("");
 
   const tradesQuery = trpc.trades.list.useQuery({ limit: 20 });
   const botRunsQuery = trpc.bot.getRuns.useQuery();
 
   useEffect(() => {
-    const unsub = derivWS.onBalance((b) => {
-      const acct = b.accounts?.[0] || b;
-      setBalance(parseFloat(acct?.balance || acct?.display_balance || "0"));
-    });
-    return () => {};
-  }, []);
-  useEffect(() => {
-    if (!isAuthenticated) {
-      navigate("/");
-    }
+    if (!isAuthenticated) { navigate("/"); }
   }, [isAuthenticated, navigate]);
 
-  useEffect(() => {
-    const unsub = derivWS.onBalance((b) => {
-      const acct = b.accounts?.[0] || b;
-      setBalance(parseFloat(acct?.balance || acct?.display_balance || "0"));
-    });
-    return () => {};
-  }, []);
   useEffect(() => {
     if (tradesQuery.data) {
       const totalPnl = tradesQuery.data.reduce((sum, trade) => {
@@ -72,13 +53,6 @@ export default function Dashboard() {
     }
   }, [tradesQuery.data]);
 
-  useEffect(() => {
-    const unsub = derivWS.onBalance((b) => {
-      const acct = b.accounts?.[0] || b;
-      setBalance(parseFloat(acct?.balance || acct?.display_balance || "0"));
-    });
-    return () => {};
-  }, []);
   useEffect(() => {
     if (botRunsQuery.data) {
       const running = botRunsQuery.data.some(run => run.status === "running");
@@ -93,16 +67,32 @@ export default function Dashboard() {
     });
     return () => {};
   }, []);
+
   useEffect(() => {
-    setDerivConnected(derivWS.isAuthorized());
-    derivWS.onBalance((b) => {
-      setBalance(parseFloat(b.balance || b.displays?.[0]?.balance || "0"));
+    const unsub = derivWS.onSymbols((syms) => {
+      setSymbols(syms);
+      if (syms.length > 0 && !syms.find(s => s.symbol === selectedSymbol)) {
+        const vi = syms.filter(s => IT_SYMBOLS.includes(s.symbol));
+        if (vi.length > 0) setSelectedSymbol(vi[0].symbol);
+      }
     });
-    const interval = setInterval(() => {
-      setDerivConnected(derivWS.isAuthorized());
-    }, 3000);
-    return () => clearInterval(interval);
+    return () => {};
   }, []);
+
+  const volatilitySymbols = symbols.filter(s => s.market === "volatility" || IT_SYMBOLS.includes(s.symbol));
+  const forexSymbols = symbols.filter(s => s.market === "forex");
+  const otherSymbols = symbols.filter(s => s.market !== "volatility" && s.market !== "forex");
+
+  const filteredSymbols = symbols.filter(s =>
+    s.symbol.toLowerCase().includes(searchSymbol.toLowerCase()) ||
+    s.displayName.toLowerCase().includes(searchSymbol.toLowerCase())
+  );
+
+  const groupedSymbols = [
+    { label: "Volatility", items: volatilitySymbols },
+    { label: "Forex", items: forexSymbols },
+    { label: "Other", items: otherSymbols },
+  ].filter(g => g.items.length > 0);
 
   if (!isAuthenticated || !user) {
     return (
@@ -123,15 +113,11 @@ export default function Dashboard() {
           </p>
         </div>
         <div className="flex items-center gap-3">
-           <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
-              <input 
-                type="text" 
-                placeholder="Search markets..." 
-                className="bg-[#161B22] border-[#30363D] pl-10 pr-4 py-2 rounded-lg text-sm focus:border-blue-500 transition-colors w-64"
-              />
-           </div>
-           <Button className="btn-primary" onClick={() => navigate("/settings")}>Connect Account</Button>
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+            <input type="text" placeholder="Search markets..." className="bg-[#161B22] border-[#30363D] pl-10 pr-4 py-2 rounded-lg text-sm focus:border-blue-500 transition-colors w-64" />
+          </div>
+          <Button className="btn-primary" onClick={() => navigate("/settings")}>Connect Account</Button>
         </div>
       </div>
 
@@ -140,9 +126,7 @@ export default function Dashboard() {
           <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Account Balance</p>
           <div className="flex items-end gap-2">
             <span className="text-2xl font-bold text-white">${balance.toFixed(2)}</span>
-            <span className={`text-xs ${derivConnected ? "text-emerald-500" : "text-red-500"} mb-1`}>
-              {derivConnected ? "LIVE" : "OFFLINE"}
-            </span>
+            <span className="text-xs text-slate-500 mb-1">USD</span>
           </div>
         </div>
         <div className={`bloomberg-panel p-5 border-l-4 ${pnl >= 0 ? "border-l-emerald-500" : "border-l-red-500"}`}>
@@ -181,16 +165,59 @@ export default function Dashboard() {
             <div className="p-4 border-b border-[#30363D] flex items-center justify-between">
               <div className="flex items-center gap-4">
                 <h2 className="font-bold text-white">Live Market Feed</h2>
-                <div className="flex gap-1">
-                  {["R_50", "R_100", "EURUSD"].map(s => (
-                    <button 
-                      key={s}
-                      onClick={() => setSelectedSymbol(s)}
-                      className={`px-3 py-1 text-[10px] font-bold rounded ${selectedSymbol === s ? "bg-blue-600 text-white" : "text-slate-500 hover:text-white"}`}
-                    >
-                      {s}
-                    </button>
-                  ))}
+                <div className="relative">
+                  <button
+                    onClick={() => setShowSymbolPicker(!showSymbolPicker)}
+                    className="flex items-center gap-2 px-3 py-1.5 bg-[#161B22] border border-[#30363D] rounded-lg text-xs font-bold text-white hover:border-blue-500 transition-colors"
+                  >
+                    {selectedSymbol} <ChevronDown className="w-3 h-3" />
+                  </button>
+                  {showSymbolPicker && (
+                    <div className="absolute top-full left-0 mt-1 w-72 bg-[#161B22] border border-[#30363D] rounded-xl shadow-2xl z-50 max-h-96 overflow-y-auto">
+                      <div className="p-3 border-b border-[#30363D]">
+                        <input
+                          value={searchSymbol}
+                          onChange={e => setSearchSymbol(e.target.value)}
+                          placeholder="Search symbols..."
+                          className="w-full bg-[#0D1117] border border-[#30363D] rounded-lg px-3 py-1.5 text-xs text-white placeholder:text-slate-600 focus:border-blue-500"
+                          autoFocus
+                        />
+                      </div>
+                      {searchSymbol ? (
+                        <div className="p-2 space-y-0.5">
+                          {filteredSymbols.slice(0, 50).map(s => (
+                            <button
+                              key={s.symbol}
+                              onClick={() => { setSelectedSymbol(s.symbol); setShowSymbolPicker(false); setSearchSymbol(""); }}
+                              className={`w-full text-left px-3 py-2 rounded-lg text-xs flex items-center justify-between hover:bg-white/5 ${selectedSymbol === s.symbol ? "bg-blue-600/10 text-blue-500" : "text-slate-300"}`}
+                            >
+                              <span className="font-bold">{s.symbol}</span>
+                              <span className="text-slate-500">{s.displayName}</span>
+                            </button>
+                          ))}
+                          {filteredSymbols.length === 0 && <p className="text-xs text-slate-600 text-center py-4">No symbols match</p>}
+                        </div>
+                      ) : (
+                        <div className="p-2 space-y-2">
+                          {groupedSymbols.map(g => (
+                            <div key={g.label}>
+                              <p className="px-3 py-1 text-[10px] font-bold text-slate-600 uppercase tracking-wider">{g.label}</p>
+                              {g.items.slice(0, 15).map(s => (
+                                <button
+                                  key={s.symbol}
+                                  onClick={() => { setSelectedSymbol(s.symbol); setShowSymbolPicker(false); }}
+                                  className={`w-full text-left px-3 py-2 rounded-lg text-xs flex items-center justify-between hover:bg-white/5 ${selectedSymbol === s.symbol ? "bg-blue-600/10 text-blue-500" : "text-slate-300"}`}
+                                >
+                                  <span className="font-bold">{s.symbol}</span>
+                                  <span className="text-slate-500">{s.displayName}</span>
+                                </button>
+                              ))}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
               <Activity className="w-4 h-4 text-blue-500 animate-pulse" />
@@ -241,7 +268,7 @@ export default function Dashboard() {
                   ))}
                   {(!tradesQuery.data || tradesQuery.data.length === 0) && (
                     <tr>
-                      <td colSpan={6} className="p-10 text-center text-slate-600 italic">No trades yet. Deploy a bot to start trading.</td>
+                      <td colSpan={6} className="p-10 text-center text-slate-600 italic">No recent trades found.</td>
                     </tr>
                   )}
                 </tbody>
@@ -260,6 +287,9 @@ export default function Dashboard() {
               <Button onClick={() => navigate("/ai-assistant")} className="w-full btn-secondary justify-start gap-3">
                 <Brain className="w-4 h-4" /> Ask 369AI
               </Button>
+              <Button onClick={() => navigate("/marketplace")} className="w-full btn-outline justify-start gap-3">
+                <LayoutGrid className="w-4 h-4" /> Browse Marketplace
+              </Button>
             </div>
           </div>
 
@@ -274,25 +304,30 @@ export default function Dashboard() {
             <DigitStats symbol={selectedSymbol} />
           </div>
 
+          <div className="bloomberg-panel p-6">
+            <h3 className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-6">Market Status</h3>
+            <div className="space-y-4">
+              {volatilitySymbols.slice(0, 6).map(m => (
+                <div key={m.symbol} className="flex items-center justify-between">
+                  <span className="text-sm text-slate-300">{m.symbol}</span>
+                  <div className="flex items-center gap-3">
+                    <TrendingUp className="w-3 h-3 text-emerald-500" />
+                    <span className="text-[10px] font-bold text-emerald-500 uppercase">Active</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
           <div className="bloomberg-panel p-6 bg-blue-600/5 border-blue-600/20">
             <div className="flex items-center gap-2 mb-4">
               <Brain className="w-4 h-4 text-blue-500" />
-              <h3 className="text-xs font-bold text-blue-500 uppercase tracking-widest">Deriv Status</h3>
+              <h3 className="text-xs font-bold text-blue-500 uppercase tracking-widest">369AI Insight</h3>
             </div>
-            <div className="space-y-3 text-xs text-slate-400">
-              <div className="flex justify-between">
-                <span>Connection</span>
-                <span className={`font-bold ${derivConnected ? "text-emerald-500" : "text-red-500"}`}>
-                  {derivConnected ? "Connected" : "Disconnected"}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span>API Token</span>
-                <span className={`font-bold ${derivWS.isAuthorized() ? "text-emerald-500" : "text-amber-500"}`}>
-                  {derivWS.isAuthorized() ? "Authorized" : "Missing"}
-                </span>
-              </div>
-            </div>
+            <p className="text-xs text-slate-400 leading-relaxed italic">
+              "Volatility 50 index is showing a strong bullish divergence on the 15m RSI. 
+              Consider a Mean Reversion strategy for the next 10 ticks."
+            </p>
           </div>
         </div>
       </div>
