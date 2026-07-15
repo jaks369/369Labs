@@ -98,9 +98,7 @@ export default function Dashboard() {
     s.displayName.toLowerCase().includes(searchSymbol.toLowerCase())
   );
   const volatilitySymbols = filteredSymbols.filter(s => 
-    s.market === "volatility" || 
-    s.submarket?.includes("volatility") ||
-    IT_SYMBOLS.includes(s.symbol)
+    s.market === "volatility" || s.market === "synthetic_index" || s.submarket?.includes("volatility") || s.submarket?.includes("synthetic") || IT_SYMBOLS.includes(s.symbol)
   );
   const forexSymbols = symbols.filter(s => s.market === "forex");
   const syntheticsSymbols = filteredSymbols.filter(s =>
