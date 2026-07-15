@@ -107,7 +107,7 @@ export default function Login() {
           >
             {pending ? "Please wait…" : mode === "login" ? "Log in" : "Create account"}
           </Button>
-        </form>
+        <p className="text-xs text-slate-500 mt-4 text-center"><Link to="/forgot-password" className="text-blue-500 hover:underline">Forgot password?</Link></p></form>
 
         <button
           type="button"
