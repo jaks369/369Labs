@@ -78,6 +78,7 @@ class DerivWebSocketService {
         this.reconnectAttempts = 0;
         this.notifyConnect();
         if (this.apiToken) this.authorize();
+        this.fetchActiveSymbols();
       };
       this.ws.onmessage = (event) => {
         try { this.handleMessage(JSON.parse(event.data)); }
@@ -170,7 +171,7 @@ class DerivWebSocketService {
   }
 
   private fetchBalance() {
-    if (!this.ws || !this.authorized) return;
+    if (!this.ws) return;
     try { this.ws.send(JSON.stringify({ balance: 1, account: "all", req_id: this.msgId++ })); }
     catch (error) { console.error("[Deriv WS] Failed to fetch balance:", error); }
   }
