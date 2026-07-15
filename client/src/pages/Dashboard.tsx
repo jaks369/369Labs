@@ -95,8 +95,8 @@ export default function Dashboard() {
             <div className="p-4 border-b border-[#30363D] flex items-center justify-between">
               <h2 className="font-bold text-white uppercase text-xs tracking-widest">Recent Executions</h2>
               <div className="flex gap-2">
-                <button onClick={() => setViewMode("grid")} className={p-1 }><LayoutGrid className="w-4 h-4" /></button>
-                <button onClick={() => setViewMode("list")} className={p-1 }><List className="w-4 h-4" /></button>
+                <button onClick={() => setViewMode("grid")} className={`p-1 ${viewMode === "grid" ? "text-blue-500" : "text-slate-600"}`}><LayoutGrid className="w-4 h-4" /></button>
+                <button onClick={() => setViewMode("list")} className={`p-1 ${viewMode === "list" ? "text-blue-500" : "text-slate-600"}`}><List className="w-4 h-4" /></button>
               </div>
             </div>
             <div className="overflow-x-auto">
@@ -116,15 +116,15 @@ export default function Dashboard() {
                     <tr key={trade.id} className="hover:bg-white/5 transition-colors">
                       <td className="p-4 font-semibold text-white">{trade.symbol || "-"}</td>
                       <td className="p-4 text-slate-400">{trade.contractType || "-"}</td>
-                      <td className="p-4 text-slate-400"></td>
+                      <td className="p-4 text-slate-400">{trade.stake}</td>
                       <td className="p-4 text-slate-400">{trade.entryPrice}</td>
                       <td className="p-4">
-                        <span className={px-2 py-0.5 rounded-sm font-bold text-[10px] }>
+                        <span className={`px-2 py-0.5 rounded-sm font-bold text-[10px] ${trade.result === "win" ? "bg-emerald-500/10 text-emerald-500" : "bg-red-500/10 text-red-500"}`}>
                           {trade.result.toUpperCase()}
                         </span>
                       </td>
-                      <td className={p-4 text-right font-bold }>
-                        {parseFloat(trade.profitLoss?.toString() || "0") >= 0 ? "+" : ""}
+                      <td className={`p-4 text-right font-bold ${parseFloat(trade.profitLoss?.toString() || "0") >= 0 ? "text-emerald-500" : "text-red-500"}`}>
+                        {parseFloat(trade.profitLoss?.toString() || "0") >= 0 ? "+" : ""}${trade.profitLoss}
                       </td>
                     </tr>
                   ))}
