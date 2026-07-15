@@ -346,31 +346,72 @@ export const appRouter = router({
     }),
   }),
 
-  // AI Assistant
-  ai: router({
-    ask: protectedProcedure
-      .input(z.object({ message: z.string().min(1) }))
-      .query(async ({ ctx, input }) => {
-        const msg = input.message.toLowerCase();
-        if (msg.includes("strategy") || msg.includes("build") || msg.includes("create"))
-          return { reply: "Head to the **Strategy Builder** and switch to **IF/THEN** mode. Set your condition and action, save it, then deploy from the **Bots** page." };
-        if (msg.includes("backtest") || msg.includes("test") || msg.includes("history"))
-          return { reply: "Go to **Backtesting**, pick a symbol and date range, select your saved strategy, and click **Run Backtest**." };
-        if (msg.includes("token") || msg.includes("api") || msg.includes("connect"))
-          return { reply: "Go to **Settings** and paste your Deriv API token." };
-        if (msg.includes("balance") || msg.includes("account"))
-          return { reply: "Your live Deriv balance appears on the **Dashboard** after adding your API token." };
-        if (msg.includes("market") || msg.includes("symbol"))
-          return { reply: "Select any symbol from the **Dashboard** market picker — Volatility indices, Boom & Crash, Forex." };
-        if (msg.includes("risk") || msg.includes("martingale") || msg.includes("money"))
-          return { reply: "Configure risk in **Strategy Builder** (IF/THEN mode). Start small — $1–$10 per trade." };
-        if (msg.includes("profit") || msg.includes("pnl") || msg.includes("win"))
-          return { reply: "Check **Analytics** for P&L breakdown, win rate, and trade history." };
-        if (msg.includes("cloud") || msg.includes("deploy") || msg.includes("bot"))
-          return { reply: "Save a strategy, then go to **Bots** and click **Deploy Bot**." };
-        return { reply: "I can help with: **Strategy Builder**, **Backtesting**, **Deploying bots**, **Analytics**, **Token setup**." };
-      }),
-  }),
-});
+  // AI Agent
+import Groq from "groq-sdk";
+import { getTickHistory, getActiveSymbols } from "./aitools";
+
+const groqAPI = process.env.AI_API_KEY ? new Groq({ apiKey: process.env.AI_API_KEY }) : null;
+
+async function runTool(name: string, args: any) {
+  if (name === "getTickHistory") { try { const t = await getTickHistory(args.symbol, args.count || 100); return { success: true, data: t }; } catch (e) { return { success: false, error: String(e) }; } }
+  if (name === "getActiveSymbols") { try { const s = await getActiveSymbols(); return { success: true, data: s }; } catch (e) { return { success: false, error: String(e) }; } }
+  if (name === "analyzeDigits") {
+    const ticks = args.ticks || []; if (!ticks.length) return { success: false, error: "No ticks" };
+    const digits = ticks.map((t: any) => { const f = t.price.toFixed(2); return parseInt(f[f.length-1], 10); });
+    const counts = Array(10).fill(0); digits.forEach(d => counts[d]++);
+    const total = digits.length;
+    return { success: true, data: { total, frequency: counts.map((c,i) => ({ digit: i, count: c, percent: ((c/total)*100).toFixed(1) })), even: ((digits.filter(d=>d%2===0).length/total)*100).toFixed(1), odd: ((digits.filter(d=>d%2!==0).length/total)*100).toFixed(1), over5: ((digits.filter(d=>d>=5).length/total)*100).toFixed(1), under5: ((digits.filter(d=>d<5).length/total)*100).toFixed(1) } };
+  }
+  if (name === "analyzePattern") {
+    const ticks = args.ticks || []; if (ticks.length < 2) return { success: false, error: "Need 2+ ticks" };
+    const prices = ticks.map((t: any) => t.price);
+    const changes = prices.slice(1).map((p,i) => p - prices[i]);
+    const up = changes.filter(c => c > 0).length; const down = changes.filter(c => c < 0).length;
+    return { success: true, data: { total: ticks.length, up, down, upPercent: ((up/changes.length)*100).toFixed(1), downPercent: ((down/changes.length)*100).toFixed(1), avgChange: (changes.reduce((a,b)=>a+b,0)/changes.length).toFixed(4), first: prices[0], last: prices[prices.length-1], change: (prices[prices.length-1]-prices[0]).toFixed(4) } };
+  }
+  return { success: false, error: "Unknown tool" };
+}
+
+const TOOL_DEFS = [
+  { type: "function", function: { name: "getTickHistory", description: "Get recent tick data for a symbol", parameters: { type: "object", properties: { symbol: { type: "string" }, count: { type: "number" } }, required: ["symbol"] } } },
+  { type: "function", function: { name: "getActiveSymbols", description: "List all available trading symbols", parameters: { type: "object", properties: {} } } },
+  { type: "function", function: { name: "analyzeDigits", description: "Analyze digit frequency from tick array", parameters: { type: "object", properties: { ticks: { type: "array", items: { type: "object" } } }, required: ["ticks"] } } },
+  { type: "function", function: { name: "analyzePattern", description: "Find price patterns in tick array", parameters: { type: "object", properties: { ticks: { type: "array", items: { type: "object" } } }, required: ["ticks"] } } },
+];
+
+ai: router({
+  ask: protectedProcedure
+    .input(z.object({ message: z.string().min(1) }))
+    .mutation(async ({ input }) => {
+      if (!groqAPI) return { reply: "AI not configured. Set AI_API_KEY in .env" };
+      try {
+        const res = await groqAPI.chat.completions.create({
+          model: "llama-3.3-70b-versatile",
+          messages: [{ role: "system", content: "You are 369AI trading assistant. Tools: getTickHistory(symbol,count), getActiveSymbols(), analyzeDigits(ticks), analyzePattern(ticks). Use tools for live data." }, { role: "user", content: input.message }],
+          tools: TOOL_DEFS,
+          tool_choice: "auto",
+        });
+        const msg = res.choices[0]?.message;
+        if (!msg) return { reply: "No response from AI" };
+        if (msg.tool_calls?.length) {
+          const results = await Promise.all(msg.tool_calls.map(async (call: any) => {
+            try { return { tool: call.function.name, result: await runTool(call.function.name, JSON.parse(call.function.arguments || "{}")) }; }
+            catch (e) { return { tool: call.function.name, result: { success: false, error: String(e) } }; }
+          }));
+          const res2 = await groqAPI.chat.completions.create({
+            model: "llama-3.3-70b-versatile",
+            messages: [
+              { role: "system", content: "Explain trading data results clearly." },
+              { role: "user", content: input.message },
+              { role: "assistant", content: msg.content || "", tool_calls: msg.tool_calls },
+              { role: "tool", content: JSON.stringify(results), tool_call_id: msg.tool_calls[0].id }
+            ],
+          });
+          return { reply: res2.choices[0]?.message?.content || JSON.stringify(results) };
+        }
+        return { reply: msg.content || "No response" };
+      } catch (e) { console.error("[AI]", e); return { reply: "AI error: " + String(e) }; }
+    }),
+
 
 export type AppRouter = typeof appRouter;
