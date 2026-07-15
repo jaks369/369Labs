@@ -104,7 +104,53 @@ export const appRouter = router({
         success: true,
       } as const;
     }),
-  }),
+  }
+    
+    // Forgot / Reset Password
+    forgotPassword: publicProcedure
+      .input(z.object({ email: z.string().email() }))
+      .mutation(async ({ ctx, input }) => {
+        try {
+          const user = await db.getUserByEmail(input.email);
+          if (user) {
+            // In production, send reset email with token
+            // For now, log the reset token
+            const resetToken = crypto.randomBytes(32).toString('hex');
+            console.log([PASSWORD RESET] Email: , Token: );
+            // TODO: Store token in DB with expiry, send email
+          }
+          // Always return success to prevent email enumeration
+          return { success: true };
+        } catch (error) {
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: "Failed to process reset request",
+          });
+        }
+      }),
+
+    resetPassword: publicProcedure
+      .input(z.object({
+        token: z.string().min(32),
+        password: z.string().min(8),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        try {
+          // TODO: Verify token from DB, check expiry, update password
+          const valid = false; // placeholder
+          if (!valid) throw new TRPCError({ code: "BAD_REQUEST", message: "Invalid or expired reset token" });
+          const passwordHash = await hashPassword(input.password);
+          // await db.updateUserPassword(userId, passwordHash);
+          return { success: true };
+        } catch (error) {
+          if (error instanceof TRPCError) throw error;
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: "Failed to reset password",
+          });
+        }
+      }),
+),
 
   // Deriv API Token Management
   deriv: router({
