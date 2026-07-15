@@ -40,6 +40,7 @@ export default function Dashboard() {
 
   const tradesQuery = trpc.trades.list.useQuery({ limit: 20 });
   const botRunsQuery = trpc.bot.getRuns.useQuery();
+  const tokenQuery = trpc.deriv.getToken.useQuery();
 
   useEffect(() => {
     if (!isAuthenticated) { navigate("/"); }
@@ -69,6 +70,12 @@ export default function Dashboard() {
     });
     return () => {};
   }, []);
+
+  useEffect(() => {
+    if (tokenQuery.data?.token) {
+      derivWS.setApiToken(tokenQuery.data.token);
+    }
+  }, [tokenQuery.data]);
 
   useEffect(() => {
     const unsub = derivWS.onSymbols((syms) => {
