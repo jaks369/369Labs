@@ -8,6 +8,7 @@ import { derivWS } from '@/services/derivWebSocket';
 interface Props { open: boolean; onClose: () => void; }
 
 export default function DerivTokenModal({ open, onClose }: Props) {
+  if (!open) return null;
   const [token, setToken] = useState('');
   const [changed, setChanged] = useState(false);
   const [preview, setPreview] = useState('');
@@ -19,7 +20,7 @@ export default function DerivTokenModal({ open, onClose }: Props) {
   useEffect(() => { if (q.data?.token) { setPreview(q.data.token.substring(0, 10) + '...'); setStatus('ok'); setMsg('Connected'); } }, [q.data]);
 
   const save = async () => {
-    try { await m.mutateAsync({ token, accountType: 'demo' }); derivWS.setApiToken(token); setPreview(token.substring(0, 10) + '...'); setToken(''); setChanged(false); setStatus('ok'); setMsg('Token saved!');
+    try { await m.mutateAsync({ token, accountType: 'demo' }); derivWS.setApiToken(token); setPreview(token.substring(0, 10) + '...'); setToken(''); setChanged(false); setStatus('ok'); setMsg('Token saved!'); onClose();
     } catch { setStatus('error'); setMsg('Failed to save.'); }
   };
 
