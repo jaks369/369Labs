@@ -35,10 +35,15 @@ export default function StrategyBuilder() {
   const [blocks, setBlocks] = useState<StrategyBlock[]>([]);
   const [rule, setRule] = useState<StrategyRule>(DEFAULT_RULE);
   const [builderMode, setBuilderMode] = useState<"visual" | "blocks">("blocks");
+  const [publishToMarketplace, setPublishToMarketplace] = useState(false);
 
   const publishMutation = trpc.strategies.publish.useMutation();
   const saveStrategyMutation = trpc.strategies.save.useMutation();
   const strategiesQuery = trpc.strategies.list.useQuery();
+
+  const search = useSearch();
+  const editId = new URLSearchParams(search).get("edit");
+  const editQuery = trpc.strategies.getById.useQuery(Number(editId), { enabled: !!editId });
 
   useEffect(() => {
     if (editQuery.data) {
