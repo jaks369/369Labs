@@ -117,11 +117,7 @@ export default function Dashboard() {
         <div className="flex items-center gap-3">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
-            <input type="text" value={marketSearch}
-            onChange={e => setMarketSearch(e.target.value)}
-            placeholder="Search markets..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)} className="bg-[#161B22] border-[#30363D] pl-10 pr-4 py-2 rounded-lg text-sm focus:border-blue-500 transition-colors w-64" />
+            <input type="text" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} placeholder="Search markets..." className="bg-[#161B22] border-[#30363D] pl-10 pr-4 py-2 rounded-lg text-sm focus:border-blue-500 transition-colors w-64" />
           </div>
           <Button className="btn-primary" onClick={() => navigate("/settings")}>Connect Account</Button>
         </div>
