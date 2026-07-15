@@ -30,6 +30,8 @@ export default function TickChart({ symbol, maxDataPoints = 100 }: TickChartProp
   const [subscriptionId, setSubscriptionId] = useState<number>(-1);
 
   useEffect(() => {
+    setData([]);
+    setError(null);
     // Subscribe to ticks
     const id = derivWS.subscribe(symbol);
     setSubscriptionId(id);
