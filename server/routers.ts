@@ -6,6 +6,39 @@ import { z } from "zod";
 import * as db from "./db";
 import { TRPCError } from "@trpc/server";
 import { hashPassword, verifyPassword, createSessionToken } from "./_core/auth";
+import { getTickHistory, getActiveSymbols } from "./aitools";
+
+  async function getAI() {
+    const mod = await import("groq-sdk");
+    return new mod.default({ apiKey: process.env.AI_API_KEY || "" });
+  }
+
+  const TOOL_DEFS = [
+    { type: "function", function: { name: "getTickHistory", description: "Get recent tick data", parameters: { type: "object", properties: { symbol: { type: "string" }, count: { type: "number" } }, required: ["symbol"] } } },
+    { type: "function", function: { name: "getActiveSymbols", description: "List available symbols", parameters: { type: "object", properties: {} } } },
+    { type: "function", function: { name: "analyzeDigits", description: "Analyze digit frequency from ticks", parameters: { type: "object", properties: { ticks: { type: "array", items: { type: "object" } } }, required: ["ticks"] } } },
+    { type: "function", function: { name: "analyzePattern", description: "Analyze price patterns", parameters: { type: "object", properties: { ticks: { type: "array", items: { type: "object" } } }, required: ["ticks"] } } },
+  ];
+
+  async function runTool(name: string, args: any) {
+    if (name === "getTickHistory") { try { const t = await getTickHistory(args.symbol, args.count || 100); return { data: t }; } catch (e) { return { error: String(e) }; } }
+    if (name === "getActiveSymbols") { try { const s = await getActiveSymbols(); return { data: s }; } catch (e) { return { error: String(e) }; } }
+    if (name === "analyzeDigits") {
+      const ticks = args.ticks || []; if (!ticks.length) return { error: "No ticks" };
+      const digits = ticks.map((t: any) => { const f = t.price.toFixed(2); return parseInt(f[f.length-1], 10); });
+      const counts = Array(10).fill(0); digits.forEach(d => counts[d]++);
+      const total = digits.length;
+      return { data: { total, frequency: counts.map((c,i) => ({ digit: i, count: c, percent: ((c/total)*100).toFixed(1) })), even: ((digits.filter(d=>d%2===0).length/total)*100).toFixed(1), odd: ((digits.filter(d=>d%2!==0).length/total)*100).toFixed(1), over5: ((digits.filter(d=>d>=5).length/total)*100).toFixed(1), under5: ((digits.filter(d=>d<5).length/total)*100).toFixed(1) } };
+    }
+    if (name === "analyzePattern") {
+      const ticks = args.ticks || []; if (ticks.length < 2) return { error: "Need 2+ ticks" };
+      const prices = ticks.map((t: any) => t.price);
+      const changes = prices.slice(1).map((p,i) => p - prices[i]);
+      const up = changes.filter(c => c > 0).length; const down = changes.filter(c => c < 0).length;
+      return { data: { total: ticks.length, up, down, upPercent: ((up/changes.length)*100).toFixed(1), downPercent: ((down/changes.length)*100).toFixed(1), avgChange: (changes.reduce((a,b)=>a+b,0)/changes.length).toFixed(4), first: prices[0], last: prices[prices.length-1], change: (prices[prices.length-1]-prices[0]).toFixed(4) } };
+    }
+    return { error: "Unknown tool" };
+  }
 
 export const appRouter = router({
   system: systemRouter,
@@ -347,71 +380,40 @@ export const appRouter = router({
   }),
 
   // AI Agent
-import Groq from "groq-sdk";
-import { getTickHistory, getActiveSymbols } from "./aitools";
-
-const groqAPI = process.env.AI_API_KEY ? new Groq({ apiKey: process.env.AI_API_KEY }) : null;
-
-async function runTool(name: string, args: any) {
-  if (name === "getTickHistory") { try { const t = await getTickHistory(args.symbol, args.count || 100); return { success: true, data: t }; } catch (e) { return { success: false, error: String(e) }; } }
-  if (name === "getActiveSymbols") { try { const s = await getActiveSymbols(); return { success: true, data: s }; } catch (e) { return { success: false, error: String(e) }; } }
-  if (name === "analyzeDigits") {
-    const ticks = args.ticks || []; if (!ticks.length) return { success: false, error: "No ticks" };
-    const digits = ticks.map((t: any) => { const f = t.price.toFixed(2); return parseInt(f[f.length-1], 10); });
-    const counts = Array(10).fill(0); digits.forEach(d => counts[d]++);
-    const total = digits.length;
-    return { success: true, data: { total, frequency: counts.map((c,i) => ({ digit: i, count: c, percent: ((c/total)*100).toFixed(1) })), even: ((digits.filter(d=>d%2===0).length/total)*100).toFixed(1), odd: ((digits.filter(d=>d%2!==0).length/total)*100).toFixed(1), over5: ((digits.filter(d=>d>=5).length/total)*100).toFixed(1), under5: ((digits.filter(d=>d<5).length/total)*100).toFixed(1) } };
-  }
-  if (name === "analyzePattern") {
-    const ticks = args.ticks || []; if (ticks.length < 2) return { success: false, error: "Need 2+ ticks" };
-    const prices = ticks.map((t: any) => t.price);
-    const changes = prices.slice(1).map((p,i) => p - prices[i]);
-    const up = changes.filter(c => c > 0).length; const down = changes.filter(c => c < 0).length;
-    return { success: true, data: { total: ticks.length, up, down, upPercent: ((up/changes.length)*100).toFixed(1), downPercent: ((down/changes.length)*100).toFixed(1), avgChange: (changes.reduce((a,b)=>a+b,0)/changes.length).toFixed(4), first: prices[0], last: prices[prices.length-1], change: (prices[prices.length-1]-prices[0]).toFixed(4) } };
-  }
-  return { success: false, error: "Unknown tool" };
-}
-
-const TOOL_DEFS = [
-  { type: "function", function: { name: "getTickHistory", description: "Get recent tick data for a symbol", parameters: { type: "object", properties: { symbol: { type: "string" }, count: { type: "number" } }, required: ["symbol"] } } },
-  { type: "function", function: { name: "getActiveSymbols", description: "List all available trading symbols", parameters: { type: "object", properties: {} } } },
-  { type: "function", function: { name: "analyzeDigits", description: "Analyze digit frequency from tick array", parameters: { type: "object", properties: { ticks: { type: "array", items: { type: "object" } } }, required: ["ticks"] } } },
-  { type: "function", function: { name: "analyzePattern", description: "Find price patterns in tick array", parameters: { type: "object", properties: { ticks: { type: "array", items: { type: "object" } } }, required: ["ticks"] } } },
-];
-
-ai: router({
-  ask: protectedProcedure
-    .input(z.object({ message: z.string().min(1) }))
-    .mutation(async ({ input }) => {
-      if (!groqAPI) return { reply: "AI not configured. Set AI_API_KEY in .env" };
-      try {
-        const res = await groqAPI.chat.completions.create({
-          model: "llama-3.3-70b-versatile",
-          messages: [{ role: "system", content: "You are 369AI trading assistant. Tools: getTickHistory(symbol,count), getActiveSymbols(), analyzeDigits(ticks), analyzePattern(ticks). Use tools for live data." }, { role: "user", content: input.message }],
-          tools: TOOL_DEFS,
-          tool_choice: "auto",
-        });
-        const msg = res.choices[0]?.message;
-        if (!msg) return { reply: "No response from AI" };
-        if (msg.tool_calls?.length) {
-          const results = await Promise.all(msg.tool_calls.map(async (call: any) => {
-            try { return { tool: call.function.name, result: await runTool(call.function.name, JSON.parse(call.function.arguments || "{}")) }; }
-            catch (e) { return { tool: call.function.name, result: { success: false, error: String(e) } }; }
-          }));
-          const res2 = await groqAPI.chat.completions.create({
+  ai: router({
+    ask: protectedProcedure
+      .input(z.object({ message: z.string().min(1) }))
+      .mutation(async ({ input }) => {
+        if (!process.env.AI_API_KEY) return { reply: "AI not configured. Add AI_API_KEY to .env" };
+        try {
+          const ai = await getAI();
+          const res = await ai.chat.completions.create({
             model: "llama-3.3-70b-versatile",
-            messages: [
-              { role: "system", content: "Explain trading data results clearly." },
-              { role: "user", content: input.message },
-              { role: "assistant", content: msg.content || "", tool_calls: msg.tool_calls },
-              { role: "tool", content: JSON.stringify(results), tool_call_id: msg.tool_calls[0].id }
-            ],
+            messages: [{ role: "system", content: "You are 369AI trading assistant. Use tools to fetch live data." }, { role: "user", content: input.message }],
+            tools: TOOL_DEFS,
+            tool_choice: "auto",
           });
-          return { reply: res2.choices[0]?.message?.content || JSON.stringify(results) };
-        }
-        return { reply: msg.content || "No response" };
-      } catch (e) { console.error("[AI]", e); return { reply: "AI error: " + String(e) }; }
-    }),
-
+          const msg = res.choices[0]?.message;
+          if (!msg) return { reply: "No response" };
+          if (msg.tool_calls?.length) {
+            const results = await Promise.all(msg.tool_calls.map(async (call: any) => {
+              try { return { tool: call.function.name, result: await runTool(call.function.name, JSON.parse(call.function.arguments || "{}")) }; } catch (e) { return { tool: call.function.name, result: { error: String(e) } }; }
+            }));
+            const res2 = await ai.chat.completions.create({
+              model: "llama-3.3-70b-versatile",
+              messages: [
+                { role: "system", content: "Explain trading data results." },
+                { role: "user", content: input.message },
+                { role: "assistant", content: msg.content || "", tool_calls: msg.tool_calls },
+                { role: "tool", content: JSON.stringify(results), tool_call_id: msg.tool_calls[0].id }
+              ],
+            });
+            return { reply: res2.choices[0]?.message?.content || "Done." };
+          }
+          return { reply: msg.content || "No response" };
+        } catch (e) { console.error("[AI]", e); return { reply: "Error: " + String(e) }; }
+      }),
+  }),
+});
 
 export type AppRouter = typeof appRouter;
