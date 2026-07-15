@@ -26,7 +26,7 @@ import ContractTypeSelector, { ContractSelection } from "@/components/ContractTy
 
 const IT_SYMBOLS = ["R_10","R_25","R_50","R_75","R_100","R_150","R_200"];
 
-export default function Dashboard() {
+// Build: 2026-07-16 00:42:13\nexport default function Dashboard() {
   const { user, isAuthenticated } = useAuth();
   const [, navigate] = useLocation();
   const [pnl, setPnl] = useState(0);
