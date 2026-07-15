@@ -94,8 +94,8 @@ export default function Dashboard() {
 
 
   const filteredSymbols = symbols.filter(s =>
-    s.symbol.toLowerCase().includes(searchSymbol.toLowerCase()) ||
-    s.displayName.toLowerCase().includes(searchSymbol.toLowerCase())
+    (s.symbol || "").toLowerCase().includes(searchSymbol.toLowerCase()) ||
+    (s.displayName || "").toLowerCase().includes(searchSymbol.toLowerCase())
   );
   const volatilitySymbols = filteredSymbols.filter(s => 
     s.market === "volatility" || s.market === "synthetic_index" || s.submarket?.includes("volatility") || s.submarket?.includes("synthetic") || IT_SYMBOLS.includes(s.symbol)

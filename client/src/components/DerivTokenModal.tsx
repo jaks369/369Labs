@@ -34,7 +34,7 @@ export default function DerivTokenModal({ open, onClose }: Props) {
         <div className="p-5 space-y-4">
           <div>
             <label className="text-xs font-bold text-slate-500 block mb-2">Deriv API Token</label>
-            <Input type="password" placeholder={preview ? 'Enter new token' : 'Paste your Deriv API token'} value={token} onChange={e => { setToken(e.target.value); setChanged(true); }} className="bg-[#161B22] border-[#30363D] text-white" />
+            <Input type="text" autoComplete="off" placeholder={preview ? 'Enter new token' : 'Paste your Deriv API token'} value={token} onChange={e => { setToken(e.target.value); setChanged(true); }} className="bg-[#161B22] border-[#30363D] text-white" />
             {preview && <p className="text-xs text-emerald-500 mt-1">Current: {preview}</p>}
             <p className="text-xs text-slate-500 mt-2">Get token from app.deriv.com/account/api-token</p>
           </div>
