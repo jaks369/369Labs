@@ -133,7 +133,6 @@ class DerivWebSocketService {
       this.fetchActiveSymbols();
       this.processPendingSubscriptions();
      
-      this.fetchActiveSymbols(); return;
     }
     if (data.msg_type === "balance") {
       this.lastBalance = data.balance;
