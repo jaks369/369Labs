@@ -1,10 +1,8 @@
 import React, { useEffect, useState } from "react";
-import { derivWS, Tick } from "@/services/derivWebSocket";
+import { derivWS, Tick, TickStreamListener } from "@/services/derivWebSocket";
 
 interface DigitStatsProps {
   symbol: string;
-  // Matches BotEngine's decimalPlaces so digit stats reflect the same last
-  // digit the bot actually trades on. Defaults to 2, same as BotEngine.
   decimalPlaces?: number;
 }
 
@@ -19,44 +17,45 @@ export default function DigitStats({ symbol, decimalPlaces = 2 }: DigitStatsProp
   });
 
   useEffect(() => {
-    const handleTick = (tick: Tick) => {
-      if (tick.symbol !== symbol) return;
-      
-      const fixed = tick.price.toFixed(decimalPlaces);
-      const lastDigit = parseInt(fixed[fixed.length - 1], 10);
-      setDigits((prev) => {
-        const next = [...prev, lastDigit].slice(-100);
+    const listener: TickStreamListener = {
+      onTick: (tick: Tick) => {
+        if (tick.symbol !== symbol) return;
         
-        // Calculate stats
-        const counts = Array(10).fill(0);
-        let even = 0, odd = 0, over5 = 0, under5 = 0;
-        
-        next.forEach((d) => {
-          counts[d]++;
-          if (d % 2 === 0) even++; else odd++;
-          if (d >= 5) over5++; else under5++;
+        const fixed = tick.price.toFixed(decimalPlaces);
+        const lastDigit = parseInt(fixed[fixed.length - 1], 10);
+        setDigits((prev) => {
+          const next = [...prev, lastDigit].slice(-100);
+          
+          const counts = Array(10).fill(0);
+          let even = 0, odd = 0, over5 = 0, under5 = 0;
+          
+          next.forEach((d) => {
+            counts[d]++;
+            if (d % 2 === 0) even++; else odd++;
+            if (d >= 4) over5++; else under5++;
+          });
+          
+          setStats({
+            even: (even / next.length) * 100,
+            odd: (odd / next.length) * 100,
+            over5: (over5 / next.length) * 100,
+            under5: (under5 / next.length) * 100,
+            counts: counts.map((c) => (c / next.length) * 100),
+          });
+          
+          return next;
         });
-        
-        setStats({
-          even: (even / next.length) * 100,
-          odd: (odd / next.length) * 100,
-          over5: (over5 / next.length) * 100,
-          under5: (under5 / next.length) * 100,
-          counts: counts.map((c) => (c / next.length) * 100),
-        });
-        
-        return next;
-      });
+      },
     };
 
-    derivWS.addListener({ onTick: handleTick });
+    derivWS.addListener(listener);
     const subId = derivWS.subscribe(symbol);
 
     return () => {
-      derivWS.removeListener({ onTick: handleTick });
+      derivWS.removeListener(listener);
       derivWS.unsubscribe(subId);
     };
-  }, [symbol]);
+  }, [symbol, decimalPlaces]);
 
   return (
     <div className="space-y-6">
