@@ -98,6 +98,7 @@ export default function Dashboard() {
     s.submarket?.includes("volatility") ||
     IT_SYMBOLS.includes(s.symbol)
   );
+  const forexSymbols = symbols.filter(s => s.market === "forex");
   const syntheticsSymbols = filteredSymbols.filter(s =>
     s.market === "indices" ||
     s.displayName?.toLowerCase().includes("boom") ||
@@ -106,9 +107,8 @@ export default function Dashboard() {
     s.displayName?.toLowerCase().includes("jump") ||
     s.displayName?.toLowerCase().includes("range") ||
     s.displayName?.toLowerCase().includes("daily reset") ||
-    (!volatilitySymbols.includes(s) && !forexSymbols.includes(s) && s.market !== "forex")
+    (!volatilitySymbols.includes(s) && s.market !== "forex")
   );
-  const forexSymbols = symbols.filter(s => s.market === "forex");
   const otherSymbols = symbols.filter(s => s.market !== "volatility" && s.market !== "forex");
 
   const groupedSymbols = [
