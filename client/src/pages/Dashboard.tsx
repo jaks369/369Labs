@@ -26,7 +26,7 @@ import ContractTypeSelector, { ContractSelection } from "@/components/ContractTy
 
 const IT_SYMBOLS = ["R_10","R_25","R_50","R_75","R_100","R_150","R_200"];
 
-// Build: 2026-07-16 00:42:13\nexport default function Dashboard() {
+export default function Dashboard() {
   const { user, isAuthenticated } = useAuth();
   const [, navigate] = useLocation();
   const [pnl, setPnl] = useState(0);
@@ -72,63 +72,7 @@ const IT_SYMBOLS = ["R_10","R_25","R_50","R_75","R_100","R_150","R_200"];
       const acct = b.accounts?.[0] || b;
       setBalance(parseFloat(acct?.balance || acct?.display_balance || "0"));
     });
-    return () => {};
-  }, []);
-
-  useEffect(() => {
-    if (tokenQuery.data?.token) {
-      derivWS.setApiToken(tokenQuery.data.token);
-    }
-  }, [tokenQuery.data]);
-
-  useEffect(() => {
-    const unsub = derivWS.onSymbols((syms) => {
-      setSymbols(syms);
-      if (syms.length > 0 && !syms.find(s => s.symbol === selectedSymbol)) {
-        const vi = syms.filter(s => IT_SYMBOLS.includes(s.symbol));
-        if (vi.length > 0) setSelectedSymbol(vi[0].symbol);
-      }
-    });
-    return () => {};
-  }, []);
-
-
-  const filteredSymbols = symbols.filter(s =>
-    (s.symbol || "").toLowerCase().includes(searchSymbol.toLowerCase()) ||
-    (s.displayName || "").toLowerCase().includes(searchSymbol.toLowerCase())
-  );
-  const volatilitySymbols = filteredSymbols.filter(s => 
-    s.market === "volatility" || s.market === "synthetic_index" || s.submarket?.includes("volatility") || s.submarket?.includes("synthetic") || IT_SYMBOLS.includes(s.symbol)
-  );
-  const forexSymbols = symbols.filter(s => s.market === "forex");
-  const syntheticsSymbols = filteredSymbols.filter(s =>
-    s.market === "indices" ||
-    s.displayName?.toLowerCase().includes("boom") ||
-    s.displayName?.toLowerCase().includes("crash") ||
-    s.displayName?.toLowerCase().includes("step") ||
-    s.displayName?.toLowerCase().includes("jump") ||
-    s.displayName?.toLowerCase().includes("range") ||
-    s.displayName?.toLowerCase().includes("daily reset") ||
-    (!volatilitySymbols.includes(s) && s.market !== "forex")
-  );
-  const otherSymbols = symbols.filter(s => s.market !== "volatility" && s.market !== "forex");
-
-  const groupedSymbols = [
-    { label: "Volatility Indices", items: volatilitySymbols },
-    { label: "Synthetics (Boom/Crash/Step/Jump)", items: syntheticsSymbols },
-    { label: "Forex", items: forexSymbols },
-    { label: "Other", items: otherSymbols },
-  ].filter(g => g.items.length > 0);
-
-  if (!isAuthenticated || !user) {
     return (
-      <div className="flex items-center justify-center h-full">
-        <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
-      </div>
-    );
-  }
-
-  return (
     <div className="p-6 lg:p-10">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-10">
         <div>
@@ -139,17 +83,20 @@ const IT_SYMBOLS = ["R_10","R_25","R_50","R_75","R_100","R_150","R_200"];
           </p>
         </div>
         <div className="flex items-center gap-3">
-            <div className="p-6 bg-black/40 h-[400px]">
-              <TickChart symbol={selectedSymbol} maxDataPoints={50} />
-            </div>
+          <div className="p-6 bg-black/40 h-[400px]">
+            <TickChart symbol={selectedSymbol} maxDataPoints={50} />
           </div>
+        </div>
+      </div>
 
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
+        <div className="xl:col-span-2 space-y-8">
           <div className="bloomberg-panel">
             <div className="p-4 border-b border-[#30363D] flex items-center justify-between">
               <h2 className="font-bold text-white uppercase text-xs tracking-widest">Recent Executions</h2>
               <div className="flex gap-2">
-                <button onClick={() => setViewMode("grid")} className={`p-1 ${viewMode === "grid" ? "text-blue-500" : "text-slate-600"}`}><LayoutGrid className="w-4 h-4" /></button>
-                <button onClick={() => setViewMode("list")} className={`p-1 ${viewMode === "list" ? "text-blue-500" : "text-slate-600"}`}><List className="w-4 h-4" /></button>
+                <button onClick={() => setViewMode("grid")} className={p-1 }><LayoutGrid className="w-4 h-4" /></button>
+                <button onClick={() => setViewMode("list")} className={p-1 }><List className="w-4 h-4" /></button>
               </div>
             </div>
             <div className="overflow-x-auto">
@@ -167,19 +114,17 @@ const IT_SYMBOLS = ["R_10","R_25","R_50","R_75","R_100","R_150","R_200"];
                 <tbody className="divide-y divide-[#30363D]">
                   {tradesQuery.data?.slice(0, 8).map(trade => (
                     <tr key={trade.id} className="hover:bg-white/5 transition-colors">
-                      <td className="p-4 font-semibold text-white">{trade.symbol || "—"}</td>
-                      <td className="p-4 text-slate-400">{trade.contractType || "—"}</td>
-                      <td className="p-4 text-slate-400">${trade.stake}</td>
+                      <td className="p-4 font-semibold text-white">{trade.symbol || "-"}</td>
+                      <td className="p-4 text-slate-400">{trade.contractType || "-"}</td>
+                      <td className="p-4 text-slate-400"></td>
                       <td className="p-4 text-slate-400">{trade.entryPrice}</td>
                       <td className="p-4">
-                        <span className={`px-2 py-0.5 rounded-sm font-bold text-[10px] ${
-                          trade.result === "win" ? "bg-emerald-500/10 text-emerald-500" : "bg-red-500/10 text-red-500"
-                        }`}>
+                        <span className={px-2 py-0.5 rounded-sm font-bold text-[10px] }>
                           {trade.result.toUpperCase()}
                         </span>
                       </td>
-                      <td className={`p-4 text-right font-bold ${parseFloat(trade.profitLoss?.toString() || "0") >= 0 ? "text-emerald-500" : "text-red-500"}`}>
-                        {parseFloat(trade.profitLoss?.toString() || "0") >= 0 ? "+" : ""}${trade.profitLoss}
+                      <td className={p-4 text-right font-bold }>
+                        {parseFloat(trade.profitLoss?.toString() || "0") >= 0 ? "+" : ""}
                       </td>
                     </tr>
                   ))}
