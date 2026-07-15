@@ -26,7 +26,7 @@ import {
 import { ENV } from './_core/env';
 import { encrypt, decrypt } from './_core/encryption';
 
-function parseDbUrl(url: string): Record<string, any> {
+function parseDbUrl(url: string) {
   const parsed = new URL(url);
   const config: Record<string, any> = {
     host: parsed.hostname,
@@ -52,7 +52,8 @@ export async function getDb() {
     } else {
       try {
         const cfg = parseDbUrl(process.env.DATABASE_URL);
-        _db = drizzle(_pool);
+        const pool = mysql.createPool(cfg);
+        _db = drizzle(pool);
         console.log("[Database] Connected successfully");
       } catch (error) {
         _dbError = String(error);
