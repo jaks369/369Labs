@@ -107,46 +107,6 @@ export default function Settings() {
         </div>
 
         <div className="hud-panel mb-6">
-          <h2 className="text-lg font-bold text-[#FF00FF] mb-4">DERIV API TOKEN</h2>
-          <div className="space-y-4">
-            <div>
-              <label className="text-sm text-[#00FFFF] block mb-2">API Token</label>
-              <input
-                type="text"
-                autoComplete="off"
-                placeholder="Paste your full Deriv API token here"
-                value={derivToken}
-                onChange={(e) => { setDerivToken(e.target.value); setTokenChanged(true); }}
-                className="flex h-10 w-full rounded-md border border-[#00FFFF]/40 bg-[#0A0E27] px-3 py-2 text-sm text-[#00FFFF] placeholder:text-[#00FFFF]/30 focus:outline-none focus:ring-2 focus:ring-[#00FFFF]"
-              />
-              <p className="text-xs text-[#00FFFF]/60 mt-2">
-                Get your token from{' '}
-                <a href="https://app.deriv.com/account/api-token" target="_blank" rel="noopener noreferrer" className="underline">
-                  app.deriv.com/account/api-token
-                </a>
-              </p>
-            </div>
-            <Button
-              onClick={handleSaveDerivToken}
-              disabled={saveDerivTokenMutation.isPending}
-              className="w-full bg-[#00FFFF] text-[#0A0E27] hover:bg-[#00FFFF]/80 font-bold py-2 px-4 rounded"
-            >
-              {saveDerivTokenMutation.isPending ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  SAVING...
-                </>
-              ) : (
-                <>
-                  <Save className="w-4 h-4 mr-2" />
-                  SAVE TOKEN
-                </>
-              )}
-            </Button>
-          </div>
-        </div>
-
-        <div className="hud-panel mb-6">
           <h2 className="text-lg font-bold text-[#FF00FF] mb-4">TELEGRAM NOTIFICATIONS</h2>
           <div className="space-y-4">
             <div>
