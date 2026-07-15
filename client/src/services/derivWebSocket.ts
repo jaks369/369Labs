@@ -132,7 +132,8 @@ class DerivWebSocketService {
       this.fetchBalance();
       this.fetchActiveSymbols();
       this.processPendingSubscriptions();
-      return;
+     
+      this.fetchActiveSymbols(); return;
     }
     if (data.msg_type === "balance") {
       this.lastBalance = data.balance;
@@ -266,7 +267,7 @@ class DerivWebSocketService {
   public get activeSymbols(): DerivSymbol[] { return this._activeSymbols; }
   private notifyBalance(b: any): void { this.balanceListeners.forEach(cb => { try { cb(b); } catch {} }); }
   public disconnect(): void { this.intentionallyDisconnected = true; if (this.ws) { this.ws.close(); this.ws = null; } this.contractListeners.clear(); this.pendingRequests.forEach(p => p.reject(new Error("Connection closed"))); this.pendingRequests.clear(); }
-  public setApiToken(token: string): void { if (this.apiToken !== token) this.authorized = false; this.apiToken = token; if (this.ws && this.ws.readyState === WebSocket.OPEN) this.authorize(); }
+  public setApiToken(token: string): void { if (this.apiToken !== token) this.authorized = false; this.apiToken = token; if (this.ws && this.ws.readyState === WebSocket.OPEN) { this.authorized = false; this.authorize(); } }
 }
 
 export const derivWS = new DerivWebSocketService();
