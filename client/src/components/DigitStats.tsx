@@ -9,6 +9,7 @@ interface DigitStatsProps {
 
 export default function DigitStats({ symbol, decimalPlaces = 2, maxTicks = 100 }: DigitStatsProps) {
   const [digits, setDigits] = useState<number[]>([]);
+  const [selectedDigit, setSelectedDigit] = useState<number | null>(null);
   const [stats, setStats] = useState({
     even: 0,
     odd: 0,
@@ -33,7 +34,8 @@ export default function DigitStats({ symbol, decimalPlaces = 2, maxTicks = 100 }
           next.forEach((d) => {
             counts[d]++;
             if (d % 2 === 0) even++; else odd++;
-            if (d >= 5) over++; else under++;
+            const th = selectedDigit !== null ? selectedDigit : 5;
+            if (d >= th) over++; else under++;
           });
 
           setStats({
@@ -83,7 +85,7 @@ export default function DigitStats({ symbol, decimalPlaces = 2, maxTicks = 100 }
         </div>
         <div className="bg-slate-900/50 p-3 rounded border border-slate-800">
           <div className="flex justify-between text-[10px] font-bold text-slate-500 mb-2 uppercase">
-            <span>Over 5</span>
+            <span>Over {selectedDigit ?? 5}</span>
             <span className="text-purple-500">{stats.over.toFixed(1)}%</span>
           </div>
           <div className="h-1.5 w-full bg-slate-800 rounded-full overflow-hidden">
@@ -92,7 +94,7 @@ export default function DigitStats({ symbol, decimalPlaces = 2, maxTicks = 100 }
         </div>
         <div className="bg-slate-900/50 p-3 rounded border border-slate-800">
           <div className="flex justify-between text-[10px] font-bold text-slate-500 mb-2 uppercase">
-            <span>Under 5</span>
+            <span>Under {selectedDigit ?? 5}</span>
             <span className="text-orange-500">{stats.under.toFixed(1)}%</span>
           </div>
           <div className="h-1.5 w-full bg-slate-800 rounded-full overflow-hidden">
@@ -107,7 +109,7 @@ export default function DigitStats({ symbol, decimalPlaces = 2, maxTicks = 100 }
           {stats.counts.map((percent, i) => (
             <div key={i} className="flex-1 flex flex-col items-center gap-2">
               <span className="text-[9px] font-bold text-slate-400">{percent.toFixed(1)}%</span>
-              <div className="w-full bg-blue-600/20 rounded-t-sm relative group" style={{ height: `${(percent / maxPercent) * 100}%` }}>
+              <div onClick={() => setSelectedDigit(d => d === i ? null : i)} className="w-full bg-blue-600/20 rounded-t-sm relative group cursor-pointer" style={{ height: `${(percent / maxPercent) * 100}%` }}>
                 <div className="absolute inset-0 bg-blue-500 opacity-60 group-hover:opacity-100 transition-opacity rounded-t-sm" style={{ height: `${percent}%` }} />
               </div>
               <span className="text-[11px] font-bold text-slate-300">{i}</span>
