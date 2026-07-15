@@ -93,12 +93,27 @@ export default function Dashboard() {
     s.symbol.toLowerCase().includes(searchSymbol.toLowerCase()) ||
     s.displayName.toLowerCase().includes(searchSymbol.toLowerCase())
   );
-  const volatilitySymbols = filteredSymbols.filter(s => s.market === "volatility" || IT_SYMBOLS.includes(s.symbol));
+  const volatilitySymbols = filteredSymbols.filter(s => 
+    s.market === "volatility" || 
+    s.submarket?.includes("volatility") ||
+    IT_SYMBOLS.includes(s.symbol)
+  );
+  const syntheticsSymbols = filteredSymbols.filter(s =>
+    s.market === "indices" ||
+    s.displayName?.toLowerCase().includes("boom") ||
+    s.displayName?.toLowerCase().includes("crash") ||
+    s.displayName?.toLowerCase().includes("step") ||
+    s.displayName?.toLowerCase().includes("jump") ||
+    s.displayName?.toLowerCase().includes("range") ||
+    s.displayName?.toLowerCase().includes("daily reset") ||
+    (!volatilitySymbols.includes(s) && !forexSymbols.includes(s) && s.market !== "forex")
+  );
   const forexSymbols = symbols.filter(s => s.market === "forex");
   const otherSymbols = symbols.filter(s => s.market !== "volatility" && s.market !== "forex");
 
   const groupedSymbols = [
-    { label: "Volatility", items: volatilitySymbols },
+    { label: "Volatility Indices", items: volatilitySymbols },
+    { label: "Synthetics (Boom/Crash/Step/Jump)", items: syntheticsSymbols },
     { label: "Forex", items: forexSymbols },
     { label: "Other", items: otherSymbols },
   ].filter(g => g.items.length > 0);
@@ -200,8 +215,8 @@ export default function Dashboard() {
                               onClick={() => { setSelectedSymbol(s.symbol); setShowSymbolPicker(false); setSearchSymbol(""); }}
                               className={`w-full text-left px-3 py-2 rounded-lg text-xs flex items-center justify-between hover:bg-white/5 ${selectedSymbol === s.symbol ? "bg-blue-600/10 text-blue-500" : "text-slate-300"}`}
                             >
-                              <span className="font-bold">{s.symbol}</span>
-                              <span className="text-slate-500">{s.displayName}</span>
+                              <span className="font-bold">{s.displayName || s.symbol}</span>
+                              <span className="text-slate-500 text-[10px]">{s.symbol}</span>
                             </button>
                           ))}
                           {filteredSymbols.length === 0 && <p className="text-xs text-slate-600 text-center py-4">No symbols match</p>}
@@ -217,8 +232,8 @@ export default function Dashboard() {
                                   onClick={() => { setSelectedSymbol(s.symbol); setShowSymbolPicker(false); }}
                                   className={`w-full text-left px-3 py-2 rounded-lg text-xs flex items-center justify-between hover:bg-white/5 ${selectedSymbol === s.symbol ? "bg-blue-600/10 text-blue-500" : "text-slate-300"}`}
                                 >
-                                  <span className="font-bold">{s.symbol}</span>
-                                  <span className="text-slate-500">{s.displayName}</span>
+                                  <span className="font-bold">{s.displayName || s.symbol}</span>
+                              <span className="text-slate-500 text-[10px]">{s.symbol}</span>
                                 </button>
                               ))}
                             </div>
