@@ -21,6 +21,7 @@ import { useLocation } from "wouter";
 import TickChart from "@/components/TickChart";
 import DigitStats from "@/components/DigitStats";
 import { derivWS, DerivSymbol } from "@/services/derivWebSocket";
+import ContractTypeSelector, { ContractSelection } from "@/components/ContractTypeSelector";
 
 const IT_SYMBOLS = ["R_10","R_25","R_50","R_75","R_100","R_150","R_200"];
 
@@ -37,6 +38,7 @@ export default function Dashboard() {
   const [symbols, setSymbols] = useState<DerivSymbol[]>([]);
   const [showSymbolPicker, setShowSymbolPicker] = useState(false);
   const [searchSymbol, setSearchSymbol] = useState("");
+  const [contract, setContract] = useState<ContractSelection>({ category: "rise_fall", direction: "rise" });
 
   const tradesQuery = trpc.trades.list.useQuery({ limit: 20 });
   const botRunsQuery = trpc.bot.getRuns.useQuery();
@@ -325,6 +327,7 @@ export default function Dashboard() {
                 <span className="text-[9px] font-bold text-purple-500 uppercase">Live</span>
               </div>
             </div>
+            <ContractTypeSelector selection={contract} onChange={setContract} />
             <DigitStats symbol={selectedSymbol} />
           </div>
 
