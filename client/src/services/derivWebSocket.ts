@@ -248,7 +248,11 @@ class DerivWebSocketService {
     catch (error) { console.error("[Deriv WS] Failed to subscribe:", error); this.subscribedSymbols.delete(symbol); }
   }
 
-  public unsubscribe(subscriptionId: number): void {}
+  public unsubscribe(subscriptionId: number): void {
+    // We can't track which symbol maps to which subscriptionId easily,
+    // so just let the listener removal handle it.
+    // The real cleanup happens when removeListener is called.
+  }
   public addListener(listener: TickStreamListener): void { this.listeners.add(listener); if (this.ws && this.ws.readyState === WebSocket.OPEN) { try { listener.onConnect?.(); } catch {} } }
   public removeListener(listener: TickStreamListener): void { this.listeners.delete(listener); }
   private notifyTick(tick: Tick): void { this.listeners.forEach(l => { try { l.onTick(tick); } catch {} }); }

@@ -37,6 +37,7 @@ export default function TickChart({ symbol, maxDataPoints = 100 }: TickChartProp
     // Create listener
     const listener = {
       onTick: (tick: Tick) => {
+        if (tick.symbol !== symbol) return;
         setData((prevData) => {
           const newData = [
             ...prevData,
