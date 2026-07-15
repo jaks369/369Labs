@@ -4,15 +4,16 @@ import { derivWS, Tick, TickStreamListener } from "@/services/derivWebSocket";
 interface DigitStatsProps {
   symbol: string;
   decimalPlaces?: number;
+  maxTicks?: number;
 }
 
-export default function DigitStats({ symbol, decimalPlaces = 2 }: DigitStatsProps) {
+export default function DigitStats({ symbol, decimalPlaces = 2, maxTicks = 100 }: DigitStatsProps) {
   const [digits, setDigits] = useState<number[]>([]);
   const [stats, setStats] = useState({
     even: 0,
     odd: 0,
-    over4: 0,
-    under4: 0,
+    over: 0,
+    under: 0,
     counts: Array(10).fill(0),
   });
 
@@ -24,23 +25,23 @@ export default function DigitStats({ symbol, decimalPlaces = 2 }: DigitStatsProp
         const fixed = tick.price.toFixed(decimalPlaces);
         const lastDigit = parseInt(fixed[fixed.length - 1], 10);
         setDigits((prev) => {
-          const next = [...prev, lastDigit].slice(-100);
+          const next = [...prev, lastDigit].slice(-maxTicks);
 
           const counts = Array(10).fill(0);
-          let even = 0, odd = 0, over4 = 0, under4 = 0;
+          let even = 0, odd = 0, over = 0, under = 0;
 
           next.forEach((d) => {
             counts[d]++;
             if (d % 2 === 0) even++; else odd++;
-            if (d >= 4) over4++; else under4++;
+            if (d >= 5) over++; else under++;
           });
 
           setStats({
-            even: (even / next.length) * 100,
-            odd: (odd / next.length) * 100,
-            over4: (over4 / next.length) * 100,
-            under4: (under4 / next.length) * 100,
-            counts: counts.map((c) => (c / next.length) * 100),
+            even: next.length ? (even / next.length) * 100 : 0,
+            odd: next.length ? (odd / next.length) * 100 : 0,
+            over: next.length ? (over / next.length) * 100 : 0,
+            under: next.length ? (under / next.length) * 100 : 0,
+            counts: counts.map((c) => (next.length ? (c / next.length) * 100 : 0)),
           });
 
           return next;
@@ -55,18 +56,20 @@ export default function DigitStats({ symbol, decimalPlaces = 2 }: DigitStatsProp
       derivWS.removeListener(listener);
       derivWS.unsubscribe(subId);
     };
-  }, [symbol, decimalPlaces]);
+  }, [symbol, decimalPlaces, maxTicks]);
+
+  const maxPercent = Math.max(...stats.counts, 1);
 
   return (
-    <div className="space-y-6">
-      <div className="grid grid-cols-2 gap-4">
+    <div className="space-y-4">
+      <div className="grid grid-cols-2 gap-3">
         <div className="bg-slate-900/50 p-3 rounded border border-slate-800">
           <div className="flex justify-between text-[10px] font-bold text-slate-500 mb-2 uppercase">
             <span>Even</span>
             <span className="text-emerald-500">{stats.even.toFixed(1)}%</span>
           </div>
           <div className="h-1.5 w-full bg-slate-800 rounded-full overflow-hidden">
-            <div className="h-full bg-emerald-500 transition-all duration-500" style={{ width: `${stats.even}%` }} />
+            <div className="h-full bg-emerald-500 transition-all duration-300" style={{ width: `${stats.even}%` }} />
           </div>
         </div>
         <div className="bg-slate-900/50 p-3 rounded border border-slate-800">
@@ -75,41 +78,39 @@ export default function DigitStats({ symbol, decimalPlaces = 2 }: DigitStatsProp
             <span className="text-blue-500">{stats.odd.toFixed(1)}%</span>
           </div>
           <div className="h-1.5 w-full bg-slate-800 rounded-full overflow-hidden">
-            <div className="h-full bg-blue-500 transition-all duration-500" style={{ width: `${stats.odd}%` }} />
+            <div className="h-full bg-blue-500 transition-all duration-300" style={{ width: `${stats.odd}%` }} />
           </div>
         </div>
         <div className="bg-slate-900/50 p-3 rounded border border-slate-800">
           <div className="flex justify-between text-[10px] font-bold text-slate-500 mb-2 uppercase">
-            <span>Over 4</span>
-            <span className="text-purple-500">{stats.over4.toFixed(1)}%</span>
+            <span>Over 5</span>
+            <span className="text-purple-500">{stats.over.toFixed(1)}%</span>
           </div>
           <div className="h-1.5 w-full bg-slate-800 rounded-full overflow-hidden">
-            <div className="h-full bg-purple-500 transition-all duration-500" style={{ width: `${stats.over4}%` }} />
+            <div className="h-full bg-purple-500 transition-all duration-300" style={{ width: `${stats.over}%` }} />
           </div>
         </div>
         <div className="bg-slate-900/50 p-3 rounded border border-slate-800">
           <div className="flex justify-between text-[10px] font-bold text-slate-500 mb-2 uppercase">
             <span>Under 5</span>
-            <span className="text-orange-500">{stats.under4.toFixed(1)}%</span>
+            <span className="text-orange-500">{stats.under.toFixed(1)}%</span>
           </div>
           <div className="h-1.5 w-full bg-slate-800 rounded-full overflow-hidden">
-            <div className="h-full bg-orange-500 transition-all duration-500" style={{ width: `${stats.under4}%` }} />
+            <div className="h-full bg-orange-500 transition-all duration-300" style={{ width: `${stats.under}%` }} />
           </div>
         </div>
       </div>
 
       <div className="bg-slate-900/50 p-4 rounded border border-slate-800">
-        <h4 className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-4">Digit Frequency (Last 100 Ticks)</h4>
-        <div className="flex items-end justify-between h-24 gap-1">
+        <h4 className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-4">Digit Frequency (Last {maxTicks} Ticks)</h4>
+        <div className="flex items-end justify-between h-32 gap-1">
           {stats.counts.map((percent, i) => (
             <div key={i} className="flex-1 flex flex-col items-center gap-2">
-              <div className="w-full bg-blue-600/20 rounded-t-sm relative group" style={{ height: `${percent * 2}px` }}>
-                <div className="absolute -top-6 left-1/2 -translate-x-1/2 text-[9px] font-bold text-white opacity-0 group-hover:opacity-100 transition-opacity">
-                  {percent.toFixed(0)}%
-                </div>
-                <div className="absolute inset-0 bg-blue-500 opacity-40 group-hover:opacity-100 transition-opacity rounded-t-sm" />
+              <span className="text-[9px] font-bold text-slate-400">{percent.toFixed(1)}%</span>
+              <div className="w-full bg-blue-600/20 rounded-t-sm relative group" style={{ height: `${(percent / maxPercent) * 100}%` }}>
+                <div className="absolute inset-0 bg-blue-500 opacity-60 group-hover:opacity-100 transition-opacity rounded-t-sm" style={{ height: `${percent}%` }} />
               </div>
-              <span className="text-[10px] font-bold text-slate-600">{i}</span>
+              <span className="text-[11px] font-bold text-slate-300">{i}</span>
             </div>
           ))}
         </div>
