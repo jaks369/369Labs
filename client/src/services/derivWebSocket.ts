@@ -158,7 +158,7 @@ class DerivWebSocketService {
   }
 
   private fetchActiveSymbols() {
-    if (!this.ws || !this.authorized) return;
+    if (!this.ws) return;
     try { this.ws.send(JSON.stringify({ active_symbols: "brief", product_type: "all", req_id: this.msgId++ })); }
     catch (error) { console.error("[Deriv WS] Failed to fetch active symbols:", error); }
   }
