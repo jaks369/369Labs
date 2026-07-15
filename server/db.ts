@@ -52,7 +52,7 @@ export async function getDb() {
     } else {
       try {
         const cfg = parseDbUrl(process.env.DATABASE_URL);
-        _db = drizzle(cfg);
+        _db = drizzle(_pool);
         console.log("[Database] Connected successfully");
       } catch (error) {
         _dbError = String(error);
