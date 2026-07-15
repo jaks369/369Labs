@@ -36,7 +36,7 @@ function parseDbUrl(url: string): Record<string, any> {
     database: parsed.pathname.replace("/", ""),
   };
   if (parsed.hostname.includes("tidbcloud.com")) {
-    config.ssl = { minVersion: "TLSv1.2" };
+    config.ssl = { rejectUnauthorized: false };
   }
   return config;
 }
