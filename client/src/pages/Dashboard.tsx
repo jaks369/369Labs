@@ -306,6 +306,43 @@ export default function Dashboard() {
 
         <div className="space-y-8">
           <div className="bloomberg-panel p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-xs font-bold text-slate-500 uppercase tracking-widest">Quick Trade</h3>
+              <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded ${accountType === "real" ? "bg-red-500/20 text-red-400" : accountType === "demo" ? "bg-amber-500/20 text-amber-400" : "bg-slate-500/20 text-slate-400"}`}>
+                {accountType === "real" ? "REAL" : accountType === "demo" ? "DEMO" : "NO TOKEN"}
+              </span>
+            </div>
+            <div className="space-y-3">
+              <div>
+                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Symbol</label>
+                <div className="mt-1 px-3 py-2 rounded-lg bg-[#0D1117] border border-[#30363D] text-sm text-white">{selectedSymbol}</div>
+              </div>
+              <ContractTypeSelector selection={contract} onChange={setContract} />
+              <div>
+                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Stake ($)</label>
+                <input
+                  type="number"
+                  min={0.35}
+                  step="0.01"
+                  value={stake}
+                  onChange={(e) => setStake(Math.max(0, parseFloat(e.target.value) || 0))}
+                  className="mt-1 w-full bg-[#0D1117] border border-[#30363D] rounded-lg px-3 py-2 text-sm text-white focus:border-blue-500 focus:outline-none"
+                />
+              </div>
+              <Button onClick={handleQuickTrade} disabled={tradeBusy} className="w-full btn-primary flex items-center justify-center gap-2">
+                {tradeBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : (contract.direction === "fall" ? <TrendingDown className="w-4 h-4" /> : <TrendingUp className="w-4 h-4" />)}
+                {tradeBusy ? "Placing..." : "Buy"}
+              </Button>
+              {tradeMsg && (
+                <p className={`text-xs ${tradeMsg.kind === "ok" ? "text-emerald-400" : "text-red-400"}`}>{tradeMsg.text}</p>
+              )}
+              {!derivWS.isAuthorized() && (
+                <p className="text-[10px] text-slate-500">Connect a Deriv token in Settings to enable trading.</p>
+              )}
+            </div>
+          </div>
+
+          <div className="bloomberg-panel p-6">
             <h3 className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-6">Quick Launch</h3>
             <div className="space-y-3">
               <Button onClick={() => navigate("/bots")} className="w-full btn-primary justify-start gap-3">
