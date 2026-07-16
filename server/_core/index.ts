@@ -7,6 +7,7 @@ import { createContext } from "./context";
 import { serveStatic } from "./staticServe";
 import { getDb } from "../db";
 import { startTickCollector } from "../tickCollector";
+import { runWatch } from "../signalScanner";
 import { ENV } from "./env";
 
 function logStartupChecks() {
@@ -52,10 +53,35 @@ export async function createApp() {
     app.listen(port, () => {
       console.log(`Server running on http://localhost:${port}/`);
       startTickCollector();
+      startAlwaysOnScanner();
     });
   }
 
   return app;
+}
+
+// Always-on AI scanner: periodically scans the main volatility symbols for all users
+// and records any repeatable pattern as a signal (the Marketplace feed). Runs every 10 min.
+function startAlwaysOnScanner() {
+  const SYMBOLS = ["R_10", "R_25", "R_50", "R_75", "R_100", "1HZ10V", "1HZ50V", "1HZ100V"];
+  const INTERVAL_MS = 10 * 60 * 1000;
+  const tick = async () => {
+    try {
+      const db = await getDb();
+      if (!db) return;
+      const users = await db.select().from(users);
+      for (const u of users) {
+        for (const sym of SYMBOLS) {
+          try {
+            await runWatch({ userId: u.id, symbol: sym, sampleSize: 600, minWinRate: 65, patternType: "any" });
+          } catch (e) { console.error("[alwaysOnScanner] symbol", sym, e); }
+        }
+      }
+      console.log("[alwaysOnScanner] cycle complete");
+    } catch (e) { console.error("[alwaysOnScanner]", e); }
+  };
+  setTimeout(tick, 60 * 1000); // first run 1 min after boot
+  setInterval(tick, INTERVAL_MS);
 }
 
 const appPromise = createApp();
