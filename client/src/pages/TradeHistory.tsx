@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { derivWS } from "@/services/derivWebSocket";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { trpc } from "@/lib/trpc";
 import { Loader2, Download } from "lucide-react";
@@ -8,6 +9,10 @@ export default function TradeHistory() {
   const { user, isAuthenticated } = useAuth();
   const [, navigate] = useLocation();
   const tradesQuery = trpc.trades.list.useQuery({ limit: 100 });
+  const [tab, setTab] = useState<"trades" | "prices">("trades");
+  const [priceSymbol, setPriceSymbol] = useState("R_100");
+  const priceQuery = trpc.market.getHistory.useQuery({ symbol: priceSymbol, limit: 200 }, { enabled: tab === "prices" });
+  const priceDecimals = derivWS.decimalPlacesFor(priceSymbol);
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -63,7 +68,50 @@ export default function TradeHistory() {
           </button>
         </div>
 
-        {/* Trades Table */}
+        {/* Tabs */}
+        <div className="flex gap-2 mb-6">
+          <button onClick={() => setTab("trades")} className={`px-4 py-2 rounded-lg text-sm font-bold ${tab === "trades" ? "bg-[#FF00FF]/20 text-[#FF00FF]" : "text-[#00FFFF]/60 hover:text-[#00FFFF]"}`}>TRADES</button>
+          <button onClick={() => setTab("prices")} className={`px-4 py-2 rounded-lg text-sm font-bold ${tab === "prices" ? "bg-[#FF00FF]/20 text-[#FF00FF]" : "text-[#00FFFF]/60 hover:text-[#00FFFF]"}`}>PRICE HISTORY</button>
+        </div>
+
+        {tab === "prices" ? (
+          <div className="hud-panel p-6">
+            <div className="flex items-center gap-3 mb-4">
+              <label className="text-xs text-[#00FFFF]/60">SYMBOL</label>
+              <select value={priceSymbol} onChange={(e) => setPriceSymbol(e.target.value)} className="bg-[#0F1629] border border-[#00FFFF]/30 rounded px-3 py-2 text-sm text-[#00FFFF]">
+                {["R_10","R_25","R_50","R_75","R_100","R_150","R_200","R_501","R_1000","R_10_1","R_25_1","R_50_1","R_75_1","R_100_1"].map((s) => (
+                  <option key={s} value={s}>{s}</option>
+                ))}
+              </select>
+            </div>
+            {priceQuery.isLoading ? (
+              <div className="flex items-center justify-center py-12"><Loader2 className="w-8 h-8 animate-spin text-[#00FFFF]" /></div>
+            ) : priceQuery.data?.ticks?.length ? (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-[#00FFFF]/30">
+                      <th className="text-left py-3 px-4 text-[#FF00FF] font-bold">TIME</th>
+                      <th className="text-right py-3 px-4 text-[#FF00FF] font-bold">PRICE</th>
+                      <th className="text-right py-3 px-4 text-[#FF00FF] font-bold">LAST DIGIT</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {priceQuery.data.ticks.slice().reverse().map((t: any, i: number) => (
+                      <tr key={i} className="border-b border-[#00FFFF]/10">
+                        <td className="py-2 px-4 text-xs">{new Date((t.epoch || 0) * 1000).toLocaleString()}</td>
+                        <td className="py-2 px-4 text-right">{Number(t.price).toFixed(priceDecimals)}</td>
+                        <td className="py-2 px-4 text-right">{String(t.price).replace(".", "")[String(t.price).replace(".", "").length - 1]}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <div className="text-center py-12 text-[#00FFFF]/60">No price history found.</div>
+            )}
+          </div>
+        ) : (
         <div className="hud-panel overflow-x-auto">
           {tradesQuery.isLoading ? (
             <div className="flex items-center justify-center py-12">
@@ -116,6 +164,8 @@ export default function TradeHistory() {
             </div>
           )}
         </div>
+
+        )}
 
         {/* Summary Stats */}
         {tradesQuery.data && tradesQuery.data.length > 0 && (
