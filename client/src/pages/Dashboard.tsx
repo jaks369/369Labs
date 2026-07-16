@@ -44,6 +44,7 @@ export default function Dashboard() {
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [showSymbolPicker, setShowSymbolPicker] = useState(false);
   const [showTokenModal, setShowTokenModal] = useState(false);
+  const [tokenError, setTokenError] = useState<string | null>(null);
   const [contract, setContract] = useState<ContractSelection>({ category: "rise_fall", direction: "rise" });
 
   const tradesQuery = trpc.trades.list.useQuery({ limit: 20 });
@@ -84,6 +85,11 @@ export default function Dashboard() {
       derivWS.setApiToken(tokenQuery.data.token);
     }
   }, [tokenQuery.data]);
+
+  useEffect(() => {
+    const unsub = derivWS.onTokenError((msg) => setTokenError(msg));
+    return () => { /* tokenListeners is a Set; ignore */ };
+  }, []);
 
   const [symbols, setSymbols] = useState<DerivSymbol[]>([]);
   useEffect(() => {
@@ -130,6 +136,13 @@ export default function Dashboard() {
           </Button>
         </div>
       </div>
+
+      {tokenError && (
+        <div className="flex items-center justify-between gap-3 bg-amber-500/10 border border-amber-500/40 text-amber-400 text-sm rounded-lg px-4 py-2 mb-4">
+          <span>Deriv token issue: {tokenError}. Update it to trade.</span>
+          <Button onClick={() => setShowTokenModal(true)} className="btn-outline text-amber-400 border-amber-500/40 text-xs px-3 py-1">UPDATE TOKEN</Button>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
         <div className="xl:col-span-2 space-y-8">
