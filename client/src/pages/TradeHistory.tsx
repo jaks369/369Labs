@@ -101,7 +101,7 @@ export default function TradeHistory() {
                       <tr key={i} className="border-b border-[#00FFFF]/10">
                         <td className="py-2 px-4 text-xs">{new Date((t.epoch || 0) * 1000).toLocaleString()}</td>
                         <td className="py-2 px-4 text-right">{Number(t.price).toFixed(priceDecimals)}</td>
-                        <td className="py-2 px-4 text-right">{String(t.price).replace(".", "")[String(t.price).replace(".", "").length - 1]}</td>
+                        <td className="py-2 px-4 text-right">{t.lastDigit}</td>
                       </tr>
                     ))}
                   </tbody>
