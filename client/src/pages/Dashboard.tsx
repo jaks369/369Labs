@@ -429,20 +429,6 @@ export default function Dashboard() {
             <DigitStats symbol={selectedSymbol} decimalPlaces={decimalPlaces} />
           </div>
 
-          <div className="bloomberg-panel p-6">
-            <h3 className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-6">Market Status</h3>
-            <div className="space-y-4">
-              {volRegularSymbols.slice(0, 6).map(m => (
-                <div key={m.symbol} className="flex items-center justify-between">
-                  <span className="text-sm text-slate-300">{m.symbol}</span>
-                  <div className="flex items-center gap-3">
-                    <TrendingUp className="w-3 h-3 text-emerald-500" />
-                    <span className="text-[10px] font-bold text-emerald-500 uppercase">Active</span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
 
           <div className="bloomberg-panel p-6 bg-amber-400/5 border-amber-400/20">
             <div className="flex items-center gap-2 mb-4">
