@@ -44,6 +44,7 @@ export interface DerivSymbol {
   displayName: string;
   market: string;
   submarket: string;
+  decimalPlaces?: number;
 }
 
 const DERIV_APP_ID = (import.meta as any).env?.VITE_DERIV_APP_ID || "1089";
@@ -146,6 +147,7 @@ class DerivWebSocketService {
         displayName: s.display_name || s.symbol,
         market: s.market || s.market,
         submarket: s.submarket || "",
+        decimalPlaces: typeof s.pip === "number" ? s.pip : (s.display_name || s.symbol || "").includes("(1s)") ? 3 : 3,
       }));
       this._activeSymbols = symbols;
       this.symbolListeners.forEach(cb => { try { cb(symbols); } catch {} });
@@ -265,6 +267,8 @@ class DerivWebSocketService {
   public onBalance(cb: (b: any) => void): void { this.balanceListeners.add(cb); if (this.lastBalance) cb(this.lastBalance); }
   public onSymbols(cb: (symbols: DerivSymbol[]) => void): void { this.symbolListeners.add(cb); if (this._activeSymbols.length > 0) cb(this._activeSymbols); }
   public get activeSymbols(): DerivSymbol[] { return this._activeSymbols; }
+  public getSymbol(symbol: string): DerivSymbol | undefined { return this._activeSymbols.find(s => s.symbol === symbol); }
+  public decimalPlacesFor(symbol: string): number { return this.getSymbol(symbol)?.decimalPlaces ?? 3; }
   private notifyBalance(b: any): void { this.balanceListeners.forEach(cb => { try { cb(b); } catch {} }); }
   public disconnect(): void { this.intentionallyDisconnected = true; if (this.ws) { this.ws.close(); this.ws = null; } this.contractListeners.clear(); this.pendingRequests.forEach(p => p.reject(new Error("Connection closed"))); this.pendingRequests.clear(); }
   public setApiToken(token: string): void { if (this.apiToken !== token) this.authorized = false; this.apiToken = token; if (this.ws && this.ws.readyState === WebSocket.OPEN) { this.authorized = false; this.authorize(); } }
