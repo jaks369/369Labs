@@ -130,7 +130,7 @@ export class BotEngine {
   }
 
   private lastDigit(price: number): number {
-    const decimals = this.config?.decimalPlaces ?? 2;
+    const decimals = this.config?.decimalPlaces ?? derivWS.decimalPlacesFor(this.config.symbol);
     const fixed = price.toFixed(decimals);
     return parseInt(fixed[fixed.length - 1], 10);
   }
