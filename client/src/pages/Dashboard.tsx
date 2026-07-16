@@ -52,10 +52,47 @@ export default function Dashboard() {
   const [showTokenModal, setShowTokenModal] = useState(false);
   const [tokenError, setTokenError] = useState<string | null>(null);
   const [contract, setContract] = useState<ContractSelection>({ category: "rise_fall", direction: "rise" });
+  const [stake, setStake] = useState<number>(1);
+  const [tradeBusy, setTradeBusy] = useState(false);
+  const [tradeMsg, setTradeMsg] = useState<{ kind: "ok" | "err"; text: string } | null>(null);
 
   const tradesQuery = trpc.trades.list.useQuery({ limit: 20 });
   const botRunsQuery = trpc.bot.getRuns.useQuery();
   const tokenQuery = trpc.deriv.getToken.useQuery();
+
+  const accountType = derivWS.getAccountType();
+
+  const handleQuickTrade = async () => {
+    if (!derivWS.isAuthorized()) { setTradeMsg({ kind: "err", text: "Connect a Deriv token first (Settings)." }); return; }
+    if (accountType === "real") {
+      const ok = window.confirm("You are connected to a REAL account. This trade uses real funds. Continue?");
+      if (!ok) return;
+    }
+    const map: Record<string, string> = {
+      "rise_fall": contract.direction === "fall" ? "PUT" : "CALL",
+      "over_under": contract.overUnder === "under" ? "DIGITUNDER" : "DIGITOVER",
+      "even_odd": contract.digitMatch === "differ" ? "DIGITODD" : "DIGITEVEN",
+      "digits": "DIGITMATCH",
+      "accumulator": "ACCU",
+    };
+    const contractType = map[contract.category];
+    if (!contractType) { setTradeMsg({ kind: "err", text: "Unsupported contract type." }); return; }
+    setTradeBusy(true); setTradeMsg(null);
+    try {
+      const purchase = await derivWS.purchaseContract({
+        symbol: selectedSymbol,
+        contractType: contractType as any,
+        amount: stake,
+        duration: 5,
+        durationUnit: "t",
+        ...(contract.category === "over_under" && contract.barrier !== undefined ? { barrier: contract.barrier } : {}),
+        ...(contract.category === "digits" && contract.digit !== undefined ? { barrier: contract.digit } : {}),
+      });
+      setTradeMsg({ kind: "ok", text: "Trade placed (contract #" + purchase.contractId + "). Settlement will appear in history." });
+    } catch (e: any) {
+      setTradeMsg({ kind: "err", text: "Trade failed: " + (e?.message || e) });
+    } finally { setTradeBusy(false); }
+  };
 
   useEffect(() => {
     if (!isAuthenticated) { navigate("/"); }
