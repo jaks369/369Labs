@@ -9,9 +9,10 @@ interface ChartData {
 interface TickChartProps {
   symbol: string;
   maxDataPoints?: number;
+  decimalPlaces?: number;
 }
 
-export default function TickChart({ symbol, maxDataPoints = 100 }: TickChartProps) {
+export default function TickChart({ symbol, maxDataPoints = 100, decimalPlaces = 3 }: TickChartProps) {
   const [data, setData] = useState<ChartData[]>([]);
   const [isConnected, setIsConnected] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -84,7 +85,7 @@ export default function TickChart({ symbol, maxDataPoints = 100 }: TickChartProp
         </div>
         <span className="text-xs font-bold text-white">{symbol}</span>
         <span className={`text-lg font-bold ${priceColor === "up" ? "text-green-500" : "text-red-500"}`}>
-          {currentPrice !== null ? currentPrice.toFixed(4) : "--"}
+          {currentPrice !== null ? currentPrice.toFixed(decimalPlaces) : "--"}
         </span>
       </div>
 
@@ -130,11 +131,11 @@ export default function TickChart({ symbol, maxDataPoints = 100 }: TickChartProp
       <div className="mt-3 grid grid-cols-3 gap-3 text-xs">
         <div className="bg-slate-900/50 p-2 rounded border border-slate-800">
           <span className="text-slate-500 text-[10px] uppercase">High</span>
-          <p className="text-white font-bold">{maxPrice.toFixed(4)}</p>
+          <p className="text-white font-bold">{maxPrice.toFixed(decimalPlaces)}</p>
         </div>
         <div className="bg-slate-900/50 p-2 rounded border border-slate-800">
           <span className="text-slate-500 text-[10px] uppercase">Low</span>
-          <p className="text-white font-bold">{minPrice.toFixed(4)}</p>
+          <p className="text-white font-bold">{minPrice.toFixed(decimalPlaces)}</p>
         </div>
         <div className="bg-slate-900/50 p-2 rounded border border-slate-800">
           <span className="text-slate-500 text-[10px] uppercase">Ticks</span>
