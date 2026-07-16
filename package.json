@@ -3,6 +3,7 @@
     "version":  "1.0.0",
     "type":  "module",
     "license":  "MIT",
+  "engines":  { "node":  ">=18.18.0 <23" },
     "scripts":  {
                     "dev":  "NODE_ENV=development tsx watch server/_core/dev.ts",
                     "build":  "vite build \u0026\u0026 esbuild server/_core/index.ts --platform=node --packages=external --bundle --format=esm --outdir=dist",
