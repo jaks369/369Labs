@@ -116,7 +116,7 @@ export const appRouter = router({
             // In production, send reset email with token
             // For now, log the reset token
             const resetToken = crypto.randomBytes(32).toString('hex');
-            console.log([PASSWORD RESET] Email: , Token: );
+            console.log('[PASSWORD RESET] Email:', input.email, 'Token:', resetToken);
             // TODO: Store token in DB with expiry, send email
           }
           // Always return success to prevent email enumeration
@@ -150,7 +150,7 @@ export const appRouter = router({
           });
         }
       }),
-),
+  }),
 
   // Deriv API Token Management
   deriv: router({
