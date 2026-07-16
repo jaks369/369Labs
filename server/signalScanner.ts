@@ -1,4 +1,4 @@
-import { db } from "./db";
+import { getDb } from "./db";
 import { getTickHistory, normalizeSymbol } from "./aitools";
 
 // Pattern types the scanner knows how to detect over a tick window.
@@ -125,6 +125,8 @@ function simulateOutcome(entry: number, next: number, tradeType: string): "win" 
 
 // Run a scan and persist any signals found.
 export async function runWatch(opts: ScanOptions): Promise<any[]> {
+  const db = await getDb();
+  if (!db) return [];
   const found = await scanTicks(opts);
   const saved = [];
   for (const f of found) {
