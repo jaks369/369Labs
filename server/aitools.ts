@@ -12,13 +12,11 @@ const VALID_SYMBOLS = [
 export function normalizeSymbol(input: string): string {
   if (!input) return input;
   let s = input.trim().toUpperCase().replace(/\s+/g, '');
-  // R10 / R100 etc -> R_10 / R_100
   const rMatch = s.match(/^R(\d+)$/);
   if (rMatch) {
     const candidate = 'R_' + rMatch[1];
     if (VALID_SYMBOLS.includes(candidate)) return candidate;
   }
-  // 1HZ10 / 1HZ100 (missing trailing V) -> add V if valid
   const hzMatch = s.match(/^1HZ(\d+)$/);
   if (hzMatch) {
     const candidate = '1HZ' + hzMatch[1] + 'V';
@@ -68,3 +66,161 @@ export async function getActiveSymbols() {
   const filtered = mapped.filter((s: any) => VALID_SYMBOLS.includes(s.symbol));
   return filtered.length ? filtered : mapped;
 }
+
+// --- Analytics tools (read-only, no auth required) ---
+
+// Last-digit distribution + hot/cold digits for a symbol.
+export async function getDigitStats(symbol: string, count = 100) {
+  const ticks = await getTickHistory(symbol, count);
+  if (!ticks.length) return { symbol: normalizeSymbol(symbol), count: 0, digits: {}, hottest: [], coldest: [] };
+  const digits: Record<string, number> = {};
+  for (const t of ticks) {
+    const str = String(t.price).replace('.', '');
+    const d = str[str.length - 1];
+    digits[d] = (digits[d] || 0) + 1;
+  }
+  const sorted = Object.entries(digits).sort((a, b) => b[1] - a[1]);
+  return {
+    symbol: normalizeSymbol(symbol),
+    count: ticks.length,
+    digits,
+    hottest: sorted.slice(0, 3).map(([d, c]) => ({ digit: d, count: c })),
+    coldest: sorted.slice(-3).reverse().map(([d, c]) => ({ digit: d, count: c })),
+  };
+}
+
+// Price trend: direction, change %, recent high/low.
+export async function getTrend(symbol: string, count = 100) {
+  const ticks = await getTickHistory(symbol, count);
+  if (ticks.length < 2) return { symbol: normalizeSymbol(symbol), count: ticks.length };
+  const prices = ticks.map(t => Number(t.price));
+  const first = prices[0], last = prices[prices.length - 1];
+  const high = Math.max(...prices), low = Math.min(...prices);
+  const changePct = ((last - first) / first) * 100;
+  const direction = changePct > 0.0001 ? 'up' : changePct < -0.0001 ? 'down' : 'flat';
+  return {
+    symbol: normalizeSymbol(symbol),
+    count: ticks.length,
+    first, last, high, low,
+    changePct: Number(changePct.toFixed(4)),
+    direction,
+  };
+}
+
+// Suggest a strategy rule based on digit stats (over/under on hottest digit).
+export async function suggestStrategy(symbol: string, count = 100) {
+  const stats = await getDigitStats(symbol, count);
+  if (!stats.hottest.length) return { symbol: normalizeSymbol(symbol), suggestion: 'Not enough data to suggest a strategy.' };
+  const hot = stats.hottest[0].digit;
+  const cold = stats.coldest[0]?.digit;
+  return {
+    symbol: normalizeSymbol(symbol),
+    suggestion: `Based on the last ${stats.count} ticks, digit ${hot} is hottest and ${cold ?? 'n/a'} is coldest. Consider an "even/odd" or "matches/differs" contract targeting digit ${hot}, or fade the cold digit ${cold ?? ''}.`,
+    hottest: stats.hottest,
+    coldest: stats.coldest,
+  };
+}
+
+// --- Action-intent tools (return structured intents; client executes + confirms) ---
+
+export function buildActionIntent(action: string, params: Record<string, any>, requiresConfirm = true) {
+  return { __action: true, action, params, requiresConfirm };
+}
+
+export const TOOL_DEFS = [
+  {
+    type: 'function',
+    function: {
+      name: 'getTickHistory',
+      description: 'Get recent tick prices for a Deriv symbol (e.g. R_10, R_50, R_100, 1HZ10V).',
+      parameters: { type: 'object', properties: { symbol: { type: 'string' }, count: { type: 'number' } }, required: ['symbol'] },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'getActiveSymbols',
+      description: 'List available Deriv symbols on 369Labs.',
+      parameters: { type: 'object', properties: {} },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'getDigitStats',
+      description: 'Analyze last-digit distribution (hot/cold digits) for a symbol over recent ticks.',
+      parameters: { type: 'object', properties: { symbol: { type: 'string' }, count: { type: 'number' } }, required: ['symbol'] },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'getTrend',
+      description: 'Get price trend (direction, change %, high/low) for a symbol.',
+      parameters: { type: 'object', properties: { symbol: { type: 'string' }, count: { type: 'number' } }, required: ['symbol'] },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'suggestStrategy',
+      description: 'Suggest a trading rule/strategy for a symbol based on digit statistics.',
+      parameters: { type: 'object', properties: { symbol: { type: 'string' }, count: { type: 'number' } }, required: ['symbol'] },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'listStrategies',
+      description: 'List the users saved strategies so they can pick one to deploy.',
+      parameters: { type: 'object', properties: {} },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'deployBot',
+      description: 'Deploy a saved bot/strategy to start trading live. Requires confirm=true and a strategyId.',
+      parameters: {
+        type: 'object',
+        properties: { strategyId: { type: 'number' }, symbol: { type: 'string' }, stake: { type: 'number' }, confirm: { type: 'boolean' } },
+        required: ['strategyId', 'confirm'],
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'placeTrade',
+      description: 'Place a single manual trade on Deriv. Requires confirm=true, symbol, contractType, stake.',
+      parameters: {
+        type: 'object',
+        properties: {
+          symbol: { type: 'string' },
+          contractType: { type: 'string', description: 'e.g. CALL, PUT, DIGITMATCH, DIGITDIFF' },
+          stake: { type: 'number' },
+          barrier: { type: 'string' },
+          confirm: { type: 'boolean' },
+        },
+        required: ['symbol', 'contractType', 'stake', 'confirm'],
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'runBacktest',
+      description: 'Run a backtest for a saved strategy over a date range. Returns an intent the app executes.',
+      parameters: {
+        type: 'object',
+        properties: {
+          strategyId: { type: 'number' },
+          symbol: { type: 'string' },
+          start: { type: 'string', description: 'ISO date or epoch seconds' },
+          end: { type: 'string', description: 'ISO date or epoch seconds' },
+        },
+        required: ['strategyId', 'symbol'],
+      },
+    },
+  },
+];
