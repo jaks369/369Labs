@@ -10,11 +10,13 @@ import {
   AlertCircle,
   Zap,
   Plus,
+  ChevronLeft,
 } from "lucide-react";
 import { useLocation } from "wouter";
 import { BotEngine, BotStatus, BotTrade } from "@/services/BotEngine";
 import { derivWS } from "@/services/derivWebSocket";
 import { StrategyRule } from "@/components/RuleBuilder";
+import { StrategyBuilderContent } from "@/pages/StrategyBuilder";
 
 interface RunningBot {
   runId: number;
@@ -42,6 +44,7 @@ export default function Bots() {
   const [, navigate] = useLocation();
   const [runningBots, setRunningBots] = useState<RunningBot[]>([]);
   const [deployingId, setDeployingId] = useState<number | null>(null);
+  const [creating, setCreating] = useState(false);
 
   const strategiesQuery = trpc.strategies.list.useQuery();
   const derivTokenQuery = trpc.deriv.getToken.useQuery();
@@ -65,7 +68,19 @@ export default function Bots() {
   // Stop all engines if the user navigates away / unmounts, so bots don't keep
   // trading in the background with no visible controls.
   useEffect(() => {
-    return () => {
+    if (creating) {
+    return (
+      <div className="p-6 lg:p-10">
+        <StrategyBuilderContent
+          embedded
+          onClose={() => setCreating(false)}
+          onSaved={() => { setCreating(false); strategiesQuery.refetch(); }}
+        />
+      </div>
+    );
+  }
+
+  return () => {
       botsRef.current.forEach((b) => b.engine.stop());
     };
   }, []);
@@ -168,6 +183,18 @@ export default function Bots() {
     }
   };
 
+  if (creating) {
+    return (
+      <div className="p-6 lg:p-10">
+        <StrategyBuilderContent
+          embedded
+          onClose={() => setCreating(false)}
+          onSaved={() => { setCreating(false); strategiesQuery.refetch(); }}
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="p-6 lg:p-10">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-10">
@@ -175,7 +202,7 @@ export default function Bots() {
           <h1 className="text-3xl font-bold text-white mb-2">Automated Bots</h1>
           <p className="text-slate-500 text-sm font-medium">Manage and monitor your 24/7 trading instances.</p>
         </div>
-        <Button onClick={() => navigate("/strategy-builder")} className="btn-primary flex items-center gap-2">
+        <Button onClick={() => setCreating(true)} className="btn-primary flex items-center gap-2">
           <Plus className="w-4 h-4" /> Create New Bot
         </Button>
       </div>
