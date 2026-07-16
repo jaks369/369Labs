@@ -179,7 +179,7 @@ export default function Dashboard() {
               </div>
             ) : (
               <div className="p-6 bg-black/40 h-[420px]">
-                <TickChart symbol={selectedSymbol} maxDataPoints={50} />
+                <TickChart symbol={selectedSymbol} maxDataPoints={50} decimalPlaces={decimalPlaces} />
               </div>
             )}
           </div>
@@ -259,7 +259,7 @@ export default function Dashboard() {
               </div>
             </div>
             <ContractTypeSelector selection={contract} onChange={setContract} />
-            <DigitStats symbol={selectedSymbol} />
+            <DigitStats symbol={selectedSymbol} decimalPlaces={decimalPlaces} />
           </div>
 
           <div className="bloomberg-panel p-6">
