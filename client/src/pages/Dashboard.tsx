@@ -356,7 +356,7 @@ export default function Dashboard() {
                       <tbody className="divide-y divide-[#30363D]">
                         {priceQuery.data.ticks.slice().reverse().slice(0, 50).map((t: any, i: number) => {
                           const priceStr = String(t.price);
-                          const lastDigit = priceStr.replace(".", "")[priceStr.replace(".", "").length - 1];
+                          const lastDigit = t.lastDigit;
                           return (
                             <tr key={i} className="hover:bg-white/5 transition-colors">
                               <td className="p-3 text-slate-600 font-mono">{i + 1}</td>
