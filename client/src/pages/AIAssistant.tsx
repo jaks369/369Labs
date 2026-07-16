@@ -1,20 +1,26 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef } from "react";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { trpc } from "@/lib/trpc";
-import { Brain, Send, Bot, Sparkles, Code, LineChart, ShieldCheck, Zap, Loader2 } from "lucide-react";
+import { Brain, Send, Bot, Sparkles, Code, LineChart, ShieldCheck, Zap, Loader2, ChevronDown, ChevronRight, Wrench } from "lucide-react";
 import { useLocation } from "wouter";
+import { derivWS } from "@/services/derivWebSocket";
 
-interface Message { role: "user" | "ai"; content: string; }
+interface Message { role: "user" | "ai"; content: string; steps?: any[]; }
+interface PendingAction { action: string; params: any; }
 
 export default function AIAssistant() {
   const { user, isAuthenticated } = useAuth();
   const [, navigate] = useLocation();
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState<Message[]>([
-    { role: "ai", content: "Hello! I am 369AI, your personal trading strategist. How can I help you build or optimize your bots today?" }
+    { role: "ai", content: "Hello! I am 369AI, your personal trading strategist. I can analyze live Deriv ticks, suggest strategies, and even place trades or run backtests for you. What would you like to do?" }
   ]);
   const [isTyping, setIsTyping] = useState(false);
+  const [pending, setPending] = useState<PendingAction | null>(null);
+  const [expanded, setExpanded] = useState<Record<number, boolean>>({});
   const askMutation = trpc.ai.ask.useMutation();
+  const strategiesQuery = trpc.strategies.list.useQuery();
+  const chatIdRef = useRef("main");
 
   const handleSend = useCallback(async () => {
     if (!input.trim() || isTyping) return;
@@ -24,22 +30,52 @@ export default function AIAssistant() {
     setInput("");
     setIsTyping(true);
     try {
-      // Build conversation history (skip the initial greeting) for context.
       const history = nextMessages
         .slice(1)
         .map(m => ({ role: m.role === "user" ? "user" as const : "assistant" as const, content: m.content }));
-      const res = await askMutation.mutateAsync({ message: input, history });
-      setMessages(prev => [...prev, { role: "ai", content: res.reply }]);
+      const res = await askMutation.mutateAsync({ message: input, history, chatId: chatIdRef.current });
+      const aiMsg: Message = { role: "ai", content: res.reply, steps: res.steps };
+      setMessages(prev => [...prev, aiMsg]);
+      if (res.action) setPending(res.action);
     } catch {
       setMessages(prev => [...prev, { role: "ai", content: "Sorry, I encountered an error. Please try again." }]);
     } finally { setIsTyping(false); }
   }, [input, isTyping, askMutation, messages]);
 
+  const executeAction = useCallback(async () => {
+    if (!pending) return;
+    const a = pending;
+    setPending(null);
+    try {
+      if (a.action === "placeTrade") {
+        if (!derivWS.isAuthorized()) { setMessages(prev => [...prev, { role: "ai", content: "You are not connected to Deriv. Add your API token in Settings first." }]); return; }
+        const r = await derivWS.purchaseContract({
+          symbol: a.params.symbol,
+          contractType: a.params.contractType,
+          amount: a.params.stake,
+          duration: 1,
+          durationUnit: "t",
+          barrier: a.params.barrier !== undefined ? Number(a.params.barrier) : undefined,
+        });
+        setMessages(prev => [...prev, { role: "ai", content: `Trade placed on ${a.params.symbol} (${a.params.contractType}) (contract ${r.contractId}).` }]);
+      } else if (a.action === "deployBot") {
+        const strat = strategiesQuery.data?.find((s: any) => s.id === a.params.strategyId);
+        setMessages(prev => [...prev, { role: "ai", content: `Bot "${strat?.name ?? a.params.strategyId}" queued for ${a.params.symbol || "default symbol"} at stake ${a.params.stake}. Open Bots to monitor it.` }]);
+        navigate("/bots");
+      } else if (a.action === "runBacktest") {
+        setMessages(prev => [...prev, { role: "ai", content: `Launching backtest for strategy ${a.params.strategyId} on ${a.params.symbol}...` }]);
+        navigate("/backtesting");
+      }
+    } catch (e: any) {
+      setMessages(prev => [...prev, { role: "ai", content: "Action failed: " + String(e?.message || e) }]);
+    }
+  }, [pending, strategiesQuery, navigate]);
+
   const suggestions = [
-    "Build a Boom & Crash strategy using RSI and EMA",
+    "What's the hottest digit on R_50 right now?",
+    "Suggest a strategy for R_100 based on recent ticks",
+    "Show me the trend on 1HZ10V",
     "How do I run a backtest?",
-    "Explain the Martingale money management system",
-    "How to connect my Deriv API token?"
   ];
 
   if (!isAuthenticated) { navigate("/login"); return null; }
@@ -54,7 +90,7 @@ export default function AIAssistant() {
           <div>
             <h1 className="text-xl font-bold text-white">369AI Assistant</h1>
             <p className="text-xs text-slate-500 font-medium flex items-center gap-1">
-              <Sparkles className="w-3 h-3 text-emerald-500" /> Powered by 369Labs Trading Engine
+              <Sparkles className="w-3 h-3 text-emerald-500" /> Live strategist &middot; reasons over real ticks
             </p>
           </div>
         </div>
@@ -73,6 +109,22 @@ export default function AIAssistant() {
                 </div>
                 <div className={`p-4 rounded-2xl text-sm leading-relaxed whitespace-pre-line ${msg.role === "ai" ? "bg-[#161B22] border border-[#30363D] text-slate-200" : "bg-blue-600 text-white"}`}>
                   {msg.content}
+                  {msg.steps && msg.steps.length > 0 && (
+                    <div className="mt-3 border-t border-[#30363D] pt-2">
+                      <button onClick={() => setExpanded(e => ({ ...e, [i]: !e[i] }))} className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-slate-500 hover:text-blue-400">
+                        {expanded[i] ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />} <Wrench className="w-3 h-3" /> {msg.steps.length} tool step{msg.steps.length > 1 ? "s" : ""}
+                      </button>
+                      {expanded[i] && (
+                        <div className="mt-2 space-y-1 text-[11px] font-mono text-slate-400">
+                          {msg.steps.map((s: any, j: number) => (
+                            <div key={j} className="rounded bg-black/30 p-2">
+                              <span className="text-blue-400">{s.tool}</span>({JSON.stringify(s.args)}) &rarr; {s.result?.__action ? "ACTION INTENT" : "ok"}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -94,6 +146,20 @@ export default function AIAssistant() {
         </div>
       </div>
 
+      {pending && (
+        <div className="p-4 border-t border-amber-500/30 bg-amber-500/5">
+          <div className="max-w-4xl mx-auto flex items-center justify-between gap-4">
+            <div className="text-xs text-amber-300">
+              <span className="font-bold uppercase">{pending.action}</span> requested: {JSON.stringify(pending.params)}
+            </div>
+            <div className="flex gap-2">
+              <button onClick={() => setPending(null)} className="px-3 py-1.5 rounded bg-slate-800 text-slate-300 text-xs hover:bg-slate-700">Cancel</button>
+              <button onClick={executeAction} className="px-3 py-1.5 rounded bg-blue-600 text-white text-xs hover:bg-blue-700">Confirm</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="p-6 border-t border-[#30363D] bg-[#0D1117]">
         <div className="max-w-4xl mx-auto space-y-4">
           {messages.length < 3 && (
@@ -108,7 +174,7 @@ export default function AIAssistant() {
               value={input}
               onChange={e => setInput(e.target.value)}
               onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
-              placeholder="Type your trading request..."
+              placeholder="Ask 369AI to analyze, suggest, or act..."
               className="w-full bg-[#161B22] border-[#30363D] rounded-xl pl-4 pr-12 py-4 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all resize-none h-14"
             />
             <button onClick={handleSend} disabled={!input.trim() || isTyping} className="absolute right-3 top-1/2 -translate-y-1/2 p-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
