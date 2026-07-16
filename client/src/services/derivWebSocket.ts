@@ -147,7 +147,7 @@ class DerivWebSocketService {
         displayName: s.display_name || s.symbol,
         market: s.market || s.market,
         submarket: s.submarket || "",
-        decimalPlaces: typeof s.pip === "number" ? s.pip : (s.display_name || s.symbol || "").includes("(1s)") ? 3 : 3,
+        decimalPlaces: typeof s.pip === "number" ? s.pip : 3,
       }));
       this._activeSymbols = symbols;
       this.symbolListeners.forEach(cb => { try { cb(symbols); } catch {} });
@@ -162,7 +162,7 @@ class DerivWebSocketService {
 
   private fetchActiveSymbols() {
     if (!this.ws) return;
-    try { this.ws.send(JSON.stringify({ active_symbols: "brief", product_type: "all", req_id: this.msgId++ })); }
+    try { this.ws.send(JSON.stringify({ active_symbols: "full", product_type: "all", req_id: this.msgId++ })); }
     catch (error) { console.error("[Deriv WS] Failed to fetch active symbols:", error); }
   }
 
@@ -238,7 +238,7 @@ class DerivWebSocketService {
     const subId = this.msgId++;
     if (this.subscribedSymbols.has(symbol)) return subId;
     if (!this.ws || this.ws.readyState !== WebSocket.OPEN) { this.pendingSubscriptionSymbols.push(symbol); return subId; }
-    if (!this.authorized) { if (this.apiToken) { this.pendingSubscriptionSymbols.push(symbol); return subId; } console.warn(`[Deriv WS] No token set, cannot subscribe to ${symbol}`); return subId; }
+    if (!this.authorized && this.apiToken) { this.pendingSubscriptionSymbols.push(symbol); return subId; }
     this.doSubscribe(symbol);
     return subId;
   }
