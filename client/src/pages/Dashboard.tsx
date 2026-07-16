@@ -35,7 +35,7 @@ const VOLATILITY_FALLBACK: DerivSymbol[] = [
 ];
 
 export default function Dashboard() {
-  const { user, isAuthenticated, logout } = useAuth();
+  const { user, isAuthenticated } = useAuth();
   const [, navigate] = useLocation();
   const [pnl, setPnl] = useState(0);
   const [balance, setBalance] = useState(0);
@@ -127,9 +127,6 @@ export default function Dashboard() {
           <Button onClick={() => setShowSymbolPicker(s => !s)} className="btn-outline gap-2">
             <Activity className="w-4 h-4" /> {selectedDisplay}
             <ChevronDown className={`w-4 h-4 transition-transform ${showSymbolPicker ? "rotate-180" : ""}`} />
-          </Button>
-          <Button onClick={logout} className="btn-outline gap-2 text-slate-400">
-            <ArrowUpRight className="w-4 h-4" /> Logout
           </Button>
         </div>
       </div>
