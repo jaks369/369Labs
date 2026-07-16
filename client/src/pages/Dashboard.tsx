@@ -258,10 +258,10 @@ export default function Dashboard() {
 
           <div className="bloomberg-panel">
             <div className="p-4 border-b border-[#30363D] flex items-center justify-between">
-              <h2 className="font-bold text-white uppercase text-xs tracking-widest">Recent Executions</h2>
+              <h2 className="font-bold text-white uppercase text-xs tracking-widest">History &middot; {selectedSymbol}</h2>
               <div className="flex gap-2">
-                <button onClick={() => setViewMode("grid")} className={`p-1 ${viewMode === "grid" ? "text-blue-500" : "text-slate-600"}`}><LayoutGrid className="w-4 h-4" /></button>
-                <button onClick={() => setViewMode("list")} className={`p-1 ${viewMode === "list" ? "text-blue-500" : "text-slate-600"}`}><List className="w-4 h-4" /></button>
+                <button onClick={() => setHistoryTab("trades")} className={`px-3 py-1 rounded text-[10px] font-bold uppercase ${historyTab === "trades" ? "bg-blue-600/20 text-blue-400" : "text-slate-500 hover:text-white"}`}>Trades (P&L)</button>
+                <button onClick={() => setHistoryTab("prices")} className={`px-3 py-1 rounded text-[10px] font-bold uppercase ${historyTab === "prices" ? "bg-blue-600/20 text-blue-400" : "text-slate-500 hover:text-white"}`}>Price History</button>
               </div>
             </div>
             <div className="overflow-x-auto">
