@@ -155,11 +155,12 @@ class DerivWebSocketService {
         submarket: s.submarket || "",
         decimalPlaces: (() => {
           const pip = s.pip;
-          if (typeof pip === "number") return pip;
-          if (typeof pip === "string" && pip.includes(".")) {
-            const d = pip.split(".")[1];
-            return d.length;
-          }
+          const countDecimals = (v: any): number => {
+            const str = typeof v === "number" ? v.toString() : String(v || "");
+            const parts = str.split(".");
+            return parts[1] ? parts[1].replace(/0+$/, "").length || parts[1].length : 0;
+          };
+          if (typeof pip === "number" || typeof pip === "string") return countDecimals(pip);
           return 3;
         })(),
       }));
