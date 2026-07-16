@@ -8,7 +8,7 @@ interface DigitStatsProps {
   maxTicks?: number;
 }
 
-export default function DigitStats({ symbol, decimalPlaces = 3, maxTicks = 100 }: DigitStatsProps) {
+export default function DigitStats({ symbol, decimalPlaces = derivWS.decimalPlacesFor(symbol), maxTicks = 100 }: DigitStatsProps) {
   const [digits, setDigits] = useState<number[]>([]);
   const [selectedDigit, setSelectedDigit] = useState<number | null>(null);
   const selectedDigitRef = useRef<number | null>(null);
