@@ -27,7 +27,15 @@ interface StrategyBlock {
   value: string;
 }
 
-export default function StrategyBuilder() {
+interface StrategyBuilderContentProps {
+  // When embedded (e.g. inside the Bots page), the builder doesn't navigate on
+  // its own - it calls these callbacks instead.
+  embedded?: boolean;
+  onClose?: () => void;
+  onSaved?: () => void;
+}
+
+export function StrategyBuilderContent({ embedded = false, onClose, onSaved }: StrategyBuilderContentProps) {
   const { user, isAuthenticated } = useAuth();
   const [, navigate] = useLocation();
   const [strategyName, setStrategyName] = useState("");
@@ -85,7 +93,7 @@ export default function StrategyBuilder() {
         config: builderMode === "visual" ? { rule: rule as any, summary: summarizeRule(rule) } : { blocks },
         published: publishToMarketplace,
       });
-      navigate("/bots");
+      if (embedded) { onSaved?.(); } else { navigate("/bots"); }
     } catch { alert("Failed to save strategy"); }
   };
 
@@ -107,6 +115,7 @@ export default function StrategyBuilder() {
       setDescription("");
       setBlocks([]);
       setRule(DEFAULT_RULE);
+      if (embedded) { onSaved?.(); }
     } catch (error) {
       alert("Failed to save strategy");
     }
@@ -135,11 +144,16 @@ export default function StrategyBuilder() {
               <input type="checkbox" checked={publishToMarketplace} onChange={e => setPublishToMarketplace(e.target.checked)} className="rounded" />
               Publish to Marketplace
             </label>
+            {embedded && (
+              <Button onClick={onClose} variant="ghost" className="btn-secondary flex items-center gap-2">
+                <ChevronRight className="w-4 h-4 rotate-180" /> Back to Bots
+              </Button>
+            )}
             <Button onClick={handleSaveStrategy} disabled={saveStrategyMutation.isPending} className="btn-secondary">
               {saveStrategyMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : "Save Draft"}
             </Button>
-            <Button onClick={() => navigate("/bots")} className="btn-primary flex items-center gap-2">
-              <Play className="w-4 h-4" /> Deploy to Cloud
+            <Button onClick={handleSaveAndDeploy} disabled={saveStrategyMutation.isPending} className="btn-primary flex items-center gap-2">
+              <Play className="w-4 h-4" /> {embedded ? "Save & Add Bot" : "Deploy to Cloud"}
             </Button>
           </div>
         </div>
@@ -270,4 +284,9 @@ export default function StrategyBuilder() {
       </div>
     </div>
   );
+}
+
+export default function StrategyBuilder() {
+  const [, navigate] = useLocation();
+  return <StrategyBuilderContent embedded={false} onClose={() => navigate("/bots")} onSaved={() => navigate("/bots")} />;
 }
