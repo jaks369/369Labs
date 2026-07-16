@@ -21,6 +21,7 @@ import { useLocation } from "wouter";
 import TickChart from "@/components/TickChart";
 import DigitStats from "@/components/DigitStats";
 import { derivWS, DerivSymbol } from "@/services/derivWebSocket";
+import { useDerivStatus } from "@/hooks/useDerivStatus";
 import DerivTokenModal from "@/components/DerivTokenModal";
 import ContractTypeSelector, { ContractSelection } from "@/components/ContractTypeSelector";
 
@@ -158,6 +159,7 @@ export default function Dashboard() {
 
   const selectedDisplay = symbolList.find(s => s.symbol === selectedSymbol)?.displayName || selectedSymbol;
   const decimalPlaces = derivWS.decimalPlacesFor(selectedSymbol);
+  const { status: derivStatus, accountType } = useDerivStatus();
 
   if (!isAuthenticated || !user) {
     return (
