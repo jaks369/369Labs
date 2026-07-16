@@ -260,3 +260,23 @@ export async function getTickHistory(symbol: string, limit: number = 1000): Prom
   if (!db) return [];
   return db.select().from(tickHistory).where(eq(tickHistory.symbol, symbol)).orderBy(desc(tickHistory.epoch)).limit(limit);
 }
+
+export async function saveSignal(row: InsertSignal): Promise<Signal> {
+  const db = await getDb();
+  if (!db) throw new Error("DB unavailable");
+  const result = await db.insert(signals).values(row);
+  const id = (result as any)[0]?.insertId || (result as any).insertId;
+  return (await db.select().from(signals).where(eq(signals.id, Number(id))).limit(1))[0];
+}
+
+export async function getSignalsByUserId(userId: number, limit: number = 100): Promise<Signal[]> {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(signals).where(eq(signals.userId, userId)).orderBy(desc(signals.discoveredAt)).limit(limit);
+}
+
+export async function getSignalsBySymbol(userId: number, symbol: string, limit: number = 100): Promise<Signal[]> {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(signals).where(and(eq(signals.userId, userId), eq(signals.symbol, symbol))).orderBy(desc(signals.discoveredAt)).limit(limit);
+}
