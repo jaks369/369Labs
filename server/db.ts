@@ -302,6 +302,7 @@ export async function ensureSignalExpiryColumn(): Promise<void> {
 // One-time data hygiene: during a past bug, ticks were stored with lastDigit=0.
 // Remove those rows so digit stats / scanners aren't skewed by bad data.
 export async function pruneBadTicks(): Promise<number> {
+  if (process.env.PRUNE_BAD_TICKS !== "1") { console.log('[pruneBadTicks] skipped (set PRUNE_BAD_TICKS=1 to run once)'); return 0; }
   const db = await getDb();
   if (!db) return 0;
   try {
