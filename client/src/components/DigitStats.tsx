@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useRef } from "react";
 import { derivWS, Tick, TickStreamListener } from "@/services/derivWebSocket";
+import { trpc } from "@/lib/trpc";
 
 interface DigitStatsProps {
   symbol: string;
