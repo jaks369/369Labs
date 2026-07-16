@@ -2,7 +2,7 @@ import { WebSocket } from "ws";
 import { saveTickHistory } from "./db";
 
 const DERIV_APP_ID = Number(process.env.VITE_DERIV_APP_ID) || 1089;
-const VOLATILITY_PREFIXES = ["R_10", "R_25", "R_50", "R_75", "R_100", "R_150", "R_200"];
+const VOLATILITY_PREFIXES = ["R_10", "R_25", "R_50", "R_75", "R_100", "1HZ10V", "1HZ15V", "1HZ25V", "1HZ30V", "1HZ50V", "1HZ75V", "1HZ90V", "1HZ100V"];
 
 let ws: WebSocket | null = null;
 let started = false;
@@ -32,7 +32,7 @@ async function fetchActiveSymbols(): Promise<string[]> {
       }
     };
     ws.on("message", handler);
-    ws.send(JSON.stringify({ active_symbols: "full", product_type: "all", req_id: reqId }));
+    ws.send(JSON.stringify({ active_symbols: "full", req_id: reqId }));
     setTimeout(() => resolve([]), 8000);
   });
 }
