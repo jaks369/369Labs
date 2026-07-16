@@ -154,7 +154,7 @@ class DerivWebSocketService {
           if (typeof pip === "number") return pip;
           if (typeof pip === "string" && pip.includes(".")) {
             const d = pip.split(".")[1];
-            return d.replace(/0+$/, "").length || d.length;
+            return d.length;
           }
           return 3;
         })(),
