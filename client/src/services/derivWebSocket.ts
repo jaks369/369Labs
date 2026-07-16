@@ -59,6 +59,7 @@ class DerivWebSocketService {
   private apiToken: string | null = null;
   private authorized = false;
   private subscribedSymbols: Set<string> = new Set();
+  private tickBuffer: Map<string, Tick[]> = new Map();
   private pendingSubscriptionSymbols: string[] = [];
   private pendingRequests: Map<number, { resolve: (v: any) => void; reject: (e: Error) => void }> = new Map();
   private contractListeners: Map<number, (c: ContractUpdate) => void> = new Map();
@@ -261,7 +262,13 @@ class DerivWebSocketService {
   }
   public addListener(listener: TickStreamListener): void { this.listeners.add(listener); if (this.ws && this.ws.readyState === WebSocket.OPEN) { try { listener.onConnect?.(); } catch {} } }
   public removeListener(listener: TickStreamListener): void { this.listeners.delete(listener); }
-  private notifyTick(tick: Tick): void { this.listeners.forEach(l => { try { l.onTick(tick); } catch {} }); }
+  private notifyTick(tick: Tick): void {
+    const buf = this.tickBuffer.get(tick.symbol) || [];
+    buf.push(tick);
+    if (buf.length > 2000) buf.shift();
+    this.tickBuffer.set(tick.symbol, buf);
+    this.listeners.forEach(l => { try { l.onTick(tick); } catch {} });
+  }
   private notifyError(error: Error): void { this.listeners.forEach(l => { try { l.onError?.(error); } catch {} }); }
   private notifyConnect(): void { this.listeners.forEach(l => { try { l.onConnect?.(); } catch {} }); }
   private notifyDisconnect(): void { this.listeners.forEach(l => { try { l.onDisconnect?.(); } catch {} }); }
@@ -272,7 +279,11 @@ class DerivWebSocketService {
   public onTokenError(cb: (msg: string) => void): void { this.tokenListeners.add(cb); }
   public get activeSymbols(): DerivSymbol[] { return this._activeSymbols; }
   public getSymbol(symbol: string): DerivSymbol | undefined { return this._activeSymbols.find(s => s.symbol === symbol); }
-  public decimalPlacesFor(symbol: string): number { return this.getSymbol(symbol)?.decimalPlaces ?? 3; }
+  public getRecentTicks(symbol: string, limit = 100): Tick[] {
+    const buf = this.tickBuffer.get(symbol) || [];
+    return buf.slice(-limit);
+  }
+  public decimalPlacesFor(symbol: string): number { return 4; }
   private notifyBalance(b: any): void { this.balanceListeners.forEach(cb => { try { cb(b); } catch {} }); }
   private notifyTokenError(msg: string): void { this.tokenListeners.forEach(cb => { try { cb(msg); } catch {} }); }
   public disconnect(): void { this.intentionallyDisconnected = true; if (this.ws) { this.ws.close(); this.ws = null; } this.contractListeners.clear(); this.pendingRequests.forEach(p => p.reject(new Error("Connection closed"))); this.pendingRequests.clear(); }
