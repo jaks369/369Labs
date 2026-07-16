@@ -472,6 +472,7 @@ export const appRouter = router({
         } catch (e) { console.error("[AI]", e); return { reply: "Error: " + String(e) }; }
       }),
   }),
+  market: router({}),
 });
 
 export type AppRouter = typeof appRouter;
