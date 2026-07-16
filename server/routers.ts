@@ -533,6 +533,29 @@ HOW TO RESPOND:
         } catch (e) { console.error("[AI]", e); return { reply: "Error: " + String(e) }; }
       }),
   }),
+  signals: router({
+    list: protectedProcedure
+      .input(z.object({ symbol: z.string().optional() }).optional())
+      .query(async ({ ctx, input }) => {
+        const list = input?.symbol
+          ? await db.getSignalsBySymbol(ctx.user.id, normalizeSymbol(input.symbol))
+          : await db.getSignalsByUserId(ctx.user.id);
+        return list;
+      }),
+    watch: protectedProcedure
+      .input(z.object({ symbol: z.string(), durationMinutes: z.number().default(30), patternType: z.string().default('any'), minWinRate: z.number().default(62) }))
+      .mutation(async ({ ctx, input }) => {
+        const { runWatch } = await import('./signalScanner');
+        const saved = await runWatch({
+          userId: ctx.user.id,
+          symbol: input.symbol,
+          sampleSize: Math.min(2000, input.durationMinutes * 20),
+          minWinRate: input.minWinRate,
+          patternType: input.patternType,
+        });
+        return { scanned: true, signalsFound: saved.length, signals: saved };
+      }),
+  }),
   market: router({
     getHistory: publicProcedure
       .input(z.object({ symbol: z.string(), limit: z.number().default(1000) }))
