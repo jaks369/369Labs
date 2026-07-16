@@ -58,6 +58,7 @@ export default function Dashboard() {
   const [tradeMsg, setTradeMsg] = useState<{ kind: "ok" | "err"; text: string } | null>(null);
 
   const tradesQuery = trpc.trades.list.useQuery({ limit: 20 });
+  const signalsQuery = trpc.signals.list.useQuery({}, { refetchInterval: 30000 });
   const botRunsQuery = trpc.bot.getRuns.useQuery();
   const tokenQuery = trpc.deriv.getToken.useQuery();
   const [historyTab, setHistoryTab] = useState<"trades" | "prices">("trades");
@@ -443,15 +444,31 @@ export default function Dashboard() {
             </div>
           </div>
 
-          <div className="bloomberg-panel p-6 bg-blue-600/5 border-blue-600/20">
+          <div className="bloomberg-panel p-6 bg-amber-400/5 border-amber-400/20">
             <div className="flex items-center gap-2 mb-4">
-              <Brain className="w-4 h-4 text-blue-500" />
-              <h3 className="text-xs font-bold text-blue-500 uppercase tracking-widest">369AI Insight</h3>
+              <Sparkles className="w-4 h-4 text-amber-400" />
+              <h3 className="text-xs font-bold text-amber-400 uppercase tracking-widest">369AI Insight</h3>
             </div>
-            <p className="text-xs text-slate-400 leading-relaxed italic">
-              "Volatility 50 index is showing a strong bullish divergence on the 15m RSI.
-              Consider a Mean Reversion strategy for the next 10 ticks."
-            </p>
+            {(() => {
+              const sigs = (signalsQuery.data as any[]) || [];
+              const latest = sigs[0];
+              if (!latest) {
+                return <p className="text-xs text-slate-500 leading-relaxed">No signals yet. Ask 369AI to watch a market, or wait for the always-on scanner to surface a pattern.</p>;
+              }
+              return (
+                <div>
+                  <p className="text-xs text-slate-300 leading-relaxed">{latest.description}</p>
+                  <div className="flex items-center gap-3 mt-3 text-[10px]">
+                    <span className="px-2 py-0.5 rounded bg-amber-400/10 border border-amber-400/30 text-amber-400 font-bold uppercase">{latest.symbol}</span>
+                    <span className="text-slate-500">win rate <b className="text-emerald-400">{latest.winRate}%</b></span>
+                    <span className="text-slate-500">{new Date((latest.discoveredAt || 0) * 1000).toLocaleString()}</span>
+                  </div>
+                  <button onClick={() => navigate("/marketplace")} className="mt-3 text-[11px] text-amber-400 hover:underline flex items-center gap-1">
+                    View all signals <ArrowRight className="w-3 h-3" />
+                  </button>
+                </div>
+              );
+            })()}
           </div>
         </div>
       </div>
