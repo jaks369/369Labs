@@ -149,7 +149,15 @@ class DerivWebSocketService {
         displayName: s.display_name || s.symbol,
         market: s.market || s.market,
         submarket: s.submarket || "",
-        decimalPlaces: typeof s.pip === "number" ? s.pip : 3,
+        decimalPlaces: (() => {
+          const pip = s.pip;
+          if (typeof pip === "number") return pip;
+          if (typeof pip === "string" && pip.includes(".")) {
+            const d = pip.split(".")[1];
+            return d.replace(/0+$/, "").length || d.length;
+          }
+          return 3;
+        })(),
       }));
       this._activeSymbols = symbols;
       this.symbolListeners.forEach(cb => { try { cb(symbols); } catch {} });
@@ -283,7 +291,7 @@ class DerivWebSocketService {
     const buf = this.tickBuffer.get(symbol) || [];
     return buf.slice(-limit);
   }
-  public decimalPlacesFor(symbol: string): number { return 4; }
+  public decimalPlacesFor(symbol: string): number { return this.getSymbol(symbol)?.decimalPlaces ?? 3; }
   private notifyBalance(b: any): void { this.balanceListeners.forEach(cb => { try { cb(b); } catch {} }); }
   private notifyTokenError(msg: string): void { this.tokenListeners.forEach(cb => { try { cb(msg); } catch {} }); }
   public disconnect(): void { this.intentionallyDisconnected = true; if (this.ws) { this.ws.close(); this.ws = null; } this.contractListeners.clear(); this.pendingRequests.forEach(p => p.reject(new Error("Connection closed"))); this.pendingRequests.clear(); }
