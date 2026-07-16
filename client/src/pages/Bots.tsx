@@ -10,7 +10,6 @@ import {
   AlertCircle,
   Zap,
   Plus,
-  ChevronLeft,
 } from "lucide-react";
 import { useLocation } from "wouter";
 import { BotEngine, BotStatus, BotTrade } from "@/services/BotEngine";
