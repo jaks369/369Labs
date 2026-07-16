@@ -127,6 +127,42 @@ export function buildActionIntent(action: string, params: Record<string, any>, r
   return { __action: true, action, params, requiresConfirm };
 }
 
+// Detect a natural-language "watch / scan / monitor" intent in free text, tolerating typos
+// and loose phrasing. Returns null if no watch intent, else { symbol, durationMinutes, patternType }.
+const WATCH_WORDS = ["watch", "scan", "monitor", "keep an eye", "keep eye", "look for", "look out for", "find setup", "find pattern", "track", "observe", "surveil"];
+const PATTERN_WORDS: Record<string, string> = {
+  streak: "digit_streak", streaky: "digit_streak", consecutive: "digit_streak",
+  bias: "digit_bias", digit: "digit_bias", lastdigit: "digit_bias", "last digit": "digit_bias",
+  parity: "even_odd_run", even: "even_odd_run", odd: "even_odd_run",
+};
+
+export function detectWatchIntent(text: string): { symbol: string; durationMinutes: number; patternType: string } | null {
+  const lower = (text || "").toLowerCase();
+  const hasWatch = WATCH_WORDS.some(w => lower.includes(w));
+  if (!hasWatch) return null;
+
+  // symbol: R50/R_50/volatility 50/1HZ10 etc
+  let symbol: string | null = null;
+  const rMatch = lower.match(/r\s?_?\s?(\d+)/);
+  if (rMatch) { const cand = "R_" + rMatch[1]; if (VALID_SYMBOLS.includes(cand)) symbol = cand; }
+  const hzMatch = lower.match(/1\s?hz\s?(\d+)/);
+  if (!symbol && hzMatch) { const cand = "1HZ" + hzMatch[1] + "V"; if (VALID_SYMBOLS.includes(cand)) symbol = cand; }
+  const volMatch = lower.match(/volatility\s*(\d+)/);
+  if (!symbol && volMatch) { const cand = "R_" + volMatch[1]; if (VALID_SYMBOLS.includes(cand)) symbol = cand; }
+  if (!symbol) return null;
+
+  // duration: "30 min", "half hour", "1 hour", "for 20 minutes"
+  let durationMinutes = 30;
+  const numMin = lower.match(/(\d+)\s*(min|mins|minute|minutes)/);
+  if (numMin) durationMinutes = Math.min(120, Math.max(5, parseInt(numMin[1], 10)));
+  else if (lower.includes("half hour") || lower.includes("half an hour")) durationMinutes = 30;
+  else if (lower.includes("hour") || lower.includes("1h") || lower.includes("an hour")) durationMinutes = 60;
+
+  let patternType = "any";
+  for (const key of Object.keys(PATTERN_WORDS)) { if (lower.includes(key)) { patternType = PATTERN_WORDS[key]; break; } }
+
+  return { symbol, durationMinutes, patternType };
+}
 export const TOOL_DEFS = [
   {
     type: 'function',
