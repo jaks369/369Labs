@@ -125,14 +125,28 @@ export default function TickChart({ symbol, maxDataPoints = 100, decimalPlaces =
             strokeWidth="2"
             vectorEffect="non-scaling-stroke"
           />
-          {points.length > 0 && (
-            <circle
-              cx={parseFloat(points[points.length - 1].split(",")[0])}
-              cy={parseFloat(points[points.length - 1].split(",")[1])}
-              r="4"
-              fill={priceColor === "up" ? "#00d4ff" : "#ff4d4d"}
-            />
-          )}
+          {points.length > 0 && (() => {
+            const last = points[points.length - 1].split(",");
+            const lx = parseFloat(last[0]);
+            const ly = parseFloat(last[1]);
+            const label = prices[prices.length - 1].toFixed(decimalPlaces);
+            const labelRight = lx > width - 70;
+            return (
+              <g>
+                <circle cx={lx} cy={ly} r="4" fill={priceColor === "up" ? "#00d4ff" : "#ff4d4d"} />
+                <text
+                  x={labelRight ? lx - 8 : lx + 8}
+                  y={ly + 4}
+                  textAnchor={labelRight ? "end" : "start"}
+                  fontSize="13"
+                  fontWeight="bold"
+                  fill={priceColor === "up" ? "#00d4ff" : "#ff4d4d"}
+                >
+                  {label}
+                </text>
+              </g>
+            );
+          })()}
         </svg>
       ) : (
         <div className="w-full h-64 flex items-center justify-center bg-[#0D1117] rounded border border-[#30363D]">
