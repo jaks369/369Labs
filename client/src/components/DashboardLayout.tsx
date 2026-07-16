@@ -31,8 +31,9 @@ import {
   Settings,
   Activity,
   Bell,
-  MessageCircle
-, , Home } from "lucide-react";
+  MessageCircle,
+  Home,
+} from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { DashboardLayoutSkeleton } from './DashboardLayoutSkeleton';
