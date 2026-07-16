@@ -19,16 +19,21 @@ export default function AIAssistant() {
   const handleSend = useCallback(async () => {
     if (!input.trim() || isTyping) return;
     const userMsg: Message = { role: "user", content: input };
-    setMessages(prev => [...prev, userMsg]);
+    const nextMessages = [...messages, userMsg];
+    setMessages(nextMessages);
     setInput("");
     setIsTyping(true);
     try {
-      const res = await askMutation.mutateAsync({ message: input });
+      // Build conversation history (skip the initial greeting) for context.
+      const history = nextMessages
+        .slice(1)
+        .map(m => ({ role: m.role === "user" ? "user" as const : "assistant" as const, content: m.content }));
+      const res = await askMutation.mutateAsync({ message: input, history });
       setMessages(prev => [...prev, { role: "ai", content: res.reply }]);
     } catch {
       setMessages(prev => [...prev, { role: "ai", content: "Sorry, I encountered an error. Please try again." }]);
     } finally { setIsTyping(false); }
-  }, [input, isTyping, askMutation]);
+  }, [input, isTyping, askMutation, messages]);
 
   const suggestions = [
     "Build a Boom & Crash strategy using RSI and EMA",
