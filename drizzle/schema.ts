@@ -134,3 +134,28 @@ export const tickHistory = mysqlTable("tickHistory", {
 
 export type TickHistoryRow = typeof tickHistory.$inferSelect;
 export type InsertTickHistory = typeof tickHistory.$inferInsert;
+
+// AI-discovered trading signals (the "Marketplace" / AI Insights feed)
+export const signals = mysqlTable("signals", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  symbol: varchar("symbol", { length: 32 }).notNull(),
+  title: varchar("title", { length: 255 }).notNull(),
+  description: text("description").notNull(),
+  // StrategyRule-compatible rule so the signal is directly backtestable / deployable
+  rule: json("rule").notNull(),
+  // Evidence: the tick window the pattern was found in (epochs + prices + lastDigits)
+  evidence: json("evidence").notNull(),
+  patternType: varchar("patternType", { length: 32 }).notNull(),
+  sampleSize: int("sampleSize").notNull(),
+  winRate: decimal("winRate", { precision: 5, scale: 2 }).notNull(),
+  confidence: decimal("confidence", { precision: 5, scale: 2 }).notNull(),
+  discoveredAt: bigint("discoveredAt", { mode: "number" }).notNull(),
+  startEpoch: bigint("startEpoch", { mode: "number" }).notNull(),
+  endEpoch: bigint("endEpoch", { mode: "number" }).notNull(),
+  source: varchar("source", { length: 16 }).notNull().default("watch"), // "watch" | "always-on"
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type Signal = typeof signals.$inferSelect;
+export type InsertSignal = typeof signals.$inferInsert;
