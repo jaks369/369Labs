@@ -15,8 +15,10 @@ import {
   List,
   Zap,
   Brain,
-  ChevronDown
-, Wallet } from "lucide-react";
+  ChevronDown,
+  Wallet,
+  Sparkles,
+} from "lucide-react";
 import { useLocation } from "wouter";
 import TickChart from "@/components/TickChart";
 import DigitStats from "@/components/DigitStats";
