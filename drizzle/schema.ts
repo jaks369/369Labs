@@ -121,3 +121,16 @@ export const notificationSettings = mysqlTable("notificationSettings", {
 
 export type NotificationSettings = typeof notificationSettings.$inferSelect;
 export type InsertNotificationSettings = typeof notificationSettings.$inferInsert;
+
+// Tick history (persistent last-digit + price history per symbol)
+export const tickHistory = mysqlTable("tickHistory", {
+  id: int("id").autoincrement().primaryKey(),
+  symbol: varchar("symbol", { length: 32 }).notNull(),
+  price: decimal("price", { precision: 18, scale: 8 }).notNull(),
+  lastDigit: int("lastDigit").notNull(),
+  epoch: bigint("epoch", { mode: "number" }).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type TickHistoryRow = typeof tickHistory.$inferSelect;
+export type InsertTickHistory = typeof tickHistory.$inferInsert;
