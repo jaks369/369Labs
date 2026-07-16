@@ -24,7 +24,7 @@ import { derivWS, DerivSymbol } from "@/services/derivWebSocket";
 import DerivTokenModal from "@/components/DerivTokenModal";
 import ContractTypeSelector, { ContractSelection } from "@/components/ContractTypeSelector";
 
-const IT_SYMBOLS = ["R_10","R_25","R_50","R_75","R_100","R_150","R_200"];
+const IT_SYMBOLS = ["R_10","R_25","R_50","R_75","R_100","R_150","R_200","R_501","R_1000"];
 
 const VOLATILITY_FALLBACK: DerivSymbol[] = [
   { symbol: "R_10", displayName: "Volatility 10 Index", market: "volatility", submarket: "volatility" },
@@ -32,6 +32,17 @@ const VOLATILITY_FALLBACK: DerivSymbol[] = [
   { symbol: "R_50", displayName: "Volatility 50 Index", market: "volatility", submarket: "volatility" },
   { symbol: "R_75", displayName: "Volatility 75 Index", market: "volatility", submarket: "volatility" },
   { symbol: "R_100", displayName: "Volatility 100 Index", market: "volatility", submarket: "volatility" },
+  { symbol: "R_150", displayName: "Volatility 150 Index", market: "volatility", submarket: "volatility" },
+  { symbol: "R_200", displayName: "Volatility 200 Index", market: "volatility", submarket: "volatility" },
+  { symbol: "R_501", displayName: "Volatility 501 Index", market: "volatility", submarket: "volatility" },
+  { symbol: "R_1000", displayName: "Volatility 1000 Index", market: "volatility", submarket: "volatility" },
+  { symbol: "R_10_1", displayName: "Volatility 10 (1s) Index", market: "volatility", submarket: "volatility" },
+  { symbol: "R_25_1", displayName: "Volatility 25 (1s) Index", market: "volatility", submarket: "volatility" },
+  { symbol: "R_50_1", displayName: "Volatility 50 (1s) Index", market: "volatility", submarket: "volatility" },
+  { symbol: "R_75_1", displayName: "Volatility 75 (1s) Index", market: "volatility", submarket: "volatility" },
+  { symbol: "R_100_1", displayName: "Volatility 100 (1s) Index", market: "volatility", submarket: "volatility" },
+  { symbol: "R_150_1", displayName: "Volatility 150 (1s) Index", market: "volatility", submarket: "volatility" },
+  { symbol: "R_200_1", displayName: "Volatility 200 (1s) Index", market: "volatility", submarket: "volatility" },
 ];
 
 export default function Dashboard() {
@@ -105,11 +116,11 @@ export default function Dashboard() {
 
   const symbolList = symbols.length > 0 ? symbols : VOLATILITY_FALLBACK;
   const pickerSymbols = symbols.length > 0 ? symbols : VOLATILITY_FALLBACK;
-  const vol1sSymbols = pickerSymbols.filter(s => /\(1s\)/i.test(s.displayName) || s.symbol.endsWith("_1"));
-  const volRegularSymbols = pickerSymbols.filter(s => /volatility/i.test(s.displayName) && !/\(1s\)/i.test(s.displayName) && !s.symbol.endsWith("_1"));
+  const vol1sSymbols = pickerSymbols.filter(s => /\(1s\)/i.test(s.displayName) || s.symbol.endsWith("_1") || /_1$/.test(s.symbol));
+  const volRegularSymbols = pickerSymbols.filter(s => (/(volatility|boom|crash)/i.test(s.displayName) || /^R_|^BOOM|^CRASH/i.test(s.symbol)) && !/\(1s\)/i.test(s.displayName) && !/_1$/.test(s.symbol));
 
   const selectedDisplay = symbolList.find(s => s.symbol === selectedSymbol)?.displayName || selectedSymbol;
-  const decimalPlaces = derivWS.decimalPlacesFor(selectedSymbol);
+  const decimalPlaces = 4;
 
   if (!isAuthenticated || !user) {
     return (
