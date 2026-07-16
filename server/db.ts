@@ -177,7 +177,7 @@ export async function getTradesByUserId(userId: number, limit: number = 50): Pro
   const db = await getDb();
   if (!db) return [];
   
-  return db.select().from(trades).where(eq(trades.userId, userId)).orderBy(desc(trades.createdAt)).limit(limit);
+  return db.select().from(trades).where(eq(trades.userId, userId)).orderBy(desc(trades.updatedAt)).limit(limit);
 }
 
 export async function saveBotRun(botRun: InsertBotRun): Promise<BotRun> {
