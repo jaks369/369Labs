@@ -61,8 +61,6 @@ export default function Dashboard() {
   const botRunsQuery = trpc.bot.getRuns.useQuery();
   const tokenQuery = trpc.deriv.getToken.useQuery();
 
-  const accountType = derivWS.getAccountType();
-
   const handleQuickTrade = async () => {
     if (!derivWS.isAuthorized()) { setTradeMsg({ kind: "err", text: "Connect a Deriv token first (Settings)." }); return; }
     if (accountType === "real") {
