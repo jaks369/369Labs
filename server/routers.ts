@@ -6,38 +6,43 @@ import { z } from "zod";
 import * as db from "./db";
 import { TRPCError } from "@trpc/server";
 import { hashPassword, verifyPassword, createSessionToken } from "./_core/auth";
-import { getTickHistory, getActiveSymbols } from "./aitools";
+import { getTickHistory, getActiveSymbols, getDigitStats, getTrend, suggestStrategy, TOOL_DEFS, buildActionIntent, normalizeSymbol } from "./aitools";
 
   async function getAI() {
     const mod = await import("groq-sdk");
     return new mod.default({ apiKey: process.env.AI_API_KEY || "" });
   }
 
-  const TOOL_DEFS = [
-    { type: "function", function: { name: "getTickHistory", description: "Get recent tick data", parameters: { type: "object", properties: { symbol: { type: "string" }, count: { type: "number" } }, required: ["symbol"] } } },
-    { type: "function", function: { name: "getActiveSymbols", description: "List available symbols", parameters: { type: "object", properties: {} } } },
-    { type: "function", function: { name: "analyzeDigits", description: "Analyze digit frequency from ticks", parameters: { type: "object", properties: { ticks: { type: "array", items: { type: "object" } } }, required: ["ticks"] } } },
-    { type: "function", function: { name: "analyzePattern", description: "Analyze price patterns", parameters: { type: "object", properties: { ticks: { type: "array", items: { type: "object" } } }, required: ["ticks"] } } },
-  ];
 
-  async function runTool(name: string, args: any) {
-    if (name === "getTickHistory") { try { const t = await getTickHistory(args.symbol, args.count || 100); return { data: t }; } catch (e) { return { error: String(e) }; } }
-    if (name === "getActiveSymbols") { try { const s = await getActiveSymbols(); return { data: s }; } catch (e) { return { error: String(e) }; } }
-    if (name === "analyzeDigits") {
-      const ticks = args.ticks || []; if (!ticks.length) return { error: "No ticks" };
-      const digits = ticks.map((t: any) => { const f = t.price.toFixed(2); return parseInt(f[f.length-1], 10); });
-      const counts = Array(10).fill(0); digits.forEach(d => counts[d]++);
-      const total = digits.length;
-      return { data: { total, frequency: counts.map((c,i) => ({ digit: i, count: c, percent: ((c/total)*100).toFixed(1) })), even: ((digits.filter(d=>d%2===0).length/total)*100).toFixed(1), odd: ((digits.filter(d=>d%2!==0).length/total)*100).toFixed(1), over5: ((digits.filter(d=>d>=5).length/total)*100).toFixed(1), under5: ((digits.filter(d=>d<5).length/total)*100).toFixed(1) } };
-    }
-    if (name === "analyzePattern") {
-      const ticks = args.ticks || []; if (ticks.length < 2) return { error: "Need 2+ ticks" };
-      const prices = ticks.map((t: any) => t.price);
-      const changes = prices.slice(1).map((p,i) => p - prices[i]);
-      const up = changes.filter(c => c > 0).length; const down = changes.filter(c => c < 0).length;
-      return { data: { total: ticks.length, up, down, upPercent: ((up/changes.length)*100).toFixed(1), downPercent: ((down/changes.length)*100).toFixed(1), avgChange: (changes.reduce((a,b)=>a+b,0)/changes.length).toFixed(4), first: prices[0], last: prices[prices.length-1], change: (prices[prices.length-1]-prices[0]).toFixed(4) } };
-    }
-    return { error: "Unknown tool" };
+
+  async function runTool(name: string, args: any, ctxUser?: any) {
+    try {
+      if (name === "getTickHistory") return { data: await getTickHistory(args.symbol, args.count || 100) };
+      if (name === "getActiveSymbols") return { data: await getActiveSymbols() };
+      if (name === "getDigitStats") return { data: await getDigitStats(args.symbol, args.count || 100) };
+      if (name === "getTrend") return { data: await getTrend(args.symbol, args.count || 100) };
+      if (name === "suggestStrategy") return { data: await suggestStrategy(args.symbol, args.count || 100) };
+      if (name === "listStrategies") {
+        if (!ctxUser) return { error: "Not authenticated" };
+        const strategies = await db.getStrategiesByUserId(ctxUser.id);
+        return { data: strategies.map((s: any) => ({ id: s.id, name: s.name, config: s.config })) };
+      }
+      if (name === "deployBot") {
+        if (!ctxUser) return { error: "Not authenticated" };
+        if (!args.confirm) return { error: "Confirmation required. Ask the user to confirm deploying this bot before proceeding." };
+        return buildActionIntent("deployBot", { strategyId: args.strategyId, symbol: normalizeSymbol(args.symbol || ""), stake: args.stake || 1 });
+      }
+      if (name === "placeTrade") {
+        if (!ctxUser) return { error: "Not authenticated" };
+        if (!args.confirm) return { error: "Confirmation required. Ask the user to confirm the trade before proceeding." };
+        return buildActionIntent("placeTrade", { symbol: normalizeSymbol(args.symbol), contractType: args.contractType, stake: args.stake, barrier: args.barrier });
+      }
+      if (name === "runBacktest") {
+        if (!ctxUser) return { error: "Not authenticated" };
+        return buildActionIntent("runBacktest", { strategyId: args.strategyId, symbol: normalizeSymbol(args.symbol), start: args.start, end: args.end });
+      }
+      return { error: "Unknown tool" };
+    } catch (e) { return { error: String(e) }; }
   }
 
 export const appRouter = router({
