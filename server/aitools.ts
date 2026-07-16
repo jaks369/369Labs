@@ -223,4 +223,32 @@ export const TOOL_DEFS = [
       },
     },
   },
+  {
+    type: 'function',
+    function: {
+      name: 'startWatch',
+      description: 'Tell 369AI to watch a symbol and discover repeatable trading patterns (signals) with evidence. Use when the user asks to watch, look for patterns, find setups, or scan a market.',
+      parameters: {
+        type: 'object',
+        properties: {
+          symbol: { type: 'string' },
+          durationMinutes: { type: 'number', description: 'How long to watch (minutes). Default 30.' },
+          patternType: { type: 'string', description: 'digit_streak | digit_bias | even_odd_run | any' },
+          minWinRate: { type: 'number', description: 'Minimum win-rate percent to record a signal (default 62)' },
+        },
+        required: ['symbol'],
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'listSignals',
+      description: 'List AI-discovered trading signals (the Marketplace feed) for the user, optionally filtered by symbol.',
+      parameters: {
+        type: 'object',
+        properties: { symbol: { type: 'string' } },
+      },
+    },
+  },
 ];
