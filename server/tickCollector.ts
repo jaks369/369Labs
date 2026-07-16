@@ -60,9 +60,11 @@ export function startTickCollector() {
         const symbol = msg.tick.symbol;
         const quote = String(msg.tick.quote);
         const epoch = Number(msg.tick.epoch) || Math.floor(Date.now() / 1000);
-        // last digit = last numeric char of the quoted price
-        const digits = quote.replace(/[^0-9]/g, "");
-        const lastDigit = digits.length ? parseInt(digits[digits.length - 1], 10) : 0;
+        // last digit = the digit immediately before the decimal point (Deriv convention)
+        const numStr = String(quote);
+        const dotIdx = numStr.indexOf(".");
+        const digitChar = dotIdx > 0 ? numStr[dotIdx - 1] : numStr[numStr.length - 1];
+        const lastDigit = parseInt(digitChar, 10);
         saveTickHistory({
           symbol,
           price: quote,
