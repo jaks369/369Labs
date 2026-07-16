@@ -8,12 +8,13 @@ import { Zap, TrendingUp, Brain, Shield, Globe, BarChart3, ChevronRight, Activit
 export default function Home() {
   const { user, isAuthenticated } = useAuth();
   const [, navigate] = useLocation();
+  const showLanding = new URLSearchParams(window.location.search).get("home") === "1";
 
   useEffect(() => {
-    if (isAuthenticated && user) {
+    if (isAuthenticated && user && !showLanding) {
       navigate("/dashboard");
     }
-  }, [isAuthenticated, user, navigate]);
+  }, [isAuthenticated, user, navigate, showLanding]);
 
   return (
     <div className="min-h-screen bg-[#0D1117] text-[#F8FAFC] selection:bg-blue-500/30">
