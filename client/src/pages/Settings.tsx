@@ -9,7 +9,7 @@ import { useLocation } from "wouter";
 import { derivWS } from "@/services/derivWebSocket";
 
 export default function Settings() {
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated, logout } = useAuth();
   const [, navigate] = useLocation();
   const [derivToken, setDerivToken] = useState("");
   const [tokenChanged, setTokenChanged] = useState(false);
