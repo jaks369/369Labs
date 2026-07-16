@@ -45,6 +45,9 @@ import { getTickHistory, getActiveSymbols, getDigitStats, getTrend, suggestStrat
     } catch (e) { return { error: String(e) }; }
   }
 
+  // In-memory agent conversation history (per user+chat) for continuity
+  const agentHistory = new Map<string, { role: "user" | "assistant"; content: string }[]>();
+
 export const appRouter = router({
   system: systemRouter,
 
@@ -443,7 +446,6 @@ export const appRouter = router({
   }),
 
   // AI Agent - ReAct-style multi-step reasoning with persistent history
-  const agentHistory = new Map<string, { role: "user" | "assistant"; content: string }[]>();
   ai: router({
     ask: protectedProcedure
       .input(z.object({
