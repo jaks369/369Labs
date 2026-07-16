@@ -41,6 +41,25 @@ import { getTickHistory, getActiveSymbols, getDigitStats, getTrend, suggestStrat
         if (!ctxUser) return { error: "Not authenticated" };
         return buildActionIntent("runBacktest", { strategyId: args.strategyId, symbol: normalizeSymbol(args.symbol), start: args.start, end: args.end });
       }
+      if (name === "startWatch") {
+        if (!ctxUser) return { error: "Not authenticated" };
+        const { runWatch } = await import("./signalScanner");
+        const saved = await runWatch({
+          userId: ctxUser.id,
+          symbol: args.symbol,
+          sampleSize: Math.min(2000, (args.durationMinutes || 30) * 20),
+          minWinRate: args.minWinRate || 62,
+          patternType: args.patternType || "any",
+        });
+        return { data: { scanned: true, signalsFound: saved.length, signals: saved } };
+      }
+      if (name === "listSignals") {
+        if (!ctxUser) return { error: "Not authenticated" };
+        const list = args.symbol
+          ? await db.getSignalsBySymbol(ctxUser.id, normalizeSymbol(args.symbol))
+          : await db.getSignalsByUserId(ctxUser.id);
+        return { data: list };
+      }
       return { error: "Unknown tool" };
     } catch (e) { return { error: String(e) }; }
   }
