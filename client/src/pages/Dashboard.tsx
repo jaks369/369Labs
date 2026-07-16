@@ -2,14 +2,14 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import { useEffect, useState } from "react";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
-import { 
-  Loader2, 
-  TrendingUp, 
-  TrendingDown, 
-  Activity, 
-  ArrowUpRight, 
-  ArrowDownRight, 
-  Clock, 
+import {
+  Loader2,
+  TrendingUp,
+  TrendingDown,
+  Activity,
+  ArrowUpRight,
+  ArrowDownRight,
+  Clock,
   Search,
   LayoutGrid,
   List,
@@ -26,6 +26,19 @@ import ContractTypeSelector, { ContractSelection } from "@/components/ContractTy
 
 const IT_SYMBOLS = ["R_10","R_25","R_50","R_75","R_100","R_150","R_200"];
 
+const VOLATILITY_FALLBACK: DerivSymbol[] = [
+  { symbol: "R_10_1", displayName: "Volatility 10 (1s) Index", market: "volatility", submarket: "volatility" },
+  { symbol: "R_25_1", displayName: "Volatility 25 (1s) Index", market: "volatility", submarket: "volatility" },
+  { symbol: "R_50_1", displayName: "Volatility 50 (1s) Index", market: "volatility", submarket: "volatility" },
+  { symbol: "R_75_1", displayName: "Volatility 75 (1s) Index", market: "volatility", submarket: "volatility" },
+  { symbol: "R_100_1", displayName: "Volatility 100 (1s) Index", market: "volatility", submarket: "volatility" },
+  { symbol: "R_10", displayName: "Volatility 10 Index", market: "volatility", submarket: "volatility" },
+  { symbol: "R_25", displayName: "Volatility 25 Index", market: "volatility", submarket: "volatility" },
+  { symbol: "R_50", displayName: "Volatility 50 Index", market: "volatility", submarket: "volatility" },
+  { symbol: "R_75", displayName: "Volatility 75 Index", market: "volatility", submarket: "volatility" },
+  { symbol: "R_100", displayName: "Volatility 100 Index", market: "volatility", submarket: "volatility" },
+];
+
 export default function Dashboard() {
   const { user, isAuthenticated } = useAuth();
   const [, navigate] = useLocation();
@@ -33,12 +46,8 @@ export default function Dashboard() {
   const [balance, setBalance] = useState(0);
   const [botRunning, setBotRunning] = useState(false);
   const [selectedSymbol, setSelectedSymbol] = useState("R_50");
-  const [marketSearch, setMarketSearch] = useState("");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
-  const [searchTerm, setSearchTerm] = useState("");
-  const [symbols, setSymbols] = useState<DerivSymbol[]>([]);
   const [showSymbolPicker, setShowSymbolPicker] = useState(false);
-  const [searchSymbol, setSearchSymbol] = useState("");
   const [showTokenModal, setShowTokenModal] = useState(false);
   const [contract, setContract] = useState<ContractSelection>({ category: "rise_fall", direction: "rise" });
 
@@ -81,6 +90,7 @@ export default function Dashboard() {
     }
   }, [tokenQuery.data]);
 
+  const [symbols, setSymbols] = useState<DerivSymbol[]>([]);
   useEffect(() => {
     const unsub = derivWS.onSymbols((syms) => {
       setSymbols(syms);
@@ -92,33 +102,11 @@ export default function Dashboard() {
     return () => {};
   }, []);
 
+  const symbolList = symbols.length > 0 ? symbols : VOLATILITY_FALLBACK;
+  const vol1sSymbols = symbolList.filter(s => /\(1s\)/i.test(s.displayName) || s.symbol.endsWith("_1"));
+  const volRegularSymbols = symbolList.filter(s => /volatility/i.test(s.displayName) && !/\(1s\)/i.test(s.displayName) && !s.symbol.endsWith("_1"));
 
-  const filteredSymbols = symbols.filter(s =>
-    (s.symbol || "").toLowerCase().includes(searchSymbol.toLowerCase()) ||
-    (s.displayName || "").toLowerCase().includes(searchSymbol.toLowerCase())
-  );
-  const volatilitySymbols = filteredSymbols.filter(s => 
-    s.market === "volatility" || s.market === "synthetic_index" || s.submarket?.includes("volatility") || s.submarket?.includes("synthetic") || IT_SYMBOLS.includes(s.symbol)
-  );
-  const forexSymbols = symbols.filter(s => s.market === "forex");
-  const syntheticsSymbols = filteredSymbols.filter(s =>
-    s.market === "indices" ||
-    s.displayName?.toLowerCase().includes("boom") ||
-    s.displayName?.toLowerCase().includes("crash") ||
-    s.displayName?.toLowerCase().includes("step") ||
-    s.displayName?.toLowerCase().includes("jump") ||
-    s.displayName?.toLowerCase().includes("range") ||
-    s.displayName?.toLowerCase().includes("daily reset") ||
-    (!volatilitySymbols.includes(s) && s.market !== "forex")
-  );
-  const otherSymbols = symbols.filter(s => s.market !== "volatility" && s.market !== "forex");
-
-  const groupedSymbols = [
-    { label: "Volatility Indices", items: volatilitySymbols },
-    { label: "Synthetics (Boom/Crash/Step/Jump)", items: syntheticsSymbols },
-    { label: "Forex", items: forexSymbols },
-    { label: "Other", items: otherSymbols },
-  ].filter(g => g.items.length > 0);
+  const selectedDisplay = symbolList.find(s => s.symbol === selectedSymbol)?.displayName || selectedSymbol;
 
   if (!isAuthenticated || !user) {
     return (
@@ -130,23 +118,76 @@ export default function Dashboard() {
 
   return (
     <div className="p-6 lg:p-10">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-10">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
         <div>
-          <h1 className="text-3xl font-bold text-white mb-2">Market Overview</h1>
-          <p className="text-slate-500 text-sm font-medium flex items-center gap-2">
-            <Clock className="w-4 h-4" />
-            Last updated: {new Date().toLocaleTimeString()}
-          </p>
+          <h1 className="text-3xl font-bold text-white mb-1">Market Overview</h1>
+          <p className="text-slate-500 text-sm font-medium">Volatility Indices &middot; Live Trading</p>
         </div>
         <div className="flex items-center gap-3">
-          <div className="p-6 bg-black/40 h-[400px]">
-            <TickChart symbol={selectedSymbol} maxDataPoints={50} />
-          </div>
+          <Button onClick={() => setShowTokenModal(true)} className="btn-primary gap-2">
+            <Zap className="w-4 h-4" /> Connect Deriv
+          </Button>
+          <Button onClick={() => setShowSymbolPicker(s => !s)} className="btn-outline gap-2">
+            <Activity className="w-4 h-4" /> {selectedDisplay}
+            <ChevronDown className={`w-4 h-4 transition-transform ${showSymbolPicker ? "rotate-180" : ""}`} />
+          </Button>
         </div>
       </div>
 
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
         <div className="xl:col-span-2 space-y-8">
+          <div className="bloomberg-panel p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="font-bold text-white uppercase text-xs tracking-widest">
+                Live Chart &mdash; {selectedDisplay}
+              </h2>
+              <button
+                onClick={() => setShowSymbolPicker(s => !s)}
+                className="text-slate-400 hover:text-white flex items-center gap-1 text-xs font-semibold"
+              >
+                {showSymbolPicker ? "Close" : "Change Symbol"}
+                <ChevronDown className={`w-3 h-3 transition-transform ${showSymbolPicker ? "rotate-180" : ""}`} />
+              </button>
+            </div>
+
+            {showSymbolPicker ? (
+              <div className="max-h-[420px] overflow-y-auto space-y-5 pr-1">
+                <div>
+                  <h3 className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2">Volatility 1s Indices</h3>
+                  <div className="grid grid-cols-2 gap-2">
+                    {vol1sSymbols.map(s => (
+                      <button
+                        key={s.symbol}
+                        onClick={() => { setSelectedSymbol(s.symbol); setShowSymbolPicker(false); }}
+                        className={`text-left px-3 py-2 rounded-lg text-xs font-semibold transition-colors ${selectedSymbol === s.symbol ? "bg-blue-600/20 text-blue-400 border border-blue-600/40" : "bg-white/5 text-slate-300 hover:bg-white/10 border border-transparent"}`}
+                      >
+                        {s.displayName || s.symbol}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <h3 className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2">Volatility Indices</h3>
+                  <div className="grid grid-cols-2 gap-2">
+                    {volRegularSymbols.map(s => (
+                      <button
+                        key={s.symbol}
+                        onClick={() => { setSelectedSymbol(s.symbol); setShowSymbolPicker(false); }}
+                        className={`text-left px-3 py-2 rounded-lg text-xs font-semibold transition-colors ${selectedSymbol === s.symbol ? "bg-blue-600/20 text-blue-400 border border-blue-600/40" : "bg-white/5 text-slate-300 hover:bg-white/10 border border-transparent"}`}
+                      >
+                        {s.displayName || s.symbol}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="p-6 bg-black/40 h-[420px]">
+                <TickChart symbol={selectedSymbol} maxDataPoints={50} />
+              </div>
+            )}
+          </div>
+
           <div className="bloomberg-panel">
             <div className="p-4 border-b border-[#30363D] flex items-center justify-between">
               <h2 className="font-bold text-white uppercase text-xs tracking-widest">Recent Executions</h2>
@@ -170,8 +211,8 @@ export default function Dashboard() {
                 <tbody className="divide-y divide-[#30363D]">
                   {tradesQuery.data?.slice(0, 8).map(trade => (
                     <tr key={trade.id} className="hover:bg-white/5 transition-colors">
-                      <td className="p-4 font-semibold text-white">{trade.symbol || "—"}</td>
-                      <td className="p-4 text-slate-400">{trade.contractType || "—"}</td>
+                      <td className="p-4 font-semibold text-white">{trade.symbol || "-"}</td>
+                      <td className="p-4 text-slate-400">{trade.contractType || "-"}</td>
                       <td className="p-4 text-slate-400">${trade.stake}</td>
                       <td className="p-4 text-slate-400">{trade.entryPrice}</td>
                       <td className="p-4">
@@ -228,7 +269,7 @@ export default function Dashboard() {
           <div className="bloomberg-panel p-6">
             <h3 className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-6">Market Status</h3>
             <div className="space-y-4">
-              {volatilitySymbols.slice(0, 6).map(m => (
+              {volRegularSymbols.slice(0, 6).map(m => (
                 <div key={m.symbol} className="flex items-center justify-between">
                   <span className="text-sm text-slate-300">{m.symbol}</span>
                   <div className="flex items-center gap-3">
@@ -246,12 +287,14 @@ export default function Dashboard() {
               <h3 className="text-xs font-bold text-blue-500 uppercase tracking-widest">369AI Insight</h3>
             </div>
             <p className="text-xs text-slate-400 leading-relaxed italic">
-              "Volatility 50 index is showing a strong bullish divergence on the 15m RSI. 
+              "Volatility 50 index is showing a strong bullish divergence on the 15m RSI.
               Consider a Mean Reversion strategy for the next 10 ticks."
             </p>
           </div>
         </div>
       </div>
+
+      <DerivTokenModal open={showTokenModal} onClose={() => setShowTokenModal(false)} />
     </div>
   );
 }
