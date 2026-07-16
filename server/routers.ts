@@ -6,7 +6,7 @@ import { z } from "zod";
 import * as db from "./db";
 import { TRPCError } from "@trpc/server";
 import { hashPassword, verifyPassword, createSessionToken } from "./_core/auth";
-import { getTickHistory, getActiveSymbols, getDigitStats, getTrend, suggestStrategy, TOOL_DEFS, buildActionIntent, normalizeSymbol } from "./aitools";
+import { getTickHistory, getActiveSymbols, getDigitStats, getTrend, suggestStrategy, TOOL_DEFS, buildActionIntent, normalizeSymbol, detectWatchIntent } from "./aitools";
 
   async function getAI() {
     const mod = await import("groq-sdk");
@@ -529,6 +529,29 @@ HOW TO RESPOND:
           // persist history for continuity
           const convo = [...prior, { role: "user" as const, content: input.message }, { role: "assistant" as const, content: reply }];
           agentHistory.set(key, convo.slice(-20));
+
+          // Natural-language fallback: if the model didn't call a tool but the user clearly
+          // asked to watch/scan/monitor a symbol (typos OK), trigger the scan automatically.
+          if (!reply || !steps.length) {
+            const intent = detectWatchIntent(input.message);
+            if (intent && ctx.user) {
+              try {
+                const { runWatch } = await import("./signalScanner");
+                const saved = await runWatch({
+                  userId: ctx.user.id,
+                  symbol: intent.symbol,
+                  sampleSize: Math.min(2000, intent.durationMinutes * 20),
+                  minWinRate: 62,
+                  patternType: intent.patternType,
+                });
+                const msg2 = saved.length
+                  ? `I watched ${intent.symbol} and found ${saved.length} repeatable pattern${saved.length > 1 ? "s" : ""} (win rates ${saved.map((s: any) => s.winRate + "%").join(", ")}). Check the AI Signals page - each has full evidence and a Backtest button.`
+                  : `I watched ${intent.symbol} for ${intent.durationMinutes} min and didn't find any pattern clearing my confidence threshold this time. I'll keep scanning - you can also ask me to watch again with a wider window.`;
+                return { reply: msg2, steps: [{ tool: "startWatch", args: intent, result: { signalsFound: saved.length } }] };
+              } catch (e) { console.error("[watch fallback]", e); }
+            }
+          }
+
           return { reply, steps };
         } catch (e) { console.error("[AI]", e); return { reply: "Error: " + String(e) }; }
       }),
