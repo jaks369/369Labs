@@ -104,8 +104,7 @@ export const appRouter = router({
         success: true,
       } as const;
     }),
-  }
-    
+
     // Forgot / Reset Password
     forgotPassword: publicProcedure
       .input(z.object({ email: z.string().email() }))
