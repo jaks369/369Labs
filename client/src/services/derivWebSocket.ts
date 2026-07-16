@@ -65,6 +65,7 @@ class DerivWebSocketService {
   private contractListeners: Map<number, (c: ContractUpdate) => void> = new Map();
   private intentionallyDisconnected = false;
   private lastBalance: any = null;
+  private lastAccountType: string = "";
   private balanceListeners: Set<(b: any) => void> = new Set();
   private _activeSymbols: DerivSymbol[] = [];
   private symbolListeners: Set<(symbols: DerivSymbol[]) => void> = new Set();
@@ -140,6 +141,9 @@ class DerivWebSocketService {
     }
     if (data.msg_type === "balance") {
       this.lastBalance = data.balance;
+      const arr = Array.isArray(data.balance) ? data.balance : [data.balance];
+      const at = arr[0]?.account_type || data.account_type || "";
+      this.lastAccountType = typeof at === "string" ? at.toLowerCase() : "";
       this.notifyBalance(data.balance);
       return;
     }
@@ -282,6 +286,7 @@ class DerivWebSocketService {
   private notifyDisconnect(): void { this.listeners.forEach(l => { try { l.onDisconnect?.(); } catch {} }); }
   public isConnected(): boolean { return this.ws !== null && this.ws.readyState === WebSocket.OPEN; }
   public isAuthorized(): boolean { return this.authorized; }
+  public getAccountType(): string { return this.lastAccountType; }
   public onBalance(cb: (b: any) => void): void { this.balanceListeners.add(cb); if (this.lastBalance) cb(this.lastBalance); }
   public onSymbols(cb: (symbols: DerivSymbol[]) => void): void { this.symbolListeners.add(cb); if (this._activeSymbols.length > 0) cb(this._activeSymbols); }
   public onTokenError(cb: (msg: string) => void): void { this.tokenListeners.add(cb); }
