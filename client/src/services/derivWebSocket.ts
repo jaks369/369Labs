@@ -67,6 +67,7 @@ class DerivWebSocketService {
   private balanceListeners: Set<(b: any) => void> = new Set();
   private _activeSymbols: DerivSymbol[] = [];
   private symbolListeners: Set<(symbols: DerivSymbol[]) => void> = new Set();
+  private tokenListeners: Set<(msg: string) => void> = new Set();
 
   constructor() { this.setupWebSocket(); }
 
@@ -156,7 +157,9 @@ class DerivWebSocketService {
     if (data.error) {
       const msg = data.error.message || JSON.stringify(data.error);
       console.error("[Deriv WS] API Error:", msg);
-      this.notifyError(new Error(msg));
+      // Token/authorization errors should not break the public market-data chart.
+      const isTokenError = /token|authoriz|session/i.test(msg);
+      if (!isTokenError) this.notifyError(new Error(msg));
     }
   }
 
@@ -266,10 +269,12 @@ class DerivWebSocketService {
   public isAuthorized(): boolean { return this.authorized; }
   public onBalance(cb: (b: any) => void): void { this.balanceListeners.add(cb); if (this.lastBalance) cb(this.lastBalance); }
   public onSymbols(cb: (symbols: DerivSymbol[]) => void): void { this.symbolListeners.add(cb); if (this._activeSymbols.length > 0) cb(this._activeSymbols); }
+  public onTokenError(cb: (msg: string) => void): void { this.tokenListeners.add(cb); }
   public get activeSymbols(): DerivSymbol[] { return this._activeSymbols; }
   public getSymbol(symbol: string): DerivSymbol | undefined { return this._activeSymbols.find(s => s.symbol === symbol); }
   public decimalPlacesFor(symbol: string): number { return this.getSymbol(symbol)?.decimalPlaces ?? 3; }
   private notifyBalance(b: any): void { this.balanceListeners.forEach(cb => { try { cb(b); } catch {} }); }
+  private notifyTokenError(msg: string): void { this.tokenListeners.forEach(cb => { try { cb(msg); } catch {} }); }
   public disconnect(): void { this.intentionallyDisconnected = true; if (this.ws) { this.ws.close(); this.ws = null; } this.contractListeners.clear(); this.pendingRequests.forEach(p => p.reject(new Error("Connection closed"))); this.pendingRequests.clear(); }
   public setApiToken(token: string): void { if (this.apiToken !== token) this.authorized = false; this.apiToken = token; if (this.ws && this.ws.readyState === WebSocket.OPEN) { this.authorized = false; this.authorize(); } }
 }
