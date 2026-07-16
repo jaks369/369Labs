@@ -188,6 +188,19 @@ export const appRouter = router({
         });
       }
     }),
+
+    removeToken: protectedProcedure
+      .mutation(async ({ ctx }) => {
+        try {
+          await db.removeDerivToken(ctx.user.id);
+          return { success: true };
+        } catch (error) {
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: "Failed to remove Deriv token",
+          });
+        }
+      }),
   }),
 
   // Strategy Management
