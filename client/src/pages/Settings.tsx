@@ -211,6 +211,19 @@ export default function Settings() {
             </Button>
           </div>
         </div>
+
+        <div className="hud-panel mb-6">
+          <h2 className="text-lg font-bold text-[#FF00FF] mb-4">ACCOUNT</h2>
+          <div className="space-y-4">
+            <p className="text-sm text-[#00FFFF]/80">Signed in as <span className="text-[#00FFFF] font-semibold">{user?.email || user?.username || "user"}</span></p>
+            <Button
+              onClick={logout}
+              className="w-full bg-red-500/20 text-red-400 border border-red-500/40 hover:bg-red-500/30 font-bold py-2 px-4 rounded"
+            >
+              LOGOUT
+            </Button>
+          </div>
+        </div>
       </div>
     </div>
   );
