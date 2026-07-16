@@ -1,4 +1,4 @@
-import { eq, and, desc } from "drizzle-orm";
+import { eq, and, desc, gt, sql } from "drizzle-orm";
 import * as mysql from "mysql2/promise";
 import { drizzle } from "drizzle-orm/mysql2";
 import { 
@@ -272,11 +272,25 @@ export async function saveSignal(row: InsertSignal): Promise<Signal> {
 export async function getSignalsByUserId(userId: number, limit: number = 100): Promise<Signal[]> {
   const db = await getDb();
   if (!db) return [];
-  return db.select().from(signals).where(eq(signals.userId, userId)).orderBy(desc(signals.discoveredAt)).limit(limit);
+  return db.select().from(signals).where(and(eq(signals.userId, userId), gt(signals.expiresAt, Math.floor(Date.now()/1000)))).orderBy(desc(signals.discoveredAt)).limit(limit);
 }
 
 export async function getSignalsBySymbol(userId: number, symbol: string, limit: number = 100): Promise<Signal[]> {
   const db = await getDb();
   if (!db) return [];
-  return db.select().from(signals).where(and(eq(signals.userId, userId), eq(signals.symbol, symbol))).orderBy(desc(signals.discoveredAt)).limit(limit);
+  return db.select().from(signals).where(and(eq(signals.userId, userId), eq(signals.symbol, symbol), gt(signals.expiresAt, Math.floor(Date.now()/1000)))).orderBy(desc(signals.discoveredAt)).limit(limit);
+}
+// One-time data hygiene: during a past bug, ticks were stored with lastDigit=0.
+// Remove those rows so digit stats / scanners aren't skewed by bad data.
+export async function pruneBadTicks(): Promise<number> {
+  const db = await getDb();
+  if (!db) return 0;
+  try {
+    const res = await db.delete(tickHistory).where(eq(tickHistory.lastDigit, 0));
+    console.log(`[pruneBadTicks] removed ${(res as any)?.affectedRows ?? 0} bad tick rows`);
+    return (res as any)?.affectedRows ?? 0;
+  } catch (e) {
+    console.error("[pruneBadTicks] failed", e);
+    return 0;
+  }
 }
