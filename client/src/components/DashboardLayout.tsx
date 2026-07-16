@@ -32,7 +32,7 @@ import {
   Activity,
   Bell,
   MessageCircle
-, History , Home } from "lucide-react";
+, , Home } from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { DashboardLayoutSkeleton } from './DashboardLayoutSkeleton';
@@ -42,7 +42,6 @@ const menuItems = [
   { icon: Home, label: "Home", path: "/?home=1" },
   { icon: LayoutDashboard, label: "Dashboard", path: "/dashboard" },
   { icon: Bot, label: "Bots", path: "/bots" },
-  { icon: History, label: "Trade History", path: "/trades" },
   { icon: Brain, label: "369AI Assistant", path: "/ai-assistant" },
   { icon: CandlestickChart, label: "AI Signals", path: "/marketplace" },
   { icon: MessageCircle, label: "Telegram", path: "/telegram" },
