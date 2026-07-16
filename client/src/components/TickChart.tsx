@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { derivWS, Tick } from "@/services/derivWebSocket";
+import { trpc } from "@/lib/trpc";
 
 interface ChartData {
   time: string;
@@ -14,6 +15,17 @@ interface TickChartProps {
 
 export default function TickChart({ symbol, maxDataPoints = 100, decimalPlaces = 3 }: TickChartProps) {
   const [data, setData] = useState<ChartData[]>([]);
+
+  const historyQuery = trpc.market.getHistory.useQuery({ symbol, limit: maxDataPoints }, { enabled: Boolean(symbol) });
+  useEffect(() => {
+    const ticks = historyQuery.data?.ticks;
+    if (!ticks || !ticks.length) return;
+    const hist = ticks.slice(-maxDataPoints).map((t) => ({
+      time: new Date((t.epoch || 0) * 1000).toLocaleTimeString(),
+      price: Number(t.price),
+    }));
+    if (hist.length) setData(hist);
+  }, [historyQuery.data, symbol, maxDataPoints]);
   const [isConnected, setIsConnected] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [currentPrice, setCurrentPrice] = useState<number | null>(null);
