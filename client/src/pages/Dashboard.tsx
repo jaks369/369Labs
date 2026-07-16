@@ -16,7 +16,7 @@ import {
   Zap,
   Brain,
   ChevronDown
-} from "lucide-react";
+, Wallet } from "lucide-react";
 import { useLocation } from "wouter";
 import TickChart from "@/components/TickChart";
 import DigitStats from "@/components/DigitStats";
@@ -50,6 +50,7 @@ export default function Dashboard() {
   const [, navigate] = useLocation();
   const [pnl, setPnl] = useState(0);
   const [balance, setBalance] = useState(0);
+  const [balanceInfo, setBalanceInfo] = useState<{ currency: string; accountType: string } | null>(null);
   const [botRunning, setBotRunning] = useState(false);
   const [selectedSymbol, setSelectedSymbol] = useState("R_50");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
@@ -87,6 +88,10 @@ export default function Dashboard() {
     const unsub = derivWS.onBalance((b) => {
       const acct = b.accounts?.[0] || b;
       setBalance(parseFloat(acct?.balance || acct?.display_balance || "0"));
+      setBalanceInfo({
+        currency: acct?.currency || "USD",
+        accountType: (acct?.account_type || b.account_type || "").toString().toLowerCase(),
+      });
     });
     return () => {};
   }, []);
@@ -138,6 +143,19 @@ export default function Dashboard() {
           <p className="text-slate-500 text-sm font-medium">Volatility Indices &middot; Live Trading</p>
         </div>
         <div className="flex items-center gap-3">
+          {balance > 0 && (
+            <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-[#161B22] border border-[#30363D]">
+              <Wallet className="w-4 h-4 text-emerald-400" />
+              <span className="text-sm font-bold text-white">
+                {balance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} {balanceInfo?.currency || "USD"}
+              </span>
+              {balanceInfo?.accountType && (
+                <span className={`text-[10px] font-bold uppercase px-1.5 py-0.5 rounded ${balanceInfo.accountType === "demo" ? "bg-amber-500/20 text-amber-400" : "bg-emerald-500/20 text-emerald-400"}`}>
+                  {balanceInfo.accountType}
+                </span>
+              )}
+            </div>
+          )}
           <Button onClick={() => setShowTokenModal(true)} className="btn-primary gap-2">
             <Zap className="w-4 h-4" /> Connect Deriv
           </Button>
