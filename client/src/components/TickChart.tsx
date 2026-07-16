@@ -142,17 +142,22 @@ export default function TickChart({ symbol, maxDataPoints = 100, decimalPlaces =
             const lx = parseFloat(last[0]);
             const ly = parseFloat(last[1]);
             const label = prices[prices.length - 1].toFixed(decimalPlaces);
-            const labelRight = lx > width - 70;
+            const tagW = Math.max(48, label.length * 8 + 16);
+            const placeLeft = lx + tagW > width - 4;
+            const tx = placeLeft ? lx - tagW - 6 : lx + 6;
+            const ty = Math.min(Math.max(ly - 11, 2), height - 22);
+            const color = priceColor === "up" ? "#00d4ff" : "#ff4d4d";
             return (
               <g>
-                <circle cx={lx} cy={ly} r="4" fill={priceColor === "up" ? "#00d4ff" : "#ff4d4d"} />
+                <circle cx={lx} cy={ly} r="4" fill={color} />
+                <rect x={tx} y={ty} width={tagW} height={22} rx="4" fill={color} />
                 <text
-                  x={labelRight ? lx - 8 : lx + 8}
-                  y={ly + 4}
-                  textAnchor={labelRight ? "end" : "start"}
+                  x={tx + tagW / 2}
+                  y={ty + 15}
+                  textAnchor="middle"
                   fontSize="13"
                   fontWeight="bold"
-                  fill={priceColor === "up" ? "#00d4ff" : "#ff4d4d"}
+                  fill="#0D1117"
                 >
                   {label}
                 </text>
