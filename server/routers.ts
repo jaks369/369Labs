@@ -472,7 +472,24 @@ export const appRouter = router({
         } catch (e) { console.error("[AI]", e); return { reply: "Error: " + String(e) }; }
       }),
   }),
-  market: router({}),
+  market: router({
+    getHistory: publicProcedure
+      .input(z.object({ symbol: z.string(), limit: z.number().default(1000) }))
+      .query(async ({ input }) => {
+        try {
+          const rows = await db.getTickHistory(input.symbol, input.limit);
+          return { ticks: rows.map((r) => ({
+            symbol: r.symbol,
+            price: r.price,
+            lastDigit: r.lastDigit,
+            epoch: Number(r.epoch),
+          })) };
+        } catch (e) {
+          console.error("[market.getHistory] error:", e);
+          return { ticks: [] };
+        }
+      }),
+  }),
 });
 
 export type AppRouter = typeof appRouter;
