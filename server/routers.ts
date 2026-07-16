@@ -451,7 +451,7 @@ export const appRouter = router({
           const res = await ai.chat.completions.create({
             model: "llama-3.3-70b-versatile",
             messages: [
-              { role: "system", content: "You are 369AI, a trading assistant for the 369Labs Deriv platform. Use tools to fetch live market data when relevant." },
+              { role: "system", content: "You are 369AI, a trading assistant for the 369Labs Deriv trading platform. The platform trades Deriv synthetic volatility indices. Valid symbols are R_10, R_25, R_50, R_75, R_100 (1-second variants: 1HZ10V, 1HZ15V, 1HZ25V, 1HZ30V, 1HZ50V, 1HZ75V, 1HZ90V, 1HZ100V). Users may type R10 instead of R_10 or 1HZ10 instead of 1HZ10V - the system normalizes these. Use the getActiveSymbols tool to list symbols and getTickHistory to pull recent ticks (prices). For backtesting, tell users to open the in-app Backtesting page (/backtesting) where they pick a symbol, strategy and date range - do NOT recommend external tools like Backtrader or Python. Keep answers concise and focused on this platform." },
               ...(input.history || []),
               { role: "user", content: input.message },
             ],
@@ -472,7 +472,7 @@ export const appRouter = router({
             const res2 = await ai.chat.completions.create({
               model: "llama-3.3-70b-versatile",
               messages: [
-                { role: "system", content: "You are 369AI, a trading assistant. Use the tool results to give a concise, helpful answer." },
+                { role: "system", content: "You are 369AI, a trading assistant for 369Labs. Use the tool results to give a concise, helpful answer. Valid symbols: R_10,R_25,R_50,R_75,R_100 and 1HZ10V,1HZ15V,1HZ25V,1HZ30V,1HZ50V,1HZ75V,1HZ90V,1HZ100V. Backtesting is done in-app at /backtesting, not via external tools." },
                 ...(input.history || []),
                 { role: "user", content: input.message },
                 { role: "assistant", content: msg.content || "", tool_calls: msg.tool_calls },
