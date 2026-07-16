@@ -11,6 +11,7 @@ import {
   botRuns, 
   telegramSettings, 
   notificationSettings,
+  tickHistory,
   DerivToken,
   Strategy,
   Trade,
@@ -241,4 +242,21 @@ export async function getNotificationSettingsByUserId(userId: number): Promise<N
   
   const result = await db.select().from(notificationSettings).where(eq(notificationSettings.userId, userId)).limit(1);
   return result.length > 0 ? result[0] : undefined;
+}
+
+
+export async function saveTickHistory(row: InsertTickHistory): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+  try {
+    await db.insert(tickHistory).values(row);
+  } catch (error) {
+    console.error("[tickHistory] insert error:", error);
+  }
+}
+
+export async function getTickHistory(symbol: string, limit: number = 1000): Promise<TickHistoryRow[]> {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(tickHistory).where(eq(tickHistory.symbol, symbol)).orderBy(desc(tickHistory.epoch)).limit(limit);
 }
