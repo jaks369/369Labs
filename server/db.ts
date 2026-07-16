@@ -134,16 +134,16 @@ export async function getDerivTokenByUserId(userId: number): Promise<DerivToken 
   }
 }
 
-export async function saveStrategy(strategy: InsertStrategy): Promise<Strategy> {
-
 export async function removeDerivToken(userId: number): Promise<void> {
   const db = await getDb();
   if (!db) return;
   await db.update(derivTokens).set({ isActive: false }).where(eq(derivTokens.userId, userId));
 }
+
+export async function saveStrategy(strategy: InsertStrategy): Promise<Strategy> {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  
+
   const result = await db.insert(strategies).values(strategy);
   const id = result[0].insertId;
   return (await db.select().from(strategies).where(eq(strategies.id, id as number)).limit(1))[0];
