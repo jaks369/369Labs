@@ -43,50 +43,55 @@
 }
 
 :root {
-  /* 369Labs Professional Palette */
+  /* 369Labs Terminal Palette - unified amber/terminal theme across the whole app */
   --black: #0D1117;
+  --terminal: #0A0D12;
+  --amber: #F0B90B;
+  --amber-soft: rgba(240, 185, 11, 0.12);
+  --amber-border: rgba(240, 185, 11, 0.32);
   --electric-blue: #2563EB;
   --white: #F8FAFC;
   --emerald: #10B981;
-  
+  --slate: #8B949E;
+
   --background: var(--black);
   --foreground: var(--white);
-  
+
   --card: #161B22;
   --card-foreground: var(--white);
-  
+
   --popover: #161B22;
   --popover-foreground: var(--white);
-  
-  --primary: var(--electric-blue);
-  --primary-foreground: var(--white);
-  
+
+  --primary: var(--amber);
+  --primary-foreground: #0D1117;
+
   --secondary: #21262D;
   --secondary-foreground: var(--white);
-  
+
   --muted: #21262D;
-  --muted-foreground: #8B949E;
-  
-  --accent: #30363D;
-  --accent-foreground: var(--white);
-  
+  --muted-foreground: var(--slate);
+
+  --accent: var(--amber-soft);
+  --accent-foreground: var(--amber);
+
   --destructive: #EF4444;
   --destructive-foreground: var(--white);
-  
+
   --border: #30363D;
   --input: #30363D;
-  --ring: var(--electric-blue);
-  
+  --ring: var(--amber);
+
   --radius: 0.5rem;
-  
-  --sidebar: #0D1117;
-  --sidebar-foreground: #8B949E;
-  --sidebar-primary: var(--electric-blue);
-  --sidebar-primary-foreground: var(--white);
-  --sidebar-accent: #21262D;
+
+  --sidebar: #0A0D12;
+  --sidebar-foreground: var(--slate);
+  --sidebar-primary: var(--amber);
+  --sidebar-primary-foreground: #0D1117;
+  --sidebar-accent: #161B22;
   --sidebar-accent-foreground: var(--white);
   --sidebar-border: #30363D;
-  --sidebar-ring: var(--electric-blue);
+  --sidebar-ring: var(--amber);
 }
 
 @layer base {
