@@ -107,6 +107,7 @@ export default function Dashboard() {
   const volRegularSymbols = symbolList.filter(s => /volatility/i.test(s.displayName) && !/\(1s\)/i.test(s.displayName) && !s.symbol.endsWith("_1"));
 
   const selectedDisplay = symbolList.find(s => s.symbol === selectedSymbol)?.displayName || selectedSymbol;
+  const decimalPlaces = derivWS.decimalPlacesFor(selectedSymbol);
 
   if (!isAuthenticated || !user) {
     return (
