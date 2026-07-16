@@ -442,51 +442,73 @@ export const appRouter = router({
     }),
   }),
 
-  // AI Agent
+  // AI Agent - ReAct-style multi-step reasoning with persistent history
+  const agentHistory = new Map<string, { role: "user" | "assistant"; content: string }[]>();
   ai: router({
     ask: protectedProcedure
       .input(z.object({
         message: z.string().min(1),
         history: z.array(z.object({ role: z.enum(["user", "assistant"]), content: z.string() })).optional(),
+        chatId: z.string().optional(),
       }))
-      .mutation(async ({ input }) => {
+      .mutation(async ({ ctx, input }) => {
         if (!process.env.AI_API_KEY) return { reply: "AI not configured. Add AI_API_KEY to .env" };
         try {
           const ai = await getAI();
-          const res = await ai.chat.completions.create({
-            model: "llama-3.3-70b-versatile",
-            messages: [
-              { role: "system", content: "You are 369AI, a trading assistant for the 369Labs Deriv trading platform. The platform trades Deriv synthetic volatility indices. Valid symbols are R_10, R_25, R_50, R_75, R_100 (1-second variants: 1HZ10V, 1HZ15V, 1HZ25V, 1HZ30V, 1HZ50V, 1HZ75V, 1HZ90V, 1HZ100V). Users may type R10 instead of R_10 or 1HZ10 instead of 1HZ10V - the system normalizes these. Use the getActiveSymbols tool to list symbols and getTickHistory to pull recent ticks (prices). For backtesting, tell users to open the in-app Backtesting page (/backtesting) where they pick a symbol, strategy and date range - do NOT recommend external tools like Backtrader or Python. Keep answers concise and focused on this platform." },
-              ...(input.history || []),
-              { role: "user", content: input.message },
-            ],
-            tools: TOOL_DEFS,
-            tool_choice: "auto",
-          });
-          const msg = res.choices[0]?.message;
-          if (!msg) return { reply: "No response" };
-          if (msg.tool_calls?.length) {
-            const results = await Promise.all(msg.tool_calls.map(async (call: any) => {
-              try { return { tool: call.function.name, result: await runTool(call.function.name, JSON.parse(call.function.arguments || "{}")), id: call.id }; } catch (e) { return { tool: call.function.name, result: { error: String(e) }, id: call.id }; }
-            }));
-            const toolMessages = results.map((r: any) => ({
-              role: "tool",
-              content: JSON.stringify(r),
-              tool_call_id: r.id,
-            }));
-            const res2 = await ai.chat.completions.create({
+          const key = (ctx.user?.id ? String(ctx.user.id) : "anon") + ":" + (input.chatId || "default");
+          const prior = (input.history && input.history.length) ? input.history : (agentHistory.get(key) || []);
+          const messages: any[] = [
+            { role: "system", content: `You are 369AI, the personal trading strategist for 369Labs - a live Deriv trading platform. You are smart, concise, and sound like an expert human strategist chatting with a trader.
+
+PLATFORM FACTS:
+- Trades Deriv synthetic volatility indices. Valid symbols: R_10, R_25, R_50, R_75, R_100 and 1-second variants 1HZ10V, 1HZ15V, 1HZ25V, 1HZ30V, 1HZ50V, 1HZ75V, 1HZ90V, 1HZ100V. Users may type "R10" (you mean R_10) or "1HZ10" (you mean 1HZ10V) - the system normalizes these, so just call tools with the normalized symbol.
+- Use tools to reason over REAL data: getTickHistory (prices), getDigitStats (hot/cold last digits), getTrend (direction), suggestStrategy (rule ideas), getActiveSymbols, listStrategies (user's saved bots).
+- You CAN take actions via intents: deployBot, placeTrade, runBacktest. These require the user to CONFIRM - if a tool returns "Confirmation required", stop and ask the user to confirm before re-calling with confirm:true. Never assume confirmation.
+- Backtesting is in-app at /backtesting. Never recommend external tools (Backtrader, Python, etc).
+
+HOW TO RESPOND:
+- Be conversational and direct. Explain your logic briefly ("Based on the last 100 ticks, digit 7 hit 18% of the time, so...").
+- When you use a tool, the next turn you will get results - reason over them before answering.
+- If you lack data, call the appropriate tool instead of guessing.
+- Keep answers focused and useful; avoid generic fluff.` },
+            ...prior,
+            { role: "user", content: input.message },
+          ];
+
+          let reply = "No response";
+          const steps: any[] = [];
+          for (let round = 0; round < 5; round++) {
+            const res = await ai.chat.completions.create({
               model: "llama-3.3-70b-versatile",
-              messages: [
-                { role: "system", content: "You are 369AI, a trading assistant for 369Labs. Use the tool results to give a concise, helpful answer. Valid symbols: R_10,R_25,R_50,R_75,R_100 and 1HZ10V,1HZ15V,1HZ25V,1HZ30V,1HZ50V,1HZ75V,1HZ90V,1HZ100V. Backtesting is done in-app at /backtesting, not via external tools." },
-                ...(input.history || []),
-                { role: "user", content: input.message },
-                { role: "assistant", content: msg.content || "", tool_calls: msg.tool_calls },
-                ...toolMessages,
-              ],
+              messages,
+              tools: TOOL_DEFS,
+              tool_choice: "auto",
             });
-            return { reply: res2.choices[0]?.message?.content || "Done." };
+            const msg = res.choices[0]?.message;
+            if (!msg) break;
+            messages.push(msg);
+            if (!msg.tool_calls?.length) { reply = msg.content || reply; break; }
+            const results = await Promise.all(msg.tool_calls.map(async (call: any) => {
+              let parsed: any = {};
+              try { parsed = JSON.parse(call.function.arguments || "{}"); } catch {}
+              const result = await runTool(call.function.name, parsed, ctx.user);
+              steps.push({ tool: call.function.name, args: parsed, result });
+              return { tool: call.function.name, result, id: call.id };
+            }));
+            for (const r of results) {
+              messages.push({ role: "tool", content: JSON.stringify(r.result), tool_call_id: r.id });
+            }
+            // If any action intent requires confirmation, surface it to the client
+            const intent = results.find((r: any) => r.result && r.result.__action);
+            if (intent) {
+              return { reply: "I can do that, but I need your confirmation first.", action: intent.result, steps };
+            }
           }
-          return { reply: msg.content || "No response" };
+
+          // persist history for continuity
+          const convo = [...prior, { role: "user" as const, content: input.message }, { role: "assistant" as const, content: reply }];
+          agentHistory.set(key, convo.slice(-20));
+          return { reply, steps };
         } catch (e) { console.error("[AI]", e); return { reply: "Error: " + String(e) }; }
       }),
   }),
