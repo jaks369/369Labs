@@ -1,6 +1,10 @@
 import { getDb } from "./db";
 import { getTickHistory, normalizeSymbol } from "./aitools";
 
+// Signals decay: digit patterns on volatile symbols lose edge quickly.
+// A signal is considered valid for this many minutes after discovery.
+export const SIGNAL_TTL_MIN = 60;
+
 // Pattern types the scanner knows how to detect over a tick window.
 export type PatternType = "digit_streak" | "digit_bias" | "even_odd_run" | "momentum_after_digit";
 
@@ -56,6 +60,7 @@ export async function scanTicks(opts: ScanOptions): Promise<any[]> {
         startEpoch: Math.floor((ticks[0].timestamp) / 1000),
         endEpoch: Math.floor((ticks[ticks.length - 1].timestamp) / 1000),
         discoveredAt: nowSec,
+        expiresAt: nowSec + SIGNAL_TTL_MIN * 60,
         source: "watch",
       });
     }
@@ -143,6 +148,7 @@ export async function runWatch(opts: ScanOptions): Promise<any[]> {
         winRate: f.winRate,
         confidence: f.confidence,
         discoveredAt: f.discoveredAt,
+        expiresAt: f.expiresAt,
         startEpoch: f.startEpoch,
         endEpoch: f.endEpoch,
         source: "watch",
