@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
-import { History, Play, BarChart3, TrendingUp, Clock, Loader2, CheckCircle2, XCircle, AlertCircle, Search } from "lucide-react";
+import { History, Play, BarChart3, TrendingUp, Clock, Loader2, CheckCircle2, XCircle, AlertCircle, Search, CandlestickChart } from "lucide-react";
 import { useLocation } from "wouter";
 import { derivWS } from "@/services/derivWebSocket";
 import { runBacktest, BacktestResult } from "@/services/BacktestEngine";
@@ -23,17 +23,32 @@ export default function Backtesting() {
   const [result, setResult] = useState<BacktestResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [selectedStrategyId, setSelectedStrategyId] = useState<number | null>(null);
+  const [signalRule, setSignalRule] = useState<StrategyRule | null>(null);
+  const [loadedSignal, setLoadedSignal] = useState<any | null>(null);
 
   const strategiesQuery = trpc.strategies.list.useQuery();
+  const signalsQuery = trpc.signals.list.useQuery();
+
+  const params = new URLSearchParams(window.location.search);
+  const signalId = params.get("signal");
 
   if (!isAuthenticated) { navigate("/login"); return null; }
 
+  // When arriving from a signal, load its rule + symbol automatically.
+  if (signalId && !loadedSignal && (signalsQuery.data as any[])?.length) {
+    const sig = (signalsQuery.data as any[]).find((s: any) => String(s.id) === String(signalId));
+    if (sig) {
+      setLoadedSignal(sig);
+      setSymbol(sig.symbol);
+      setSignalRule(sig.rule as StrategyRule);
+    }
+  }
+
   const runBacktestHandler = async () => {
-    if (!selectedStrategyId) { alert("Select a strategy first"); return; }
-    const strategy = strategiesQuery.data?.find(s => s.id === selectedStrategyId);
-    if (!strategy) { alert("Strategy not found"); return; }
-    const rule = strategy.config?.rule as StrategyRule;
-    if (!rule) { alert("Selected strategy has no deployable rule. Use visual IF/THEN mode."); return; }
+    const rule = (selectedStrategyId
+      ? strategiesQuery.data?.find(s => s.id === selectedStrategyId)?.config?.rule
+      : signalRule) as StrategyRule | undefined;
+    if (!rule) { alert(selectedStrategyId ? "Selected strategy has no deployable rule. Use visual IF/THEN mode." : "No strategy or signal selected."); return; }
 
     setRunning(true);
     setError(null);
@@ -78,7 +93,15 @@ export default function Backtesting() {
 
             <div>
               <label className="text-xs text-slate-500 font-bold uppercase tracking-wider">Strategy</label>
-              <select value={selectedStrategyId || ""} onChange={e => setSelectedStrategyId(Number(e.target.value))} className="w-full mt-1 bg-[#0D1117] border border-[#30363D] rounded-lg px-3 py-2 text-white text-sm">
+              {loadedSignal && (
+              <div className="mb-4 p-3 rounded-lg bg-amber-400/10 border border-amber-400/30 flex items-start gap-2">
+                <CandlestickChart className="w-4 h-4 text-amber-400 mt-0.5" />
+                <div className="text-xs text-slate-300">
+                  <b className="text-amber-400">Backtesting AI signal:</b> {loadedSignal.title} (win rate {loadedSignal.winRate}%, {loadedSignal.sampleSize} samples). Rule loaded automatically.
+                </div>
+              </div>
+            )}
+            <select value={selectedStrategyId || ""} onChange={e => setSelectedStrategyId(Number(e.target.value))} className="w-full mt-1 bg-[#0D1117] border border-[#30363D] rounded-lg px-3 py-2 text-white text-sm">
                 <option value="">Select a strategy...</option>
                 {(strategiesQuery.data || []).filter(s => s.config?.rule).map(s => (
                   <option key={s.id} value={s.id}>{s.name}</option>
