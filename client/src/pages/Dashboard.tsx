@@ -415,20 +415,6 @@ export default function Dashboard() {
             </div>
           </div>
 
-          <div className="bloomberg-panel p-6">
-            <h3 className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-6">Quick Launch</h3>
-            <div className="space-y-3">
-              <Button onClick={() => navigate("/bots")} className="w-full btn-primary justify-start gap-3">
-                <Zap className="w-4 h-4" /> Create a Bot
-              </Button>
-              <Button onClick={() => navigate("/ai-assistant")} className="w-full btn-secondary justify-start gap-3">
-                <Brain className="w-4 h-4" /> Ask 369AI
-              </Button>
-              <Button onClick={() => navigate("/marketplace")} className="w-full btn-outline justify-start gap-3">
-                <LayoutGrid className="w-4 h-4" /> Browse Marketplace
-              </Button>
-            </div>
-          </div>
 
           <div className="bloomberg-panel p-6 border-l-4 border-l-purple-600">
             <div className="flex items-center justify-between mb-6">
