@@ -1,7 +1,7 @@
 import { useState, useCallback, useRef } from "react";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { trpc } from "@/lib/trpc";
-import { Brain, Send, Bot, Sparkles, Code, LineChart, ShieldCheck, Zap, Loader2, ChevronDown, ChevronRight, Wrench, Activity, Candle } from "lucide-react";
+import { Brain, Send, Bot, Sparkles, Code, LineChart, ShieldCheck, Zap, Loader2, ChevronDown, ChevronRight, Wrench, Activity, CandlestickChart } from "lucide-react";
 import { useLocation } from "wouter";
 import { derivWS } from "@/services/derivWebSocket";
 
@@ -96,7 +96,7 @@ export default function AIAssistant() {
       <div className="p-6 border-b border-[#30363D] flex items-center justify-between bg-[#0D1117]/50 backdrop-blur-xl">
         <div className="flex items-center gap-3">
           <div className={`w-10 h-10 ${ACCENT_BG} rounded-xl flex items-center justify-center ${ACCENT_BORDER}`}>
-            <Candle className={`w-6 h-6 ${ACCENT}`} />
+            <CandlestickChart className={`w-6 h-6 ${ACCENT}`} />
           </div>
           <div>
             <h1 className="text-xl font-bold text-white tracking-tight">369<span className={ACCENT}>AI</span></h1>
@@ -116,7 +116,7 @@ export default function AIAssistant() {
             <div key={i} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
               <div className={`flex gap-4 max-w-[80%] ${msg.role === "user" ? "flex-row-reverse" : ""}`}>
                 <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 border ${msg.role === "ai" ? `${ACCENT_BG} ${ACCENT_BORDER}` : "bg-slate-800 border-slate-700"}`}>
-                  {msg.role === "ai" ? <Candle className={`w-4 h-4 ${ACCENT}`} /> : <div className="text-[10px] font-bold text-white">{user?.name?.charAt(0)}</div>}
+                  {msg.role === "ai" ? <CandlestickChart className={`w-4 h-4 ${ACCENT}`} /> : <div className="text-[10px] font-bold text-white">{user?.name?.charAt(0)}</div>}
                 </div>
                 <div className={`p-4 rounded-2xl text-sm leading-relaxed whitespace-pre-line ${msg.role === "ai" ? "bg-[#161B22] border border-[#30363D] text-slate-200 border-l-2 border-l-amber-400/60" : "bg-amber-500 text-black font-medium"}`}>
                   {msg.content}
@@ -146,7 +146,7 @@ export default function AIAssistant() {
             <div className="flex justify-start">
               <div className="flex gap-4 max-w-[80%]">
                 <div className={`w-8 h-8 rounded-lg ${ACCENT_BG} ${ACCENT_BORDER} flex items-center justify-center`}>
-                  <Candle className={`w-4 h-4 ${ACCENT} animate-pulse`} />
+                  <CandlestickChart className={`w-4 h-4 ${ACCENT} animate-pulse`} />
                 </div>
                 <div className="p-4 rounded-2xl bg-[#161B22] border border-[#30363D] flex items-center gap-2 text-xs text-amber-400 font-mono">
                   <Loader2 className="w-3 h-3 animate-spin" /> 369AI is {typingLabel.toLowerCase()}...
