@@ -135,6 +135,12 @@ export async function getDerivTokenByUserId(userId: number): Promise<DerivToken 
 }
 
 export async function saveStrategy(strategy: InsertStrategy): Promise<Strategy> {
+
+export async function removeDerivToken(userId: number): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(derivTokens).set({ isActive: false }).where(eq(derivTokens.userId, userId));
+}
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   
