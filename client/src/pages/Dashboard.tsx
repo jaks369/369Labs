@@ -80,8 +80,9 @@ export default function Dashboard() {
 
   useEffect(() => {
     const unsub = derivWS.onBalance((b) => {
-      const acct = b.accounts?.[0] || b;
-      setBalance(parseFloat(acct?.balance || acct?.display_balance || "0"));
+      const list = Array.isArray(b.balance) ? b.balance : (b.accounts || [b]);
+      const acct = list[0] || b;
+      setBalance(parseFloat(acct?.balance != null ? acct.balance : (acct?.display_balance || "0")) || 0);
       setBalanceInfo({
         currency: acct?.currency || "USD",
         accountType: (acct?.account_type || b.account_type || "").toString().toLowerCase(),
