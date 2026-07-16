@@ -6,6 +6,7 @@ import { appRouter } from "../routers";
 import { createContext } from "./context";
 import { serveStatic } from "./staticServe";
 import { getDb } from "../db";
+import { startTickCollector } from "../tickCollector";
 import { ENV } from "./env";
 
 function logStartupChecks() {
@@ -50,6 +51,7 @@ export async function createApp() {
     const port = parseInt(process.env.PORT || "3000");
     app.listen(port, () => {
       console.log(`Server running on http://localhost:${port}/`);
+      startTickCollector();
     });
   }
 
