@@ -33,9 +33,21 @@ export default function TickChart({ symbol, maxDataPoints = 100, decimalPlaces =
   const svgRef = useRef<SVGSVGElement>(null);
 
   useEffect(() => {
-    setData([]);
-    setCurrentPrice(null);
-    setPriceColor("up");
+    // Seed from the in-memory buffer so the chart is continuous even after
+    // navigating away and back (Deriv-style persistent line).
+    const buffered = derivWS.getRecentTicks(symbol, maxDataPoints);
+    if (buffered.length) {
+      setData(buffered.slice(-maxDataPoints).map((t) => ({
+        time: new Date(t.timestamp).toLocaleTimeString(),
+        price: t.price,
+      })));
+      const last = buffered[buffered.length - 1];
+      setCurrentPrice(last.price);
+    } else {
+      setData([]);
+      setCurrentPrice(null);
+      setPriceColor("up");
+    }
     setError(null);
 
     const listener = {
