@@ -5,7 +5,7 @@ import { registerStorageProxy } from "./storageProxy";
 import { appRouter } from "../routers";
 import { createContext } from "./context";
 import { serveStatic } from "./staticServe";
-import { getDb, pruneBadTicks } from "../db";
+import { getDb, pruneBadTicks, ensureSignalExpiryColumn } from "../db";
 import { users } from "../../drizzle/schema";
 import { startTickCollector } from "../tickCollector";
 import { runWatch } from "../signalScanner";
@@ -55,6 +55,7 @@ export async function createApp() {
       console.log(`Server running on http://localhost:${port}/`);
       startTickCollector();
       startAlwaysOnScanner();
+      ensureSignalExpiryColumn(); // add expiresAt col if missing + backfill
       pruneBadTicks(); // one-time cleanup of buggy lastDigit=0 rows
     });
   }
