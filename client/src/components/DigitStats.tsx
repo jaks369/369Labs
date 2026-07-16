@@ -20,6 +20,14 @@ export default function DigitStats({ symbol, decimalPlaces = 3, maxTicks = 100 }
     counts: Array(10).fill(0),
   });
 
+  const historyQuery = trpc.market.getHistory.useQuery({ symbol, limit: maxTicks }, { enabled: Boolean(symbol) });
+  useEffect(() => {
+    const ticks = historyQuery.data?.ticks;
+    if (!ticks || !ticks.length) return;
+    const hist = ticks.map((t) => t.lastDigit).filter((d) => d >= 0 && d <= 9);
+    if (hist.length) setDigits(hist);
+  }, [historyQuery.data, symbol, maxTicks]);
+
   useEffect(() => {
     const listener: TickStreamListener = {
       onTick: (tick: Tick) => {
