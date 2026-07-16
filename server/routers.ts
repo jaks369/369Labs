@@ -440,14 +440,21 @@ export const appRouter = router({
   // AI Agent
   ai: router({
     ask: protectedProcedure
-      .input(z.object({ message: z.string().min(1) }))
+      .input(z.object({
+        message: z.string().min(1),
+        history: z.array(z.object({ role: z.enum(["user", "assistant"]), content: z.string() })).optional(),
+      }))
       .mutation(async ({ input }) => {
         if (!process.env.AI_API_KEY) return { reply: "AI not configured. Add AI_API_KEY to .env" };
         try {
           const ai = await getAI();
           const res = await ai.chat.completions.create({
             model: "llama-3.3-70b-versatile",
-            messages: [{ role: "system", content: "You are 369AI trading assistant. Use tools to fetch live data." }, { role: "user", content: input.message }],
+            messages: [
+              { role: "system", content: "You are 369AI, a trading assistant for the 369Labs Deriv platform. Use tools to fetch live market data when relevant." },
+              ...(input.history || []),
+              { role: "user", content: input.message },
+            ],
             tools: TOOL_DEFS,
             tool_choice: "auto",
           });
@@ -455,15 +462,21 @@ export const appRouter = router({
           if (!msg) return { reply: "No response" };
           if (msg.tool_calls?.length) {
             const results = await Promise.all(msg.tool_calls.map(async (call: any) => {
-              try { return { tool: call.function.name, result: await runTool(call.function.name, JSON.parse(call.function.arguments || "{}")) }; } catch (e) { return { tool: call.function.name, result: { error: String(e) } }; }
+              try { return { tool: call.function.name, result: await runTool(call.function.name, JSON.parse(call.function.arguments || "{}")), id: call.id }; } catch (e) { return { tool: call.function.name, result: { error: String(e) }, id: call.id }; }
+            }));
+            const toolMessages = results.map((r: any) => ({
+              role: "tool",
+              content: JSON.stringify(r),
+              tool_call_id: r.id,
             }));
             const res2 = await ai.chat.completions.create({
               model: "llama-3.3-70b-versatile",
               messages: [
-                { role: "system", content: "Explain trading data results." },
+                { role: "system", content: "You are 369AI, a trading assistant. Use the tool results to give a concise, helpful answer." },
+                ...(input.history || []),
                 { role: "user", content: input.message },
                 { role: "assistant", content: msg.content || "", tool_calls: msg.tool_calls },
-                { role: "tool", content: JSON.stringify(results), tool_call_id: msg.tool_calls[0].id }
+                ...toolMessages,
               ],
             });
             return { reply: res2.choices[0]?.message?.content || "Done." };
