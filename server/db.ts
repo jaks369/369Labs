@@ -280,6 +280,25 @@ export async function getSignalsBySymbol(userId: number, symbol: string, limit: 
   if (!db) return [];
   return db.select().from(signals).where(and(eq(signals.userId, userId), eq(signals.symbol, symbol), gt(signals.expiresAt, Math.floor(Date.now()/1000)))).orderBy(desc(signals.discoveredAt)).limit(limit);
 }
+// Ensure the signals.expiresAt column exists (idempotent). TiDB errors if it
+// already exists, which we swallow. Also backfill any 0 rows from old data.
+export async function ensureSignalExpiryColumn(): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+  try {
+    await db.execute(sql`ALTER TABLE signals ADD COLUMN expiresAt bigint NOT NULL DEFAULT 0`);
+    console.log("[ensureSignalExpiryColumn] added expiresAt column");
+  } catch (e: any) {
+    if (e?.errno !== 1060) console.error("[ensureSignalExpiryColumn] alter failed", e?.message || e);
+  }
+  try {
+    await db.execute(sql`UPDATE signals SET expiresAt = discoveredAt + 3600 WHERE expiresAt = 0`);
+  } catch (e) {
+    console.error("[ensureSignalExpiryColumn] backfill failed", e);
+  }
+}
+
+
 // One-time data hygiene: during a past bug, ticks were stored with lastDigit=0.
 // Remove those rows so digit stats / scanners aren't skewed by bad data.
 export async function pruneBadTicks(): Promise<number> {
