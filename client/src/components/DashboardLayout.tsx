@@ -41,7 +41,6 @@ import { Button } from "./ui/button";
 const menuItems = [
   { icon: LayoutDashboard, label: "Dashboard", path: "/dashboard" },
   { icon: Bot, label: "Bots", path: "/bots" },
-  { icon: Zap, label: "Strategy Builder", path: "/strategy-builder" },
   { icon: Brain, label: "369AI Assistant", path: "/ai-assistant" },
   { icon: ShoppingBag, label: "Marketplace", path: "/marketplace" },
   { icon: MessageCircle, label: "Telegram", path: "/telegram" },
@@ -180,7 +179,7 @@ function DashboardLayoutContent({
           disableTransition={isResizing}
         >
           <SidebarHeader className="h-20 justify-center border-b border-[#30363D]">
-            <div className="flex items-center gap-3 px-4 transition-all w-full">
+            <button onClick={() => setLocation("/dashboard")} className="flex items-center gap-3 px-4 transition-all w-full text-left cursor-pointer">
               <div className="w-8 h-8 bg-blue-600 rounded flex items-center justify-center shrink-0">
                 <Activity className="w-5 h-5 text-white" />
               </div>
@@ -189,7 +188,7 @@ function DashboardLayoutContent({
                   369Labs
                 </span>
               )}
-            </div>
+            </button>
           </SidebarHeader>
 
           <SidebarContent className="py-6">
