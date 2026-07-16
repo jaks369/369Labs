@@ -258,51 +258,122 @@ export default function Dashboard() {
 
           <div className="bloomberg-panel">
             <div className="p-4 border-b border-[#30363D] flex items-center justify-between">
-              <h2 className="font-bold text-white uppercase text-xs tracking-widest">History &middot; {selectedSymbol}</h2>
-              <div className="flex gap-2">
-                <button onClick={() => setHistoryTab("trades")} className={`px-3 py-1 rounded text-[10px] font-bold uppercase ${historyTab === "trades" ? "bg-blue-600/20 text-blue-400" : "text-slate-500 hover:text-white"}`}>Trades (P&L)</button>
-                <button onClick={() => setHistoryTab("prices")} className={`px-3 py-1 rounded text-[10px] font-bold uppercase ${historyTab === "prices" ? "bg-blue-600/20 text-blue-400" : "text-slate-500 hover:text-white"}`}>Price History</button>
+              <h2 className="font-bold text-white uppercase text-xs tracking-widest">History</h2>
+              <div className="flex gap-1 p-1 bg-[#0D1117] rounded-lg border border-[#30363D]">
+                <button onClick={() => setHistoryTab("trades")} className={`px-3 py-1 rounded text-[10px] font-bold uppercase transition-colors ${historyTab === "trades" ? "bg-blue-600/20 text-blue-400" : "text-slate-500 hover:text-white"}`}>Trades</button>
+                <button onClick={() => setHistoryTab("prices")} className={`px-3 py-1 rounded text-[10px] font-bold uppercase transition-colors ${historyTab === "prices" ? "bg-blue-600/20 text-blue-400" : "text-slate-500 hover:text-white"}`}>Price History</button>
               </div>
             </div>
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs">
-                <thead>
-                  <tr className="text-slate-500 border-b border-[#30363D]">
-                    <th className="p-4 font-bold">SYMBOL</th>
-                    <th className="p-4 font-bold">TYPE</th>
-                    <th className="p-4 font-bold">STAKE</th>
-                    <th className="p-4 font-bold">ENTRY</th>
-                    <th className="p-4 font-bold">RESULT</th>
-                    <th className="p-4 font-bold text-right">P&L</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-[#30363D]">
-                  {tradesQuery.data?.slice(0, 8).map(trade => (
-                    <tr key={trade.id} className="hover:bg-white/5 transition-colors">
-                      <td className="p-4 font-semibold text-white">{trade.symbol || "-"}</td>
-                      <td className="p-4 text-slate-400">{trade.contractType || "-"}</td>
-                      <td className="p-4 text-slate-400">${trade.stake}</td>
-                      <td className="p-4 text-slate-400">{trade.entryPrice}</td>
-                      <td className="p-4">
-                        <span className={`px-2 py-0.5 rounded-sm font-bold text-[10px] ${
-                          trade.result === "win" ? "bg-emerald-500/10 text-emerald-500" : "bg-red-500/10 text-red-500"
-                        }`}>
-                          {trade.result.toUpperCase()}
-                        </span>
-                      </td>
-                      <td className={`p-4 text-right font-bold ${parseFloat(trade.profitLoss?.toString() || "0") >= 0 ? "text-emerald-500" : "text-red-500"}`}>
-                        {parseFloat(trade.profitLoss?.toString() || "0") >= 0 ? "+" : ""}${trade.profitLoss}
-                      </td>
-                    </tr>
-                  ))}
-                  {(!tradesQuery.data || tradesQuery.data.length === 0) && (
-                    <tr>
-                      <td colSpan={6} className="p-10 text-center text-slate-600 italic">No recent trades found.</td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
+
+            {historyTab === "trades" ? (
+              <div>
+                {(() => {
+                  const symTrades = (tradesQuery.data || []).filter((t: any) => (t.symbol || "") === selectedSymbol);
+                  const wins = symTrades.filter((t: any) => t.result === "win").length;
+                  const grossProfit = symTrades.filter((t: any) => parseFloat(t.profitLoss?.toString() || "0") >= 0).reduce((a: number, t: any) => a + parseFloat(t.profitLoss?.toString() || "0"), 0);
+                  const grossLoss = symTrades.filter((t: any) => parseFloat(t.profitLoss?.toString() || "0") < 0).reduce((a: number, t: any) => a + parseFloat(t.profitLoss?.toString() || "0"), 0);
+                  const net = grossProfit + grossLoss;
+                  const winRate = symTrades.length ? Math.round((wins / symTrades.length) * 100) : 0;
+                  return (
+                    <div className="p-4 grid grid-cols-4 gap-3 border-b border-[#30363D]">
+                      <div className="rounded-lg bg-[#0D1117] border border-[#30363D] p-3">
+                        <div className="text-[10px] uppercase tracking-widest text-slate-500 font-bold">Trades</div>
+                        <div className="text-lg font-bold text-white mt-1">{symTrades.length}</div>
+                      </div>
+                      <div className="rounded-lg bg-[#0D1117] border border-[#30363D] p-3">
+                        <div className="text-[10px] uppercase tracking-widest text-slate-500 font-bold">Win Rate</div>
+                        <div className="text-lg font-bold text-white mt-1">{winRate}%</div>
+                      </div>
+                      <div className="rounded-lg bg-[#0D1117] border border-[#30363D] p-3">
+                        <div className="text-[10px] uppercase tracking-widest text-slate-500 font-bold">Gross Profit</div>
+                        <div className="text-lg font-bold text-emerald-500 mt-1">+{grossProfit.toFixed(2)}</div>
+                      </div>
+                      <div className="rounded-lg bg-[#0D1117] border border-[#30363D] p-3">
+                        <div className="text-[10px] uppercase tracking-widest text-slate-500 font-bold">Net P&L</div>
+                        <div className={`text-lg font-bold mt-1 ${net >= 0 ? "text-emerald-500" : "text-red-500"}`}>{net >= 0 ? "+" : ""}{net.toFixed(2)}</div>
+                      </div>
+                    </div>
+                  );
+                })()}
+                <div className="overflow-x-auto">
+                  {(() => {
+                    const symTrades = (tradesQuery.data || []).filter((t: any) => (t.symbol || "") === selectedSymbol);
+                    if (symTrades.length === 0) {
+                      return <div className="p-10 text-center text-slate-600 italic text-sm">No trades for {selectedSymbol} yet. Deploy a bot or place a quick trade.</div>;
+                    }
+                    return (
+                      <table className="w-full text-left text-xs">
+                        <thead>
+                          <tr className="text-slate-500 border-b border-[#30363D]">
+                            <th className="p-3 font-bold">#</th>
+                            <th className="p-3 font-bold">TYPE</th>
+                            <th className="p-3 font-bold">STAKE</th>
+                            <th className="p-3 font-bold">ENTRY</th>
+                            <th className="p-3 font-bold">RESULT</th>
+                            <th className="p-3 font-bold text-right">P&L</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-[#30363D]">
+                          {symTrades.slice(0, 10).map((trade: any, i: number) => (
+                            <tr key={trade.id} className="hover:bg-white/5 transition-colors">
+                              <td className="p-3 text-slate-600 font-mono">{i + 1}</td>
+                              <td className="p-3"><span className="px-2 py-0.5 rounded bg-white/5 text-slate-300 font-semibold">{trade.contractType || "-"}</span></td>
+                              <td className="p-3 text-slate-400">${trade.stake}</td>
+                              <td className="p-3 text-slate-400 font-mono">{trade.entryPrice}</td>
+                              <td className="p-3">
+                                <span className={`px-2 py-0.5 rounded-sm font-bold text-[10px] ${
+                                  trade.result === "win" ? "bg-emerald-500/10 text-emerald-500" : "bg-red-500/10 text-red-500"
+                                }`}>
+                                  {trade.result.toUpperCase()}
+                                </span>
+                              </td>
+                              <td className={`p-3 text-right font-bold font-mono ${parseFloat(trade.profitLoss?.toString() || "0") >= 0 ? "text-emerald-500" : "text-red-500"}`}>
+                                {parseFloat(trade.profitLoss?.toString() || "0") >= 0 ? "+" : ""}{trade.profitLoss}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    );
+                  })()}
+                </div>
+              </div>
+            ) : (
+              <div className="p-4">
+                {priceQuery.isLoading ? (
+                  <div className="p-10 text-center text-slate-600 italic text-sm">Loading price history...</div>
+                ) : priceQuery.data?.ticks?.length ? (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left text-xs">
+                      <thead>
+                        <tr className="text-slate-500 border-b border-[#30363D]">
+                          <th className="p-3 font-bold">#</th>
+                          <th className="p-3 font-bold">TIME</th>
+                          <th className="p-3 font-bold text-right">PRICE</th>
+                          <th className="p-3 font-bold text-right">LAST DIGIT</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-[#30363D]">
+                        {priceQuery.data.ticks.slice().reverse().slice(0, 50).map((t: any, i: number) => {
+                          const priceStr = String(t.price);
+                          const lastDigit = priceStr.replace(".", "")[priceStr.replace(".", "").length - 1];
+                          return (
+                            <tr key={i} className="hover:bg-white/5 transition-colors">
+                              <td className="p-3 text-slate-600 font-mono">{i + 1}</td>
+                              <td className="p-3 text-slate-400">{new Date((t.epoch || 0) * 1000).toLocaleTimeString()}</td>
+                              <td className="p-3 text-right text-white font-mono">{Number(t.price).toFixed(decimalPlaces)}</td>
+                              <td className="p-3 text-right text-slate-400 font-mono">{lastDigit}</td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <div className="p-10 text-center text-slate-600 italic text-sm">No price history for {selectedSymbol} yet. It populates as ticks arrive.</div>
+                )}
+              </div>
+            )}
           </div>
         </div>
 
