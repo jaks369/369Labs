@@ -55,8 +55,9 @@ export async function createApp() {
       console.log(`Server running on http://localhost:${port}/`);
       startTickCollector();
       startAlwaysOnScanner();
-      ensureSignalExpiryColumn(); // add expiresAt col if missing + backfill
-      pruneBadTicks(); // one-time cleanup of buggy lastDigit=0 rows
+      // Non-critical startup hygiene - never allowed to break the live feed
+      try { await ensureSignalExpiryColumn(); } catch (e) { console.error('[startup] ensureSignalExpiryColumn failed', e); }
+      try { await pruneBadTicks(); } catch (e) { console.error('[startup] pruneBadTicks failed', e); }
     });
   }
 
