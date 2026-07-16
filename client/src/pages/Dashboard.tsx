@@ -27,11 +27,6 @@ import ContractTypeSelector, { ContractSelection } from "@/components/ContractTy
 const IT_SYMBOLS = ["R_10","R_25","R_50","R_75","R_100","R_150","R_200"];
 
 const VOLATILITY_FALLBACK: DerivSymbol[] = [
-  { symbol: "R_10_1", displayName: "Volatility 10 (1s) Index", market: "volatility", submarket: "volatility" },
-  { symbol: "R_25_1", displayName: "Volatility 25 (1s) Index", market: "volatility", submarket: "volatility" },
-  { symbol: "R_50_1", displayName: "Volatility 50 (1s) Index", market: "volatility", submarket: "volatility" },
-  { symbol: "R_75_1", displayName: "Volatility 75 (1s) Index", market: "volatility", submarket: "volatility" },
-  { symbol: "R_100_1", displayName: "Volatility 100 (1s) Index", market: "volatility", submarket: "volatility" },
   { symbol: "R_10", displayName: "Volatility 10 Index", market: "volatility", submarket: "volatility" },
   { symbol: "R_25", displayName: "Volatility 25 Index", market: "volatility", submarket: "volatility" },
   { symbol: "R_50", displayName: "Volatility 50 Index", market: "volatility", submarket: "volatility" },
@@ -103,8 +98,9 @@ export default function Dashboard() {
   }, []);
 
   const symbolList = symbols.length > 0 ? symbols : VOLATILITY_FALLBACK;
-  const vol1sSymbols = symbolList.filter(s => /\(1s\)/i.test(s.displayName) || s.symbol.endsWith("_1"));
-  const volRegularSymbols = symbolList.filter(s => /volatility/i.test(s.displayName) && !/\(1s\)/i.test(s.displayName) && !s.symbol.endsWith("_1"));
+  const pickerSymbols = symbols.length > 0 ? symbols : VOLATILITY_FALLBACK;
+  const vol1sSymbols = pickerSymbols.filter(s => /\(1s\)/i.test(s.displayName) || s.symbol.endsWith("_1"));
+  const volRegularSymbols = pickerSymbols.filter(s => /volatility/i.test(s.displayName) && !/\(1s\)/i.test(s.displayName) && !s.symbol.endsWith("_1"));
 
   const selectedDisplay = symbolList.find(s => s.symbol === selectedSymbol)?.displayName || selectedSymbol;
   const decimalPlaces = derivWS.decimalPlacesFor(selectedSymbol);
