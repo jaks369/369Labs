@@ -406,12 +406,16 @@ export default function Dashboard() {
         </div>
 
         <div className="space-y-8">
-          <div className="bloomberg-panel p-6">
+          <div className="bloomberg-panel p-6 border-l-4 border-l-purple-600">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-xs font-bold text-slate-500 uppercase tracking-widest">Quick Trade</h3>
-              <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded ${accountType === "real" ? "bg-red-500/20 text-red-400" : accountType === "demo" ? "bg-amber-500/20 text-amber-400" : "bg-slate-500/20 text-slate-400"}`}>
-                {accountType === "real" ? "REAL" : accountType === "demo" ? "DEMO" : "NO TOKEN"}
-              </span>
+              <h3 className="text-xs font-bold text-slate-500 uppercase tracking-widest">Trade Studio</h3>
+              <div className="flex items-center gap-2">
+                <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded ${accountType === "real" ? "bg-red-500/20 text-red-400" : accountType === "demo" ? "bg-amber-500/20 text-amber-400" : "bg-slate-500/20 text-slate-400"}`}>
+                  {accountType === "real" ? "REAL" : accountType === "demo" ? "DEMO" : "NO TOKEN"}
+                </span>
+                <div className="w-2 h-2 bg-purple-500 rounded-full animate-pulse" />
+                <span className="text-[9px] font-bold text-purple-500 uppercase">Live</span>
+              </div>
             </div>
             <div className="space-y-3">
               <div>
@@ -441,19 +445,9 @@ export default function Dashboard() {
                 <p className="text-[10px] text-slate-500">Connect a Deriv token in Settings to enable trading.</p>
               )}
             </div>
-          </div>
-
-
-          <div className="bloomberg-panel p-6 border-l-4 border-l-purple-600">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-xs font-bold text-slate-500 uppercase tracking-widest">Live Digit Analysis</h3>
-              <div className="flex items-center gap-2">
-                <div className="w-2 h-2 bg-purple-500 rounded-full animate-pulse" />
-                <span className="text-[9px] font-bold text-purple-500 uppercase">Live</span>
-              </div>
+            <div className="mt-6 pt-6 border-t border-[#30363D]">
+              <DigitStats symbol={selectedSymbol} decimalPlaces={decimalPlaces} />
             </div>
-            <ContractTypeSelector selection={contract} onChange={setContract} />
-            <DigitStats symbol={selectedSymbol} decimalPlaces={decimalPlaces} />
           </div>
 
 
