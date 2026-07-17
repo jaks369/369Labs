@@ -1,4 +1,3 @@
-import { useEffect } from "react";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { getLoginUrl } from "@/const";
@@ -8,12 +7,6 @@ import { Zap, TrendingUp, Brain, Shield, Globe, BarChart3, ChevronRight, Activit
 export default function Home() {
   const { user, isAuthenticated } = useAuth();
   const [, navigate] = useLocation();
-
-  useEffect(() => {
-    if (isAuthenticated && user) {
-      navigate("/dashboard");
-    }
-  }, [isAuthenticated, user, navigate]);
 
   return (
     <div className="min-h-screen bg-[#0D0D0D] text-[#F8FAFC] selection:bg-[#D98B1F]/30">
