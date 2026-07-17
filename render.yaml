@@ -10,4 +10,10 @@ services:
       - key: VITE_DERIV_APP_ID
         sync: false
       - key: AI_API_KEY
+      - key: OPENAI_API_BASE_URL
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: ENCRYPTION_KEY
+        sync: false
         sync: false
