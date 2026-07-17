@@ -13,12 +13,9 @@ export default function DigitStats({ symbol, decimalPlaces = derivWS.decimalPlac
   // The most recent last digit - drives the live pointer.
   const [currentDigit, setCurrentDigit] = useState<number | null>(null);
   const [selectedDigit, setSelectedDigit] = useState<number | null>(null);
-  const selectedDigitRef = useRef<number | null>(5);
   const [stats, setStats] = useState({
     even: 0,
     odd: 0,
-    over: 0,
-    under: 0,
     counts: Array(10).fill(0),
   });
 
@@ -26,24 +23,9 @@ export default function DigitStats({ symbol, decimalPlaces = derivWS.decimalPlac
   useEffect(() => {
     const ticks = historyQuery.data?.ticks;
     if (!ticks || !ticks.length) return;
-    // DB returns newest-first; reverse to chronological (oldest-first) so live
-    // ticks append in order and the history is continuous across logins.
     const hist = ticks.map((t) => t.lastDigit).filter((d) => d >= 0 && d <= 9).reverse();
     if (hist.length) setDigits(hist.slice(-maxTicks));
   }, [historyQuery.data, symbol, maxTicks]);
-
-  // Recompute Over/Under immediately when the selected digit changes, so the
-  // bars/labels update without waiting for the next tick.
-  useEffect(() => {
-    setDigits((prev) => {
-      const next = prev.slice(-maxTicks);
-      let over = 0, under = 0;
-      next.forEach((d) => { if (d > selectedDigit) over++; else if (d < selectedDigit) under++; });
-      const len = next.length || 1;
-      setStats((s) => ({ ...s, over: (over / len) * 100, under: (under / len) * 100 }));
-      return prev;
-    });
-  }, [selectedDigit, maxTicks]);
 
   useEffect(() => {
     const listener: TickStreamListener = {
@@ -57,21 +39,16 @@ export default function DigitStats({ symbol, decimalPlaces = derivWS.decimalPlac
           const next = [...prev, lastDigit].slice(-maxTicks);
 
           const counts = Array(10).fill(0);
-          let even = 0, odd = 0, over = 0, under = 0;
+          let even = 0, odd = 0;
 
           next.forEach((d) => {
             counts[d]++;
             if (d % 2 === 0) even++; else odd++;
-            const th = selectedDigitRef.current !== null ? selectedDigitRef.current : 5;
-            if (d > th) over++;
-            else if (d < th) under++;
           });
 
           setStats({
             even: next.length ? (even / next.length) * 100 : 0,
             odd: next.length ? (odd / next.length) * 100 : 0,
-            over: next.length ? (over / next.length) * 100 : 0,
-            under: next.length ? (under / next.length) * 100 : 0,
             counts: counts.map((c) => (next.length ? (c / next.length) * 100 : 0)),
           });
 
@@ -90,14 +67,15 @@ export default function DigitStats({ symbol, decimalPlaces = derivWS.decimalPlac
   }, [symbol, decimalPlaces, maxTicks]);
 
   const maxPercent = Math.max(...stats.counts, 1);
-  // Derive Over/Under live from the current digits array so they always reflect
-  // the latest ticks (not just when onTick fires).
-  const th = selectedDigit ?? 5;
+  // Over/Under are computed against the selected barrier digit (0-9).
+  // Over = last digit strictly greater than barrier, Under = strictly less.
+  // Percentages are conditional (over / (over + under)) so they always sum to 100%.
+  const th = selectedDigit;
   let _over = 0, _under = 0;
-  digits.forEach((d) => { if (d > th) _over++; else if (d < th) _under++; });
-  const _len = digits.length || 1;
-  const overPct = (_over / _len) * 100;
-  const underPct = (_under / _len) * 100;
+  digits.forEach((d) => { if (th !== null) { if (d > th) _over++; else if (d < th) _under++; } });
+  const _denom = _over + _under;
+  const overPct = _denom ? (_over / _denom) * 100 : 0;
+  const underPct = _denom ? (_under / _denom) * 100 : 0;
   const maxIdx = stats.counts.indexOf(Math.max(...stats.counts));
   const minIdx = stats.counts.indexOf(Math.min(...stats.counts));
   const hasData = stats.counts.some((c) => c > 0);
