@@ -1,108 +1,63 @@
 # RuFlo Agent Orchestration
 
-RuFlo is integrated as a server-side AI agent orchestration layer for 369Labs. It is intentionally separate from the current React/Express runtime path, so the existing app continues to work without requiring agent orchestration to be enabled.
+> **Status: configuration only.** RuFlo in this repo is a set of **agent
+> definitions** (`server/ruflo/config.ts`). There is currently **no router or
+> runtime path that invokes it**, so it does not affect the live app. The
+> documentation below describes the intended design and how to extend it.
 
-## What Was Added
+## What exists today
 
-- Agent configuration: `server/ruflo/config.ts`
-- Orchestration runner: `server/ruflo/orchestrator.ts`
-- CLI entry point: `scripts/ruflo.ts`
-- Configuration tests: `server/ruflo/orchestrator.test.ts`
+- `server/ruflo/config.ts` — defines four agents with purposes, models,
+  temperatures, system prompts, and handoff graphs.
+- `server/ruflo/orchestrator.test.ts` — unit test that validates the config
+  (agent ids, `getRuFloAgent` resolution). It does **not** call any AI provider.
 
-## Agents
+That's it. There is no `scripts/ruflo.ts`, no `ruflo:run` npm script, and no CI
+workflow wired to RuFlo in this repository. (The root `orchestrator.ts` is a
+**separate, dev-time code-gen CLI** using Gemini + OpenCode — unrelated to RuFlo.)
 
-The current configuration defines four agents:
+## Agents (defined, not yet invoked)
 
-- `strategy-architect`: converts trading ideas into structured strategy plans.
-- `risk-reviewer`: reviews strategy logic for risk, ambiguity, and missing controls.
-- `deriv-execution`: maps approved plans to Deriv-compatible execution details.
-- `support-triage`: classifies user issues and routes them to the right operational action.
+| Agent | Purpose |
+|---|---|
+| `strategy-architect` | Turn trading ideas into structured Deriv bot strategy plans. |
+| `risk-reviewer` | Review strategy logic for risk, ambiguity, missing controls. |
+| `deriv-execution` | Map approved plans to Deriv-compatible execution details. |
+| `support-triage` | Classify user issues and route to the right action. |
 
-Each agent has an explicit purpose, model, temperature, system prompt, and handoff list in `server/ruflo/config.ts`.
+Each agent has an explicit `purpose`, `model`, `temperature`, `systemPrompt`, and
+`handoffs` list. The system prompts bake in Deriv domain facts (volatility indices
+are fixed-volatility synthetic instruments; digit contracts are about the last
+digit, not price level; digit contracts have fixed payout and session-level risk
+controls, not per-trade SL/TP).
 
-## Environment Variables
+## Environment variables
 
-RuFlo uses an OpenAI-compatible chat completions provider.
-
-```bash
-RUFLO_API_KEY="..."
-RUFLO_API_URL="https://api.openai.com/v1"
-RUFLO_MODEL="gpt-4.1-mini"
-```
-
-Fallbacks:
-
-- `OPENAI_API_KEY` is used if `RUFLO_API_KEY` is not set.
-- `OPENAI_API_URL` is used if `RUFLO_API_URL` is not set.
-- `https://api.openai.com/v1` is used if neither API URL is set.
-
-## Local Usage
-
-Install dependencies:
+RuFlo expects an OpenAI-compatible chat completions provider:
 
 ```bash
-pnpm install
+RUFLO_API_KEY="..."        # falls back to OPENAI_API_KEY
+RUFLO_API_URL="https://api.openai.com/v1"   # falls back to OPENAI_API_URL
+RUFLO_MODEL="gpt-4.1-mini" # override if needed
 ```
 
-List configured agents:
+Because RuFlo is server-side, do **not** prefix these with `VITE_`.
 
-```bash
-pnpm ruflo:list
-```
+## How to wire it in (future work)
 
-Run an agent:
+To make RuFlo live, you would:
 
-```bash
-pnpm ruflo:run -- --agent strategy-architect --prompt "Create a Volatility 75 digit-under bot with risk controls"
-```
+1. Add a `ruflo` router in `server/routers.ts` that calls the provider's chat
+   completions endpoint using `getRuFloAgent(...)` for system prompts.
+2. Implement handoff logic (agent A → agent B) in that router.
+3. Expose it to the client (e.g. a "Generate with agents" button in the Strategy
+   Builder) or to a server worker.
 
-Optional context:
-
-```bash
-pnpm ruflo:run -- --agent risk-reviewer --prompt "Review this strategy" --context "Stake $10, no stop loss, buy under after 3 digit-over ticks"
-```
+Until then, the 369AI chat in `routers.ts` (`ai.*`) is the active AI surface; RuFlo
+is dormant config you can build on.
 
 ## Verification
 
-Run the project checks:
-
 ```bash
-pnpm check
-pnpm test
-pnpm build
+pnpm test            # runs server/ruflo/orchestrator.test.ts (config-only)
 ```
-
-The RuFlo tests do not call the AI provider. They verify the local agent configuration only.
-
-## GitHub Best Practices
-
-The CI workflow in `.github/workflows/ci.yml` runs type checking, tests, and production build on pull requests and pushes to `main`.
-
-Recommended repository secrets:
-
-- `DATABASE_URL`
-- `JWT_SECRET`
-- `OPENAI_API_KEY`
-- `RUFLO_API_KEY` if using a separate provider key
-- `RUFLO_API_URL` if using a non-default provider
-
-Do not commit `.env` files or provider keys.
-
-## Vercel Deployment
-
-The existing `vercel.json` continues to build the frontend and server entry point. RuFlo does not change the public routes unless it is imported into a route later.
-
-Set these Vercel environment variables when using RuFlo in deployed functions:
-
-- `RUFLO_API_KEY` or `OPENAI_API_KEY`
-- `RUFLO_API_URL` if using a custom OpenAI-compatible provider
-- `RUFLO_MODEL` if overriding the default model
-
-Keep the existing application variables configured as before:
-
-- `DATABASE_URL`
-- `JWT_SECRET`
-- `VITE_DERIV_APP_ID`
-- `OPENAI_API_KEY` for the existing AI Strategy Assistant
-
-Because RuFlo is server-side, do not prefix its secret variables with `VITE_`.
