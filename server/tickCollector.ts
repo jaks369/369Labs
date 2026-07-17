@@ -60,11 +60,10 @@ export function startTickCollector() {
         const symbol = msg.tick.symbol;
         const quote = String(msg.tick.quote);
         const epoch = Number(msg.tick.epoch) || Math.floor(Date.now() / 1000);
-        // last digit = the digit immediately before the decimal point (Deriv convention)
-        const numStr = String(quote);
-        const dotIdx = numStr.indexOf(".");
-        const digitChar = dotIdx > 0 ? numStr[dotIdx - 1] : numStr[numStr.length - 1];
-        const lastDigit = parseInt(digitChar, 10);
+        // last digit = the FINAL decimal digit of the tick price (true Deriv "last digit").
+        // e.g. 95.2144 -> 4, 95.2279 -> 9. This is what digit strategies analyze.
+        const numStr = String(quote).replace(".", "");
+        const lastDigit = parseInt(numStr[numStr.length - 1], 10) || 0;
         saveTickHistory({
           symbol,
           price: quote,
