@@ -23,7 +23,9 @@ export interface PurchaseParams {
   duration: number;
   durationUnit?: "t" | "s" | "m";
   barrier?: number;
-}
+  barrier?: number;
+  stopLoss?: number;
+  takeProfit?: number;
 export interface PurchaseResult {
   contractId: number;
   buyPrice: number;
@@ -229,7 +231,7 @@ class DerivWebSocketService {
   public async purchaseContract(params: PurchaseParams): Promise<PurchaseResult> {
     if (!this.ws || this.ws.readyState !== WebSocket.OPEN) throw new Error("WebSocket not connected");
     if (!this.authorized) throw new Error("Not authorized");
-    const proposalRes = await this.sendRequest({ proposal: 1, amount: params.amount, basis: "stake", contract_type: params.contractType, currency: "USD", duration: params.duration, duration_unit: params.durationUnit || "t", symbol: params.symbol, ...(params.barrier !== undefined ? { barrier: String(params.barrier) } : {}) });
+    const proposalRes = await this.sendRequest({ proposal: 1, amount: params.amount, basis: "stake", contract_type: params.contractType, currency: "USD", duration: params.duration, duration_unit: params.durationUnit || "t", symbol: params.symbol, ...(params.barrier !== undefined ? { barrier: String(params.barrier) } : {}), ...(params.stopLoss !== undefined ? { stop_loss: String(params.stopLoss) } : {}), ...(params.takeProfit !== undefined ? { take_profit: String(params.takeProfit) } : {}) });
     if (!proposalRes.proposal) throw new Error("No proposal returned");
     const buyRes = await this.sendRequest({ buy: proposalRes.proposal.id, price: proposalRes.proposal.ask_price });
     if (!buyRes.buy) throw new Error("Buy request failed");
