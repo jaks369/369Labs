@@ -13,6 +13,70 @@ import {
 } from "@/components/ui/select";
 import { useState } from "react";
 
+
+// ---- Natural-language -> StrategyRule parser (client-side, no API call) ----
+const NL_SYMBOLS = [
+  "R_10", "R_25", "R_50", "R_75", "R_100",
+  "1HZ10V", "1HZ15V", "1HZ25V", "1HZ30V", "1HZ50V", "1HZ75V", "1HZ90V", "1HZ100V",
+];
+function nlNormalizeSymbol(input: string): string {
+  if (!input) return "";
+  let s = input.trim().toUpperCase().replace(/\s+/g, "");
+  const r = s.match(/^R(\d+)$/);
+  if (r) { const c = "R_" + r[1]; if (NL_SYMBOLS.includes(c)) return c; }
+  const h = s.match(/^1HZ(\d+)$/);
+  if (h) { const c = "1HZ" + h[1] + "V"; if (NL_SYMBOLS.includes(c)) return c; }
+  return s;
+}
+export function parseRuleFromText(text: string, fallback: StrategyRule): { rule: StrategyRule; ok: boolean; error?: string } {
+  const t = text.toLowerCase();
+  if (!t.trim()) return { rule: fallback, ok: false, error: "Empty input" };
+  let symbol = fallback.symbol;
+  const symMatch = t.match(/\b(r\d{1,3}|1hz\d{1,3}|volatility\s*\d{1,3})\b/);
+  if (symMatch) {
+    const norm = nlNormalizeSymbol(symMatch[1].replace("volatility", "r").replace(/\s+/g, ""));
+    if (NL_SYMBOLS.includes(norm)) symbol = norm;
+  }
+  let tradeType = "buy_rise";
+  if (/\bbuy\s*(fall|down|put)\b/.test(t) || (/\b(fall|drop|down)\b/.test(t) && !/\brise\b/.test(t))) tradeType = "buy_fall";
+  if (/\brise\b|\bup\b|\bcall\b/.test(t)) tradeType = "buy_rise";
+  if (/\bbuy\s*even\b|\beven\b.*\btrade\b/.test(t)) tradeType = "buy_even";
+  if (/\bbuy\s*odd\b|\bodd\b.*\btrade\b/.test(t)) tradeType = "buy_odd";
+  if (/\bover\b/.test(t) && /\bbuy\b/.test(t)) tradeType = "buy_over";
+  if (/\bunder\b/.test(t) && /\bbuy\b/.test(t)) tradeType = "buy_under";
+  const parityMatch = t.match(/\b(even|odd)\b/);
+  const digitMatch = t.match(/\bdigit\s*(\d)\b/);
+  const afterDigit = t.match(/after\s*(digit\s*)?(\d)/);
+  const consec = /\b(consecutiv|in a row|row|streak|same)\b/.test(t);
+  const consecCount = (t.match(/(\d+)\s*(consecutiv|in a row|row|streak|same)/) || [])[1];
+  let condition: StrategyRule["condition"];
+  if (parityMatch && !digitMatch) {
+    const isEven = parityMatch[1] === "even";
+    condition = { indicator: "parity", comparison: "equals", count: 1, barrier: isEven ? 0 : 1 };
+  } else if (digitMatch) {
+    const d = parseInt(digitMatch[1], 10);
+    if (consec) {
+      condition = { indicator: "last_digit", comparison: "appears_consecutively", count: consecCount ? parseInt(consecCount, 10) : 3, barrier: d };
+    } else {
+      condition = { indicator: "last_digit", comparison: "equals", count: 1, barrier: d };
+    }
+  } else if (afterDigit) {
+    const d = parseInt(afterDigit[2], 10);
+    condition = { indicator: "last_digit", comparison: "equals", count: 1, barrier: d };
+  } else if (/\bover\b/.test(t)) {
+    const ov = (t.match(/over\s*(\d)/) || [])[1];
+    condition = { indicator: "last_digit", comparison: "greater_than", count: 1, barrier: ov ? parseInt(ov, 10) : 5 };
+  } else if (/\bunder\b/.test(t)) {
+    const un = (t.match(/under\s*(\d)/) || [])[1];
+    condition = { indicator: "last_digit", comparison: "less_than", count: 1, barrier: un ? parseInt(un, 10) : 4 };
+  } else {
+    return { rule: fallback, ok: false, error: "Could not understand the condition. Try e.g. \"when an even digit appears, buy rise\"." };
+  }
+  return { rule: { symbol, condition, action: { tradeType }, params: fallback.params }, ok: true };
+}
+// ---------------------------------------------------------------------------
+
+
 export interface StrategyRule {
   // Deriv instrument symbol, e.g. "R_100" (Volatility 100), "R_75" (Volatility 75).
   // Optional for backward compatibility with strategies saved before this field existed.
