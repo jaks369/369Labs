@@ -250,6 +250,7 @@ export const appRouter = router({
             accountType: input.accountType,
             isActive: true,
           });
+          await db.saveAuditLog({ userId: ctx.user.id, action: "token.add", detail: { accountType: input.accountType } });
           return { success: true, token: saved };
         } catch (error) {
           throw new TRPCError({
@@ -275,6 +276,7 @@ export const appRouter = router({
       .mutation(async ({ ctx }) => {
         try {
           await db.removeDerivToken(ctx.user.id);
+          await db.saveAuditLog({ userId: ctx.user.id, action: "token.remove" });
           return { success: true };
         } catch (error) {
           throw new TRPCError({
@@ -414,6 +416,7 @@ export const appRouter = router({
             strategyId: input.strategyId,
             status: "running",
           });
+          await db.saveAuditLog({ userId: ctx.user.id, action: "bot.start", target: String(input.strategyId) });
           return botRun;
         } catch (error) {
           throw new TRPCError({
@@ -446,6 +449,7 @@ export const appRouter = router({
         try {
           const { id, ...updates } = input;
           const run = await db.updateBotRun(id, ctx.user.id, { ...updates, endTime: new Date() });
+          await db.saveAuditLog({ userId: ctx.user.id, action: "bot.stop", target: String(id), detail: { status: input.status, totalTrades: input.totalTrades, totalProfitLoss: input.totalProfitLoss } });
           if (!run) {
             throw new TRPCError({ code: "NOT_FOUND", message: "Bot run not found" });
           }
