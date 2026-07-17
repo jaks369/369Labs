@@ -4,9 +4,10 @@ import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
-import { Loader2, Save } from "lucide-react";
+import { Loader2, Save, Brain } from "lucide-react";
 import { useLocation } from "wouter";
 import { derivWS } from "@/services/derivWebSocket";
+import { pushTimeline } from "@/components/AITimeline";
 
 export default function Settings() {
   const { user, isAuthenticated, logout } = useAuth();
@@ -24,6 +25,14 @@ export default function Settings() {
   const derivTokenQuery = trpc.deriv.getToken.useQuery();
   const telegramQuery = trpc.telegram.getSettings.useQuery();
   const notificationsQuery = trpc.notifications.getSettings.useQuery();
+  const memoryQuery = trpc.memory.get.useQuery();
+  const saveMemoryMutation = trpc.memory.set.useMutation();
+
+  const [memSymbols, setMemSymbols] = useState("");
+  const [memRisk, setMemRisk] = useState("");
+  const [memNoMartingale, setMemNoMartingale] = useState(true);
+  const [memStyle, setMemStyle] = useState("");
+  const [memNotes, setMemNotes] = useState("");
 
   const saveDerivTokenMutation = trpc.deriv.saveToken.useMutation();
   const saveTelegramMutation = trpc.telegram.saveSettings.useMutation();
@@ -56,10 +65,38 @@ export default function Settings() {
   }, [notificationsQuery.data]);
 
   useEffect(() => {
+    if (memoryQuery.data?.memory) {
+      const m = memoryQuery.data.memory;
+      setMemSymbols((m.symbols || []).join(", "));
+      setMemRisk(m.riskPct != null ? String(m.riskPct) : "");
+      setMemNoMartingale(!!m.noMartingale);
+      setMemStyle(m.style || "");
+      setMemNotes(m.notes || "");
+    }
+  }, [memoryQuery.data]);
+
+  useEffect(() => {
     if (!isAuthenticated) {
       navigate("/");
     }
   }, [isAuthenticated, navigate]);
+
+  const handleSaveMemory = async () => {
+    const memory: Record<string, any> = {
+      symbols: memSymbols.split(",").map((s) => s.trim()).filter(Boolean),
+      riskPct: memRisk ? Number(memRisk) : null,
+      noMartingale: memNoMartingale,
+      style: memStyle.trim(),
+      notes: memNotes.trim(),
+    };
+    try {
+      await saveMemoryMutation.mutateAsync({ memory });
+      pushTimeline({ icon: "ai", text: "Updated AI memory (trader profile)" });
+      alert("Trader profile saved — 369AI will remember these preferences.");
+    } catch (e) {
+      alert("Failed to save memory: " + (e instanceof Error ? e.message : String(e)));
+    }
+  };
 
   const handleSaveDerivToken = async () => {
     try {
@@ -213,6 +250,79 @@ export default function Settings() {
         </div>
 
         <div className="hud-panel mb-6">
+          <h2 className="text-lg font-bold text-[#FF00FF] mb-4 flex items-center gap-2">
+            <Brain className="w-5 h-5" /> AI MEMORY — TRADER PROFILE
+          </h2>
+          <p className="text-xs text-[#00FFFF]/70 mb-4">
+            369AI remembers these so it can auto-apply them to every strategy, backtest and trade suggestion. No need to repeat yourself.
+          </p>
+          <div className="space-y-4">
+            <div>
+              <label className="text-sm text-[#00FFFF] block mb-2">Preferred symbols (comma separated)</label>
+              <Input
+                placeholder="R_75, R_100, 1HZ10V"
+                value={memSymbols}
+                onChange={(e) => setMemSymbols(e.target.value)}
+                className="border-[#00FFFF]/40 text-[#00FFFF]"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="text-sm text-[#00FFFF] block mb-2">Risk % per trade</label>
+                <Input
+                  type="number"
+                  placeholder="2"
+                  value={memRisk}
+                  onChange={(e) => setMemRisk(e.target.value)}
+                  className="border-[#00FFFF]/40 text-[#00FFFF]"
+                />
+              </div>
+              <div className="flex items-end">
+                <label className="flex items-center gap-2 text-sm text-[#00FFFF] cursor-pointer">
+                  <Switch checked={memNoMartingale} onCheckedChange={setMemNoMartingale} />
+                  No martingale / no grid averaging
+                </label>
+              </div>
+            </div>
+            <div>
+              <label className="text-sm text-[#00FFFF] block mb-2">Trading style</label>
+              <Input
+                placeholder="e.g. volatility 75 index, 1-minute contracts, trend-follow"
+                value={memStyle}
+                onChange={(e) => setMemStyle(e.target.value)}
+                className="border-[#00FFFF]/40 text-[#00FFFF]"
+              />
+            </div>
+            <div>
+              <label className="text-sm text-[#00FFFF] block mb-2">Notes for 369AI</label>
+              <Input
+                placeholder="e.g. only trade London session; avoid news spikes"
+                value={memNotes}
+                onChange={(e) => setMemNotes(e.target.value)}
+                className="border-[#00FFFF]/40 text-[#00FFFF]"
+              />
+            </div>
+            <Button
+              onClick={handleSaveMemory}
+              disabled={saveMemoryMutation.isPending}
+              className="w-full bg-[#FF00FF] text-[#0A0E27] hover:bg-[#FF00FF]/80 font-bold py-2 px-4 rounded"
+            >
+              {saveMemoryMutation.isPending ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  SAVING...
+                </>
+              ) : (
+                <>
+                  <Save className="w-4 h-4 mr-2" />
+                  SAVE PROFILE
+                </>
+              )}
+            </Button>
+          </div>
+        </div>
+
+        <div className="hud-panel mb-6">
           <h2 className="text-lg font-bold text-[#FF00FF] mb-4">ACCOUNT</h2>
           <div className="space-y-4">
             <p className="text-sm text-[#00FFFF]/80">Signed in as <span className="text-[#00FFFF] font-semibold">{user?.email || user?.username || "user"}</span></p>
@@ -228,3 +338,4 @@ export default function Settings() {
     </div>
   );
 }
+
