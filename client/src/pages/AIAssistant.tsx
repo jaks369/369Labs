@@ -27,9 +27,10 @@ export default function AIAssistant() {
   const strategiesQuery = trpc.strategies.list.useQuery();
   const chatIdRef = useRef("main");
 
-  const handleSend = useCallback(async () => {
-    if (!input.trim() || isTyping) return;
-    const userMsg: Message = { role: "user", content: input };
+  const handleSend = useCallback(async (override?: string) => {
+    const text = (override ?? input).trim();
+    if (!text || isTyping) return;
+    const userMsg: Message = { role: "user", content: text };
     const nextMessages = [...messages, userMsg];
     setMessages(nextMessages);
     setInput("");
