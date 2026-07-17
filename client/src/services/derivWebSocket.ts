@@ -23,9 +23,10 @@ export interface PurchaseParams {
   duration: number;
   durationUnit?: "t" | "s" | "m";
   barrier?: number;
-  barrier?: number;
   stopLoss?: number;
   takeProfit?: number;
+}
+
 export interface PurchaseResult {
   contractId: number;
   buyPrice: number;
