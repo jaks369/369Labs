@@ -18,6 +18,7 @@ import { runBacktest } from "@/services/BacktestEngine";
 import { derivWS } from "@/services/derivWebSocket";
 import { StrategyRule } from "@/components/RuleBuilder";
 import { StrategyBuilderContent } from "@/pages/StrategyBuilder";
+import { pushTimeline } from "@/components/AITimeline";
 
 interface RunningBot {
   runId: number;
@@ -162,6 +163,7 @@ export default function Bots() {
       setRunningBots((prev) => [...prev, newBot]);
 
       engine.start({ symbol: rule.symbol || DEFAULT_SYMBOL, strategy: rule });
+      pushTimeline({ icon: "bot", text: `Bot started: ${strategy.name} on ${rule.symbol || DEFAULT_SYMBOL}` });
       alertTg(`🚀 Bot deployed: ${strategy.name} on ${rule.symbol || DEFAULT_SYMBOL}`);
 
       // Capture the expected win rate via backtest so we can flag regime drift live.
@@ -198,6 +200,7 @@ export default function Bots() {
     const finalPnl = bot.engine.getTotalPnl();
 
     setRunningBots((prev) => prev.filter((b) => b.runId !== bot.runId));
+    pushTimeline({ icon: "bot", text: `Bot stopped: ${bot.name} · ${finalTrades} trades · P&L ${finalPnl >= 0 ? "+" : ""}$${finalPnl.toFixed(2)}` });
     alertTg(`⏹️ Bot stopped: ${bot.name} · ${finalTrades} trades · P&L ${finalPnl >= 0 ? "+" : ""}$${finalPnl.toFixed(2)}`);
     try {
       await stopRunMutation.mutateAsync({
