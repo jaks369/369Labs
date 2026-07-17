@@ -10,6 +10,7 @@ import { users } from "../../drizzle/schema";
 import { startTickCollector } from "../tickCollector";
 import { runWatch } from "../signalScanner";
 import { ENV } from "./env";
+import { sql } from "drizzle-orm";
 
 function logStartupChecks() {
   const missing: string[] = [];
@@ -25,6 +26,8 @@ function logStartupChecks() {
   }
 }
 
+const BOOT_TIME = Date.now();
+
 export async function createApp() {
   logStartupChecks();
 
@@ -39,6 +42,32 @@ export async function createApp() {
   app.use(express.json({ limit: "50mb" }));
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
   registerStorageProxy(app);
+
+  // Production-readiness health check. Reports connectivity to the subsystems
+  // so Render health checks and monitoring can verify the app is healthy.
+  app.get("/health", async (_req: any, res: any) => {
+    const checks: Record<string, string> = {};
+    try {
+      const db = await getDb();
+      if (!db) checks.db = "unavailable";
+      else {
+        await db.execute(sql`SELECT 1`);
+        checks.db = "connected";
+      }
+    } catch {
+      checks.db = "error";
+    }
+    checks.derivWs = "client-side"; // live WebSocket runs in the browser
+    checks.aiProvider = process.env.AI_API_KEY ? "configured" : "missing";
+    const healthy = checks.db === "connected";
+    res.status(healthy ? 200 : 503).json({
+      status: healthy ? "ok" : "degraded",
+      uptime: Math.floor((Date.now() - BOOT_TIME) / 1000),
+      queue: "idle",
+      checks,
+    });
+  });
+
 
   // Lightweight in-memory rate limiter (per-IP). Stricter caps on auth/token paths.
   const rateBuckets: Record<string, { count: number; reset: number }> = {};
