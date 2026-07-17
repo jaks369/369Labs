@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useLocation, Link } from "wouter";
+import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -44,29 +44,29 @@ export default function Login() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#0D1117] px-4">
-      <div className="w-full max-w-sm border border-[#30363D] bg-[#161B22] rounded p-6 relative">
-        <div className="absolute -top-3 left-4 bg-[#0D1117] px-2 text-sm font-bold text-slate-300">
+    <div className="min-h-screen flex items-center justify-center bg-[#0A0E27] px-4">
+      <div className="w-full max-w-sm border border-[#00FFFF]/40 bg-[#0F1629] rounded p-6 relative">
+        <div className="absolute -top-3 left-4 bg-[#0A0E27] px-2 text-sm font-bold text-[#00FFFF]">
           {mode === "login" ? "LOG IN" : "SIGN UP"}
         </div>
 
         <form onSubmit={handleSubmit} className="mt-4 space-y-4">
           {mode === "signup" && (
             <div>
-              <label className="text-[10px] text-slate-400 uppercase tracking-wider block mb-1">
+              <label className="text-[10px] text-[#00FFFF]/70 uppercase tracking-wider block mb-1">
                 Name
               </label>
               <Input
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                className="border-[#30363D] text-slate-300"
+                className="border-[#00FFFF]/40 text-[#00FFFF]"
                 placeholder="Your name"
               />
             </div>
           )}
 
           <div>
-            <label className="text-[10px] text-slate-400 uppercase tracking-wider block mb-1">
+            <label className="text-[10px] text-[#00FFFF]/70 uppercase tracking-wider block mb-1">
               Email
             </label>
             <Input
@@ -74,13 +74,13 @@ export default function Login() {
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="border-[#30363D] text-slate-300"
+              className="border-[#00FFFF]/40 text-[#00FFFF]"
               placeholder="you@example.com"
             />
           </div>
 
           <div>
-            <label className="text-[10px] text-slate-400 uppercase tracking-wider block mb-1">
+            <label className="text-[10px] text-[#00FFFF]/70 uppercase tracking-wider block mb-1">
               Password
             </label>
             <Input
@@ -89,13 +89,13 @@ export default function Login() {
               minLength={8}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="border-[#30363D] text-slate-300"
+              className="border-[#00FFFF]/40 text-[#00FFFF]"
               placeholder="At least 8 characters"
             />
           </div>
 
           {error && (
-            <p className="text-xs text-red-400 border border-red-400/40 bg-red-500/10 rounded px-3 py-2">
+            <p className="text-xs text-[#FF0000] border border-[#FF0000]/40 bg-[#FF0000]/10 rounded px-3 py-2">
               {error}
             </p>
           )}
@@ -103,11 +103,11 @@ export default function Login() {
           <Button
             type="submit"
             disabled={pending}
-            className="w-full bg-[#F0B90B] text-[#0D1117] hover:bg-[#FFD23F]"
+            className="w-full bg-[#00FFFF] text-[#0A0E27] hover:bg-[#00FFFF]/80"
           >
             {pending ? "Please wait…" : mode === "login" ? "Log in" : "Create account"}
           </Button>
-        <p className="text-xs text-slate-500 mt-4 text-center"><Link to="/forgot-password" className="text-blue-500 hover:underline">Forgot password?</Link></p></form>
+        </form>
 
         <button
           type="button"
@@ -115,7 +115,7 @@ export default function Login() {
             setMode(mode === "login" ? "signup" : "login");
             setError(null);
           }}
-          className="mt-4 text-xs text-amber-400 hover:underline w-full text-center"
+          className="mt-4 text-xs text-[#FF00FF] hover:underline w-full text-center"
         >
           {mode === "login"
             ? "Need an account? Sign up"

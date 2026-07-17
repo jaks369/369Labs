@@ -8,17 +8,13 @@ import {
   Square,
   Activity,
   AlertCircle,
-  AlertTriangle,
   Zap,
   Plus,
 } from "lucide-react";
 import { useLocation } from "wouter";
 import { BotEngine, BotStatus, BotTrade } from "@/services/BotEngine";
-import { runBacktest } from "@/services/BacktestEngine";
 import { derivWS } from "@/services/derivWebSocket";
 import { StrategyRule } from "@/components/RuleBuilder";
-import { StrategyBuilderContent } from "@/pages/StrategyBuilder";
-import { pushTimeline } from "@/components/AITimeline";
 
 interface RunningBot {
   runId: number;
@@ -29,9 +25,6 @@ interface RunningBot {
   status: BotStatus;
   pnl: number;
   trades: number;
-  wins: number;
-  losses: number;
-  backtestWinRate: number | null;
   lastLog?: string;
 }
 
@@ -49,16 +42,13 @@ export default function Bots() {
   const [, navigate] = useLocation();
   const [runningBots, setRunningBots] = useState<RunningBot[]>([]);
   const [deployingId, setDeployingId] = useState<number | null>(null);
-  const [creating, setCreating] = useState(false);
+  const isMountedRef = useRef(true);
 
   const strategiesQuery = trpc.strategies.list.useQuery();
   const derivTokenQuery = trpc.deriv.getToken.useQuery();
   const startRunMutation = trpc.bot.startRun.useMutation();
   const stopRunMutation = trpc.bot.stopRun.useMutation();
   const saveTradeMutation = trpc.trades.save.useMutation();
-  const notifyTelegram = trpc.telegram.send.useMutation();
-
-  const alertTg = (msg: string) => { try { notifyTelegram.mutate({ message: msg }); } catch { /* ignore */ } };
 
   // Keep a live-mutable ref so BotEngine callbacks (closures created at deploy time)
   // always update the latest state array rather than a stale snapshot.
@@ -76,19 +66,9 @@ export default function Bots() {
   // Stop all engines if the user navigates away / unmounts, so bots don't keep
   // trading in the background with no visible controls.
   useEffect(() => {
-    if (creating) {
-    return (
-      <div className="p-6 lg:p-10">
-        <StrategyBuilderContent
-          embedded
-          onClose={() => setCreating(false)}
-          onSaved={() => { setCreating(false); strategiesQuery.refetch(); }}
-        />
-      </div>
-    );
-  }
-
-  return () => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
       botsRef.current.forEach((b) => b.engine.stop());
     };
   }, []);
@@ -116,35 +96,36 @@ export default function Bots() {
       const botRun = await startRunMutation.mutateAsync({ strategyId: strategy.id });
 
       const engine = new BotEngine({
-        onStatusChange: (status) => updateBot(botRun.id, { status }),
-        onTrade: (trade: BotTrade) => {
-          if (trade.result === "open") return; // only persist settled trades
+        onStatusChange: (status) => { if (isMountedRef.current) updateBot(botRun.id, { status }); },
+        onTrade: async (trade: BotTrade) => {
+          if (trade.result === "open") return;
           const current = botsRef.current.find((b) => b.runId === botRun.id);
-          updateBot(botRun.id, {
-            pnl: (current?.pnl || 0) + parseFloat(trade.pnl),
-            trades: (current?.trades || 0) + 1,
-            wins: (current?.wins || 0) + (trade.result === "win" ? 1 : 0),
-            losses: (current?.losses || 0) + (trade.result === "loss" ? 1 : 0),
-          });
-          saveTradeMutation.mutate({
-            botRunId: botRun.id,
-            strategyId: strategy.id,
-            entryTime: trade.timestamp,
-            entryPrice: String(trade.entryPrice),
-            stake: String(trade.stake),
-            profitLoss: trade.pnl,
-            result: trade.result,
-            symbol: trade.symbol,
-            contractType: trade.contractType,
-            contractId: trade.contractId ? String(trade.contractId) : undefined,
-          });
+          if (isMountedRef.current) {
+            updateBot(botRun.id, {
+              pnl: (current?.pnl || 0) + parseFloat(trade.pnl),
+              trades: (current?.trades || 0) + 1,
+            });
+          }
+          try {
+            await saveTradeMutation.mutateAsync({
+              botRunId: botRun.id,
+              strategyId: strategy.id,
+              entryTime: trade.timestamp,
+              entryPrice: String(trade.entryPrice),
+              stake: String(trade.stake),
+              profitLoss: trade.pnl,
+              result: trade.result,
+              contractId: trade.contractId ? String(trade.contractId) : undefined,
+            });
+          } catch (e) {
+            console.error("Failed to persist trade:", e);
+          }
           const decimalRegex = /^\d+(\.\d{1,8})?$/;
           if (!decimalRegex.test(trade.stake.toString())) {
             console.warn(`Trade saved with unexpected stake format: ${trade.stake}`);
           }
-          alertTg(`🔔 ${strategy.name} [${trade.symbol}] trade ${trade.result.toUpperCase()} · stake $${trade.stake} · P&L ${trade.pnl >= 0 ? "+" : ""}${trade.pnl}`);
         },
-        onLog: (message) => updateBot(botRun.id, { lastLog: message }),
+        onLog: (message) => { if (isMountedRef.current) updateBot(botRun.id, { lastLog: message }); },
       });
 
       const newBot: RunningBot = {
@@ -156,32 +137,14 @@ export default function Bots() {
         status: "running",
         pnl: 0,
         trades: 0,
-        wins: 0,
-        losses: 0,
-        backtestWinRate: null,
       };
-      setRunningBots((prev) => [...prev, newBot]);
+      if (isMountedRef.current) setRunningBots((prev) => [...prev, newBot]);
 
       engine.start({ symbol: rule.symbol || DEFAULT_SYMBOL, strategy: rule });
-      pushTimeline({ icon: "bot", text: `Bot started: ${strategy.name} on ${rule.symbol || DEFAULT_SYMBOL}` });
-      alertTg(`🚀 Bot deployed: ${strategy.name} on ${rule.symbol || DEFAULT_SYMBOL}`);
-
-      // Capture the expected win rate via backtest so we can flag regime drift live.
-      const stake = Number(rule.params?.stake ?? 1);
-      derivWS
-        .fetchTickHistory(rule.symbol || DEFAULT_SYMBOL, Math.floor(Date.now() / 1000) - 7 * 24 * 3600, Math.floor(Date.now() / 1000))
-        .then(async (ticks) => {
-          if (!ticks || ticks.length < 20) return;
-          const res = await runBacktest(ticks, rule, stake);
-          updateBot(botRun.id, { backtestWinRate: res.winRate });
-        })
-        .catch(() => {
-          /* backtest unavailable (e.g. invalid token) — badge stays hidden */
-        });
     } catch (error) {
-      alert(error instanceof Error ? error.message : "Failed to deploy bot");
+      if (isMountedRef.current) alert(error instanceof Error ? error.message : "Failed to deploy bot");
     } finally {
-      setDeployingId(null);
+      if (isMountedRef.current) setDeployingId(null);
     }
   };
 
@@ -200,8 +163,6 @@ export default function Bots() {
     const finalPnl = bot.engine.getTotalPnl();
 
     setRunningBots((prev) => prev.filter((b) => b.runId !== bot.runId));
-    pushTimeline({ icon: "bot", text: `Bot stopped: ${bot.name} · ${finalTrades} trades · P&L ${finalPnl >= 0 ? "+" : ""}$${finalPnl.toFixed(2)}` });
-    alertTg(`⏹️ Bot stopped: ${bot.name} · ${finalTrades} trades · P&L ${finalPnl >= 0 ? "+" : ""}$${finalPnl.toFixed(2)}`);
     try {
       await stopRunMutation.mutateAsync({
         id: bot.runId,
@@ -214,18 +175,6 @@ export default function Bots() {
     }
   };
 
-  if (creating) {
-    return (
-      <div className="p-6 lg:p-10">
-        <StrategyBuilderContent
-          embedded
-          onClose={() => setCreating(false)}
-          onSaved={() => { setCreating(false); strategiesQuery.refetch(); }}
-        />
-      </div>
-    );
-  }
-
   return (
     <div className="p-6 lg:p-10">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-10">
@@ -233,7 +182,7 @@ export default function Bots() {
           <h1 className="text-3xl font-bold text-white mb-2">Automated Bots</h1>
           <p className="text-slate-500 text-sm font-medium">Manage and monitor your 24/7 trading instances.</p>
         </div>
-        <Button onClick={() => setCreating(true)} className="btn-primary flex items-center gap-2">
+        <Button onClick={() => navigate("/strategy-builder")} className="btn-primary flex items-center gap-2">
           <Plus className="w-4 h-4" /> Create New Bot
         </Button>
       </div>
@@ -255,7 +204,7 @@ export default function Bots() {
         {/* Active Bots List */}
         <div className="lg:col-span-2 space-y-6">
           <div className="bloomberg-panel">
-            <div className="p-4 border-b border-[#30363D] flex items-center justify-between bg-black/20">
+            <div className="p-4 border-b border-[rgba(255,255,255,0.08)] flex items-center justify-between bg-black/20">
               <h2 className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Running Instances</h2>
               <div className="flex items-center gap-2">
                 <span className="text-[10px] font-bold text-emerald-500">{runningBots.length} Active</span>
@@ -265,7 +214,7 @@ export default function Bots() {
             <div className="p-0">
               {runningBots.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-20 text-center">
-                  <div className="w-12 h-12 bg-slate-900 rounded-full flex items-center justify-center mb-4 border border-[#30363D]">
+                  <div className="w-12 h-12 bg-slate-900 rounded-full flex items-center justify-center mb-4 border border-[rgba(255,255,255,0.08)]">
                     <Bot className="w-6 h-6 text-slate-600" />
                   </div>
                   <p className="text-slate-500 text-sm mb-6">No bots are currently running.</p>
@@ -274,16 +223,16 @@ export default function Bots() {
                   </Button>
                 </div>
               ) : (
-                <div className="divide-y divide-[#30363D]">
+                <div className="divide-y divide-[rgba(255,255,255,0.08)]">
                   {runningBots.map((bot) => (
                     <div key={bot.runId} className="p-6 flex items-center justify-between hover:bg-white/5 transition-colors">
                       <div className="flex items-center gap-4">
                         <div className={`w-10 h-10 rounded-lg flex items-center justify-center border ${
                           bot.status === "error"
                             ? "bg-red-600/10 border-red-600/20"
-                            : "bg-blue-600/10 border-blue-600/20"
+                            : "bg-orange-500/10 border-orange-500/20"
                         }`}>
-                          <Activity className={`w-5 h-5 ${bot.status === "error" ? "text-red-500" : "text-blue-500 animate-pulse"}`} />
+                          <Activity className={`w-5 h-5 ${bot.status === "error" ? "text-red-500" : "text-orange-400 animate-pulse"}`} />
                         </div>
                         <div>
                           <h3 className="text-sm font-bold text-white">{bot.name}</h3>
@@ -300,24 +249,6 @@ export default function Bots() {
                             {bot.pnl >= 0 ? "+" : ""}${bot.pnl.toFixed(2)}
                           </p>
                         </div>
-                        {(() => {
-                          const settled = bot.wins + bot.losses;
-                          const liveWinRate = settled > 0 ? (bot.wins / settled) * 100 : null;
-                          if (bot.backtestWinRate == null || liveWinRate == null || settled < 5) return null;
-                          const drift = liveWinRate - bot.backtestWinRate;
-                          const mismatch = drift <= -15 || liveWinRate < bot.backtestWinRate * 0.7;
-                          if (!mismatch) return null;
-                          return (
-                            <div className="max-w-[180px] text-left bg-red-500/10 border border-red-500/30 rounded px-2 py-1">
-                              <div className="flex items-center gap-1 text-[10px] font-bold text-red-400 uppercase">
-                                <AlertTriangle className="w-3 h-3" /> Regime mismatch
-                              </div>
-                              <p className="text-[10px] text-red-300/80 leading-tight mt-0.5">
-                                Live {liveWinRate.toFixed(0)}% vs backtest {bot.backtestWinRate.toFixed(0)}%
-                              </p>
-                            </div>
-                          );
-                        })()}
                         <Button
                           size="sm"
                           variant="destructive"
@@ -341,6 +272,18 @@ export default function Bots() {
             <h3 className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-6">System Health</h3>
             <div className="space-y-4">
               <div className="flex justify-between items-center">
+                <span className="text-xs text-slate-400">Deriv Connection</span>
+                <span className={`text-[10px] font-bold uppercase ${derivWS.isConnected() ? "text-emerald-500" : "text-red-500"}`}>
+                  {derivWS.isConnected() ? "Connected" : "Offline"}
+                </span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-xs text-slate-400">API Token</span>
+                <span className={`text-[10px] font-bold uppercase ${derivTokenQuery.data?.token ? "text-emerald-500" : "text-red-500"}`}>
+                  {derivTokenQuery.data?.token ? "Configured" : "Missing"}
+                </span>
+              </div>
+              <div className="flex justify-between items-center">
                 <span className="text-xs text-slate-400">Active Bots</span>
                 <span className="text-[10px] font-bold text-slate-300 uppercase">{runningBots.length}</span>
               </div>
@@ -351,13 +294,13 @@ export default function Bots() {
             <h3 className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-6">Ready to Deploy</h3>
             <div className="space-y-3">
               {strategiesQuery.data?.map((s: any) => (
-                <div key={s.id} className="p-4 rounded-xl bg-[#161B22] border border-[#30363D] hover:border-blue-500/50 transition-all group">
+                <div key={s.id} className="p-4 rounded-xl bg-[rgba(30,30,34,0.6)] border border-[rgba(255,255,255,0.08)] hover:border-orange-400/50 transition-all group">
                   <div className="flex justify-between items-start mb-3">
                     <h4 className="text-xs font-bold text-white">{s.name}</h4>
-                    <Zap className="w-3 h-3 text-blue-500" />
+                    <Zap className="w-3 h-3 text-orange-400" />
                   </div>
                   <Button
-                    className="w-full h-8 text-[10px] font-bold bg-blue-600/10 text-blue-500 hover:bg-blue-600 hover:text-white border border-blue-600/20"
+                    className="w-full h-8 text-[10px] font-bold bg-orange-500/10 text-orange-400 hover:bg-orange-500 hover:text-white border border-orange-500/20"
                     disabled={deployingId === s.id || runningBots.some((b) => b.strategyId === s.id)}
                     onClick={() => handleDeploy(s)}
                   >
@@ -376,5 +319,3 @@ export default function Bots() {
     </div>
   );
 }
-
-

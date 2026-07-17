@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef } from "react";
 import { derivWS, Tick } from "@/services/derivWebSocket";
-import { trpc } from "@/lib/trpc";
 
 interface ChartData {
   time: string;
@@ -10,43 +9,20 @@ interface ChartData {
 interface TickChartProps {
   symbol: string;
   maxDataPoints?: number;
-  decimalPlaces?: number;
 }
 
-export default function TickChart({ symbol, maxDataPoints = 100, decimalPlaces = 3 }: TickChartProps) {
+export default function TickChart({ symbol, maxDataPoints = 100 }: TickChartProps) {
   const [data, setData] = useState<ChartData[]>([]);
-
-  const historyQuery = trpc.market.getHistory.useQuery({ symbol, limit: maxDataPoints }, { enabled: Boolean(symbol) });
-  useEffect(() => {
-    const ticks = historyQuery.data?.ticks;
-    if (!ticks || !ticks.length) return;
-    const hist = ticks.slice(-maxDataPoints).map((t) => ({
-      time: new Date((t.epoch || 0) * 1000).toLocaleTimeString(),
-      price: Number(t.price),
-    }));
-    if (hist.length) setData(hist);
-  }, [historyQuery.data, symbol, maxDataPoints]);
+  const [isConnected, setIsConnected] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [currentPrice, setCurrentPrice] = useState<number | null>(null);
   const [priceColor, setPriceColor] = useState<"up" | "down">("up");
   const svgRef = useRef<SVGSVGElement>(null);
 
   useEffect(() => {
-    // Seed from the in-memory buffer so the chart is continuous even after
-    // navigating away and back (Deriv-style persistent line).
-    const buffered = derivWS.getRecentTicks(symbol, maxDataPoints);
-    if (buffered.length) {
-      setData(buffered.slice(-maxDataPoints).map((t) => ({
-        time: new Date(t.timestamp).toLocaleTimeString(),
-        price: t.price,
-      })));
-      const last = buffered[buffered.length - 1];
-      setCurrentPrice(last.price);
-    } else {
-      setData([]);
-      setCurrentPrice(null);
-      setPriceColor("up");
-    }
+    setData([]);
+    setCurrentPrice(null);
+    setPriceColor("up");
     setError(null);
 
     const listener = {
@@ -71,7 +47,9 @@ export default function TickChart({ symbol, maxDataPoints = 100, decimalPlaces =
         setError(null);
       },
       onError: (err: Error) => setError(err.message),
-        };
+      onConnect: () => setIsConnected(true),
+      onDisconnect: () => setIsConnected(false),
+    };
 
     const id = derivWS.subscribe(symbol);
     derivWS.addListener(listener);
@@ -82,6 +60,7 @@ export default function TickChart({ symbol, maxDataPoints = 100, decimalPlaces =
     };
   }, [symbol, maxDataPoints]);
 
+  // Compute Y-axis domain (tight)
   const prices = data.map((d) => d.price);
   const minPrice = prices.length ? Math.min(...prices) : 0;
   const maxPrice = prices.length ? Math.max(...prices) : 1;
@@ -99,15 +78,20 @@ export default function TickChart({ symbol, maxDataPoints = 100, decimalPlaces =
 
   return (
     <div className="w-full">
-      <div className="flex items-center justify-between mb-3 px-3 py-2 bg-[#0D1117] rounded border border-[#30363D]">
+      {/* Status bar */}
+      <div className="flex items-center justify-between mb-3 px-3 py-2 bg-[#0D0D0D] rounded border border-[rgba(255,255,255,0.08)]">
+        <div className="flex items-center gap-2">
+          <div className={`w-2 h-2 rounded-full ${isConnected ? "bg-green-500" : "bg-red-500"}`} />
+          <span className="text-[10px] text-slate-400">{isConnected ? "CONNECTED" : "DISCONNECTED"}</span>
+        </div>
         <span className="text-xs font-bold text-white">{symbol}</span>
         <span className={`text-lg font-bold ${priceColor === "up" ? "text-green-500" : "text-red-500"}`}>
-          {currentPrice !== null ? currentPrice.toFixed(decimalPlaces) : "--"}
+          {currentPrice !== null ? currentPrice.toFixed(4) : "--"}
         </span>
       </div>
 
       {error ? (
-        <div className="w-full h-64 flex items-center justify-center bg-[#0D1117] rounded border border-red-500/30">
+        <div className="w-full h-64 flex items-center justify-center bg-[#0D0D0D] rounded border border-red-500/30">
           <p className="text-red-500 text-sm">Connection Error: {error}</p>
         </div>
       ) : data.length > 1 ? (
@@ -130,48 +114,30 @@ export default function TickChart({ symbol, maxDataPoints = 100, decimalPlaces =
             strokeWidth="2"
             vectorEffect="non-scaling-stroke"
           />
-          {points.length > 0 && (() => {
-            const last = points[points.length - 1].split(",");
-            const lx = parseFloat(last[0]);
-            const ly = parseFloat(last[1]);
-            const label = prices[prices.length - 1].toFixed(decimalPlaces);
-            const tagW = Math.max(48, label.length * 8 + 16);
-            const placeLeft = lx + tagW > width - 4;
-            const tx = placeLeft ? lx - tagW - 6 : lx + 6;
-            const ty = Math.min(Math.max(ly - 11, 2), height - 22);
-            const color = priceColor === "up" ? "#00d4ff" : "#ff4d4d";
-            return (
-              <g>
-                <circle cx={lx} cy={ly} r="4" fill={color} />
-                <rect x={tx} y={ty} width={tagW} height={22} rx="4" fill={color} />
-                <text
-                  x={tx + tagW / 2}
-                  y={ty + 15}
-                  textAnchor="middle"
-                  fontSize="13"
-                  fontWeight="bold"
-                  fill="#0D1117"
-                >
-                  {label}
-                </text>
-              </g>
-            );
-          })()}
+          {points.length > 0 && (
+            <circle
+              cx={parseFloat(points[points.length - 1].split(",")[0])}
+              cy={parseFloat(points[points.length - 1].split(",")[1])}
+              r="4"
+              fill={priceColor === "up" ? "#00d4ff" : "#ff4d4d"}
+            />
+          )}
         </svg>
       ) : (
-        <div className="w-full h-64 flex items-center justify-center bg-[#0D1117] rounded border border-[#30363D]">
+        <div className="w-full h-64 flex items-center justify-center bg-[#0D0D0D] rounded border border-[rgba(255,255,255,0.08)]">
           <p className="text-slate-500 text-sm">Waiting for tick data...</p>
         </div>
       )}
 
+      {/* Stats */}
       <div className="mt-3 grid grid-cols-3 gap-3 text-xs">
         <div className="bg-slate-900/50 p-2 rounded border border-slate-800">
           <span className="text-slate-500 text-[10px] uppercase">High</span>
-          <p className="text-white font-bold">{maxPrice.toFixed(decimalPlaces)}</p>
+          <p className="text-white font-bold">{maxPrice.toFixed(4)}</p>
         </div>
         <div className="bg-slate-900/50 p-2 rounded border border-slate-800">
           <span className="text-slate-500 text-[10px] uppercase">Low</span>
-          <p className="text-white font-bold">{minPrice.toFixed(decimalPlaces)}</p>
+          <p className="text-white font-bold">{minPrice.toFixed(4)}</p>
         </div>
         <div className="bg-slate-900/50 p-2 rounded border border-slate-800">
           <span className="text-slate-500 text-[10px] uppercase">Ticks</span>

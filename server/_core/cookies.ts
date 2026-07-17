@@ -21,6 +21,9 @@ export function getSessionCookieOptions(req: Request): {
 } {
   const secure = isSecureRequest(req);
 
+  // On Vercel (or any same-site deployment), "lax" works and avoids
+  // third-party cookie blocking in Safari / Firefox.
+  // Only use "none" when the API is on a different origin than the frontend.
   return {
     httpOnly: true,
     path: "/",

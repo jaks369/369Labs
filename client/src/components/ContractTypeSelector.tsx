@@ -9,11 +9,15 @@ export type ContractCategory =
 
 export interface ContractSelection {
   category: ContractCategory;
+  // For rise_fall
   direction?: "rise" | "fall";
-  barrier?: number;
+  // For over_under
+  barrier?: number; // 0-9
   overUnder?: "over" | "under";
-  digit?: number;
+  // For digits
+  digit?: number; // 0-9
   digitMatch?: "match" | "differ";
+  // For accumulator
   growthRate?: number;
 }
 
@@ -35,6 +39,7 @@ export default function ContractTypeSelector({ selection, onChange }: ContractTy
     const base: ContractSelection = { category };
     if (category === "rise_fall") base.direction = "rise";
     if (category === "over_under") { base.overUnder = "over"; base.barrier = 5; }
+    if (category === "even_odd") { /* even by default */ }
     if (category === "digits") { base.digitMatch = "match"; base.digit = 0; }
     if (category === "accumulator") base.growthRate = 1;
     onChange(base);
@@ -42,14 +47,15 @@ export default function ContractTypeSelector({ selection, onChange }: ContractTy
 
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-5 gap-1 bg-[#0D1117] p-1 rounded-lg border border-[#30363D]">
+      {/* Category tabs */}
+      <div className="grid grid-cols-5 gap-1 bg-[#0D0D0D] p-1 rounded-lg border border-[rgba(255,255,255,0.08)]">
         {CATEGORIES.map((c) => (
           <button
             key={c.id}
             onClick={() => setCat(c.id)}
             className={`flex flex-col items-center gap-1 py-2 rounded text-[10px] font-bold transition-colors ${
               selection.category === c.id
-                ? "bg-blue-600 text-white"
+                ? "bg-orange-500 text-white"
                 : "text-slate-400 hover:text-white hover:bg-white/5"
             }`}
           >
@@ -59,6 +65,7 @@ export default function ContractTypeSelector({ selection, onChange }: ContractTy
         ))}
       </div>
 
+      {/* Sub-options */}
       <div className="bg-slate-900/50 p-4 rounded border border-slate-800">
         {selection.category === "rise_fall" && (
           <div className="grid grid-cols-2 gap-2">
@@ -118,7 +125,7 @@ export default function ContractTypeSelector({ selection, onChange }: ContractTy
                     onClick={() => onChange({ ...selection, barrier: i })}
                     className={`py-2 rounded text-xs font-bold ${
                       selection.barrier === i
-                        ? "bg-blue-600 text-white"
+                        ? "bg-orange-500 text-white"
                         : "bg-slate-800 text-slate-300 hover:bg-slate-700"
                     }`}
                   >
@@ -140,7 +147,7 @@ export default function ContractTypeSelector({ selection, onChange }: ContractTy
             </button>
             <button
               onClick={() => onChange({ ...selection, category: "even_odd" })}
-              className="py-3 rounded font-bold text-sm bg-blue-600 text-white"
+              className="py-3 rounded font-bold text-sm bg-orange-500 text-white"
             >
               Odd
             </button>
@@ -180,7 +187,7 @@ export default function ContractTypeSelector({ selection, onChange }: ContractTy
                     onClick={() => onChange({ ...selection, digit: i })}
                     className={`py-2 rounded text-xs font-bold ${
                       selection.digit === i
-                        ? "bg-blue-600 text-white"
+                        ? "bg-orange-500 text-white"
                         : "bg-slate-800 text-slate-300 hover:bg-slate-700"
                     }`}
                   >
@@ -202,7 +209,7 @@ export default function ContractTypeSelector({ selection, onChange }: ContractTy
                   onClick={() => onChange({ ...selection, growthRate: rate })}
                   className={`py-2 rounded text-xs font-bold ${
                     selection.growthRate === rate
-                      ? "bg-blue-600 text-white"
+                      ? "bg-orange-500 text-white"
                       : "bg-slate-800 text-slate-300 hover:bg-slate-700"
                   }`}
                 >

@@ -1,4 +1,4 @@
-import { int, mysqlEnum, mysqlTable, text, timestamp, varchar, decimal, boolean, json, bigint } from "drizzle-orm/mysql-core";
+import { int, mysqlEnum, mysqlTable, text, timestamp, varchar, decimal, boolean, json } from "drizzle-orm/mysql-core";
 import { relations } from "drizzle-orm";
 
 /**
@@ -47,7 +47,6 @@ export const strategies = mysqlTable("strategies", {
   description: text("description"),
   config: json("config").notNull(), // JSON config of the strategy blocks
   isActive: boolean("isActive").default(true).notNull(),
-  published: boolean("published").default(false).notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
@@ -67,8 +66,9 @@ export const trades = mysqlTable("trades", {
   exitPrice: decimal("exitPrice", { precision: 18, scale: 8 }),
   stake: decimal("stake", { precision: 18, scale: 8 }).notNull(),
   profitLoss: decimal("profitLoss", { precision: 18, scale: 8 }),
-  symbol: varchar("symbol", { length: 32 }).notNull().default("R_100"),
-  contractType: varchar("contractType", { length: 32 }).default("CALL"),
+  result: mysqlEnum("result", ["win", "loss", "pending"]).default("pending").notNull(),
+  contractId: varchar("contractId", { length: 64 }),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
 
@@ -121,109 +121,3 @@ export const notificationSettings = mysqlTable("notificationSettings", {
 
 export type NotificationSettings = typeof notificationSettings.$inferSelect;
 export type InsertNotificationSettings = typeof notificationSettings.$inferInsert;
-
-// Tick history (persistent last-digit + price history per symbol)
-export const tickHistory = mysqlTable("tickHistory", {
-  id: int("id").autoincrement().primaryKey(),
-  symbol: varchar("symbol", { length: 32 }).notNull(),
-  price: decimal("price", { precision: 18, scale: 8 }).notNull(),
-  lastDigit: int("lastDigit").notNull(),
-  epoch: bigint("epoch", { mode: "number" }).notNull(),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-});
-
-export type TickHistoryRow = typeof tickHistory.$inferSelect;
-export type InsertTickHistory = typeof tickHistory.$inferInsert;
-
-// AI-discovered trading signals (the "Marketplace" / AI Insights feed)
-export const signals = mysqlTable("signals", {
-  id: int("id").autoincrement().primaryKey(),
-  userId: int("userId").notNull(),
-  symbol: varchar("symbol", { length: 32 }).notNull(),
-  title: varchar("title", { length: 255 }).notNull(),
-  description: text("description").notNull(),
-  // StrategyRule-compatible rule so the signal is directly backtestable / deployable
-  rule: json("rule").notNull(),
-  // Evidence: the tick window the pattern was found in (epochs + prices + lastDigits)
-  evidence: json("evidence").notNull(),
-  patternType: varchar("patternType", { length: 32 }).notNull(),
-  sampleSize: int("sampleSize").notNull(),
-  winRate: decimal("winRate", { precision: 5, scale: 2 }).notNull(),
-  confidence: decimal("confidence", { precision: 5, scale: 2 }).notNull(),
-  discoveredAt: bigint("discoveredAt", { mode: "number" }).notNull(),
-  startEpoch: bigint("startEpoch", { mode: "number" }).notNull(),
-  endEpoch: bigint("endEpoch", { mode: "number" }).notNull(),
-  source: varchar("source", { length: 16 }).notNull().default("watch"), // "watch" | "always-on"
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-});
-
-export type Signal = typeof signals.$inferSelect;
-export type InsertSignal = typeof signals.$inferInsert;
-
-// Audit log: who changed what and when (token add, strategy edit, bot start/stop, SL change).
-export const auditLogs = mysqlTable("auditLogs", {
-  id: int("id").autoincrement().primaryKey(),
-  userId: int("userId").notNull(),
-  action: varchar("action", { length: 48 }).notNull(), // e.g. "token.add", "strategy.create", "bot.start", "bot.stop", "strategy.edit", "sl.change"
-  target: varchar("target", { length: 64 }), // strategy id, bot id, etc.
-  detail: json("detail"), // before/after snapshot where relevant
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-});
-
-export type AuditLog = typeof auditLogs.$inferSelect;
-export type InsertAuditLog = typeof auditLogs.$inferInsert;
-
-// AI Memory: persistent user preferences/context so agents remember trader profile
-// (favorite symbols, risk %, no-martingale rule, trading style, notes). Keyed per user.
-export const userMemory = mysqlTable("userMemory", {
-  id: int("id").autoincrement().primaryKey(),
-  userId: int("userId").notNull().unique(),
-  // JSON blob of remembered preferences, e.g.
-  // { symbols: ["R_75"], riskPct: 2, noMartingale: true, style: "volatility 1m", notes: "" }
-  memory: json("memory").notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
-});
-
-export type UserMemory = typeof userMemory.$inferSelect;
-export type InsertUserMemory = typeof userMemory.$inferInsert;
-
-// Plugin registry: community-contributed extensions that hook into the OS.
-export const plugins = mysqlTable("plugins", {
-  id: int("id").autoincrement().primaryKey(),
-  name: varchar("name", { length: 128 }).notNull().unique(),
-  description: text("description"),
-  author: varchar("author", { length: 128 }),
-  hook: varchar("hook", { length: 64 }), // e.g. "onTrade", "onSignal", "onBotStart"
-  config: json("config"), // default configuration for the plugin
-  enabledByDefault: boolean("enabled_by_default").default(false).notNull(),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-});
-
-export type Plugin = typeof plugins.$inferSelect;
-export type InsertPlugin = typeof plugins.$inferInsert;
-
-// Which plugins a given user has installed/enabled.
-export const pluginInstalls = mysqlTable("plugin_installs", {
-  id: int("id").autoincrement().primaryKey(),
-  userId: int("userId").notNull(),
-  pluginId: int("pluginId").notNull(),
-  enabled: boolean("enabled").default(true).notNull(),
-  installedAt: timestamp("installed_at").defaultNow().notNull(),
-});
-
-export type PluginInstall = typeof pluginInstalls.$inferSelect;
-export type InsertPluginInstall = typeof pluginInstalls.$inferInsert;
-
-// One-shot scheduled task queue (used by plugins / workflows).
-export const jobs = mysqlTable("jobs", {
-  id: int("id").autoincrement().primaryKey(),
-  userId: int("userId").notNull(),
-  type: varchar("type", { length: 64 }).notNull(),
-  payload: json("payload"),
-  status: mysqlEnum("status", ["pending", "done", "failed"]).default("pending").notNull(),
-  runAt: bigint("runAt", { mode: "number" }).notNull(),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-});
-
-export type Job = typeof jobs.$inferSelect;
-export type InsertJob = typeof jobs.$inferInsert;

@@ -1,20 +1,16 @@
 import express, { type Express } from "express";
 import fs from "fs";
 import path from "path";
-import { fileURLToPath } from "url";
 
 export function serveStatic(app: Express) {
-  // In dev (tsx): import.meta.dirname = server/_core/
-  // In prod (bundled in dist/index.js): import.meta.dirname = dist/
-  const __dirname = path.dirname(fileURLToPath(import.meta.url));
-  const distPath = path.resolve(__dirname, "public");
+  // Vite builds to dist/public at the project root.
+  // import.meta.dirname is server/_core/, so we need to go up two levels.
+  const distPath = path.resolve(import.meta.dirname, "../../dist/public");
 
   if (!fs.existsSync(distPath)) {
-    console.warn(
-      `[Static] Build directory not found: ${distPath}. ` +
-      `Run 'pnpm build' to build the frontend for production.`
+    throw new Error(
+      `Could not find the build directory: ${distPath}, make sure to build the client first (pnpm build)`
     );
-    return;
   }
 
   app.use(express.static(distPath));
