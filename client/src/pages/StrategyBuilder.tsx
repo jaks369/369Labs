@@ -16,7 +16,8 @@ import {
   Database,
   Search,
   Zap,
-  ShieldCheck
+  ShieldCheck,
+  GitCompare
 } from "lucide-react";
 import { useLocation, useSearch } from "wouter";
 import RuleBuilder, { StrategyRule, DEFAULT_RULE, summarizeRule } from "@/components/RuleBuilder";
@@ -35,6 +36,10 @@ interface StrategyBuilderContentProps {
   onSaved?: () => void;
 }
 
+const summarizeRuleSafe = (r: any): string => {
+  try { return summarizeRule(r as StrategyRule); } catch { return "—"; }
+};
+
 export function StrategyBuilderContent({ embedded = false, onClose, onSaved }: StrategyBuilderContentProps) {
   const { user, isAuthenticated } = useAuth();
   const [, navigate] = useLocation();
@@ -46,6 +51,9 @@ export function StrategyBuilderContent({ embedded = false, onClose, onSaved }: S
   const [publishToMarketplace, setPublishToMarketplace] = useState(false);
   const [ensembleVote, setEnsembleVote] = useState<"all" | "majority" | "any">("majority");
   const [ensembleIds, setEnsembleIds] = useState<number[]>([]);
+  const [versions, setVersions] = useState<{ savedAt: string; rule: any }[]>([]);
+  const [showHistory, setShowHistory] = useState(false);
+  const [compareIdx, setCompareIdx] = useState<[number, number] | null>(null);
 
   const publishMutation = trpc.strategies.publish.useMutation();
   const saveStrategyMutation = trpc.strategies.save.useMutation();
@@ -61,6 +69,7 @@ export function StrategyBuilderContent({ embedded = false, onClose, onSaved }: S
       setDescription(editQuery.data.description || "");
       const config = editQuery.data.config as any;
       if (config?.rule) { setRule(config.rule); setBuilderMode("visual"); }
+      if (Array.isArray(config?.versions)) setVersions(config.versions);
     }
   }, [editQuery.data]);
   useEffect(() => {
@@ -102,9 +111,14 @@ export function StrategyBuilderContent({ embedded = false, onClose, onSaved }: S
   };
 
   const buildConfig = () => {
-    if (builderMode === "visual") return { rule: rule as any, summary: summarizeRule(rule) };
-    if (builderMode === "ensemble") return { rule: buildEnsembleRule(), summary: `Ensemble (${ensembleVote}) of ${ensembleIds.length} strategies` };
-    return { blocks };
+    const base = (builderMode === "visual")
+      ? { rule: rule as any, summary: summarizeRule(rule) }
+      : builderMode === "ensemble"
+        ? { rule: buildEnsembleRule(), summary: `Ensemble (${ensembleVote}) of ${ensembleIds.length} strategies` }
+        : { blocks };
+    const prevRule = (editQuery.data?.config as any)?.rule;
+    const nextVersions = prevRule ? [...versions, { savedAt: new Date().toISOString(), rule: prevRule }] : versions;
+    return { ...base, versions: nextVersions };
   };
 
   const handleSaveAndDeploy = async () => {
@@ -255,8 +269,41 @@ export function StrategyBuilderContent({ embedded = false, onClose, onSaved }: S
                    <button onClick={() => setBuilderMode("blocks")} className={`px-3 py-1 text-[10px] font-bold rounded ${builderMode === "blocks" ? "bg-blue-600 text-white" : "text-slate-500"}`}>BLOCKS</button>
                    <button onClick={() => setBuilderMode("visual")} className={`px-3 py-1 text-[10px] font-bold rounded ${builderMode === "visual" ? "bg-blue-600 text-white" : "text-slate-500"}`}>IF/THEN</button>
                    <button onClick={() => setBuilderMode("ensemble")} className={`px-3 py-1 text-[10px] font-bold rounded ${builderMode === "ensemble" ? "bg-purple-600 text-white" : "text-slate-500"}`}>ENSEMBLE</button>
-                </div>
-              </div>
+                   <button onClick={() => setShowHistory((v) => !v)} className={`px-3 py-1 text-[10px] font-bold rounded ${showHistory ? "bg-amber-600 text-white" : "text-slate-500"}`}><GitCompare className="w-3 h-3 inline mr-1" />HISTORY</button>
+                 </div>
+               </div>
+
+               {showHistory && (
+                 <div className="border-b border-[#30363D] p-4 bg-black/20 space-y-3">
+                   <div className="flex items-center justify-between">
+                     <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Version History ({versions.length})</span>
+                     {versions.length >= 2 && compareIdx === null && (
+                       <button onClick={() => setCompareIdx([versions.length - 2, versions.length - 1])} className="text-[10px] text-amber-400 hover:underline">Compare last two</button>
+                     )}
+                   </div>
+                   {versions.length === 0 && <p className="text-xs text-slate-600">No saved versions yet. Save this strategy to start tracking history.</p>}
+                   <div className="space-y-1">
+                     {versions.map((v, i) => (
+                       <div key={i} className="flex items-center gap-3 text-xs">
+                         <span className="text-slate-500 w-40">{new Date(v.savedAt).toLocaleString()}</span>
+                         <span className="text-slate-300">{summarizeRuleSafe(v.rule)}</span>
+                       </div>
+                     ))}
+                   </div>
+                   {compareIdx && versions[compareIdx[0]] && versions[compareIdx[1]] && (
+                     <div className="grid grid-cols-2 gap-4 pt-2">
+                       <div className="bg-[#161B22] border border-[#30363D] rounded p-3">
+                         <p className="text-[10px] text-slate-500 mb-1">{new Date(versions[compareIdx[0]].savedAt).toLocaleString()}</p>
+                         <p className="text-xs text-white whitespace-pre-wrap">{summarizeRuleSafe(versions[compareIdx[0]].rule)}</p>
+                       </div>
+                       <div className="bg-[#161B22] border border-[#30363D] rounded p-3">
+                         <p className="text-[10px] text-slate-500 mb-1">{new Date(versions[compareIdx[1]].savedAt).toLocaleString()}</p>
+                         <p className="text-xs text-white whitespace-pre-wrap">{summarizeRuleSafe(versions[compareIdx[1]].rule)}</p>
+                       </div>
+                     </div>
+                   )}
+                 </div>
+               )}
 
               <div className="flex-1 p-8 space-y-4">
                 {builderMode === "visual" ? (
