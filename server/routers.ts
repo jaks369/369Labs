@@ -5,7 +5,7 @@ import { publicProcedure, router, protectedProcedure } from "./_core/trpc";
 import { z } from "zod";
 import * as db from "./db";
 import { TRPCError } from "@trpc/server";
-import { hashPassword, verifyPassword, createSessionToken } from "./_core/auth";
+import { hashPassword, verifyPassword, createSessionToken, sanitizeUser } from "./_core/auth";
 import { getTickHistory, getActiveSymbols, getDigitStats, getTrend, suggestStrategy, TOOL_DEFS, buildActionIntent, normalizeSymbol, detectWatchIntent } from "./aitools";
 
   async function getAI() {
@@ -109,7 +109,7 @@ export const appRouter = router({
         const cookieOptions = getSessionCookieOptions(ctx.req);
         ctx.res.cookie(COOKIE_NAME, sessionToken, { ...cookieOptions, maxAge: ONE_YEAR_MS });
 
-        return user;
+        return sanitizeUser(user);
       }),
 
     login: publicProcedure
@@ -134,7 +134,7 @@ export const appRouter = router({
         const cookieOptions = getSessionCookieOptions(ctx.req);
         ctx.res.cookie(COOKIE_NAME, sessionToken, { ...cookieOptions, maxAge: ONE_YEAR_MS });
 
-        return user;
+        return sanitizeUser(user);
       }),
 
     logout: publicProcedure.mutation(({ ctx }) => {
