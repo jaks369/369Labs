@@ -10,6 +10,8 @@ interface DigitStatsProps {
 
 export default function DigitStats({ symbol, decimalPlaces = derivWS.decimalPlacesFor(symbol), maxTicks = 100 }: DigitStatsProps) {
   const [digits, setDigits] = useState<number[]>([]);
+  // The most recent last digit - drives the live pointer.
+  const [currentDigit, setCurrentDigit] = useState<number | null>(null);
   const [selectedDigit, setSelectedDigit] = useState<number | null>(null);
   const selectedDigitRef = useRef<number | null>(null);
   const [stats, setStats] = useState({
@@ -35,6 +37,7 @@ export default function DigitStats({ symbol, decimalPlaces = derivWS.decimalPlac
 
         const fixed = tick.price.toFixed(decimalPlaces);
         const lastDigit = parseInt(fixed[fixed.length - 1], 10);
+        setCurrentDigit(lastDigit);
         setDigits((prev) => {
           const next = [...prev, lastDigit].slice(-maxTicks);
 
@@ -72,6 +75,9 @@ export default function DigitStats({ symbol, decimalPlaces = derivWS.decimalPlac
   }, [symbol, decimalPlaces, maxTicks]);
 
   const maxPercent = Math.max(...stats.counts, 1);
+  const maxIdx = stats.counts.indexOf(Math.max(...stats.counts));
+  const minIdx = stats.counts.indexOf(Math.min(...stats.counts));
+  const hasData = stats.counts.some((c) => c > 0);
 
   return (
     <div className="space-y-4">
@@ -119,11 +125,14 @@ export default function DigitStats({ symbol, decimalPlaces = derivWS.decimalPlac
         <div className="flex items-end justify-between h-28 gap-0.5 overflow-x-auto">
           {stats.counts.map((percent, i) => (
             <div key={i} className="flex-1 flex flex-col items-center gap-2">
-              <span className="text-[7px] font-bold text-slate-400">{percent.toFixed(1)}%</span>
-              <div onClick={() => { const next = selectedDigit === i ? null : i; setSelectedDigit(next); selectedDigitRef.current = next; }} className="w-full bg-blue-600/20 rounded-t-sm relative group cursor-pointer" style={{ height: `${(percent / maxPercent) * 100}%` }}>
-                <div className="absolute inset-0 bg-blue-500 opacity-60 group-hover:opacity-100 transition-opacity rounded-t-sm" style={{ height: `${percent}%` }} />
+              <span className={`text-[7px] font-bold ${hasData && i === maxIdx ? "text-emerald-400" : hasData && i === minIdx ? "text-red-400" : "text-slate-400"}`}>{percent.toFixed(1)}%</span>
+              <div onClick={() => { const next = selectedDigit === i ? null : i; setSelectedDigit(next); selectedDigitRef.current = next; }} className="w-full rounded-t-sm relative group cursor-pointer" style={{ height: `${(percent / maxPercent) * 100}%`, background: hasData && i === maxIdx ? "rgba(16,185,129,0.25)" : hasData && i === minIdx ? "rgba(239,68,68,0.25)" : "rgba(37,99,235,0.2)" }}>
+                <div className={`absolute inset-0 rounded-t-sm transition-opacity ${i === currentDigit ? "opacity-100" : "opacity-60 group-hover:opacity-100"}`} style={{ height: `${percent}%`, background: i === currentDigit ? "#f59e0b" : hasData && i === maxIdx ? "#10b981" : hasData && i === minIdx ? "#ef4444" : "#3b82f6" }} />
+                {i === currentDigit && (
+                  <div className="absolute -top-3 left-1/2 -translate-x-1/2 text-amber-400 text-[10px] leading-none">▼</div>
+                )}
               </div>
-              <span className="text-[9px] font-bold text-slate-300">{i}</span>
+              <span className={`text-[9px] font-bold ${i === currentDigit ? "text-amber-400" : "text-slate-300"}`}>{i}</span>
             </div>
           ))}
         </div>
