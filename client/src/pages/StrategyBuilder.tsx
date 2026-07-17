@@ -17,7 +17,8 @@ import {
   Search,
   Zap,
   ShieldCheck,
-  GitCompare
+  GitCompare,
+  History
 } from "lucide-react";
 import { useLocation, useSearch } from "wouter";
 import RuleBuilder, { StrategyRule, DEFAULT_RULE, summarizeRule } from "@/components/RuleBuilder";
@@ -46,6 +47,9 @@ export function StrategyBuilderContent({ embedded = false, onClose, onSaved }: S
   const [strategyName, setStrategyName] = useState("");
   const [description, setDescription] = useState("");
   const [blocks, setBlocks] = useState<StrategyBlock[]>([]);
+  const [showHistory, setShowHistory] = useState(false);
+  const [diffA, setDiffA] = useState<number | null>(null);
+  const [diffB, setDiffB] = useState<number | null>(null);
   const [rule, setRule] = useState<StrategyRule>(DEFAULT_RULE);
   const [builderMode, setBuilderMode] = useState<"visual" | "blocks" | "ensemble">("blocks");
   const [publishToMarketplace, setPublishToMarketplace] = useState(false);
@@ -191,6 +195,9 @@ export function StrategyBuilderContent({ embedded = false, onClose, onSaved }: S
             )}
             <Button onClick={handleSaveStrategy} disabled={saveStrategyMutation.isPending} className="btn-secondary">
               {saveStrategyMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : "Save Draft"}
+            </Button>
+            <Button onClick={() => setShowHistory(true)} variant="ghost" className="btn-secondary flex items-center gap-2">
+              <History className="w-4 h-4" /> History
             </Button>
             <Button onClick={handleSaveAndDeploy} disabled={saveStrategyMutation.isPending} className="btn-primary flex items-center gap-2">
               <Play className="w-4 h-4" /> {embedded ? "Save & Add Bot" : "Deploy to Cloud"}
@@ -401,6 +408,63 @@ export function StrategyBuilderContent({ embedded = false, onClose, onSaved }: S
           </div>
         </div>
       </div>
+
+      {showHistory && (
+        <div className="fixed inset-0 z-[90] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setShowHistory(false)}>
+          <div className="w-full max-w-2xl bg-[#0D1117] border border-[#30363D] rounded-xl max-h-[80vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between p-4 border-b border-[#30363D]">
+              <h3 className="text-sm font-bold text-white flex items-center gap-2"><History className="w-4 h-4" /> Version History</h3>
+              <button onClick={() => setShowHistory(false)} className="text-slate-500 hover:text-white">✕</button>
+            </div>
+            <div className="p-4 space-y-2">
+              {(() => {
+                const versions: any[] = (editQuery.data?.config as any)?.versions || [];
+                if (!versions.length) return <p className="text-sm text-slate-500">No saved versions yet. Save the strategy to start tracking history.</p>;
+                const a = diffA != null ? versions[diffA] : null;
+                const b = diffB != null ? versions[diffB] : null;
+                const diffLines = (() => {
+                  if (!a || !b) return [];
+                  const sa = JSON.stringify(a.rule, null, 2).split("\n");
+                  const sb = JSON.stringify(b.rule, null, 2).split("\n");
+                  const max = Math.max(sa.length, sb.length);
+                  const out: { kind: "same" | "add" | "del"; text: string }[] = [];
+                  for (let i = 0; i < max; i++) {
+                    const la = sa[i] ?? "";
+                    const lb = sb[i] ?? "";
+                    if (la === lb) out.push({ kind: "same", text: la });
+                    else { if (la) out.push({ kind: "del", text: la }); if (lb) out.push({ kind: "add", text: lb }); }
+                  }
+                  return out;
+                })();
+                return (
+                  <>
+                    <div className="space-y-1">
+                      {versions.map((v, i) => (
+                        <div key={i} className="flex items-center gap-3 p-2 bg-black/20 rounded-lg">
+                          <span className="text-xs text-slate-400 w-24 shrink-0">{new Date(v.savedAt).toLocaleString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}</span>
+                          <code className="text-[11px] text-slate-500 flex-1 truncate">{summarizeRule(v.rule)}</code>
+                          <button onClick={() => setDiffA(i)} className={`text-[10px] px-2 py-0.5 rounded ${diffA === i ? "bg-blue-600 text-white" : "bg-white/5 text-slate-400"}`}>A</button>
+                          <button onClick={() => setDiffB(i)} className={`text-[10px] px-2 py-0.5 rounded ${diffB === i ? "bg-blue-600 text-white" : "bg-white/5 text-slate-400"}`}>B</button>
+                        </div>
+                      ))}
+                    </div>
+                    {diffLines.length > 0 && (
+                      <div className="mt-3 p-3 bg-black/40 rounded-lg font-mono text-[11px] overflow-x-auto">
+                        <p className="text-slate-500 mb-2">Diff: v{(diffA ?? 0) + 1} → v{(diffB ?? 0) + 1}</p>
+                        {diffLines.map((l, i) => (
+                          <div key={i} className={l.kind === "add" ? "text-emerald-400" : l.kind === "del" ? "text-red-400" : "text-slate-500"}>
+                            {l.kind === "add" ? "+ " : l.kind === "del" ? "- " : "  "}{l.text}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </>
+                );
+              })()}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -409,5 +473,6 @@ export default function StrategyBuilder() {
   const [, navigate] = useLocation();
   return <StrategyBuilderContent embedded={false} onClose={() => navigate("/bots")} onSaved={() => navigate("/bots")} />;
 }
+
 
 
