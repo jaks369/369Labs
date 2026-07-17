@@ -289,6 +289,16 @@ export async function getSignalsBySymbol(userId: number, symbol: string, limit: 
 }
 // Ensure the signals.expiresAt column exists (idempotent). TiDB errors if it
 // already exists, which we swallow. Also backfill any 0 rows from old data.
+export async function saveAuditLog(entry: { userId: number; action: string; target?: string; detail?: any }): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+  try {
+    await db.insert(auditLogs).values({ userId: entry.userId, action: entry.action, target: entry.target || null, detail: entry.detail ?? null });
+  } catch (e: any) {
+    console.error("[auditLog] insert failed", e?.message || e);
+  }
+}
+
 export async function ensureSignalExpiryColumn(): Promise<void> {
   const db = await getDb();
   if (!db) return;
