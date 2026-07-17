@@ -12,7 +12,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useState } from "react";
-import { ConditionNode, LegacyConditionToNode } from "@/services/conditionEval";
+import { ConditionNode, legacyConditionToNode } from "@/services/conditionEval";
 import ConditionTreeEditor from "@/components/ConditionTreeEditor";
 
 // ---- Natural-language -> StrategyRule parser (client-side, no API call) ----
@@ -330,7 +330,7 @@ export default function RuleBuilder({ rule, onChange }: RuleBuilderProps) {
           type="button"
           onClick={() => {
             if (!showTree) {
-              onChange({ ...rule, conditions: rule.conditions ?? LegacyConditionToNode(rule.condition) });
+              onChange({ ...rule, conditions: rule.conditions ?? legacyConditionToNode(rule.condition) });
             } else {
               onChange({ ...rule, conditions: undefined });
             }
@@ -342,9 +342,8 @@ export default function RuleBuilder({ rule, onChange }: RuleBuilderProps) {
         </button>
         {showTree && (
           <div className="mt-3">
-            <div className="absolute -top-3 left-4 bg-[#0A0E27] px-2 text-sm font-bold text-[#FF00FF] hidden" />
             <ConditionTreeEditor
-              value={rule.conditions ?? LegacyConditionToNode(rule.condition)}
+              value={rule.conditions ?? legacyConditionToNode(rule.condition)}
               onChange={(node) => onChange({ ...rule, conditions: node })}
             />
             <p className="mt-2 text-[10px] text-slate-500">
