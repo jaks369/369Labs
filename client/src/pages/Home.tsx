@@ -44,13 +44,6 @@ export default function Home() {
 
       <main className="relative z-10">
         <section className="max-w-7xl mx-auto px-6 pt-32 pb-20 text-center">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400 text-xs font-bold tracking-wider mb-8 animate-fade-in">
-            <span className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-blue-500"></span>
-            </span>
-            V1.0 NOW LIVE
-          </div>
           <h1 className="text-6xl md:text-8xl font-extrabold text-white mb-8 tracking-tighter leading-[1.1]">
             Build. Backtest.<br />
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-500 to-emerald-400">Automate.</span>
