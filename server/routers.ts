@@ -573,6 +573,38 @@ HOW TO RESPOND:
           return { reply, steps };
         } catch (e) { console.error("[AI]", e); return { reply: "Error: " + String(e) }; }
       }),
+    parseRule: protectedProcedure
+      .input(z.object({ text: z.string().min(1), symbol: z.string().optional() }))
+      .mutation(async ({ input }) => {
+        if (!process.env.AI_API_KEY) return { ok: false, error: "AI not configured" };
+        try {
+          const ai = await getAI();
+          const sys = `You convert a trader's natural-language description of a trading rule into strict JSON only (no prose, no markdown). Output exactly one JSON object with this shape:
+{ "symbol": "R_50" | null, "condition": { "indicator": "last_digit" | "parity", "comparison": "equals" | "appears_consecutively" | "greater_than" | "less_than", "count": number, "barrier": number | null }, "action": { "tradeType": "buy_rise" | "buy_fall" | "buy_even" | "buy_odd" | "buy_over" | "buy_under" }, "params": { "stake": number, "stopLoss": number, "takeProfit": number } }
+Rules:
+- indicator "parity": barrier 0 = even, 1 = odd.
+- indicator "last_digit": barrier 0-9 for the specific digit; comparison "equals" for a single occurrence, "appears_consecutively" for N-in-a-row (count = N), "greater_than"/"less_than" for over/under a digit.
+- If a number is referenced generally (e.g. "over 5", "under 5"), use last_digit with greater_than/less_than and that barrier.
+- Infer direction: "rise/up/climb/bull" -> buy_rise; "fall/down/drop/bear" -> buy_fall; "even" -> buy_even; "odd" -> buy_odd; "over" -> buy_over; "under" -> buy_under.
+- Use the symbol from the text if present (normalize "R10"->"R_10", "1HZ10"->"1HZ10V"), else the provided default symbol, else null.
+- Keep params default { stake: 1, stopLoss: 20, takeProfit: 50 } unless the user states amounts.
+Return ONLY the JSON.`;
+          const res = await ai.chat.completions.create({
+            model: "llama-3.3-70b-versatile",
+            messages: [
+              { role: "system", content: sys },
+              { role: "user", content: `Default symbol: ${input.symbol || "none"}. Text: ${input.text}` },
+            ],
+            temperature: 0,
+          });
+          const content = res.choices[0]?.message?.content || "{}";
+          const json = content.replace(/^[\s\S]*?(\{[\s\S]*\})[\s\S]*$/, "$1");
+          const rule = JSON.parse(json);
+          return { ok: true, rule };
+        } catch (e) {
+          return { ok: false, error: String(e) };
+        }
+      }),
   }),
   signals: router({
     list: protectedProcedure
