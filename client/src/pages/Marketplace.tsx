@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
-import { CandlestickChart, Sparkles, TrendingUp, Clock, Bot, Loader2, ChevronDown, ChevronRight, FlaskConical } from "lucide-react";
+import { CandlestickChart, Sparkles, TrendingUp, Clock, Bot, Loader2, ChevronDown, ChevronRight, FlaskConical, Users } from "lucide-react";
 import { useLocation } from "wouter";
 
 const SYMBOLS = ["R_10", "R_25", "R_50", "R_75", "R_100", "1HZ10V", "1HZ50V", "1HZ100V"];
@@ -15,6 +15,8 @@ export default function Marketplace() {
 
   const createBotMutation = trpc.strategies.save.useMutation();
   const [sentId, setSentId] = useState<number | null>(null);
+  const publishedQuery = trpc.strategies.publishedList.useQuery();
+  const cloneMutation = trpc.strategies.save.useMutation();
   const signalsQuery = trpc.signals.list.useQuery(
     symbol ? { symbol } : {},
     { refetchInterval: 30000 }
@@ -43,8 +45,23 @@ export default function Marketplace() {
     }
   };
 
+  const cloneStrategy = async (s: any) => {
+    try {
+      await cloneMutation.mutateAsync({
+        name: s.name + " (cloned)",
+        description: s.description || "Cloned from community marketplace.",
+        config: s.config,
+        published: false,
+      });
+      alert("Cloned to your strategies. Open Strategy Builder or Bots to use it.");
+    } catch (e) {
+      alert("Clone failed: " + (e instanceof Error ? e.message : String(e)));
+    }
+  };
+
   if (!isAuthenticated) { navigate("/login"); return null; }
   const signals = (signalsQuery.data as any[]) || [];
+  const published = (publishedQuery.data as any[]) || [];
 
   return (
     <div className="min-h-screen bg-[#0D1117] text-white">
@@ -153,7 +170,35 @@ export default function Marketplace() {
             })}
           </div>
         )}
+
+        <div className="mt-10">
+          <h2 className="text-xl font-bold text-white mb-1 flex items-center gap-2">
+            <Users className="w-5 h-5 text-purple-400" /> Community Strategies
+          </h2>
+          <p className="text-sm text-slate-500 mb-4">Strategies traders published. Clone any into your account to backtest or deploy.</p>
+          {publishedQuery.isLoading ? (
+            <p className="text-sm text-slate-500">Loading community strategies…</p>
+          ) : published.length === 0 ? (
+            <p className="text-sm text-slate-500">No published strategies yet. Publish one from the Strategy Builder.</p>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {published.map((s: any) => (
+                <div key={s.id} className="bg-[#161B22] border border-[#30363D] rounded-xl p-4 flex items-center justify-between gap-4">
+                  <div className="flex-1 min-w-0">
+                    <h3 className="font-bold text-white truncate">{s.name}</h3>
+                    <p className="text-xs text-slate-400 mt-1 truncate">{s.description || "No description"}</p>
+                    <span className="text-[10px] text-slate-500">by user #{s.userId}</span>
+                  </div>
+                  <Button onClick={() => cloneStrategy(s)} className="bg-purple-500 hover:bg-purple-400 text-white text-xs px-3 py-1.5 rounded-lg shrink-0">
+                    Clone
+                  </Button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
 }
+
