@@ -73,6 +73,48 @@ import { getTickHistory, getActiveSymbols, getDigitStats, getTrend, suggestStrat
           : await db.getSignalsByUserId(ctxUser.id);
         return { data: list };
       }
+      if (name === "getTradeHistory") {
+        if (!ctxUser) return { error: "Not authenticated" };
+        let trades = await db.getTradesByUserId(ctxUser.id, Math.min(args.limit || 50, 500));
+        if (args.symbol) trades = trades.filter((t: any) => (t.symbol || "").toUpperCase() === normalizeSymbol(args.symbol).toUpperCase());
+        if (args.result) trades = trades.filter((t: any) => t.result === args.result);
+        const wins = trades.filter((t: any) => t.result === "win").length;
+        const losses = trades.filter((t: any) => t.result === "loss").length;
+        const total = trades.length;
+        const net = trades.reduce((s: number, t: any) => s + (parseFloat(t.profitLoss || "0") || 0), 0);
+        return {
+          data: {
+            count: total,
+            wins, losses,
+            winRate: total ? ((wins / total) * 100).toFixed(1) + "%" : "n/a",
+            netProfitLoss: net.toFixed(2),
+            trades: trades.slice(0, 50).map((t: any) => ({
+              id: t.id, symbol: t.symbol, result: t.result,
+              stake: t.stake, profitLoss: t.profitLoss,
+              entryTime: t.entryTime, exitTime: t.exitTime, contractId: t.contractId,
+            })),
+          },
+        };
+      }
+      if (name === "getBotPerformance") {
+        if (!ctxUser) return { error: "Not authenticated" };
+        const strategies = args.botId
+          ? [await db.getStrategyById(args.botId, ctxUser.id)].filter(Boolean)
+          : await db.getStrategiesByUserId(ctxUser.id);
+        const runs = await db.getBotRunsByUserId(ctxUser.id);
+        const enriched = strategies.map((s: any) => {
+          const sRuns = runs.filter((r: any) => r.strategyId === s.id);
+          const last = sRuns[sRuns.length - 1];
+          return {
+            id: s.id, name: s.name, isActive: s.isActive,
+            config: s.config,
+            runs: sRuns.length,
+            lastRunStatus: last?.status || "never",
+            lastUpdated: s.updatedAt || s.createdAt,
+          };
+        });
+        return { data: { bots: enriched, totalRuns: runs.length } };
+      }
       return { error: "Unknown tool" };
     } catch (e) { return { error: String(e) }; }
   }
