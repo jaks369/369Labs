@@ -357,7 +357,7 @@ export default function Dashboard() {
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-[#30363D]">
-                        {priceQuery.data.ticks.slice().reverse().slice(0, 50).map((t: any, i: number) => {
+                        {priceQuery.data.ticks.slice(0, 50).map((t: any, i: number) => {
                           const priceStr = String(t.price);
                           const lastDigit = t.lastDigit;
                           return (
