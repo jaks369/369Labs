@@ -57,6 +57,7 @@ export function StrategyBuilderContent({ embedded = false, onClose, onSaved }: S
 
   const publishMutation = trpc.strategies.publish.useMutation();
   const saveStrategyMutation = trpc.strategies.save.useMutation();
+  const critiqueMutation = trpc.ai.critique.useMutation();
   const strategiesQuery = trpc.strategies.list.useQuery();
 
   const search = useSearch();
@@ -270,6 +271,7 @@ export function StrategyBuilderContent({ embedded = false, onClose, onSaved }: S
                    <button onClick={() => setBuilderMode("visual")} className={`px-3 py-1 text-[10px] font-bold rounded ${builderMode === "visual" ? "bg-blue-600 text-white" : "text-slate-500"}`}>IF/THEN</button>
                    <button onClick={() => setBuilderMode("ensemble")} className={`px-3 py-1 text-[10px] font-bold rounded ${builderMode === "ensemble" ? "bg-purple-600 text-white" : "text-slate-500"}`}>ENSEMBLE</button>
                    <button onClick={() => setShowHistory((v) => !v)} className={`px-3 py-1 text-[10px] font-bold rounded ${showHistory ? "bg-amber-600 text-white" : "text-slate-500"}`}><GitCompare className="w-3 h-3 inline mr-1" />HISTORY</button>
+                   <button onClick={() => critiqueMutation.mutate({ rule: buildConfig().rule })} className={`px-3 py-1 text-[10px] font-bold rounded ${critiqueMutation.isPending ? "opacity-50" : "hover:bg-emerald-600/20 text-emerald-400 border border-emerald-600/30"}`}><ShieldCheck className="w-3 h-3 inline mr-1" />AI REVIEW</button>
                  </div>
                </div>
 
@@ -301,11 +303,29 @@ export function StrategyBuilderContent({ embedded = false, onClose, onSaved }: S
                          <p className="text-xs text-white whitespace-pre-wrap">{summarizeRuleSafe(versions[compareIdx[1]].rule)}</p>
                        </div>
                      </div>
-                   )}
-                 </div>
-               )}
+                    )}
+                  </div>
+                )}
 
-              <div className="flex-1 p-8 space-y-4">
+                {critiqueMutation.data && (
+                  <div className="border-b border-[#30363D] p-4 bg-black/20">
+                    <div className="flex items-center gap-2 mb-2">
+                      <ShieldCheck className="w-4 h-4 text-emerald-400" />
+                      <span className="text-[10px] font-bold text-emerald-400 uppercase tracking-widest">Risk Reviewer Agent</span>
+                    </div>
+                    <p className="text-xs text-slate-300 mb-3">{critiqueMutation.data.summary}</p>
+                    <div className="space-y-2">
+                      {((critiqueMutation.data.findings as any[]) || []).map((f, i) => (
+                        <div key={i} className="flex items-start gap-2 text-xs">
+                          <span className={`px-1.5 py-0.5 rounded font-bold uppercase ${f.severity === "high" ? "bg-red-600/30 text-red-300" : f.severity === "medium" ? "bg-amber-600/30 text-amber-300" : "bg-slate-600/30 text-slate-300"}`}>{f.severity}</span>
+                          <div><b className="text-white">{f.title}</b> <span className="text-slate-400">— {f.detail}</span></div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                <div className="flex-1 p-8 space-y-4">
                 {builderMode === "visual" ? (
                   <div className="max-w-2xl mx-auto py-10">
                     <RuleBuilder rule={rule} onChange={setRule} />
@@ -389,4 +409,5 @@ export default function StrategyBuilder() {
   const [, navigate] = useLocation();
   return <StrategyBuilderContent embedded={false} onClose={() => navigate("/bots")} onSaved={() => navigate("/bots")} />;
 }
+
 
