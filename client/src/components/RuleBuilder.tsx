@@ -150,16 +150,28 @@ export default function RuleBuilder({ rule, onChange }: RuleBuilderProps) {
 
   const [nlText, setNlText] = useState("");
   const [nlMsg, setNlMsg] = useState<{ kind: "ok" | "err"; text: string } | null>(null);
+  const parseRuleMutation = trpc.ai.parseRule.useMutation();
 
-  const applyNl = () => {
-    const res = parseRuleFromText(nlText, rule);
+  const applyNl = async () => {
+    const text = nlText.trim();
+    if (!text) { setNlMsg({ kind: "err", text: "Type a condition first." }); return; }
+    try {
+      const ai = await parseRuleMutation.mutateAsync({ text, symbol: rule.symbol });
+      if (ai.ok && ai.rule) {
+        onChange({ ...rule, ...ai.rule, params: { ...rule.params, ...(ai.rule.params || {}) } });
+        const c = ai.rule.condition;
+        setNlMsg({ kind: "ok", text: `AI parsed: IF ${c.indicator}${c.barrier !== undefined ? " " + c.barrier : ""} (${c.comparison || "equals"}) -> ${ai.rule.action.tradeType}` });
+        return;
+      }
+    } catch (e) { /* fall through to local parser */ }
+    // Fallback: lightweight local parser (no API needed)
+    const res = parseRuleFromText(text, rule);
     if (res.ok) {
       onChange(res.rule);
       const c = res.rule.condition;
-      const trade = res.rule.action.tradeType;
-      setNlMsg({ kind: "ok", text: `Parsed: IF ${c.indicator}${c.barrier !== undefined ? " " + c.barrier : ""} (${c.comparison}) -> ${trade}` });
+      setNlMsg({ kind: "ok", text: `Parsed (offline): IF ${c.indicator}${c.barrier !== undefined ? " " + c.barrier : ""} (${c.comparison}) -> ${res.rule.action.tradeType}` });
     } else {
-      setNlMsg({ kind: "err", text: res.error || "Could not parse." });
+      setNlMsg({ kind: "err", text: res.error || "Could not understand that. Try rephrasing." });
     }
   };
 
