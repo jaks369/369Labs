@@ -87,19 +87,19 @@ export default function RuleBuilder({ rule, onChange }: RuleBuilderProps) {
   return (
     <div className="space-y-4">
       {/* Symbol selector */}
-      <div className="relative border border-[#FF00FF]/50 bg-[#0F1629] p-4 rounded">
-        <div className="absolute -top-3 left-4 bg-[#0A0E27] px-2 text-sm font-bold text-[#FF00FF]">
+      <div className="relative border border-[#E89A2A]/50 bg-[#151515] p-4 rounded">
+        <div className="absolute -top-3 left-4 bg-[#0D0D0D] px-2 text-sm font-bold text-[#E89A2A]">
           SYMBOL
         </div>
         <div className="mt-2">
-          <label className="text-[10px] text-[#FF00FF]/70 uppercase tracking-wider block mb-1">
+          <label className="text-[10px] text-[#E89A2A]/70 uppercase tracking-wider block mb-1">
             Instrument
           </label>
           <Select
             value={rule.symbol ?? "R_100"}
             onValueChange={(v) => onChange({ ...rule, symbol: v })}
           >
-            <SelectTrigger className="border-[#FF00FF]/40 text-[#FF00FF]">
+            <SelectTrigger className="border-[#E89A2A]/40 text-[#E89A2A]">
               <SelectValue placeholder="Select symbol" />
             </SelectTrigger>
             <SelectContent>
@@ -114,13 +114,13 @@ export default function RuleBuilder({ rule, onChange }: RuleBuilderProps) {
       </div>
 
       {/* IF Block */}
-      <div className="relative border border-[#00FFFF]/50 bg-[#0F1629] p-4 rounded">
-        <div className="absolute -top-3 left-4 bg-[#0A0E27] px-2 text-sm font-bold text-[#00FFFF]">
+      <div className="relative border border-[#D98B1F]/50 bg-[#151515] p-4 rounded">
+        <div className="absolute -top-3 left-4 bg-[#0D0D0D] px-2 text-sm font-bold text-[#D98B1F]">
           IF
         </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mt-2">
           <div>
-            <label className="text-[10px] text-[#00FFFF]/70 uppercase tracking-wider block mb-1">
+            <label className="text-[10px] text-[#D98B1F]/70 uppercase tracking-wider block mb-1">
               Indicator
             </label>
             <Select
@@ -129,7 +129,7 @@ export default function RuleBuilder({ rule, onChange }: RuleBuilderProps) {
                 onChange({ ...rule, condition: { ...rule.condition, indicator: v } })
               }
             >
-              <SelectTrigger className="border-[#00FFFF]/40 text-[#00FFFF]">
+              <SelectTrigger className="border-[#D98B1F]/40 text-[#D98B1F]">
                 <SelectValue placeholder="Select indicator" />
               </SelectTrigger>
               <SelectContent>
@@ -142,7 +142,7 @@ export default function RuleBuilder({ rule, onChange }: RuleBuilderProps) {
             </Select>
           </div>
           <div>
-            <label className="text-[10px] text-[#00FFFF]/70 uppercase tracking-wider block mb-1">
+            <label className="text-[10px] text-[#D98B1F]/70 uppercase tracking-wider block mb-1">
               Comparison
             </label>
             <Select
@@ -151,7 +151,7 @@ export default function RuleBuilder({ rule, onChange }: RuleBuilderProps) {
                 onChange({ ...rule, condition: { ...rule.condition, comparison: v } })
               }
             >
-              <SelectTrigger className="border-[#00FFFF]/40 text-[#00FFFF]">
+              <SelectTrigger className="border-[#D98B1F]/40 text-[#D98B1F]">
                 <SelectValue placeholder="Select comparison" />
               </SelectTrigger>
               <SelectContent>
@@ -164,7 +164,7 @@ export default function RuleBuilder({ rule, onChange }: RuleBuilderProps) {
             </Select>
           </div>
           <div>
-            <label className="text-[10px] text-[#00FFFF]/70 uppercase tracking-wider block mb-1">
+            <label className="text-[10px] text-[#D98B1F]/70 uppercase tracking-wider block mb-1">
               Times
             </label>
             <Input
@@ -178,13 +178,13 @@ export default function RuleBuilder({ rule, onChange }: RuleBuilderProps) {
                   condition: { ...rule.condition, count: parseInt(e.target.value) || 1 },
                 })
               }
-              className="border-[#00FFFF]/40 text-[#00FFFF]"
+              className="border-[#D98B1F]/40 text-[#D98B1F]"
             />
           </div>
         </div>
         {(rule.condition.indicator === "digit_over" || rule.condition.indicator === "digit_under") && (
           <div className="mt-3 max-w-[200px]">
-            <label className="text-[10px] text-[#00FFFF]/70 uppercase tracking-wider block mb-1">
+            <label className="text-[10px] text-[#D98B1F]/70 uppercase tracking-wider block mb-1">
               Barrier Digit (0-9)
             </label>
             <Input
@@ -201,7 +201,7 @@ export default function RuleBuilder({ rule, onChange }: RuleBuilderProps) {
                   },
                 })
               }
-              className="border-[#00FFFF]/40 text-[#00FFFF]"
+              className="border-[#D98B1F]/40 text-[#D98B1F]"
             />
           </div>
         )}
@@ -209,23 +209,23 @@ export default function RuleBuilder({ rule, onChange }: RuleBuilderProps) {
 
       {/* Connector Arrow */}
       <div className="flex justify-center">
-        <div className="text-[#FF00FF] text-xl font-bold">▼</div>
+        <div className="text-[#E89A2A] text-xl font-bold">â–¼</div>
       </div>
 
       {/* THEN Block */}
-      <div className="relative border border-[#FF00FF]/50 bg-[#0F1629] p-4 rounded">
-        <div className="absolute -top-3 left-4 bg-[#0A0E27] px-2 text-sm font-bold text-[#FF00FF]">
+      <div className="relative border border-[#E89A2A]/50 bg-[#151515] p-4 rounded">
+        <div className="absolute -top-3 left-4 bg-[#0D0D0D] px-2 text-sm font-bold text-[#E89A2A]">
           THEN
         </div>
         <div className="mt-2">
-          <label className="text-[10px] text-[#FF00FF]/70 uppercase tracking-wider block mb-1">
+          <label className="text-[10px] text-[#E89A2A]/70 uppercase tracking-wider block mb-1">
             Trade Action
           </label>
           <Select
             value={rule.action.tradeType}
             onValueChange={(v) => onChange({ ...rule, action: { tradeType: v } })}
           >
-            <SelectTrigger className="border-[#FF00FF]/40 text-[#FF00FF]">
+            <SelectTrigger className="border-[#E89A2A]/40 text-[#E89A2A]">
               <SelectValue placeholder="Select action" />
             </SelectTrigger>
             <SelectContent>
@@ -240,13 +240,13 @@ export default function RuleBuilder({ rule, onChange }: RuleBuilderProps) {
       </div>
 
       {/* Trade Parameters */}
-      <div className="relative border border-[#00FF00]/40 bg-[#0F1629] p-4 rounded">
-        <div className="absolute -top-3 left-4 bg-[#0A0E27] px-2 text-sm font-bold text-[#00FF00]">
+      <div className="relative border border-[#10B981]/40 bg-[#151515] p-4 rounded">
+        <div className="absolute -top-3 left-4 bg-[#0D0D0D] px-2 text-sm font-bold text-[#10B981]">
           PARAMETERS
         </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mt-2">
           <div>
-            <label className="text-[10px] text-[#00FF00]/70 uppercase tracking-wider block mb-1">
+            <label className="text-[10px] text-[#10B981]/70 uppercase tracking-wider block mb-1">
               Stake ($)
             </label>
             <Input
@@ -267,7 +267,7 @@ export default function RuleBuilder({ rule, onChange }: RuleBuilderProps) {
                 const error = validateStake(rule.params.stake);
                 setStakeError(error);
               }}
-              className="border-[#00FF00]/40 text-[#00FF00]"
+              className="border-[#10B981]/40 text-[#10B981]"
             />
             {stakeError && (
               <div className="text-[#FF0000] text-xs mt-1">
@@ -294,7 +294,7 @@ export default function RuleBuilder({ rule, onChange }: RuleBuilderProps) {
             />
           </div>
           <div>
-            <label className="text-[10px] text-[#00FF00]/70 uppercase tracking-wider block mb-1">
+            <label className="text-[10px] text-[#10B981]/70 uppercase tracking-wider block mb-1">
               Take Profit ($)
             </label>
             <Input
@@ -308,14 +308,14 @@ export default function RuleBuilder({ rule, onChange }: RuleBuilderProps) {
                   params: { ...rule.params, takeProfit: parseFloat(e.target.value) || 0 },
                 })
               }
-              className="border-[#00FF00]/40 text-[#00FF00]"
+              className="border-[#10B981]/40 text-[#10B981]"
             />
           </div>
         </div>
       </div>
 
       {/* Rule Summary */}
-      <div className="text-center text-xs text-[#00FFFF]/60 italic border-t border-[#00FFFF]/20 pt-3">
+      <div className="text-center text-xs text-[#D98B1F]/60 italic border-t border-[#D98B1F]/20 pt-3">
         {summarizeRule(rule)}
       </div>
     </div>
@@ -330,7 +330,7 @@ export function summarizeRule(rule: StrategyRule): string {
     rule.condition.indicator === "digit_over" || rule.condition.indicator === "digit_under"
       ? ` ${rule.condition.barrier ?? 5}`
       : "";
-  return `IF ${indicator}${barrierPart} ${comparison} ${rule.condition.count} times THEN ${action} — Stake $${rule.params.stake}, SL $${rule.params.stopLoss}, TP $${rule.params.takeProfit}`;
+  return `IF ${indicator}${barrierPart} ${comparison} ${rule.condition.count} times THEN ${action} â€” Stake $${rule.params.stake}, SL $${rule.params.stopLoss}, TP $${rule.params.takeProfit}`;
 }
 
 function validateStake(value: number): string | null {

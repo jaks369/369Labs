@@ -60,7 +60,7 @@ export default function Settings() {
   }, [isAuthenticated, navigate]);
 
   const handleSaveDerivToken = async () => {
-    if (!tokenChanged) { alert("No changes to save — enter a new token first."); return; }
+    if (!tokenChanged) { alert("No changes to save â€” enter a new token first."); return; }
     if (!derivToken.trim()) { alert("Token cannot be empty."); return; }
     try {
       await saveDerivTokenMutation.mutateAsync({
@@ -102,35 +102,35 @@ export default function Settings() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0A0E27] text-[#00FFFF] p-8">
+    <div className="min-h-screen bg-[#0D0D0D] text-[#D98B1F] p-8">
       <div className="max-w-2xl mx-auto">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-[#FF00FF] mb-2">SETTINGS</h1>
-          <p className="text-[#00FFFF] text-sm">Configure your trading bot platform</p>
+          <h1 className="text-3xl font-bold text-[#E89A2A] mb-2">SETTINGS</h1>
+          <p className="text-[#D98B1F] text-sm">Configure your trading bot platform</p>
         </div>
 
         {/* Deriv API Token */}
-        <div className="hud-panel mb-6">
-          <h2 className="text-lg font-bold text-[#FF00FF] mb-4">DERIV API TOKEN</h2>
+        <div className="bloomberg-panel mb-6">
+          <h2 className="text-lg font-bold text-[#E89A2A] mb-4">DERIV API TOKEN</h2>
           <div className="space-y-4">
             <div>
-              <label className="text-sm text-[#00FFFF] block mb-2">API Token</label>
+              <label className="text-sm text-[#D98B1F] block mb-2">API Token</label>
               <Input
                 type="password"
                 placeholder={savedTokenPreview ? "Enter new token to replace existing one" : "Enter your Deriv API token"}
                 value={derivToken}
                 onChange={(e) => { setDerivToken(e.target.value); setTokenChanged(true); }}
               />
-              {savedTokenPreview && <p className="text-xs text-[#00FF00]/60 mt-1">Current token: {savedTokenPreview}</p>}
-              <p className="text-xs text-[#00FFFF]/60 mt-2">
+              {savedTokenPreview && <p className="text-xs text-[#10B981]/60 mt-1">Current token: {savedTokenPreview}</p>}
+              <p className="text-xs text-[#D98B1F]/60 mt-2">
                 Get your token from https://app.deriv.com/account/api-token
               </p>
             </div>
             <Button
               onClick={handleSaveDerivToken}
               disabled={saveDerivTokenMutation.isPending}
-              className="w-full btn-neon-cyan"
+              className="w-full btn-primary"
             >
               {saveDerivTokenMutation.isPending ? (
                 <>
@@ -148,24 +148,24 @@ export default function Settings() {
         </div>
 
         {/* Telegram Settings */}
-        <div className="hud-panel mb-6">
-          <h2 className="text-lg font-bold text-[#FF00FF] mb-4">TELEGRAM NOTIFICATIONS</h2>
+        <div className="bloomberg-panel mb-6">
+          <h2 className="text-lg font-bold text-[#E89A2A] mb-4">TELEGRAM NOTIFICATIONS</h2>
           <div className="space-y-4">
             <div>
-              <label className="text-sm text-[#00FFFF] block mb-2">Chat ID</label>
+              <label className="text-sm text-[#D98B1F] block mb-2">Chat ID</label>
               <Input
                 placeholder="Enter your Telegram Chat ID"
                 value={chatId}
                 onChange={(e) => setChatId(e.target.value)}
               />
-              <p className="text-xs text-[#00FFFF]/60 mt-2">
+              <p className="text-xs text-[#D98B1F]/60 mt-2">
                 Get your Chat ID by messaging @userinfobot on Telegram
               </p>
             </div>
             <Button
               onClick={handleSaveTelegram}
               disabled={saveTelegramMutation.isPending}
-              className="w-full btn-neon-cyan"
+              className="w-full btn-primary"
             >
               {saveTelegramMutation.isPending ? (
                 <>
@@ -183,11 +183,11 @@ export default function Settings() {
         </div>
 
         {/* Notification Preferences */}
-        <div className="hud-panel mb-6">
-          <h2 className="text-lg font-bold text-[#FF00FF] mb-4">NOTIFICATION PREFERENCES</h2>
+        <div className="bloomberg-panel mb-6">
+          <h2 className="text-lg font-bold text-[#E89A2A] mb-4">NOTIFICATION PREFERENCES</h2>
           <div className="space-y-4">
             <div className="flex items-center justify-between">
-              <label className="text-sm text-[#00FFFF]">Trade Executed</label>
+              <label className="text-sm text-[#D98B1F]">Trade Executed</label>
               <Switch
                 checked={notificationSettings.tradeExecuted}
                 onCheckedChange={(checked) =>
@@ -199,7 +199,7 @@ export default function Settings() {
               />
             </div>
             <div className="flex items-center justify-between">
-              <label className="text-sm text-[#00FFFF]">Take Profit Hit</label>
+              <label className="text-sm text-[#D98B1F]">Take Profit Hit</label>
               <Switch
                 checked={notificationSettings.takeProfitHit}
                 onCheckedChange={(checked) =>
@@ -211,7 +211,7 @@ export default function Settings() {
               />
             </div>
             <div className="flex items-center justify-between">
-              <label className="text-sm text-[#00FFFF]">Stop Loss Hit</label>
+              <label className="text-sm text-[#D98B1F]">Stop Loss Hit</label>
               <Switch
                 checked={notificationSettings.stopLossHit}
                 onCheckedChange={(checked) =>
@@ -223,7 +223,7 @@ export default function Settings() {
               />
             </div>
             <div className="flex items-center justify-between">
-              <label className="text-sm text-[#00FFFF]">Bot Error</label>
+              <label className="text-sm text-[#D98B1F]">Bot Error</label>
               <Switch
                 checked={notificationSettings.botError}
                 onCheckedChange={(checked) =>
@@ -237,7 +237,7 @@ export default function Settings() {
             <Button
               onClick={handleSaveNotifications}
               disabled={saveNotificationsMutation.isPending}
-              className="w-full btn-neon-cyan mt-4"
+              className="w-full btn-primary mt-4"
             >
               {saveNotificationsMutation.isPending ? (
                 <>
