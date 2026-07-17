@@ -9,15 +9,11 @@ export type ContractCategory =
 
 export interface ContractSelection {
   category: ContractCategory;
-  // For rise_fall
   direction?: "rise" | "fall";
-  // For over_under
-  barrier?: number; // 0-9
+  barrier?: number;
   overUnder?: "over" | "under";
-  // For digits
-  digit?: number; // 0-9
+  digit?: number;
   digitMatch?: "match" | "differ";
-  // For accumulator
   growthRate?: number;
 }
 
@@ -27,11 +23,11 @@ interface ContractTypeSelectorProps {
 }
 
 const CATEGORIES: { id: ContractCategory; label: string; icon: string }[] = [
-  { id: "rise_fall", label: "Rise/Fall", icon: "↗" },
-  { id: "over_under", label: "Over/Under", icon: "↑↓" },
-  { id: "even_odd", label: "Even/Odd", icon: "◧" },
+  { id: "rise_fall", label: "Rise/Fall", icon: "â†—" },
+  { id: "over_under", label: "Over/Under", icon: "â†‘â†“" },
+  { id: "even_odd", label: "Even/Odd", icon: "â—§" },
   { id: "digits", label: "Digits", icon: "0-9" },
-  { id: "accumulator", label: "Accumulator", icon: "∑" },
+  { id: "accumulator", label: "Accumulator", icon: "âˆ‘" },
 ];
 
 export default function ContractTypeSelector({ selection, onChange }: ContractTypeSelectorProps) {
@@ -39,7 +35,6 @@ export default function ContractTypeSelector({ selection, onChange }: ContractTy
     const base: ContractSelection = { category };
     if (category === "rise_fall") base.direction = "rise";
     if (category === "over_under") { base.overUnder = "over"; base.barrier = 5; }
-    if (category === "even_odd") { /* even by default */ }
     if (category === "digits") { base.digitMatch = "match"; base.digit = 0; }
     if (category === "accumulator") base.growthRate = 1;
     onChange(base);
@@ -47,15 +42,14 @@ export default function ContractTypeSelector({ selection, onChange }: ContractTy
 
   return (
     <div className="space-y-4">
-      {/* Category tabs */}
-      <div className="grid grid-cols-5 gap-1 bg-[#0D0D0D] p-1 rounded-lg border border-[rgba(255,255,255,0.08)]">
+      <div className="grid grid-cols-5 gap-1 bg-[#0D1117] p-1 rounded-lg border border-[#30363D]">
         {CATEGORIES.map((c) => (
           <button
             key={c.id}
             onClick={() => setCat(c.id)}
             className={`flex flex-col items-center gap-1 py-2 rounded text-[10px] font-bold transition-colors ${
               selection.category === c.id
-                ? "bg-[#D98B1F] text-white"
+                ? "bg-blue-600 text-white"
                 : "text-slate-400 hover:text-white hover:bg-white/5"
             }`}
           >
@@ -65,7 +59,6 @@ export default function ContractTypeSelector({ selection, onChange }: ContractTy
         ))}
       </div>
 
-      {/* Sub-options */}
       <div className="bg-slate-900/50 p-4 rounded border border-slate-800">
         {selection.category === "rise_fall" && (
           <div className="grid grid-cols-2 gap-2">
@@ -109,7 +102,7 @@ export default function ContractTypeSelector({ selection, onChange }: ContractTy
                 onClick={() => onChange({ ...selection, overUnder: "under" })}
                 className={`py-2 rounded font-bold text-xs ${
                   selection.overUnder === "under"
-                    ? "bg-[#C07B1A] text-white"
+                    ? "bg-orange-600 text-white"
                     : "bg-slate-800 text-slate-300"
                 }`}
               >
@@ -125,7 +118,7 @@ export default function ContractTypeSelector({ selection, onChange }: ContractTy
                     onClick={() => onChange({ ...selection, barrier: i })}
                     className={`py-2 rounded text-xs font-bold ${
                       selection.barrier === i
-                        ? "bg-[#D98B1F] text-white"
+                        ? "bg-blue-600 text-white"
                         : "bg-slate-800 text-slate-300 hover:bg-slate-700"
                     }`}
                   >
@@ -147,7 +140,7 @@ export default function ContractTypeSelector({ selection, onChange }: ContractTy
             </button>
             <button
               onClick={() => onChange({ ...selection, category: "even_odd" })}
-              className="py-3 rounded font-bold text-sm bg-[#D98B1F] text-white"
+              className="py-3 rounded font-bold text-sm bg-blue-600 text-white"
             >
               Odd
             </button>
@@ -187,7 +180,7 @@ export default function ContractTypeSelector({ selection, onChange }: ContractTy
                     onClick={() => onChange({ ...selection, digit: i })}
                     className={`py-2 rounded text-xs font-bold ${
                       selection.digit === i
-                        ? "bg-[#D98B1F] text-white"
+                        ? "bg-blue-600 text-white"
                         : "bg-slate-800 text-slate-300 hover:bg-slate-700"
                     }`}
                   >
@@ -209,7 +202,7 @@ export default function ContractTypeSelector({ selection, onChange }: ContractTy
                   onClick={() => onChange({ ...selection, growthRate: rate })}
                   className={`py-2 rounded text-xs font-bold ${
                     selection.growthRate === rate
-                      ? "bg-[#D98B1F] text-white"
+                      ? "bg-blue-600 text-white"
                       : "bg-slate-800 text-slate-300 hover:bg-slate-700"
                   }`}
                 >

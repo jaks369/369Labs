@@ -123,10 +123,10 @@ export default function DashboardLayout({
 
   if (!user) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-[#0D0D0D]">
+      <div className="flex items-center justify-center min-h-screen bg-[#0D1117]">
         <div className="flex flex-col items-center gap-8 p-8 max-w-md w-full glass-card">
           <div className="flex flex-col items-center gap-6">
-            <div className="w-12 h-12 bg-[#D98B1F] rounded-xl flex items-center justify-center shadow-lg shadow-[#D98B1F]/20">
+            <div className="w-12 h-12 bg-blue-600 rounded-xl flex items-center justify-center shadow-lg shadow-blue-600/20">
               <Activity className="w-8 h-8 text-white" />
             </div>
             <h1 className="text-2xl font-bold tracking-tight text-center text-white">
@@ -223,16 +223,16 @@ function DashboardLayoutContent({
   }, [isResizing, setSidebarWidth]);
 
   return (
-    <div className="flex min-h-screen bg-[#0D0D0D]">
+    <div className="flex min-h-screen bg-[#0D1117]">
       <div className="relative" ref={sidebarRef}>
         <Sidebar
           collapsible="icon"
-          className="border-r border-[#2A2A2A] bg-[#0D0D0D]"
+          className="border-r border-[#30363D] bg-[#0D1117]"
           disableTransition={isResizing}
         >
-          <SidebarHeader className="h-20 justify-center border-b border-[#2A2A2A]">
+          <SidebarHeader className="h-20 justify-center border-b border-[#30363D]">
             <button onClick={() => setLocation("/dashboard")} className="flex items-center gap-3 px-4 transition-all w-full text-left cursor-pointer">
-              <div className="w-8 h-8 bg-[#D98B1F] rounded flex items-center justify-center shrink-0">
+              <div className="w-8 h-8 bg-blue-600 rounded flex items-center justify-center shrink-0">
                 <Activity className="w-5 h-5 text-white" />
               </div>
               {!isCollapsed && (
@@ -262,12 +262,12 @@ function DashboardLayoutContent({
                           tooltip={item.label}
                           className={`h-10 px-3 rounded-md transition-all ${
                             isActive
-                              ? "bg-[#D98B1F]/10 text-[#E89A2A] font-semibold"
+                              ? "bg-blue-600/10 text-blue-500 font-semibold"
                               : "text-slate-400 hover:text-white hover:bg-white/5"
                           }`}
                         >
                           <item.icon
-                            className={`h-5 w-5 ${isActive ? "text-[#E89A2A]" : ""}`}
+                            className={`h-5 w-5 ${isActive ? "text-blue-500" : ""}`}
                           />
                           <span>{item.label}</span>
                         </SidebarMenuButton>
@@ -279,14 +279,14 @@ function DashboardLayoutContent({
             ))}
           </SidebarContent>
 
-          <SidebarFooter className="p-3 border-t border-[#2A2A2A] space-y-3">
+          <SidebarFooter className="p-3 border-t border-[#30363D] space-y-3">
             <button
               onClick={() => openCommandPalette()}
-              className="w-full flex items-center gap-2 rounded-md border border-[#2A2A2A] bg-[#0D0D0D] px-3 py-2 text-xs text-slate-400 hover:text-white hover:border-[#D98B1F]/50 transition-colors"
+              className="w-full flex items-center gap-2 rounded-md border border-[#30363D] bg-[#0D1117] px-3 py-2 text-xs text-slate-400 hover:text-white hover:border-blue-500/50 transition-colors"
             >
               <Command className="w-3.5 h-3.5" />
               <span className="flex-1 text-left">Command Center</span>
-              <kbd className="text-[9px] border border-[#2A2A2A] rounded px-1">⌘K</kbd>
+              <kbd className="text-[9px] border border-[#30363D] rounded px-1">âŒ˜K</kbd>
             </button>
 
             <button
@@ -294,18 +294,18 @@ function DashboardLayoutContent({
               className={`w-full flex items-center gap-2 rounded-md border px-3 py-2 text-xs transition-colors ${
                 voice.listening
                   ? "border-red-500/50 bg-red-500/10 text-red-400 animate-pulse"
-                  : "border-[#2A2A2A] bg-[#0D0D0D] text-slate-400 hover:text-white hover:border-[#D98B1F]/50"
+                  : "border-[#30363D] bg-[#0D1117] text-slate-400 hover:text-white hover:border-blue-500/50"
               }`}
             >
               {voice.listening ? <Square className="w-3.5 h-3.5" /> : <Mic className="w-3.5 h-3.5" />}
-              <span className="flex-1 text-left">{voice.listening ? "Listening…" : "Voice Command"}</span>
+              <span className="flex-1 text-left">{voice.listening ? "Listeningâ€¦" : "Voice Command"}</span>
             </button>
             {voice.listening && voice.transcript && (
-              <p className="text-[10px] text-[#E89A2A] px-1 truncate">“{voice.transcript}”</p>
+              <p className="text-[10px] text-blue-300 px-1 truncate">â€œ{voice.transcript}â€</p>
             )}
 
             {!isCollapsed && (
-              <div className="rounded-md border border-[#2A2A2A] bg-[#0D0D0D] p-2.5">
+              <div className="rounded-md border border-[#30363D] bg-[#0D1117] p-2.5">
                 <AITimeline compact />
               </div>
             )}
@@ -313,8 +313,8 @@ function DashboardLayoutContent({
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <button className="flex items-center gap-3 rounded-lg px-2 py-2 hover:bg-white/5 transition-colors w-full text-left group-data-[collapsible=icon]:justify-center focus:outline-none">
-                  <Avatar className="h-8 w-8 border border-[#2A2A2A] shrink-0">
-                    <AvatarFallback className="bg-[#D98B1F] text-white text-xs font-bold">
+                  <Avatar className="h-8 w-8 border border-[#30363D] shrink-0">
+                    <AvatarFallback className="bg-blue-600 text-white text-xs font-bold">
                       {user?.name?.charAt(0).toUpperCase()}
                     </AvatarFallback>
                   </Avatar>
@@ -330,7 +330,7 @@ function DashboardLayoutContent({
                   )}
                 </button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-56 bg-[#1A1A1A] border-[#2A2A2A] text-white">
+              <DropdownMenuContent align="end" className="w-56 bg-[#161B22] border-[#30363D] text-white">
                 <DropdownMenuItem
                   onClick={async () => { await logout(); setLocation("/"); }}
                   className="cursor-pointer text-red-400 focus:text-red-400 focus:bg-red-400/10"
@@ -344,9 +344,9 @@ function DashboardLayoutContent({
         </Sidebar>
       </div>
 
-      <SidebarInset className="bg-[#0D0D0D] flex flex-col">
+      <SidebarInset className="bg-[#0D1117] flex flex-col">
         {isMobile && (
-          <div className="flex border-b border-[#2A2A2A] h-16 items-center justify-between bg-[#0D0D0D] px-4 sticky top-0 z-40">
+          <div className="flex border-b border-[#30363D] h-16 items-center justify-between bg-[#0D1117] px-4 sticky top-0 z-40">
             <div className="flex items-center gap-3">
               <SidebarTrigger className="text-slate-400" />
               <span className="font-bold text-white">
@@ -362,7 +362,7 @@ function DashboardLayoutContent({
               <span className="flex-1">
                 Trading involves substantial risk. 369Labs is an analysis tool, not financial advice. Never trade with money you cannot afford to lose, and verify every strategy on a demo account first.
               </span>
-              <button onClick={() => setRiskDismissed(true)} className="text-amber-300 hover:text-white font-bold px-2">✕</button>
+              <button onClick={() => setRiskDismissed(true)} className="text-amber-300 hover:text-white font-bold px-2">âœ•</button>
             </div>
           )}
           {children}

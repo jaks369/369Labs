@@ -100,10 +100,10 @@ export default function CommandPalette() {
       onClick={() => setOpen(false)}
     >
       <div
-        className="w-full max-w-xl bg-[#0D0D0D] border border-[#2A2A2A] rounded-xl shadow-2xl overflow-hidden"
+        className="w-full max-w-xl bg-[#0D1117] border border-[#30363D] rounded-xl shadow-2xl overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center gap-3 px-4 border-b border-[#2A2A2A]">
+        <div className="flex items-center gap-3 px-4 border-b border-[#30363D]">
           <Search className="w-4 h-4 text-slate-500" />
           <input
             autoFocus
@@ -115,10 +115,10 @@ export default function CommandPalette() {
               else if (e.key === "Enter") { e.preventDefault(); if (filtered[active]) exec(filtered[active]); }
               else if (e.key === "Escape") setOpen(false);
             }}
-            placeholder="Type a command or search…  (navigate, deploy, backtest, ask 369AI)"
+            placeholder="Type a command or searchâ€¦  (navigate, deploy, backtest, ask 369AI)"
             className="flex-1 bg-transparent py-3.5 text-sm text-white outline-none placeholder:text-slate-600"
           />
-          <kbd className="text-[10px] text-slate-500 border border-[#2A2A2A] rounded px-1.5 py-0.5">ESC</kbd>
+          <kbd className="text-[10px] text-slate-500 border border-[#30363D] rounded px-1.5 py-0.5">ESC</kbd>
         </div>
         <div className="max-h-80 overflow-y-auto py-2">
           {filtered.length === 0 && (
@@ -132,7 +132,7 @@ export default function CommandPalette() {
                 onClick={() => exec(c)}
                 onMouseEnter={() => setActive(i)}
                 className={`w-full flex items-center gap-3 px-4 py-2.5 text-left text-sm ${
-                  i === active ? "bg-[#D98B1F]/15 text-white" : "text-slate-300 hover:bg-white/5"
+                  i === active ? "bg-blue-600/15 text-white" : "text-slate-300 hover:bg-white/5"
                 }`}
               >
                 <Icon className="w-4 h-4 text-slate-400" />
@@ -142,10 +142,10 @@ export default function CommandPalette() {
             );
           })}
         </div>
-        <div className="px-4 py-2 border-t border-[#2A2A2A] text-[10px] text-slate-600 flex items-center gap-2">
-          <kbd className="border border-[#2A2A2A] rounded px-1">↑</kbd>
-          <kbd className="border border-[#2A2A2A] rounded px-1">↓</kbd>
-          to navigate · <kbd className="border border-[#2A2A2A] rounded px-1">↵</kbd> to run · 369Labs Command Center
+        <div className="px-4 py-2 border-t border-[#30363D] text-[10px] text-slate-600 flex items-center gap-2">
+          <kbd className="border border-[#30363D] rounded px-1">â†‘</kbd>
+          <kbd className="border border-[#30363D] rounded px-1">â†“</kbd>
+          to navigate Â· <kbd className="border border-[#30363D] rounded px-1">â†µ</kbd> to run Â· 369Labs Command Center
         </div>
       </div>
     </div>

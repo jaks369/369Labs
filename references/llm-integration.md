@@ -53,7 +53,7 @@ const response = await invokeLLM({
 Tips
 - Always call llm functions from server-side code (e.g., inside tRPC procedures), to avoid exposing your API key.
 - LLM calls deduct from this project's credit balance.
-- All models support streaming, but `invokeLLM()` doesn't expose `stream` — modify the helper to pass `stream: true` and parse the SSE response if you need it. When proxying SSE, listen on `res` close (not `req`) and guard with a `finished` flag, or the upstream gets aborted after the first event.
+- All models support streaming, but `invokeLLM()` doesn't expose `stream` â€” modify the helper to pass `stream: true` and parse the SSE response if you need it. When proxying SSE, listen on `res` close (not `req`) and guard with a `finished` flag, or the upstream gets aborted after the first event.
 - LLM responses often contain markdown. Use `<Streamdown>{content}</Streamdown>` (imported from `streamdown`) to render markdown content with proper formatting and streaming support.
 
 ### Listing Available Models
@@ -85,9 +85,9 @@ const response = await invokeLLM({
 
 `invokeLLM()` forwards `thinking` and `reasoning` extension params unchanged (no defaults). Per model family:
 
-- OpenAI gpt-5 family — `reasoning: { effort: "minimal" | "low" | "medium" | "high" }`
-- Anthropic claude family — `thinking: { type: "enabled", budget_tokens: 2048 }`
-- Google gemini family — `thinking: { budget_tokens: 1024 }`
+- OpenAI gpt-5 family â€” `reasoning: { effort: "minimal" | "low" | "medium" | "high" }`
+- Anthropic claude family â€” `thinking: { type: "enabled", budget_tokens: 2048 }`
+- Google gemini family â€” `thinking: { budget_tokens: 1024 }`
 
 ```ts
 await invokeLLM({

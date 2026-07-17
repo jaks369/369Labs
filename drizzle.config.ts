@@ -5,12 +5,9 @@ if (!connectionString) {
   throw new Error("DATABASE_URL is required to run drizzle commands");
 }
 
-// Parse the URL and build mysql2 connection config with SSL for TiDB Cloud
 function parseDbUrl(url: string) {
   const parsed = new URL(url);
   const sslParam = parsed.searchParams.get("ssl");
-  
-  // Strip ssl param from URL
   parsed.searchParams.delete("ssl");
 
   const config: Record<string, unknown> = {
@@ -21,7 +18,6 @@ function parseDbUrl(url: string) {
     database: parsed.pathname.replace("/", ""),
   };
 
-  // TiDB Cloud requires SSL
   if (sslParam || parsed.hostname.includes("tidbcloud.com")) {
     try {
       config.ssl = sslParam ? JSON.parse(sslParam) : { minVersion: "TLSv1.2" };

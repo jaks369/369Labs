@@ -15,7 +15,7 @@ const ICONS = {
 };
 const COLORS = {
   ai: "text-amber-400",
-  bot: "text-[#E89A2A]",
+  bot: "text-blue-400",
   market: "text-emerald-400",
   risk: "text-red-400",
 };
@@ -44,12 +44,12 @@ export default function AITimeline({ compact = false }: { compact?: boolean }) {
   return (
     <div className="text-left">
       <div className="flex items-center gap-2 mb-2">
-        <Activity className="w-3.5 h-3.5 text-[#E89A2A]" />
+        <Activity className="w-3.5 h-3.5 text-blue-400" />
         <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">AI Timeline</span>
       </div>
       {entries.length === 0 ? (
         <p className="text-[10px] text-slate-600 leading-relaxed">
-          Live agent activity will appear here — scans, strategy builds, risk checks, trades.
+          Live agent activity will appear here â€” scans, strategy builds, risk checks, trades.
         </p>
       ) : (
         <ul className="space-y-1.5">

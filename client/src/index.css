@@ -43,55 +43,54 @@
 }
 
 :root {
-  /* 369Labs — Premium Fintech palette */
-  --black: #0D0D0D;
-  --surface-1: #151515;
-  --surface-2: #1A1A1A;
-  --white: #FFFFFF;
-  --gray: #A8A8A8;
-  --muted-gray: #6F6F6F;
-  --amber: #D98B1F;
-  --amber-strong: #E89A2A;
-  --green: #22C55E;
-  --red: #EF4444;
+  /* 369Labs Terminal Palette - unified amber/terminal theme across the whole app */
+  --black: #0D1117;
+  --terminal: #0A0D12;
+  --amber: #F0B90B;
+  --amber-soft: rgba(240, 185, 11, 0.12);
+  --amber-border: rgba(240, 185, 11, 0.32);
+  --electric-blue: #2563EB;
+  --white: #F8FAFC;
+  --emerald: #10B981;
+  --slate: #8B949E;
 
   --background: var(--black);
   --foreground: var(--white);
 
-  --card: var(--surface-1);
+  --card: #161B22;
   --card-foreground: var(--white);
 
-  --popover: var(--surface-2);
+  --popover: #161B22;
   --popover-foreground: var(--white);
 
   --primary: var(--amber);
-  --primary-foreground: #0D0D0D;
+  --primary-foreground: #0D1117;
 
-  --secondary: rgba(255, 255, 255, 0.04);
+  --secondary: #21262D;
   --secondary-foreground: var(--white);
 
-  --muted: rgba(255, 255, 255, 0.04);
-  --muted-foreground: var(--gray);
+  --muted: #21262D;
+  --muted-foreground: var(--slate);
 
-  --accent: var(--green);
-  --accent-foreground: #0D0D0D;
+  --accent: var(--amber-soft);
+  --accent-foreground: var(--amber);
 
-  --destructive: var(--red);
+  --destructive: #EF4444;
   --destructive-foreground: var(--white);
 
-  --border: #2A2A2A;
-  --input: #2A2A2A;
+  --border: #30363D;
+  --input: #30363D;
   --ring: var(--amber);
 
-  --radius: 0.9rem;
+  --radius: 0.5rem;
 
-  --sidebar: #0D0D0D;
-  --sidebar-foreground: var(--gray);
+  --sidebar: #0A0D12;
+  --sidebar-foreground: var(--slate);
   --sidebar-primary: var(--amber);
-  --sidebar-primary-foreground: #0D0D0D;
-  --sidebar-accent: rgba(255, 255, 255, 0.04);
+  --sidebar-primary-foreground: #0D1117;
+  --sidebar-accent: #161B22;
   --sidebar-accent-foreground: var(--white);
-  --sidebar-border: #2A2A2A;
+  --sidebar-border: #30363D;
   --sidebar-ring: var(--amber);
 }
 
@@ -103,41 +102,37 @@
   }
   body {
     @apply bg-background text-foreground font-['Inter',sans-serif] antialiased;
-    background-image:
-      radial-gradient(circle at 50% -10%, rgba(217, 139, 31, 0.05) 0%, transparent 45%),
-      linear-gradient(rgba(255, 255, 255, 0.025) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(255, 255, 255, 0.025) 1px, transparent 1px);
-    background-size: 100% 100%, 28px 28px, 28px 28px;
+    background-image: 
+      radial-gradient(circle at 50% 0%, rgba(37, 99, 235, 0.05) 0%, transparent 50%),
+      linear-gradient(rgba(13, 17, 23, 0.9) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(13, 17, 23, 0.9) 1px, transparent 1px);
+    background-size: 100% 100%, 40px 40px, 40px 40px;
   }
-
-  h1, h2, h3 {
+  
+  h1, h2, h3, h4, h5, h6 {
     @apply font-bold tracking-tight text-white;
-  }
-
-  h1 {
-    @apply text-4xl md:text-5xl font-extrabold;
   }
 }
 
 @layer components {
   .btn-primary {
-    @apply px-6 py-3 bg-[#D98B1F] hover:bg-[#E89A2A] text-[#0D0D0D] font-bold rounded-xl transition-all duration-200 active:scale-[0.98];
+    @apply px-6 py-2.5 bg-[#F0B90B] hover:bg-[#FFD23F] text-[#0D1117] font-semibold rounded-lg transition-all duration-200 shadow-lg shadow-amber-900/20 active:scale-[0.98];
   }
-
+  
   .btn-secondary {
-    @apply px-6 py-3 bg-transparent hover:bg-white/5 text-white font-bold rounded-xl transition-all duration-200 border border-[#2A2A2A] active:scale-[0.98];
+    @apply px-6 py-2.5 bg-slate-800 hover:bg-slate-700 text-white font-semibold rounded-lg transition-all duration-200 border border-slate-700 active:scale-[0.98];
   }
-
+  
   .btn-outline {
-    @apply px-6 py-3 bg-transparent border border-[#2A2A2A] hover:border-[#D98B1F] text-white font-bold rounded-xl transition-all duration-200 active:scale-[0.98];
+    @apply px-6 py-2.5 bg-transparent border border-slate-700 hover:border-blue-600 text-white font-semibold rounded-lg transition-all duration-200 active:scale-[0.98];
   }
 
   .glass-card {
-    @apply bg-[#151515] border border-[#2A2A2A] rounded-2xl p-6;
+    @apply bg-slate-900/50 border border-slate-800 backdrop-blur-md rounded-xl p-6;
   }
-
+  
   .bloomberg-panel {
-    @apply bg-[#0D0D0D] border border-[#2A2A2A] rounded-2xl;
+    @apply bg-[#0D1117] border border-[#30363D] rounded-none;
   }
   
   .status-dot {

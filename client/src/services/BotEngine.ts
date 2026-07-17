@@ -1,12 +1,13 @@
 import { derivWS, Tick, ContractUpdate, DerivContractType } from "./derivWebSocket";
 import { StrategyRule } from "@/components/RuleBuilder";
+import { evaluateNode, ConditionNode, EvalContext, legacyConditionToNode, lastDigitOf } from "./conditionEval";
 
 export type BotStatus = "idle" | "running" | "error" | "stopped";
 
 export interface BotConfig {
   symbol: string;
   // Full rule from the visual builder. This is the only strategy shape the
-  // engine currently understands how to trade for real — the freeform
+  // engine currently understands how to trade for real â€” the freeform
   // "blocks" builder mode is a draft/notes format, not executable.
   strategy: StrategyRule;
   decimalPlaces?: number; // last-digit precision for this symbol; default 2
@@ -47,7 +48,6 @@ export class BotEngine {
   private status: BotStatus = "idle";
   private config: BotConfig | null = null;
   private subscriptionId: number | null = null;
-  private listener: { onTick: (t: Tick) => void; onError: (e: Error) => void } | null = null;
   private totalPnl = 0;
   private trades: BotTrade[] = [];
   private hasOpenTrade = false;
@@ -89,26 +89,18 @@ export class BotEngine {
 
     this.log(`Starting bot for ${config.symbol}...`);
 
-    if (this.listener) derivWS.removeListener(this.listener);
+    this.subscriptionId = derivWS.subscribe(config.symbol);
 
-    this.listener = {
+    derivWS.addListener({
       onTick: (tick) => this.handleTick(tick),
       onError: (err) => this.handleError(err),
-    };
-    derivWS.addListener(this.listener);
-
-    this.subscriptionId = derivWS.subscribe(config.symbol);
+    });
   }
 
   public stop() {
     if (this.status !== "running") return;
 
     this.stopRequested = true;
-
-    if (this.listener) {
-      derivWS.removeListener(this.listener);
-      this.listener = null;
-    }
 
     if (this.subscriptionId !== null) {
       derivWS.unsubscribe(this.subscriptionId);
@@ -130,7 +122,7 @@ export class BotEngine {
       this.tickHistory.shift();
     }
 
-    // Never stack trades — wait for the open contract to resolve first.
+    // Never stack trades â€” wait for the open contract to resolve first.
     if (this.hasOpenTrade) return;
 
     if (this.evaluateStrategy()) {
@@ -139,7 +131,7 @@ export class BotEngine {
   }
 
   private lastDigit(price: number): number {
-    const decimals = this.config?.decimalPlaces ?? 2;
+    const decimals = this.config?.decimalPlaces ?? derivWS.decimalPlacesFor(this.config.symbol);
     const fixed = price.toFixed(decimals);
     return parseInt(fixed[fixed.length - 1], 10);
   }
@@ -148,9 +140,9 @@ export class BotEngine {
    * Returns true if the current tick satisfies the strategy's per-tick condition,
    * given the rule's indicator (digit_over/under/even/odd, consecutive_rise/fall).
    */
-  private tickSatisfiesIndicator(index: number): boolean {
+  private tickSatisfiesIndicator(index: number, r?: StrategyRule): boolean {
     if (!this.config) return false;
-    const rule = this.config.strategy;
+    const rule = r || this.config.strategy;
     const tick = this.tickHistory[index];
     const indicator = rule.condition.indicator;
 
@@ -163,6 +155,14 @@ export class BotEngine {
         return this.lastDigit(tick.price) % 2 === 0;
       case "digit_odd":
         return this.lastDigit(tick.price) % 2 === 1;
+      case "parity":
+        return rule.condition.barrier === 1
+          ? this.lastDigit(tick.price) % 2 === 1
+          : this.lastDigit(tick.price) % 2 === 0;
+      case "last_digit":
+        if (rule.condition.comparison === "greater_than") return this.lastDigit(tick.price) > (rule.condition.barrier ?? 5);
+        if (rule.condition.comparison === "less_than") return this.lastDigit(tick.price) < (rule.condition.barrier ?? 5);
+        return this.lastDigit(tick.price) === (rule.condition.barrier ?? 0);
       case "consecutive_rise":
         return index > 0 && tick.price > this.tickHistory[index - 1].price;
       case "consecutive_fall":
@@ -178,23 +178,63 @@ export class BotEngine {
    */
   private evaluateStrategy(): boolean {
     if (!this.config) return false;
-    const { comparison, count } = this.config.strategy.condition;
+    const rule = this.config.strategy;
+    const digits = this.tickHistory.map((t) => lastDigitOf(Number(t.price)));
+    const ctx: EvalContext = {
+      prices: this.tickHistory.map((t) => Number(t.price)),
+      digits,
+      lossStreak: this.lossStreak,
+      window: 20,
+    };
+    if (rule.ensemble && rule.ensemble.rules.length > 0) return this.ensembleTriggered(rule.ensemble);
+    if (rule.conditions) return evaluateNode(rule.conditions as ConditionNode, ctx);
+    // Backward-compatible flat condition path.
+    const { comparison, count } = rule.condition;
     if (this.tickHistory.length < count) return false;
-
     if (comparison === "appears_consecutively") {
       for (let i = this.tickHistory.length - count; i < this.tickHistory.length; i++) {
         if (!this.tickSatisfiesIndicator(i)) return false;
       }
       return true;
     }
-
-    // "appears": frequency count within the trailing window (last 20 ticks, or all history if shorter)
     const windowStart = Math.max(0, this.tickHistory.length - 20);
     let occurrences = 0;
     for (let i = windowStart; i < this.tickHistory.length; i++) {
       if (this.tickSatisfiesIndicator(i)) occurrences++;
     }
     return occurrences >= count;
+  }
+
+  private ruleTriggers(rule: StrategyRule): boolean {
+    const digits = this.tickHistory.map((t) => lastDigitOf(Number(t.price)));
+    const ctx: EvalContext = {
+      prices: this.tickHistory.map((t) => Number(t.price)),
+      digits,
+      lossStreak: this.lossStreak,
+      window: 20,
+    };
+    if (rule.conditions) return evaluateNode(rule.conditions as ConditionNode, ctx);
+    const { comparison, count } = rule.condition;
+    if (this.tickHistory.length < count) return false;
+    if (comparison === "appears_consecutively") {
+      for (let i = this.tickHistory.length - count; i < this.tickHistory.length; i++) {
+        if (!this.tickSatisfiesIndicator(i, rule)) return false;
+      }
+      return true;
+    }
+    const windowStart = Math.max(0, this.tickHistory.length - 20);
+    let occurrences = 0;
+    for (let i = windowStart; i < this.tickHistory.length; i++) {
+      if (this.tickSatisfiesIndicator(i, rule)) occurrences++;
+    }
+    return occurrences >= count;
+  }
+
+  private ensembleTriggered(ensemble: NonNullable<StrategyRule["ensemble"]>): boolean {
+    const votes = ensemble.rules.filter((r) => this.ruleTriggers(r)).length;
+    if (ensemble.vote === "all") return votes === ensemble.rules.length;
+    if (ensemble.vote === "any") return votes >= 1;
+    return votes >= Math.ceil(ensemble.rules.length / 2);
   }
 
       private async executeTrade() {
@@ -222,7 +262,7 @@ export class BotEngine {
       return;
     }
 
-    this.log(`Signal detected at ${currentTick.price} — placing ${contractType} for $${stake}`);
+    this.log(`Signal detected at ${currentTick.price} â€” placing ${contractType} for $${stake}`);
     this.hasOpenTrade = true;
 
     const pendingTrade: BotTrade = {
@@ -252,10 +292,10 @@ export class BotEngine {
 
         derivWS.subscribeToContract(purchase.contractId, (update) => this.handleContractUpdate(pendingTrade, update));
       } else {
-        // No live/authorized connection — engine is in demo/offline mode.
+        // No live/authorized connection â€” engine is in demo/offline mode.
         // We do NOT fabricate a win/loss here; the bot simply can't trade for real right now.
         this.hasOpenTrade = false;
-        this.handleError(new Error("Not connected to a live, authorized Deriv session — cannot place a real trade. Add a Deriv API token in Settings."));
+        this.handleError(new Error("Not connected to a live, authorized Deriv session â€” cannot place a real trade. Add a Deriv API token in Settings."));
         return;
       }
     } catch (error) {
@@ -340,3 +380,4 @@ export class BotEngine {
     return this.trades;
   }
 }
+

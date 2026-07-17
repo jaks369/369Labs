@@ -1,4 +1,4 @@
-## 🗺️ Maps Integration
+## ðŸ—ºï¸ Maps Integration
 
 **CRITICAL: The Manus proxy provides FULL access to ALL Google Maps features** - including advanced drawing, heatmaps, Street View, all layers, Places API, etc. Do NOT ask users for Google Map API keys - authentication is automatic.
 

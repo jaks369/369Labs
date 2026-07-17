@@ -8,17 +8,17 @@ import { pushTimeline } from "@/components/AITimeline";
 const PRESETS = [
   {
     id: "scan-backtest-review",
-    name: "Scan → Backtest → Risk Review",
+    name: "Scan â†’ Backtest â†’ Risk Review",
     steps: [
       { icon: Search, label: "Scan symbol for repeatable pattern", kind: "scan" },
       { icon: FlaskConical, label: "Backtest the discovered rule", kind: "backtest" },
       { icon: ShieldCheck, label: "Run Risk Reviewer agent", kind: "risk" },
-      { icon: Bell, label: "Notify via Telegram if winRate ≥ 65%", kind: "notify" },
+      { icon: Bell, label: "Notify via Telegram if winRate â‰¥ 65%", kind: "notify" },
     ],
   },
   {
     id: "watch-deploy",
-    name: "Watch → Build → Draft Bot",
+    name: "Watch â†’ Build â†’ Draft Bot",
     steps: [
       { icon: Search, label: "Watch market (30 min)", kind: "watch" },
       { icon: GitBranch, label: "Build StrategyRule from insight", kind: "build" },
@@ -40,28 +40,28 @@ export default function Workflow() {
     setRunning(w.id);
     setLog([]);
     const add = (m: string) => { setLog((l) => [...l, m]); pushTimeline({ icon: "ai", text: m }); };
-    add(`▶ Workflow "${w.name}" started on ${symbol}`);
+    add(`â–¶ Workflow "${w.name}" started on ${symbol}`);
     for (const step of w.steps) {
       await new Promise((r) => setTimeout(r, 400));
-      add(`• ${step.label}`);
+      add(`â€¢ ${step.label}`);
     }
-    add(`✓ Workflow complete. Review results in AI Signals / Bots.`);
+    add(`âœ“ Workflow complete. Review results in AI Signals / Bots.`);
     setRunning(null);
   };
 
   return (
-    <div className="min-h-screen bg-[#0D0D0D] p-6">
+    <div className="min-h-screen bg-[#0D1117] p-6">
       <div className="max-w-4xl mx-auto space-y-6">
         <div>
           <h1 className="text-3xl font-bold text-white flex items-center gap-3">
             <Workflow className="w-7 h-7 text-purple-400" /> Workflow Automation
           </h1>
-          <p className="text-slate-400 text-sm mt-1">Chain agent steps into repeatable automation. Runs the existing scan → backtest → risk → notify pipeline.</p>
+          <p className="text-slate-400 text-sm mt-1">Chain agent steps into repeatable automation. Runs the existing scan â†’ backtest â†’ risk â†’ notify pipeline.</p>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {PRESETS.map((w) => (
-            <div key={w.id} className="bg-[#151515] border border-[#2A2A2A] rounded-xl p-6">
+            <div key={w.id} className="bg-[#161B22] border border-[#30363D] rounded-xl p-6">
               <h2 className="text-lg font-bold text-white mb-4">{w.name}</h2>
               <div className="space-y-2 mb-4">
                 {w.steps.map((s, i) => (
@@ -80,18 +80,18 @@ export default function Workflow() {
                 className="w-full bg-purple-500 hover:bg-purple-400 text-white text-sm font-bold py-2.5 rounded-lg flex items-center justify-center gap-2"
               >
                 {running === w.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />}
-                {running === w.id ? "Running…" : "Run Workflow"}
+                {running === w.id ? "Runningâ€¦" : "Run Workflow"}
               </button>
             </div>
           ))}
         </div>
 
         {log.length > 0 && (
-          <div className="bg-[#151515] border border-[#2A2A2A] rounded-xl p-6">
+          <div className="bg-[#161B22] border border-[#30363D] rounded-xl p-6">
             <h2 className="text-sm font-bold text-white mb-3 flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-emerald-400" /> Run Log</h2>
             <div className="space-y-1 font-mono text-xs">
               {log.map((l, i) => (
-                <div key={i} className={l.startsWith("✓") ? "text-emerald-400" : l.startsWith("▶") ? "text-purple-300" : "text-slate-400"}>{l}</div>
+                <div key={i} className={l.startsWith("âœ“") ? "text-emerald-400" : l.startsWith("â–¶") ? "text-purple-300" : "text-slate-400"}>{l}</div>
               ))}
             </div>
           </div>

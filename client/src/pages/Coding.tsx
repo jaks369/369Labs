@@ -45,7 +45,7 @@ export default function Coding() {
   };
 
   return (
-    <div className="min-h-screen bg-[#0D0D0D] p-6">
+    <div className="min-h-screen bg-[#0D1117] p-6">
       <div className="max-w-6xl mx-auto space-y-4">
         <div>
           <h1 className="text-3xl font-bold text-white flex items-center gap-3">
@@ -55,7 +55,7 @@ export default function Coding() {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
-          <div className="bg-[#151515] border border-[#2A2A2A] rounded-xl p-3 max-h-[70vh] overflow-y-auto">
+          <div className="bg-[#161B22] border border-[#30363D] rounded-xl p-3 max-h-[70vh] overflow-y-auto">
             <p className="text-[10px] uppercase tracking-widest text-slate-500 font-bold mb-2">Files</p>
             {(filesQuery.data?.files || []).map((f: string) => (
               <button
@@ -68,7 +68,7 @@ export default function Coding() {
                 <FileText className="w-3 h-3 shrink-0" /> <span className="truncate">{f}</span>
               </button>
             ))}
-            {filesQuery.isLoading && <p className="text-xs text-slate-500 p-2">Loading…</p>}
+            {filesQuery.isLoading && <p className="text-xs text-slate-500 p-2">Loadingâ€¦</p>}
           </div>
 
           <div className="lg:col-span-3 space-y-3">
@@ -87,11 +87,11 @@ export default function Coding() {
               value={content}
               onChange={(e) => { setContent(e.target.value); setDirty(true); }}
               spellCheck={false}
-              className="w-full h-[45vh] bg-[#0D0D0D] border border-[#2A2A2A] rounded-xl p-4 text-xs font-mono text-slate-200 outline-none focus:border-emerald-500/50 resize-none"
-              placeholder="Open a file to edit…"
+              className="w-full h-[45vh] bg-[#0D1117] border border-[#30363D] rounded-xl p-4 text-xs font-mono text-slate-200 outline-none focus:border-emerald-500/50 resize-none"
+              placeholder="Open a file to editâ€¦"
             />
 
-            <div className="bg-[#151515] border border-[#2A2A2A] rounded-xl p-4 space-y-3">
+            <div className="bg-[#161B22] border border-[#30363D] rounded-xl p-4 space-y-3">
               <div className="flex items-center gap-2 text-sm text-slate-300">
                 <Sparkles className="w-4 h-4 text-amber-400" /> Ask 369AI to modify this file
               </div>
@@ -101,7 +101,7 @@ export default function Coding() {
                   onChange={(e) => setPrompt(e.target.value)}
                   onKeyDown={(e) => { if (e.key === "Enter") askAI(); }}
                   placeholder="e.g. extract the win-rate calc into a helper"
-                  className="flex-1 bg-[#0D0D0D] border border-[#2A2A2A] rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-amber-400"
+                  className="flex-1 bg-[#0D1117] border border-[#30363D] rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-amber-400"
                 />
                 <button onClick={askAI} disabled={askMutation.isPending || !selected} className="flex items-center gap-1 px-3 py-2 rounded-lg bg-amber-500 text-black text-xs font-bold disabled:opacity-40 hover:bg-amber-400">
                   {askMutation.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />} Ask

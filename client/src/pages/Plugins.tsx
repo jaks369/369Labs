@@ -36,7 +36,7 @@ export default function Plugins() {
   };
 
   return (
-    <div className="min-h-screen bg-[#0D0D0D] p-6">
+    <div className="min-h-screen bg-[#0D1117] p-6">
       <div className="max-w-4xl mx-auto space-y-6">
         <div>
           <h1 className="text-3xl font-bold text-white flex items-center gap-3">
@@ -51,14 +51,14 @@ export default function Plugins() {
             const rec = installed.get(p.id);
             const on = rec?.installedEnabled ?? false;
             return (
-              <div key={p.id} className="bg-[#151515] border border-[#2A2A2A] rounded-xl p-4 space-y-3">
+              <div key={p.id} className="bg-[#161B22] border border-[#30363D] rounded-xl p-4 space-y-3">
                 <div className="flex items-start gap-3">
                   <div className="h-9 w-9 rounded-lg bg-purple-500/15 flex items-center justify-center shrink-0">
                     <Icon className="w-4 h-4 text-purple-300" />
                   </div>
                   <div className="flex-1">
                     <p className="text-sm font-semibold text-white">{p.name}</p>
-                    <p className="text-[11px] text-slate-500">by {p.author} · hook: {p.hook}</p>
+                    <p className="text-[11px] text-slate-500">by {p.author} Â· hook: {p.hook}</p>
                   </div>
                 </div>
                 <p className="text-xs text-slate-400 leading-relaxed">{p.description}</p>
@@ -70,12 +70,12 @@ export default function Plugins() {
                   }`}
                 >
                   {busy === p.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : on ? <Check className="w-3.5 h-3.5" /> : <Plus className="w-3.5 h-3.5" />}
-                  {on ? "Installed · Enabled" : "Install"}
+                  {on ? "Installed Â· Enabled" : "Install"}
                 </button>
               </div>
             );
           })}
-          {marketplace.isLoading && <p className="text-sm text-slate-500 col-span-2 p-4">Loading marketplace…</p>}
+          {marketplace.isLoading && <p className="text-sm text-slate-500 col-span-2 p-4">Loading marketplaceâ€¦</p>}
         </div>
       </div>
     </div>

@@ -1,5 +1,6 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { derivWS, Tick, TickStreamListener } from "@/services/derivWebSocket";
+import { trpc } from "@/lib/trpc";
 
 interface DigitStatsProps {
   symbol: string;
@@ -7,15 +8,24 @@ interface DigitStatsProps {
   maxTicks?: number;
 }
 
-export default function DigitStats({ symbol, decimalPlaces = 2, maxTicks = 100 }: DigitStatsProps) {
+export default function DigitStats({ symbol, decimalPlaces = derivWS.decimalPlacesFor(symbol), maxTicks = 100 }: DigitStatsProps) {
   const [digits, setDigits] = useState<number[]>([]);
+  // The most recent last digit - drives the live pointer.
+  const [currentDigit, setCurrentDigit] = useState<number | null>(null);
+  const [selectedDigit, setSelectedDigit] = useState<number | null>(5);
   const [stats, setStats] = useState({
     even: 0,
     odd: 0,
-    over: 0,
-    under: 0,
     counts: Array(10).fill(0),
   });
+
+  const historyQuery = trpc.market.getHistory.useQuery({ symbol, limit: 500 }, { enabled: Boolean(symbol) });
+  useEffect(() => {
+    const ticks = historyQuery.data?.ticks;
+    if (!ticks || !ticks.length) return;
+    const hist = ticks.map((t) => t.lastDigit).filter((d) => d >= 0 && d <= 9).reverse();
+    if (hist.length) setDigits(hist.slice(-maxTicks));
+  }, [historyQuery.data, symbol, maxTicks]);
 
   useEffect(() => {
     const listener: TickStreamListener = {
@@ -24,23 +34,21 @@ export default function DigitStats({ symbol, decimalPlaces = 2, maxTicks = 100 }
 
         const fixed = tick.price.toFixed(decimalPlaces);
         const lastDigit = parseInt(fixed[fixed.length - 1], 10);
+        setCurrentDigit(lastDigit);
         setDigits((prev) => {
           const next = [...prev, lastDigit].slice(-maxTicks);
 
           const counts = Array(10).fill(0);
-          let even = 0, odd = 0, over = 0, under = 0;
+          let even = 0, odd = 0;
 
           next.forEach((d) => {
             counts[d]++;
             if (d % 2 === 0) even++; else odd++;
-            if (d >= 5) over++; else under++;
           });
 
           setStats({
             even: next.length ? (even / next.length) * 100 : 0,
             odd: next.length ? (odd / next.length) * 100 : 0,
-            over: next.length ? (over / next.length) * 100 : 0,
-            under: next.length ? (under / next.length) * 100 : 0,
             counts: counts.map((c) => (next.length ? (c / next.length) * 100 : 0)),
           });
 
@@ -59,10 +67,21 @@ export default function DigitStats({ symbol, decimalPlaces = 2, maxTicks = 100 }
   }, [symbol, decimalPlaces, maxTicks]);
 
   const maxPercent = Math.max(...stats.counts, 1);
+  // Over/Under are computed against the selected barrier digit (0-9).
+  // Over = last digit strictly greater than barrier, Under = strictly less.
+  // Percentages are conditional (over / (over + under)) so they always sum to 100%.
+  const th = selectedDigit;
+  let _over = 0, _under = 0;
+  digits.forEach((d) => { if (th !== null) { if (d > th) _over++; else if (d < th) _under++; } });
+  const _denom = _over + _under;
+  const overPct = _denom ? (_over / _denom) * 100 : 0;
+  const underPct = _denom ? (_under / _denom) * 100 : 0;
+  const maxIdx = stats.counts.indexOf(Math.max(...stats.counts));
+  const minIdx = stats.counts.indexOf(Math.min(...stats.counts));
+  const hasData = stats.counts.some((c) => c > 0);
 
   return (
     <div className="space-y-4">
-      {/* Odd/Even Over/Under summary */}
       <div className="grid grid-cols-2 gap-3">
         <div className="bg-slate-900/50 p-3 rounded border border-slate-800">
           <div className="flex justify-between text-[10px] font-bold text-slate-500 mb-2 uppercase">
@@ -76,43 +95,48 @@ export default function DigitStats({ symbol, decimalPlaces = 2, maxTicks = 100 }
         <div className="bg-slate-900/50 p-3 rounded border border-slate-800">
           <div className="flex justify-between text-[10px] font-bold text-slate-500 mb-2 uppercase">
             <span>Odd</span>
-            <span className="text-[#E89A2A]">{stats.odd.toFixed(1)}%</span>
+            <span className="text-blue-500">{stats.odd.toFixed(1)}%</span>
           </div>
           <div className="h-1.5 w-full bg-slate-800 rounded-full overflow-hidden">
-            <div className="h-full bg-[#D98B1F] transition-all duration-300" style={{ width: `${stats.odd}%` }} />
+            <div className="h-full bg-blue-500 transition-all duration-300" style={{ width: `${stats.odd}%` }} />
           </div>
         </div>
         <div className="bg-slate-900/50 p-3 rounded border border-slate-800">
           <div className="flex justify-between text-[10px] font-bold text-slate-500 mb-2 uppercase">
-            <span>Over 5</span>
-            <span className="text-purple-500">{stats.over.toFixed(1)}%</span>
+            <span>Over {th !== null ? th : "â€”"}</span>
+            <span className="text-purple-500">{overPct.toFixed(1)}%</span>
           </div>
           <div className="h-1.5 w-full bg-slate-800 rounded-full overflow-hidden">
-            <div className="h-full bg-purple-500 transition-all duration-300" style={{ width: `${stats.over}%` }} />
+            <div className="h-full bg-purple-500 transition-all duration-300" style={{ width: `${overPct}%` }} />
           </div>
         </div>
         <div className="bg-slate-900/50 p-3 rounded border border-slate-800">
           <div className="flex justify-between text-[10px] font-bold text-slate-500 mb-2 uppercase">
-            <span>Under 5</span>
-            <span className="text-[#D98B1F]">{stats.under.toFixed(1)}%</span>
+            <span>Under {th !== null ? th : "â€”"}</span>
+            <span className="text-orange-500">{underPct.toFixed(1)}%</span>
           </div>
           <div className="h-1.5 w-full bg-slate-800 rounded-full overflow-hidden">
-            <div className="h-full bg-[#D98B1F] transition-all duration-300" style={{ width: `${stats.under}%` }} />
+            <div className="h-full bg-orange-500 transition-all duration-300" style={{ width: `${underPct}%` }} />
           </div>
         </div>
       </div>
 
-      {/* Digit frequency bars 0-9 */}
+      {th === null && (
+        <p className="text-[10px] text-slate-500 mb-2">Click a digit above to set the Over/Under barrier.</p>
+      )}
       <div className="bg-slate-900/50 p-4 rounded border border-slate-800">
         <h4 className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-4">Digit Frequency (Last {maxTicks} Ticks)</h4>
-        <div className="flex items-end justify-between h-32 gap-1">
+        <div className="flex items-end justify-between h-28 gap-0.5 overflow-x-auto">
           {stats.counts.map((percent, i) => (
-            <div key={i} className="flex-1 flex flex-col items-center gap-2">
-              <span className="text-[9px] font-bold text-slate-400">{percent.toFixed(1)}%</span>
-              <div className="w-full bg-[#D98B1F]/20 rounded-t-sm relative group" style={{ height: `${(percent / maxPercent) * 100}%` }}>
-                <div className="absolute inset-0 bg-[#D98B1F] opacity-60 group-hover:opacity-100 transition-opacity rounded-t-sm" style={{ height: `${percent}%` }} />
+            <div key={i} onClick={() => { setSelectedDigit(i); }} className={`flex-1 flex flex-col items-center gap-2 cursor-pointer ${selectedDigit === i ? "ring-1 ring-amber-400 rounded" : ""}`}>
+              <span className={`text-[7px] font-bold ${hasData && i === maxIdx ? "text-emerald-400" : hasData && i === minIdx ? "text-red-400" : "text-slate-400"}`}>{percent.toFixed(1)}%</span>
+              <div className="w-full rounded-t-sm relative group cursor-pointer" style={{ height: `${(percent / maxPercent) * 100}%`, background: hasData && i === maxIdx ? "rgba(16,185,129,0.25)" : hasData && i === minIdx ? "rgba(239,68,68,0.25)" : "rgba(37,99,235,0.2)" }}>
+                <div className={`absolute inset-0 rounded-t-sm transition-opacity ${i === currentDigit ? "opacity-100" : "opacity-60 group-hover:opacity-100"}`} style={{ height: `${percent}%`, background: i === currentDigit ? "#f59e0b" : hasData && i === maxIdx ? "#10b981" : hasData && i === minIdx ? "#ef4444" : "#3b82f6" }} />
+                {i === currentDigit && (
+                  <div className="absolute -top-3 left-1/2 -translate-x-1/2 text-amber-400 text-[10px] leading-none">â–¼</div>
+                )}
               </div>
-              <span className="text-[11px] font-bold text-slate-300">{i}</span>
+              <span className={`text-[9px] font-bold ${i === currentDigit ? "text-amber-400" : "text-slate-300"}`}>{i}</span>
             </div>
           ))}
         </div>

@@ -219,7 +219,7 @@ const resolveApiUrl = () =>
 
 const assertApiKey = () => {
   if (!ENV.forgeApiKey) {
-    throw new Error("OPENAI_API_KEY is not configured");
+    throw new Error("AI_API_KEY (or OPENAI_API_KEY) is not configured");
   }
 };
 
@@ -413,7 +413,7 @@ export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
   if (!response.ok) {
     const errorText = await response.text();
     throw new Error(
-      `LLM invoke failed: ${response.status} ${response.statusText} – ${errorText}`
+      `LLM invoke failed: ${response.status} ${response.statusText} â€“ ${errorText}`
     );
   }
 
@@ -446,7 +446,7 @@ export async function listLLMModels(): Promise<ModelsResponse> {
   if (!response.ok) {
     const errorText = await response.text();
     throw new Error(
-      `List LLM models failed: ${response.status} ${response.statusText} – ${errorText}`
+      `List LLM models failed: ${response.status} ${response.statusText} â€“ ${errorText}`
     );
   }
 

@@ -12,16 +12,16 @@ Manus OAuth requires cookies to maintain session state. If a user's browser bloc
 
 **Anti-patterns:**
 ```ts
-// ❌ Guessing the URL doesn't allow you to redirect to the actual domain that the user is using
+// âŒ Guessing the URL doesn't allow you to redirect to the actual domain that the user is using
 const appId = process.env.VITE_APP_ID || "";
 const prefix = appId.substring(0, 8);
 const baseUrl = `https://myapp-${prefix}.manus.space`;
 const invitationUrl = `${baseUrl}/invite/${token}`;
 
-// ❌ Same thing here, we should make sure that this information is preserved
+// âŒ Same thing here, we should make sure that this information is preserved
 const url = `https://${projectName}.manus.space/callback`;
 
-// ❌ Setting subdomains here risks a chance of the env var being out of date.
+// âŒ Setting subdomains here risks a chance of the env var being out of date.
 const url = `https://${process.env.APP_SUBDOMAIN}.example.com/verify`;
 ```
 
@@ -32,7 +32,7 @@ The only correct approach: Frontend passes `window.location.origin` to the backe
 On the frontend, use `window.location.origin`:
 
 ```ts
-// ✅ Always use window.location.origin
+// âœ… Always use window.location.origin
 const frontendUrl = window.location.origin;
 // Returns: "https://myapp.manus.space" (no trailing slash)
 
@@ -78,7 +78,7 @@ router.get("/api/oauth/callback", async (req, res) => {
   const token = await exchangeCodeForToken(code);
   res.cookie(COOKIE_NAME, token, cookieOptions);
 
-  // ✅ Redirect using the origin from state
+  // âœ… Redirect using the origin from state
   res.redirect(`${origin}${returnPath}`);
 });
 ```
@@ -92,7 +92,7 @@ When the backend needs to generate URLs (magic links, invitations, email verific
 const createInvite = trpc.invites.create.useMutation();
 await createInvite.mutateAsync({
   eventId: "123",
-  origin: window.location.origin, // ✅ Always pass this
+  origin: window.location.origin, // âœ… Always pass this
 });
 ```
 
@@ -109,7 +109,7 @@ createInvite: protectedProcedure
     const { eventId, origin } = input;
     const token = generateToken();
 
-    // ✅ Use the origin passed from frontend
+    // âœ… Use the origin passed from frontend
     const inviteUrl = `${origin}/events/${eventId}/join?token=${token}`;
 
     return { inviteUrl };
