@@ -20,6 +20,7 @@ import CloudBots from "./pages/CloudBots";
 import Bots from "./pages/Bots";
 import TradeHistory from "./pages/TradeHistory";
 import Login from "./pages/Login";
+import Logs from "./pages/Logs";
 
 function AppLayout({ children }: { children: React.ReactNode }) {
   return <DashboardLayout>{children}</DashboardLayout>;
@@ -65,6 +66,9 @@ function Router() {
       </Route>
       <Route path={"/trades"}>
         <AppLayout><TradeHistory /></AppLayout>
+      </Route>
+      <Route path={"/logs"}>
+        <AppLayout><Logs /></AppLayout>
       </Route>
       <Route path={"/404"} component={NotFound} />
       <Route component={NotFound} />
