@@ -1,5 +1,6 @@
 import { derivWS, Tick, ContractUpdate, DerivContractType } from "./derivWebSocket";
 import { StrategyRule } from "@/components/RuleBuilder";
+import { evaluateNode, ConditionNode, EvalContext, legacyConditionToNode, lastDigitOf } from "./conditionEval";
 
 export type BotStatus = "idle" | "running" | "error" | "stopped";
 
@@ -185,17 +186,24 @@ export class BotEngine {
    */
   private evaluateStrategy(): boolean {
     if (!this.config) return false;
-    const { comparison, count } = this.config.strategy.condition;
+    const rule = this.config.strategy;
+    const digits = this.tickHistory.map((t) => lastDigitOf(Number(t.price)));
+    const ctx: EvalContext = {
+      prices: this.tickHistory.map((t) => Number(t.price)),
+      digits,
+      lossStreak: this.lossStreak,
+      window: 20,
+    };
+    if (rule.conditions) return evaluateNode(rule.conditions as ConditionNode, ctx);
+    // Backward-compatible flat condition path.
+    const { comparison, count } = rule.condition;
     if (this.tickHistory.length < count) return false;
-
     if (comparison === "appears_consecutively") {
       for (let i = this.tickHistory.length - count; i < this.tickHistory.length; i++) {
         if (!this.tickSatisfiesIndicator(i)) return false;
       }
       return true;
     }
-
-    // "appears": frequency count within the trailing window (last 20 ticks, or all history if shorter)
     const windowStart = Math.max(0, this.tickHistory.length - 20);
     let occurrences = 0;
     for (let i = windowStart; i < this.tickHistory.length; i++) {
