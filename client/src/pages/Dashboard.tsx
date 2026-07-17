@@ -66,6 +66,31 @@ export default function Dashboard() {
   const [historyTab, setHistoryTab] = useState<"trades" | "prices">("trades");
   const priceQuery = trpc.market.getHistory.useQuery({ symbol: selectedSymbol, limit: 200 }, { enabled: historyTab === "prices", refetchInterval: historyTab === "prices" ? 3000 : false });
 
+  // Live tick buffer: stream ticks from the Deriv WS so the Price History table
+  // updates in real time (newest on top, pushing older rows down).
+  const [liveTicks, setLiveTicks] = useState<any[]>([]);
+  useEffect(() => {
+    if (historyTab !== "prices") return;
+    setLiveTicks([]);
+    const subId = derivWS.subscribe(selectedSymbol);
+    const listener = {
+      onTick: (tick: any) => {
+        if (tick.symbol !== selectedSymbol) return;
+        const price = Number(tick.price);
+        const lastDigit = parseInt(String(tick.price).replace(".", "").slice(-1), 10) || 0;
+        setLiveTicks((prev) => [{ symbol: tick.symbol, price, lastDigit, epoch: Math.floor(tick.timestamp / 1000) }, ...prev].slice(0, 50));
+      },
+      onError: () => {},
+      onConnect: () => {},
+      onDisconnect: () => {},
+    };
+    derivWS.addListener(listener);
+    return () => { derivWS.removeListener(listener); derivWS.unsubscribe(subId); };
+  }, [selectedSymbol, historyTab]);
+
+  // Use live ticks if streaming, else fall back to the DB snapshot.
+  const displayTicks = liveTicks.length ? liveTicks : (priceQuery.data?.ticks || []).slice(0, 50);
+
   const handleQuickTrade = async () => {
     if (!derivWS.isAuthorized()) { setTradeMsg({ kind: "err", text: "Connect a Deriv token first (Settings)." }); return; }
     if (accountType === "real") {
@@ -357,7 +382,7 @@ export default function Dashboard() {
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-[#30363D]">
-                        {priceQuery.data.ticks.slice(0, 50).map((t: any, i: number) => {
+                        {displayTicks.map((t: any, i: number) => {
                           const priceStr = String(t.price);
                           const lastDigit = t.lastDigit;
                           return (
