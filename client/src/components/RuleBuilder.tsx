@@ -426,6 +426,9 @@ export default function RuleBuilder({ rule, onChange }: RuleBuilderProps) {
                 {stakeError}
               </div>
             )}
+            <p className="text-[10px] text-slate-500 mt-1 leading-tight">
+              ⚠ Trading involves risk. Never stake more than you can afford to lose. New users are advised to start at the $0.35 minimum and scale only after verified live results.
+            </p>
           </div>
           <div>
             <label className="text-[10px] text-[#FF0000]/70 uppercase tracking-wider block mb-1">
@@ -498,4 +501,5 @@ function validateStake(value: number): string | null {
   }
   return null;
 }
+
 
