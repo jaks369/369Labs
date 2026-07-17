@@ -55,6 +55,9 @@ export default function Bots() {
   const startRunMutation = trpc.bot.startRun.useMutation();
   const stopRunMutation = trpc.bot.stopRun.useMutation();
   const saveTradeMutation = trpc.trades.save.useMutation();
+  const notifyTelegram = trpc.telegram.send.useMutation();
+
+  const alertTg = (msg: string) => { try { notifyTelegram.mutate({ message: msg }); } catch { /* ignore */ } };
 
   // Keep a live-mutable ref so BotEngine callbacks (closures created at deploy time)
   // always update the latest state array rather than a stale snapshot.
@@ -138,6 +141,7 @@ export default function Bots() {
           if (!decimalRegex.test(trade.stake.toString())) {
             console.warn(`Trade saved with unexpected stake format: ${trade.stake}`);
           }
+          alertTg(`🔔 ${strategy.name} [${trade.symbol}] trade ${trade.result.toUpperCase()} · stake $${trade.stake} · P&L ${trade.pnl >= 0 ? "+" : ""}${trade.pnl}`);
         },
         onLog: (message) => updateBot(botRun.id, { lastLog: message }),
       });
@@ -158,6 +162,7 @@ export default function Bots() {
       setRunningBots((prev) => [...prev, newBot]);
 
       engine.start({ symbol: rule.symbol || DEFAULT_SYMBOL, strategy: rule });
+      alertTg(`🚀 Bot deployed: ${strategy.name} on ${rule.symbol || DEFAULT_SYMBOL}`);
 
       // Capture the expected win rate via backtest so we can flag regime drift live.
       const stake = Number(rule.params?.stake ?? 1);
@@ -193,6 +198,7 @@ export default function Bots() {
     const finalPnl = bot.engine.getTotalPnl();
 
     setRunningBots((prev) => prev.filter((b) => b.runId !== bot.runId));
+    alertTg(`⏹️ Bot stopped: ${bot.name} · ${finalTrades} trades · P&L ${finalPnl >= 0 ? "+" : ""}$${finalPnl.toFixed(2)}`);
     try {
       await stopRunMutation.mutateAsync({
         id: bot.runId,
@@ -367,4 +373,5 @@ export default function Bots() {
     </div>
   );
 }
+
 
