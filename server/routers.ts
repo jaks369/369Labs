@@ -569,6 +569,29 @@ export const appRouter = router({
         }
       }),
 
+    critique: protectedProcedure
+      .input(z.object({ rule: z.any(), backtest: z.any().optional() }))
+      .mutation(async ({ ctx, input }) => {
+        if (!process.env.AI_API_KEY) return { findings: [], summary: "AI not configured." };
+        try {
+          const ai = await getAI();
+          const bt = input.backtest ? `\nBacktest result: ${JSON.stringify(input.backtest)}` : "";
+          const res = await ai.chat.completions.create({
+            model: process.env.AI_MODEL || "llama-3.3-70b-versatile",
+            messages: [
+              { role: "system", content: "You are 369AI's Risk Reviewer agent. Critique a trading strategy rule for: overfitting, martingale/grid danger, poor risk:reward, unrealistic win-rate expectations, excessive drawdown risk, and fragile logic. Respond ONLY as JSON: { \"findings\": [{\"severity\": \"high\"|\"medium\"|\"low\", \"title\": string, \"detail\": string}], \"summary\": string }." },
+              { role: "user", content: `Strategy rule: ${JSON.stringify(input.rule)}${bt}` },
+            ],
+            temperature: 0.3,
+          });
+          const text = res.choices?.[0]?.message?.content || "{}";
+          const json = text.replace(/```json|```/g, "").trim();
+          try { return JSON.parse(json); } catch { return { findings: [], summary: text }; }
+        } catch (e: any) {
+          return { findings: [], summary: "Critique failed: " + (e?.message || "error") };
+        }
+      }),
+
     ask: protectedProcedure
       .input(z.object({
         message: z.string().min(1),
@@ -752,5 +775,6 @@ Return ONLY the JSON.`;
 });
 
 export type AppRouter = typeof appRouter;
+
 
 
