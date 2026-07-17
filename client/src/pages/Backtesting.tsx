@@ -6,6 +6,7 @@ import { History, Play, BarChart3, TrendingUp, Clock, Loader2, CheckCircle2, XCi
 import { useLocation } from "wouter";
 import { derivWS } from "@/services/derivWebSocket";
 import { runBacktest, BacktestResult } from "@/services/BacktestEngine";
+import Sparkline from "@/components/Sparkline";
 import { StrategyRule } from "@/components/RuleBuilder";
 
 const IT_SYMBOLS = ["R_10","R_25","R_50","R_75","R_100","1HZ10V","1HZ25V","1HZ50V","1HZ75V","1HZ100V","BOOM300","BOOM500","BOOM1000","CRASH300","CRASH500","CRASH1000"];
@@ -170,6 +171,11 @@ export default function Backtesting() {
                     <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Max Drawdown</p>
                     <p className="text-2xl font-bold text-red-500 mt-1">-${result.maxDrawdown.toFixed(2)}</p>
                   </div>
+                </div>
+
+                <div className="bg-[#161B22] border border-[#30363D] rounded-xl p-6">
+                  <h3 className="text-sm font-bold text-white mb-4">Equity Curve (cumulative P&L)</h3>
+                  <Sparkline data={(result.equityCurve || []).map((v: number) => ({ value: v }))} />
                 </div>
 
                 <div className="bg-[#161B22] border border-[#30363D] rounded-xl p-6">
