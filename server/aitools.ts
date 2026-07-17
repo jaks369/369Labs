@@ -219,6 +219,7 @@ export const TOOL_DEFS = [
       description: 'Create a DRAFT bot from an insight, or deploy a saved strategy. To turn a plain-language insight into a bot, call with { name, description, rule } (no confirm needed) - this saves a draft the user starts manually. To start an existing saved bot, call with { strategyId, confirm: true } (requires user confirmation).',
       parameters: {
         type: 'object',
+        additionalProperties: false,
         properties: {
           name: { type: 'string', description: 'Bot name when creating from an insight' },
           description: { type: 'string' },
@@ -239,6 +240,7 @@ export const TOOL_DEFS = [
       description: 'Place a single manual trade on Deriv. Requires confirm=true, symbol, contractType, stake.',
       parameters: {
         type: 'object',
+        additionalProperties: false,
         properties: {
           symbol: { type: 'string' },
           contractType: { type: 'string', description: 'e.g. CALL, PUT, DIGITMATCH, DIGITDIFF' },
@@ -257,6 +259,7 @@ export const TOOL_DEFS = [
       description: 'Run a backtest for a saved strategy over a date range. Returns an intent the app executes.',
       parameters: {
         type: 'object',
+        additionalProperties: false,
         properties: {
           strategyId: { type: 'number' },
           symbol: { type: 'string' },
@@ -274,6 +277,7 @@ export const TOOL_DEFS = [
       description: 'Tell 369AI to watch a symbol and discover repeatable trading patterns (signals) with evidence. Use when the user asks to watch, look for patterns, find setups, or scan a market.',
       parameters: {
         type: 'object',
+        additionalProperties: false,
         properties: {
           symbol: { type: 'string' },
           durationMinutes: { type: 'number', description: 'How long to watch (minutes). Default 30.' },
@@ -291,6 +295,7 @@ export const TOOL_DEFS = [
       description: 'List AI-discovered trading signals (the Marketplace feed) for the user, optionally filtered by symbol.',
       parameters: {
         type: 'object',
+        additionalProperties: false,
         properties: { symbol: { type: 'string' } },
       },
     },
