@@ -5,7 +5,7 @@ import { registerStorageProxy } from "./storageProxy";
 import { appRouter } from "../routers";
 import { createContext } from "./context";
 import { serveStatic } from "./staticServe";
-import { getDb, pruneBadTicks, ensureSignalExpiryColumn, recomputeLastDigits, ensureUserMemoryTable } from "../db";
+import { getDb, pruneBadTicks, ensureSignalExpiryColumn, recomputeLastDigits, ensureUserMemoryTable, ensurePluginsTable } from "../db";
 import { users } from "../../drizzle/schema";
 import { startTickCollector } from "../tickCollector";
 import { runWatch } from "../signalScanner";
@@ -80,6 +80,7 @@ try { await ensureSignalExpiryColumn(); } catch (e) { console.error('[startup] e
 try { await pruneBadTicks(); } catch (e) { console.error('[startup] pruneBadTicks failed', e); }
 try { await recomputeLastDigits(); } catch (e) { console.error('[startup] recomputeLastDigits failed', e); }
 try { await ensureUserMemoryTable(); } catch (e) { console.error('[startup] ensureUserMemoryTable failed', e); }
+try { await ensurePluginsTable(); } catch (e) { console.error('[startup] ensurePluginsTable failed', e); }
     });
   }
 
