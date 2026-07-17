@@ -11,7 +11,13 @@ import { ENV } from "./env";
 
 const scrypt = promisify(scryptCallback);
 const SCRYPT_KEYLEN = 64;
+const SCRYPT_KEYLEN = 64;
 
+export function sanitizeUser(u: any): any {
+  if (!u) return u;
+  const { passwordHash, ...rest } = u;
+  return rest;
+}
 /** Hash a plaintext password for storage. Format: "salt:derivedKeyHex". */
 export async function hashPassword(password: string): Promise<string> {
   const salt = randomBytes(16).toString("hex");
@@ -92,7 +98,7 @@ export async function authenticateRequest(req: Request): Promise<User> {
     throw ForbiddenError("User not found");
   }
 
-  export const sanitizeUser = (u: any) => { if (!u) return u; const { passwordHash, ...rest } = u; return rest; };
+  return sanitizeUser(user);
 
   return sanitizeUser(user);
 }
