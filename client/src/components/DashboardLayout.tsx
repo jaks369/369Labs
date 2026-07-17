@@ -332,7 +332,7 @@ function DashboardLayoutContent({
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56 bg-[#161B22] border-[#30363D] text-white">
                 <DropdownMenuItem
-                  onClick={logout}
+                  onClick={async () => { await logout(); setLocation("/"); }}
                   className="cursor-pointer text-red-400 focus:text-red-400 focus:bg-red-400/10"
                 >
                   <LogOut className="mr-2 h-4 w-4" />
