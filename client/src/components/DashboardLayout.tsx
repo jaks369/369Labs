@@ -35,6 +35,7 @@ import {
   Home,
   FlaskConical,
   Command,
+  Terminal,
 } from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
@@ -62,14 +63,15 @@ const navGroups: NavGroup[] = [
       { icon: CandlestickChart, label: "AI Signals", path: "/marketplace" },
     ],
   },
-  {
-    title: "Operate",
-    items: [
-      { icon: Bot, label: "Bots", path: "/bots" },
-      { icon: Activity, label: "Analytics", path: "/analytics" },
-      { icon: Home, label: "Home", path: "/?home=1" },
-    ],
-  },
+    {
+      title: "Operate",
+      items: [
+        { icon: Bot, label: "Bots", path: "/bots" },
+        { icon: Activity, label: "Analytics", path: "/analytics" },
+        { icon: Terminal, label: "Observability", path: "/logs" },
+        { icon: Home, label: "Home", path: "/?home=1" },
+      ],
+    },
   {
     title: "Connect",
     items: [
