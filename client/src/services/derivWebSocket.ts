@@ -189,7 +189,7 @@ class DerivWebSocketService {
     for (const symbol of pending) { if (!this.subscribedSymbols.has(symbol)) this.doSubscribe(symbol); }
   }
 
-  private fetchBalance() {
+  public fetchBalance() {
     if (!this.ws) return;
     try { this.ws.send(JSON.stringify({ balance: 1, account: "all", req_id: this.msgId++ })); }
     catch (error) { console.error("[Deriv WS] Failed to fetch balance:", error); }
