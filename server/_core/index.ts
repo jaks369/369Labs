@@ -40,6 +40,26 @@ export async function createApp() {
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
   registerStorageProxy(app);
 
+  // Lightweight in-memory rate limiter (per-IP). Stricter caps on auth/token paths.
+  const rateBuckets: Record<string, { count: number; reset: number }> = {};
+  const RATE = (limit: number, windowMs: number) => (req: any, res: any, next: any) => {
+    const ip = req.headers["x-forwarded-for"]?.toString().split(",")[0]?.trim() || req.socket?.remoteAddress || "unknown";
+    const now = Date.now();
+    const b = rateBuckets[ip] || { count: 0, reset: now + windowMs };
+    if (now > b.reset) { b.count = 0; b.reset = now + windowMs; }
+    b.count++;
+    rateBuckets[ip] = b;
+    if (b.count > limit) { res.status(429).json({ error: "Too many requests, slow down." }); return; }
+    next();
+  };
+  app.use("/api/trpc", (req: any, res: any, next: any) => {
+    const url: string = req.url || "";
+    if (url.includes("signup") || url.includes("login") || url.includes("saveToken") || url.includes("removeToken")) {
+      return RATE(10, 60_000)(req, res, next); // 10 auth/token writes per minute per IP
+    }
+    return RATE(120, 60_000)(req, res, next); // 120 general requests per minute per IP
+  });
+
   app.use(
     "/api/trpc",
     createExpressMiddleware({
