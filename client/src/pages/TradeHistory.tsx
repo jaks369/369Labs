@@ -13,6 +13,7 @@ export default function TradeHistory() {
   const [priceSymbol, setPriceSymbol] = useState("R_100");
   const priceQuery = trpc.market.getHistory.useQuery({ symbol: priceSymbol, limit: 200 }, { enabled: tab === "prices" });
   const priceDecimals = derivWS.decimalPlacesFor(priceSymbol);
+  const journalMutation = trpc.ai.journal.useMutation();
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -72,6 +73,39 @@ export default function TradeHistory() {
         <div className="flex gap-2 mb-6">
           <button onClick={() => setTab("trades")} className={`px-4 py-2 rounded-lg text-sm font-bold ${tab === "trades" ? "bg-[#FF00FF]/20 text-[#FF00FF]" : "text-[#00FFFF]/60 hover:text-[#00FFFF]"}`}>TRADES</button>
           <button onClick={() => setTab("prices")} className={`px-4 py-2 rounded-lg text-sm font-bold ${tab === "prices" ? "bg-[#FF00FF]/20 text-[#FF00FF]" : "text-[#00FFFF]/60 hover:text-[#00FFFF]"}`}>PRICE HISTORY</button>
+        </div>
+
+        {/* AI Trading Journal */}
+        <div className="hud-panel p-6 mb-6">
+          <div className="flex items-center justify-between mb-3">
+            <div>
+              <h2 className="text-lg font-bold text-[#FF00FF]">AI TRADING JOURNAL</h2>
+              <p className="text-xs text-[#00FFFF]/60">Automatic post-trade analysis — why you won, why you lost, and how to improve.</p>
+            </div>
+            <button
+              onClick={() => journalMutation.mutate({})}
+              disabled={journalMutation.isPending || !tradesQuery.data?.length}
+              className="btn-neon flex items-center gap-2 text-sm"
+            >
+              {journalMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+              ANALYZE
+            </button>
+          </div>
+          {journalMutation.data ? (
+            <div className="space-y-3">
+              <div className="flex gap-4 text-xs">
+                <span className="text-emerald-400">Wins: {journalMutation.data.wins}</span>
+                <span className="text-red-400">Losses: {journalMutation.data.losses}</span>
+                <span className={journalMutation.data.net >= 0 ? "text-emerald-400" : "text-red-400"}>Net: ${journalMutation.data.net}</span>
+                <span className="text-slate-500">Sample: {journalMutation.data.sampleSize}</span>
+              </div>
+              <p className="text-sm text-[#00FFFF]/90 whitespace-pre-wrap leading-relaxed">{journalMutation.data.analysis}</p>
+            </div>
+          ) : journalMutation.isPending ? (
+            <div className="flex items-center gap-2 text-sm text-[#00FFFF]/60"><Loader2 className="w-4 h-4 animate-spin" /> Analyzing your trades...</div>
+          ) : (
+            <p className="text-sm text-[#00FFFF]/50">Press ANALYZE to generate an AI journal from your recent trades.</p>
+          )}
         </div>
 
         {tab === "prices" ? (
@@ -206,3 +240,4 @@ export default function TradeHistory() {
     </div>
   );
 }
+
