@@ -163,14 +163,6 @@ export class BotEngine {
         if (rule.condition.comparison === "greater_than") return this.lastDigit(tick.price) > (rule.condition.barrier ?? 5);
         if (rule.condition.comparison === "less_than") return this.lastDigit(tick.price) < (rule.condition.barrier ?? 5);
         return this.lastDigit(tick.price) === (rule.condition.barrier ?? 0);
-      case "parity":
-        return rule.condition.barrier === 1
-          ? this.lastDigit(tick.price) % 2 === 1
-          : this.lastDigit(tick.price) % 2 === 0;
-      case "last_digit":
-        if (rule.condition.comparison === "greater_than") return this.lastDigit(tick.price) > (rule.condition.barrier ?? 5);
-        if (rule.condition.comparison === "less_than") return this.lastDigit(tick.price) < (rule.condition.barrier ?? 5);
-        return this.lastDigit(tick.price) === (rule.condition.barrier ?? 0);
       case "consecutive_rise":
         return index > 0 && tick.price > this.tickHistory[index - 1].price;
       case "consecutive_fall":
