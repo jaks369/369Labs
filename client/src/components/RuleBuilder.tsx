@@ -1,5 +1,6 @@
 /**
  * Visual IF/THEN Rule Builder
+import { ConditionNode, LegacyConditionToNode } from "@/services/conditionEval";
  * Structured no-code strategy definition with condition/action blocks
  * and trade parameters (Stake, Stop Loss, Take Profit).
  */
@@ -87,6 +88,9 @@ export interface StrategyRule {
     count: number; // e.g. 5 times
     barrier?: number; // 0-9, required by Deriv for digit_over / digit_under
   };
+  // Optional composable condition tree (AND/OR/NOT of leaf indicators).
+  // When present, this takes precedence over the flat `condition` above.
+  conditions?: ConditionNode;
   action: {
     tradeType: string; // e.g. "buy_under", "buy_over", "buy_rise", "buy_fall"
   };
