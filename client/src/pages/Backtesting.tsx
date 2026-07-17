@@ -27,6 +27,11 @@ export default function Backtesting() {
   const [signalRule, setSignalRule] = useState<StrategyRule | null>(null);
   const [loadedSignal, setLoadedSignal] = useState<any | null>(null);
 
+  const [sweepParam, setSweepParam] = useState<"barrier" | "count" | "stake">("barrier");
+  const [sweepRunning, setSweepRunning] = useState(false);
+  const [sweepError, setSweepError] = useState<string | null>(null);
+  const [sweepGrid, setSweepGrid] = useState<{ value: number; winRate: number; trades: number; pnl: number }[] | null>(null);
+
   const strategiesQuery = trpc.strategies.list.useQuery();
   const signalsQuery = trpc.signals.list.useQuery();
 
@@ -69,6 +74,61 @@ export default function Backtesting() {
     } finally {
       setRunning(false);
     }
+  };
+
+  const SWEEP_RANGES: Record<string, number[]> = {
+    barrier: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
+    count: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+    stake: [1, 2, 3, 5, 8, 10, 15, 20, 30, 50],
+  };
+
+  const runSweep = async () => {
+    const rule = (selectedStrategyId
+      ? strategiesQuery.data?.find(s => s.id === selectedStrategyId)?.config?.rule
+      : signalRule) as StrategyRule | undefined;
+    if (!rule) { alert("Select a strategy or signal first."); return; }
+    setSweepRunning(true);
+    setSweepError(null);
+    setSweepGrid(null);
+    try {
+      const startEpoch = Math.floor(new Date(startDate).getTime() / 1000);
+      const endEpoch = Math.floor(new Date(endDate).getTime() / 1000);
+      const ticks = await derivWS.fetchTickHistory(symbol, startEpoch, endEpoch);
+      if (ticks.length < 20) throw new Error(`Only ${ticks.length} ticks returned — need at least 20.`);
+      const values = SWEEP_RANGES[sweepParam];
+      const grid: { value: number; winRate: number; trades: number; pnl: number }[] = [];
+      for (const v of values) {
+        let sweptRule = rule;
+        let sweptStake = stake;
+        if (sweepParam === "stake") {
+          sweptStake = v;
+        } else {
+          sweptRule = {
+            ...rule,
+            condition: { ...(rule.condition || ({} as any)), [sweepParam]: v },
+          };
+          if (rule.conditions) {
+            // sweep only applies cleanly to flat conditions; tree kept as-is
+          }
+        }
+        const r = await runBacktest(ticks, sweptRule, sweptStake);
+        grid.push({ value: v, winRate: r.winRate, trades: r.totalTrades, pnl: r.totalPnl });
+      }
+      setSweepGrid(grid);
+    } catch (e) {
+      setSweepError(e instanceof Error ? e.message : "Sweep failed");
+    } finally {
+      setSweepRunning(false);
+    }
+  };
+
+  const heatColor = (wr: number) => {
+    // 40% red -> 60% amber -> 75%+ green
+    if (wr >= 75) return "bg-emerald-600/70 text-white";
+    if (wr >= 60) return "bg-emerald-600/30 text-emerald-200";
+    if (wr >= 50) return "bg-amber-600/30 text-amber-200";
+    if (wr >= 40) return "bg-red-600/30 text-red-200";
+    return "bg-red-600/60 text-white";
   };
 
   return (
@@ -234,6 +294,46 @@ export default function Backtesting() {
                     })}
                   </div>
                 </div>
+
+                <div className="bg-[#161B22] border border-[#30363D] rounded-xl p-6">
+                  <h3 className="text-sm font-bold text-white mb-1">Parameter Sweep</h3>
+                  <p className="text-xs text-slate-500 mb-4">Stress-test one parameter across a range on the same tick window. Cells show win rate (green = strong, red = weak).</p>
+                  <div className="flex items-center gap-2 mb-4">
+                    <select value={sweepParam} onChange={(e) => setSweepParam(e.target.value as any)} className="bg-[#0D1117] border border-[#30363D] rounded-lg px-3 py-2 text-white text-sm">
+                      <option value="barrier">Barrier digit (0-9)</option>
+                      <option value="count">Count / frequency (1-10)</option>
+                      <option value="stake">Stake ($)</option>
+                    </select>
+                    <Button onClick={runSweep} disabled={sweepRunning} className="bg-purple-600 hover:bg-purple-700 text-white">
+                      {sweepRunning ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Sweeping...</> : <><Search className="w-4 h-4 mr-2" /> Run Sweep</>}
+                    </Button>
+                  </div>
+                  {sweepError && <p className="text-sm text-red-400 mb-3">{sweepError}</p>}
+                  {sweepGrid && (
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-left text-xs">
+                        <thead>
+                          <tr className="text-slate-500 border-b border-[#30363D]">
+                            <th className="pb-2 font-bold">{sweepParam}</th>
+                            <th className="pb-2 font-bold">Win Rate</th>
+                            <th className="pb-2 font-bold">Trades</th>
+                            <th className="pb-2 font-bold text-right">P&L</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-[#30363D]">
+                          {sweepGrid.map((c) => (
+                            <tr key={c.value} className="hover:bg-white/5">
+                              <td className="py-2 font-bold text-white">{c.value}</td>
+                              <td className={`py-2 px-2 rounded font-bold ${heatColor(c.winRate)}`}>{c.winRate.toFixed(1)}%</td>
+                              <td className="py-2 text-slate-400">{c.trades}</td>
+                              <td className={`py-2 text-right font-bold ${c.pnl >= 0 ? "text-emerald-500" : "text-red-500"}`}>{c.pnl >= 0 ? "+" : ""}${c.pnl.toFixed(2)}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
               </>
             )}
 
@@ -251,3 +351,4 @@ export default function Backtesting() {
     </div>
   );
 }
+
