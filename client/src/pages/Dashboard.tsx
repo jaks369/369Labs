@@ -417,8 +417,6 @@ export default function Dashboard() {
                 <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded ${accountType === "real" ? "bg-red-500/20 text-red-400" : accountType === "demo" ? "bg-amber-500/20 text-amber-400" : "bg-slate-500/20 text-slate-400"}`}>
                   {accountType === "real" ? "REAL" : accountType === "demo" ? "DEMO" : "NO TOKEN"}
                 </span>
-                <div className="w-2 h-2 bg-purple-500 rounded-full animate-pulse" />
-                <span className="text-[9px] font-bold text-purple-500 uppercase">Live</span>
               </div>
             </div>
             <div className="space-y-3">
