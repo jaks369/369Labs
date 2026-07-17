@@ -357,6 +357,19 @@ export const appRouter = router({
         }
       }),
 
+    exportCsv: protectedProcedure
+      .query(async ({ ctx }) => {
+        try {
+          const trades = await db.getTradesByUserId(ctx.user.id, 5000);
+          const header = ["id","symbol","result","stake","profitLoss","entryTime","exitTime","contractId"];
+          const esc = (v) => `"${String(v ?? "").replace(/"/g, '""')}"`;
+          const rows = trades.map((t) => [t.id, t.symbol, t.result, t.stake, t.profitLoss, t.entryTime, t.exitTime, t.contractId].map(esc).join(","));
+          return { csv: [header.join(","), ...rows].join("\n"), count: trades.length };
+        } catch (error) {
+          throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Failed to export trades" });
+        }
+      }),
+
     save: protectedProcedure
       .input(z.object({
         botRunId: z.number().optional(),
