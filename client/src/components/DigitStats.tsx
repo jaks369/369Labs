@@ -22,12 +22,14 @@ export default function DigitStats({ symbol, decimalPlaces = derivWS.decimalPlac
     counts: Array(10).fill(0),
   });
 
-  const historyQuery = trpc.market.getHistory.useQuery({ symbol, limit: maxTicks }, { enabled: Boolean(symbol) });
+  const historyQuery = trpc.market.getHistory.useQuery({ symbol, limit: 500 }, { enabled: Boolean(symbol) });
   useEffect(() => {
     const ticks = historyQuery.data?.ticks;
     if (!ticks || !ticks.length) return;
-    const hist = ticks.map((t) => t.lastDigit).filter((d) => d >= 0 && d <= 9);
-    if (hist.length) setDigits(hist);
+    // DB returns newest-first; reverse to chronological (oldest-first) so live
+    // ticks append in order and the history is continuous across logins.
+    const hist = ticks.map((t) => t.lastDigit).filter((d) => d >= 0 && d <= 9).reverse();
+    if (hist.length) setDigits(hist.slice(-maxTicks));
   }, [historyQuery.data, symbol, maxTicks]);
 
   // Recompute Over/Under immediately when the selected digit changes, so the
@@ -139,7 +141,7 @@ export default function DigitStats({ symbol, decimalPlaces = derivWS.decimalPlac
           {stats.counts.map((percent, i) => (
             <div key={i} className="flex-1 flex flex-col items-center gap-2">
               <span className={`text-[7px] font-bold ${hasData && i === maxIdx ? "text-emerald-400" : hasData && i === minIdx ? "text-red-400" : "text-slate-400"}`}>{percent.toFixed(1)}%</span>
-              <div onClick={() => { setSelectedDigit(i); selectedDigitRef.current = i; }} className="w-full rounded-t-sm relative group cursor-pointer" style={{ height: `${(percent / maxPercent) * 100}%`, background: hasData && i === maxIdx ? "rgba(16,185,129,0.25)" : hasData && i === minIdx ? "rgba(239,68,68,0.25)" : "rgba(37,99,235,0.2)" }}>
+              <div className="w-full rounded-t-sm relative group cursor-pointer" style={{ height: `${(percent / maxPercent) * 100}%`, background: hasData && i === maxIdx ? "rgba(16,185,129,0.25)" : hasData && i === minIdx ? "rgba(239,68,68,0.25)" : "rgba(37,99,235,0.2)" }}>
                 <div className={`absolute inset-0 rounded-t-sm transition-opacity ${i === currentDigit ? "opacity-100" : "opacity-60 group-hover:opacity-100"}`} style={{ height: `${percent}%`, background: i === currentDigit ? "#f59e0b" : hasData && i === maxIdx ? "#10b981" : hasData && i === minIdx ? "#ef4444" : "#3b82f6" }} />
                 {i === currentDigit && (
                   <div className="absolute -top-3 left-1/2 -translate-x-1/2 text-amber-400 text-[10px] leading-none">▼</div>
