@@ -11,7 +11,6 @@ import { ENV } from "./env";
 
 const scrypt = promisify(scryptCallback);
 const SCRYPT_KEYLEN = 64;
-const SCRYPT_KEYLEN = 64;
 
 export function sanitizeUser(u: any): any {
   if (!u) return u;
