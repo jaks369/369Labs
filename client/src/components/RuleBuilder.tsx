@@ -99,6 +99,12 @@ export interface StrategyRule {
     stopLoss: number;
     takeProfit: number;
   };
+  // Optional ensemble: combine multiple sub-strategies by vote. Trade fires when
+  // the number of agreeing sub-rules meets `vote` (all | majority | any).
+  ensemble?: {
+    vote: "all" | "majority" | "any";
+    rules: StrategyRule[];
+  };
 }
 
 export const DEFAULT_RULE: StrategyRule = {
@@ -492,3 +498,4 @@ function validateStake(value: number): string | null {
   }
   return null;
 }
+
