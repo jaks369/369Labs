@@ -59,7 +59,7 @@ export default function Dashboard() {
   if (!isAuthenticated || !user) {
     return (
       <div className="flex items-center justify-center h-full">
-        <Loader2 className="w-8 h-8 animate-spin text-orange-500" />
+        <Loader2 className="w-8 h-8 animate-spin text-[#D98B1F]" />
       </div>
     );
   }
@@ -83,7 +83,7 @@ export default function Dashboard() {
                 placeholder="Search markets..." 
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="bg-[rgba(30,30,34,0.6)] border-[rgba(255,255,255,0.08)] pl-10 pr-4 py-2 rounded-lg text-sm focus:border-orange-400 transition-colors w-64"
+                className="bg-[rgba(30,30,34,0.6)] border-[rgba(255,255,255,0.08)] pl-10 pr-4 py-2 rounded-lg text-sm focus:border-[#E89A2A] transition-colors w-64"
               />
            </div>
            <Button className="btn-primary" onClick={() => navigate("/settings")}>Connect Account</Button>
@@ -92,7 +92,7 @@ export default function Dashboard() {
 
       {/* Stats Ribbon */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
-        <div className="bloomberg-panel p-5 border-l-4 border-l-orange-500">
+        <div className="bloomberg-panel p-5 border-l-4 border-l-[#D98B1F]">
           <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Account Balance</p>
           <div className="flex items-end gap-2">
             <span className="text-2xl font-bold text-white">${balance.toFixed(2)}</span>
@@ -142,14 +142,14 @@ export default function Dashboard() {
                     <button 
                       key={s}
                       onClick={() => setSelectedSymbol(s)}
-                      className={`px-3 py-1 text-[10px] font-bold rounded ${selectedSymbol === s ? "bg-orange-500 text-white" : "text-slate-500 hover:text-white"}`}
+                      className={`px-3 py-1 text-[10px] font-bold rounded ${selectedSymbol === s ? "bg-[#D98B1F] text-white" : "text-slate-500 hover:text-white"}`}
                     >
                       {s}
                     </button>
                   ))}
                 </div>
               </div>
-              <Activity className="w-4 h-4 text-orange-400 animate-pulse" />
+              <Activity className="w-4 h-4 text-[#E89A2A] animate-pulse" />
             </div>
             <div className="p-6 bg-black/40 h-[400px]">
               <TickChart symbol={selectedSymbol} maxDataPoints={50} />
@@ -161,8 +161,8 @@ export default function Dashboard() {
             <div className="p-4 border-b border-[rgba(255,255,255,0.08)] flex items-center justify-between">
               <h2 className="font-bold text-white uppercase text-xs tracking-widest">Recent Executions</h2>
               <div className="flex gap-2">
-                <button onClick={() => setViewMode("grid")} className={`p-1 ${viewMode === "grid" ? "text-orange-400" : "text-slate-600"}`}><LayoutGrid className="w-4 h-4" /></button>
-                <button onClick={() => setViewMode("list")} className={`p-1 ${viewMode === "list" ? "text-orange-400" : "text-slate-600"}`}><List className="w-4 h-4" /></button>
+                <button onClick={() => setViewMode("grid")} className={`p-1 ${viewMode === "grid" ? "text-[#E89A2A]" : "text-slate-600"}`}><LayoutGrid className="w-4 h-4" /></button>
+                <button onClick={() => setViewMode("list")} className={`p-1 ${viewMode === "list" ? "text-[#E89A2A]" : "text-slate-600"}`}><List className="w-4 h-4" /></button>
               </div>
             </div>
             <div className="overflow-x-auto">
@@ -259,10 +259,10 @@ export default function Dashboard() {
           </div>
 
           {/* AI Insights */}
-          <div className="bloomberg-panel p-6 bg-orange-500/5 border-orange-500/20">
+          <div className="bloomberg-panel p-6 bg-[#D98B1F]/5 border-[#D98B1F]/20">
             <div className="flex items-center gap-2 mb-4">
-              <Brain className="w-4 h-4 text-orange-400" />
-              <h3 className="text-xs font-bold text-orange-400 uppercase tracking-widest">369AI Insight</h3>
+              <Brain className="w-4 h-4 text-[#E89A2A]" />
+              <h3 className="text-xs font-bold text-[#E89A2A] uppercase tracking-widest">369AI Insight</h3>
             </div>
             <p className="text-xs text-slate-400 leading-relaxed italic">
               "Volatility 50 index is showing a strong bullish divergence on the 15m RSI. 

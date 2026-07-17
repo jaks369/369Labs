@@ -43,33 +43,34 @@
 }
 
 :root {
-  /* 369Labs — TradeMasterPro palette */
+  /* 369Labs — Premium Fintech palette */
   --black: #0D0D0D;
-  --charcoal: #141416;
+  --surface-1: #151515;
+  --surface-2: #1A1A1A;
   --white: #FFFFFF;
-  --gray: #9CA3AF;
-  --orange: #FB923C;
-  --orange-strong: #F97316;
+  --gray: #A8A8A8;
+  --muted-gray: #6F6F6F;
+  --amber: #D98B1F;
+  --amber-strong: #E89A2A;
   --green: #22C55E;
   --red: #EF4444;
-  --amber: #F59E0B;
 
   --background: var(--black);
   --foreground: var(--white);
 
-  --card: rgba(30, 30, 34, 0.6);
+  --card: var(--surface-1);
   --card-foreground: var(--white);
 
-  --popover: #1A1A1E;
+  --popover: var(--surface-2);
   --popover-foreground: var(--white);
 
-  --primary: var(--orange);
+  --primary: var(--amber);
   --primary-foreground: #0D0D0D;
 
-  --secondary: rgba(255, 255, 255, 0.06);
+  --secondary: rgba(255, 255, 255, 0.04);
   --secondary-foreground: var(--white);
 
-  --muted: rgba(255, 255, 255, 0.06);
+  --muted: rgba(255, 255, 255, 0.04);
   --muted-foreground: var(--gray);
 
   --accent: var(--green);
@@ -78,20 +79,20 @@
   --destructive: var(--red);
   --destructive-foreground: var(--white);
 
-  --border: rgba(255, 255, 255, 0.08);
-  --input: rgba(255, 255, 255, 0.1);
-  --ring: var(--orange);
+  --border: #2A2A2A;
+  --input: #2A2A2A;
+  --ring: var(--amber);
 
-  --radius: 1rem;
+  --radius: 0.9rem;
 
   --sidebar: #0D0D0D;
   --sidebar-foreground: var(--gray);
-  --sidebar-primary: var(--orange);
+  --sidebar-primary: var(--amber);
   --sidebar-primary-foreground: #0D0D0D;
-  --sidebar-accent: rgba(255, 255, 255, 0.06);
+  --sidebar-accent: rgba(255, 255, 255, 0.04);
   --sidebar-accent-foreground: var(--white);
-  --sidebar-border: rgba(255, 255, 255, 0.08);
-  --sidebar-ring: var(--orange);
+  --sidebar-border: #2A2A2A;
+  --sidebar-ring: var(--amber);
 }
 
 @layer base {
@@ -103,10 +104,10 @@
   body {
     @apply bg-background text-foreground font-['Inter',sans-serif] antialiased;
     background-image:
-      radial-gradient(circle at 50% 0%, rgba(251, 146, 60, 0.06) 0%, transparent 55%),
-      linear-gradient(rgba(255, 255, 255, 0.04) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(255, 255, 255, 0.04) 1px, transparent 1px);
-    background-size: 100% 100%, 22px 22px, 22px 22px;
+      radial-gradient(circle at 50% -10%, rgba(217, 139, 31, 0.05) 0%, transparent 45%),
+      linear-gradient(rgba(255, 255, 255, 0.025) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255, 255, 255, 0.025) 1px, transparent 1px);
+    background-size: 100% 100%, 28px 28px, 28px 28px;
   }
 
   h1, h2, h3 {
@@ -114,29 +115,29 @@
   }
 
   h1 {
-    @apply text-4xl md:text-5xl;
+    @apply text-4xl md:text-5xl font-extrabold;
   }
 }
 
 @layer components {
   .btn-primary {
-    @apply px-6 py-3 bg-orange-500 hover:bg-orange-400 text-[#0D0D0D] font-bold rounded-xl transition-all duration-200 shadow-lg shadow-orange-900/20 active:scale-[0.98];
+    @apply px-6 py-3 bg-[#D98B1F] hover:bg-[#E89A2A] text-[#0D0D0D] font-bold rounded-xl transition-all duration-200 active:scale-[0.98];
   }
 
   .btn-secondary {
-    @apply px-6 py-3 bg-transparent hover:bg-white/5 text-white font-bold rounded-xl transition-all duration-200 border border-white/10 active:scale-[0.98];
+    @apply px-6 py-3 bg-transparent hover:bg-white/5 text-white font-bold rounded-xl transition-all duration-200 border border-[#2A2A2A] active:scale-[0.98];
   }
 
   .btn-outline {
-    @apply px-6 py-3 bg-transparent border border-white/10 hover:border-orange-500 text-white font-bold rounded-xl transition-all duration-200 active:scale-[0.98];
+    @apply px-6 py-3 bg-transparent border border-[#2A2A2A] hover:border-[#D98B1F] text-white font-bold rounded-xl transition-all duration-200 active:scale-[0.98];
   }
 
   .glass-card {
-    @apply bg-[rgba(30,30,34,0.6)] border border-white/10 backdrop-blur-md rounded-2xl p-6 shadow-[0_8px_30px_rgba(0,0,0,0.4)];
+    @apply bg-[#151515] border border-[#2A2A2A] rounded-2xl p-6;
   }
 
   .bloomberg-panel {
-    @apply bg-[#0D0D0D] border border-white/10 rounded-2xl;
+    @apply bg-[#0D0D0D] border border-[#2A2A2A] rounded-2xl;
   }
   
   .status-dot {

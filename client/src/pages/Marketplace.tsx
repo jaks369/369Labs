@@ -89,17 +89,17 @@ export default function Marketplace() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search strategies by name or tag..."
-            className="w-full bg-[rgba(30,30,34,0.6)] border-[rgba(255,255,255,0.08)] pl-12 py-6 text-base rounded-xl focus:border-orange-400 focus:ring-1 focus:ring-orange-400"
+            className="w-full bg-[rgba(30,30,34,0.6)] border-[rgba(255,255,255,0.08)] pl-12 py-6 text-base rounded-xl focus:border-[#E89A2A] focus:ring-1 focus:ring-[#E89A2A]"
           />
         </div>
 
         {/* Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {filtered.map((s) => (
-            <div key={s.name} className="bg-[rgba(30,30,34,0.6)] border border-[rgba(255,255,255,0.08)] rounded-xl p-6 hover:border-orange-400/50 transition-all group">
+            <div key={s.name} className="bg-[rgba(30,30,34,0.6)] border border-[rgba(255,255,255,0.08)] rounded-xl p-6 hover:border-[#E89A2A]/50 transition-all group">
               <div className="flex items-start justify-between mb-4">
                 <div>
-                  <h3 className="text-lg font-bold text-white group-hover:text-orange-300 transition-colors">{s.name}</h3>
+                  <h3 className="text-lg font-bold text-white group-hover:text-[#E89A2A] transition-colors">{s.name}</h3>
                   <p className="text-xs text-slate-500 flex items-center gap-1 mt-1">
                     <Bot className="w-3 h-3" /> by {s.author}
                   </p>
@@ -123,7 +123,7 @@ export default function Marketplace() {
               <div className="grid grid-cols-3 gap-4 py-3 border-t border-[rgba(255,255,255,0.08)]">
                 <div>
                   <p className="text-[10px] font-bold text-slate-600 uppercase tracking-wider">Trades</p>
-                  <p className="text-sm font-bold text-white flex items-center gap-1"><BarChart3 className="w-3 h-3 text-orange-400" /> {(s.trades / 1000).toFixed(1)}k</p>
+                  <p className="text-sm font-bold text-white flex items-center gap-1"><BarChart3 className="w-3 h-3 text-[#E89A2A]" /> {(s.trades / 1000).toFixed(1)}k</p>
                 </div>
                 <div>
                   <p className="text-[10px] font-bold text-slate-600 uppercase tracking-wider">Win Rate</p>
@@ -139,7 +139,7 @@ export default function Marketplace() {
                 <div className="flex items-center gap-1 text-xs text-slate-500">
                   <Clock className="w-3 h-3" /> Min: {s.minAmount}
                 </div>
-                <Button className="bg-orange-500 hover:bg-orange-400 text-white text-xs px-4 py-2 rounded-lg flex items-center gap-1">
+                <Button className="bg-[#D98B1F] hover:bg-[#E89A2A] text-white text-xs px-4 py-2 rounded-lg flex items-center gap-1">
                   Deploy Strategy <ArrowUpRight className="w-3 h-3" />
                 </Button>
               </div>

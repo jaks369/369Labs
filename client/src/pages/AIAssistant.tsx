@@ -71,8 +71,8 @@ export default function AIAssistant() {
       {/* Header */}
       <div className="p-6 border-b border-[rgba(255,255,255,0.08)] flex items-center justify-between bg-[#0D0D0D]/50 backdrop-blur-xl">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-orange-500/10 rounded-xl flex items-center justify-center border border-orange-500/20">
-            <Brain className="w-6 h-6 text-orange-400" />
+          <div className="w-10 h-10 bg-[#D98B1F]/10 rounded-xl flex items-center justify-center border border-[#D98B1F]/20">
+            <Brain className="w-6 h-6 text-[#E89A2A]" />
           </div>
           <div>
             <h1 className="text-xl font-bold text-white">369AI Assistant</h1>
@@ -95,12 +95,12 @@ export default function AIAssistant() {
             <div key={i} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
               <div className={`flex gap-4 max-w-[80%] ${msg.role === "user" ? "flex-row-reverse" : ""}`}>
                 <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 border ${
-                  msg.role === "ai" ? "bg-orange-500/10 border-orange-500/20" : "bg-slate-800 border-slate-700"
+                  msg.role === "ai" ? "bg-[#D98B1F]/10 border-[#D98B1F]/20" : "bg-slate-800 border-slate-700"
                 }`}>
-                  {msg.role === "ai" ? <Bot className="w-4 h-4 text-orange-400" /> : <div className="text-[10px] font-bold text-white">{user?.name?.charAt(0)}</div>}
+                  {msg.role === "ai" ? <Bot className="w-4 h-4 text-[#E89A2A]" /> : <div className="text-[10px] font-bold text-white">{user?.name?.charAt(0)}</div>}
                 </div>
                 <div className={`p-4 rounded-2xl text-sm leading-relaxed ${
-                  msg.role === "ai" ? "bg-[rgba(30,30,34,0.6)] border border-[rgba(255,255,255,0.08)] text-slate-200" : "bg-orange-500 text-white"
+                  msg.role === "ai" ? "bg-[rgba(30,30,34,0.6)] border border-[rgba(255,255,255,0.08)] text-slate-200" : "bg-[#D98B1F] text-white"
                 }`}>
                   {msg.content}
                 </div>
@@ -110,8 +110,8 @@ export default function AIAssistant() {
           {isTyping && (
             <div className="flex justify-start">
               <div className="flex gap-4 max-w-[80%]">
-                <div className="w-8 h-8 rounded-lg bg-orange-500/10 border border-orange-500/20 flex items-center justify-center">
-                  <Loader2 className="w-4 h-4 text-orange-400 animate-spin" />
+                <div className="w-8 h-8 rounded-lg bg-[#D98B1F]/10 border border-[#D98B1F]/20 flex items-center justify-center">
+                  <Loader2 className="w-4 h-4 text-[#E89A2A] animate-spin" />
                 </div>
                 <div className="p-4 rounded-2xl bg-[rgba(30,30,34,0.6)] border border-[rgba(255,255,255,0.08)] flex gap-1">
                   <div className="w-1 h-1 bg-slate-500 rounded-full animate-bounce" />
@@ -134,7 +134,7 @@ export default function AIAssistant() {
                 <button 
                   key={s}
                   onClick={() => setInput(s)}
-                  className="whitespace-nowrap px-4 py-2 rounded-full bg-slate-900 border border-slate-800 text-xs text-slate-400 hover:border-orange-400 hover:text-white transition-all"
+                  className="whitespace-nowrap px-4 py-2 rounded-full bg-slate-900 border border-slate-800 text-xs text-slate-400 hover:border-[#E89A2A] hover:text-white transition-all"
                 >
                   {s}
                 </button>
@@ -153,12 +153,12 @@ export default function AIAssistant() {
                 }
               }}
               placeholder="Type your trading request..."
-              className="w-full bg-[rgba(30,30,34,0.6)] border-[rgba(255,255,255,0.08)] rounded-xl pl-4 pr-12 py-4 text-sm focus:border-orange-400 focus:ring-1 focus:ring-orange-400 transition-all resize-none h-14"
+              className="w-full bg-[rgba(30,30,34,0.6)] border-[rgba(255,255,255,0.08)] rounded-xl pl-4 pr-12 py-4 text-sm focus:border-[#E89A2A] focus:ring-1 focus:ring-[#E89A2A] transition-all resize-none h-14"
             />
             <button 
               onClick={handleSend}
               disabled={!input.trim() || isTyping}
-              className="absolute right-3 top-1/2 -translate-y-1/2 p-2 bg-orange-500 text-white rounded-lg hover:bg-orange-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              className="absolute right-3 top-1/2 -translate-y-1/2 p-2 bg-[#D98B1F] text-white rounded-lg hover:bg-[#E89A2A] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               <Send className="w-4 h-4" />
             </button>

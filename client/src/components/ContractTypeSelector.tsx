@@ -55,7 +55,7 @@ export default function ContractTypeSelector({ selection, onChange }: ContractTy
             onClick={() => setCat(c.id)}
             className={`flex flex-col items-center gap-1 py-2 rounded text-[10px] font-bold transition-colors ${
               selection.category === c.id
-                ? "bg-orange-500 text-white"
+                ? "bg-[#D98B1F] text-white"
                 : "text-slate-400 hover:text-white hover:bg-white/5"
             }`}
           >
@@ -109,7 +109,7 @@ export default function ContractTypeSelector({ selection, onChange }: ContractTy
                 onClick={() => onChange({ ...selection, overUnder: "under" })}
                 className={`py-2 rounded font-bold text-xs ${
                   selection.overUnder === "under"
-                    ? "bg-orange-600 text-white"
+                    ? "bg-[#C07B1A] text-white"
                     : "bg-slate-800 text-slate-300"
                 }`}
               >
@@ -125,7 +125,7 @@ export default function ContractTypeSelector({ selection, onChange }: ContractTy
                     onClick={() => onChange({ ...selection, barrier: i })}
                     className={`py-2 rounded text-xs font-bold ${
                       selection.barrier === i
-                        ? "bg-orange-500 text-white"
+                        ? "bg-[#D98B1F] text-white"
                         : "bg-slate-800 text-slate-300 hover:bg-slate-700"
                     }`}
                   >
@@ -147,7 +147,7 @@ export default function ContractTypeSelector({ selection, onChange }: ContractTy
             </button>
             <button
               onClick={() => onChange({ ...selection, category: "even_odd" })}
-              className="py-3 rounded font-bold text-sm bg-orange-500 text-white"
+              className="py-3 rounded font-bold text-sm bg-[#D98B1F] text-white"
             >
               Odd
             </button>
@@ -187,7 +187,7 @@ export default function ContractTypeSelector({ selection, onChange }: ContractTy
                     onClick={() => onChange({ ...selection, digit: i })}
                     className={`py-2 rounded text-xs font-bold ${
                       selection.digit === i
-                        ? "bg-orange-500 text-white"
+                        ? "bg-[#D98B1F] text-white"
                         : "bg-slate-800 text-slate-300 hover:bg-slate-700"
                     }`}
                   >
@@ -209,7 +209,7 @@ export default function ContractTypeSelector({ selection, onChange }: ContractTy
                   onClick={() => onChange({ ...selection, growthRate: rate })}
                   className={`py-2 rounded text-xs font-bold ${
                     selection.growthRate === rate
-                      ? "bg-orange-500 text-white"
+                      ? "bg-[#D98B1F] text-white"
                       : "bg-slate-800 text-slate-300 hover:bg-slate-700"
                   }`}
                 >

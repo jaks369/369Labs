@@ -230,9 +230,9 @@ export default function Bots() {
                         <div className={`w-10 h-10 rounded-lg flex items-center justify-center border ${
                           bot.status === "error"
                             ? "bg-red-600/10 border-red-600/20"
-                            : "bg-orange-500/10 border-orange-500/20"
+                            : "bg-[#D98B1F]/10 border-[#D98B1F]/20"
                         }`}>
-                          <Activity className={`w-5 h-5 ${bot.status === "error" ? "text-red-500" : "text-orange-400 animate-pulse"}`} />
+                          <Activity className={`w-5 h-5 ${bot.status === "error" ? "text-red-500" : "text-[#E89A2A] animate-pulse"}`} />
                         </div>
                         <div>
                           <h3 className="text-sm font-bold text-white">{bot.name}</h3>
@@ -294,13 +294,13 @@ export default function Bots() {
             <h3 className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-6">Ready to Deploy</h3>
             <div className="space-y-3">
               {strategiesQuery.data?.map((s: any) => (
-                <div key={s.id} className="p-4 rounded-xl bg-[rgba(30,30,34,0.6)] border border-[rgba(255,255,255,0.08)] hover:border-orange-400/50 transition-all group">
+                <div key={s.id} className="p-4 rounded-xl bg-[rgba(30,30,34,0.6)] border border-[rgba(255,255,255,0.08)] hover:border-[#E89A2A]/50 transition-all group">
                   <div className="flex justify-between items-start mb-3">
                     <h4 className="text-xs font-bold text-white">{s.name}</h4>
-                    <Zap className="w-3 h-3 text-orange-400" />
+                    <Zap className="w-3 h-3 text-[#E89A2A]" />
                   </div>
                   <Button
-                    className="w-full h-8 text-[10px] font-bold bg-orange-500/10 text-orange-400 hover:bg-orange-500 hover:text-white border border-orange-500/20"
+                    className="w-full h-8 text-[10px] font-bold bg-[#D98B1F]/10 text-[#E89A2A] hover:bg-[#D98B1F] hover:text-white border border-[#D98B1F]/20"
                     disabled={deployingId === s.id || runningBots.some((b) => b.strategyId === s.id)}
                     onClick={() => handleDeploy(s)}
                   >

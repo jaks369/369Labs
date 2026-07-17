@@ -74,7 +74,7 @@ export default function DashboardLayout({
       <div className="flex items-center justify-center min-h-screen bg-[#0D0D0D]">
         <div className="flex flex-col items-center gap-8 p-8 max-w-md w-full glass-card">
           <div className="flex flex-col items-center gap-6">
-            <div className="w-12 h-12 bg-orange-500 rounded-xl flex items-center justify-center shadow-lg shadow-orange-500/20">
+            <div className="w-12 h-12 bg-[#D98B1F] rounded-xl flex items-center justify-center shadow-lg shadow-[#D98B1F]/20">
               <Activity className="w-8 h-8 text-white" />
             </div>
             <h1 className="text-2xl font-bold tracking-tight text-center text-white">
@@ -177,7 +177,7 @@ function DashboardLayoutContent({
         >
           <SidebarHeader className="h-20 justify-center border-b border-[rgba(255,255,255,0.08)]">
             <div className="flex items-center gap-3 px-4 transition-all w-full">
-              <div className="w-8 h-8 bg-orange-500 rounded flex items-center justify-center shrink-0">
+              <div className="w-8 h-8 bg-[#D98B1F] rounded flex items-center justify-center shrink-0">
                 <Activity className="w-5 h-5 text-white" />
               </div>
               {!isCollapsed && (
@@ -200,12 +200,12 @@ function DashboardLayoutContent({
                       tooltip={item.label}
                       className={`h-11 px-3 rounded-md transition-all ${
                         isActive 
-                          ? "bg-orange-500/10 text-orange-400 font-semibold" 
+                          ? "bg-[#D98B1F]/10 text-[#E89A2A] font-semibold" 
                           : "text-slate-400 hover:text-white hover:bg-white/5"
                       }`}
                     >
                       <item.icon
-                        className={`h-5 w-5 ${isActive ? "text-orange-400" : ""}`}
+                        className={`h-5 w-5 ${isActive ? "text-[#E89A2A]" : ""}`}
                       />
                       <span>{item.label}</span>
                     </SidebarMenuButton>
@@ -220,7 +220,7 @@ function DashboardLayoutContent({
               <DropdownMenuTrigger asChild>
                 <button className="flex items-center gap-3 rounded-lg px-2 py-2 hover:bg-white/5 transition-colors w-full text-left group-data-[collapsible=icon]:justify-center focus:outline-none">
                   <Avatar className="h-8 w-8 border border-[rgba(255,255,255,0.08)] shrink-0">
-                    <AvatarFallback className="bg-orange-500 text-white text-xs font-bold">
+                    <AvatarFallback className="bg-[#D98B1F] text-white text-xs font-bold">
                       {user?.name?.charAt(0).toUpperCase()}
                     </AvatarFallback>
                   </Avatar>

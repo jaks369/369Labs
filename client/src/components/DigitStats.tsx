@@ -76,10 +76,10 @@ export default function DigitStats({ symbol, decimalPlaces = 2, maxTicks = 100 }
         <div className="bg-slate-900/50 p-3 rounded border border-slate-800">
           <div className="flex justify-between text-[10px] font-bold text-slate-500 mb-2 uppercase">
             <span>Odd</span>
-            <span className="text-orange-400">{stats.odd.toFixed(1)}%</span>
+            <span className="text-[#E89A2A]">{stats.odd.toFixed(1)}%</span>
           </div>
           <div className="h-1.5 w-full bg-slate-800 rounded-full overflow-hidden">
-            <div className="h-full bg-orange-500 transition-all duration-300" style={{ width: `${stats.odd}%` }} />
+            <div className="h-full bg-[#D98B1F] transition-all duration-300" style={{ width: `${stats.odd}%` }} />
           </div>
         </div>
         <div className="bg-slate-900/50 p-3 rounded border border-slate-800">
@@ -94,10 +94,10 @@ export default function DigitStats({ symbol, decimalPlaces = 2, maxTicks = 100 }
         <div className="bg-slate-900/50 p-3 rounded border border-slate-800">
           <div className="flex justify-between text-[10px] font-bold text-slate-500 mb-2 uppercase">
             <span>Under 5</span>
-            <span className="text-orange-500">{stats.under.toFixed(1)}%</span>
+            <span className="text-[#D98B1F]">{stats.under.toFixed(1)}%</span>
           </div>
           <div className="h-1.5 w-full bg-slate-800 rounded-full overflow-hidden">
-            <div className="h-full bg-orange-500 transition-all duration-300" style={{ width: `${stats.under}%` }} />
+            <div className="h-full bg-[#D98B1F] transition-all duration-300" style={{ width: `${stats.under}%` }} />
           </div>
         </div>
       </div>
@@ -109,8 +109,8 @@ export default function DigitStats({ symbol, decimalPlaces = 2, maxTicks = 100 }
           {stats.counts.map((percent, i) => (
             <div key={i} className="flex-1 flex flex-col items-center gap-2">
               <span className="text-[9px] font-bold text-slate-400">{percent.toFixed(1)}%</span>
-              <div className="w-full bg-orange-500/20 rounded-t-sm relative group" style={{ height: `${(percent / maxPercent) * 100}%` }}>
-                <div className="absolute inset-0 bg-orange-500 opacity-60 group-hover:opacity-100 transition-opacity rounded-t-sm" style={{ height: `${percent}%` }} />
+              <div className="w-full bg-[#D98B1F]/20 rounded-t-sm relative group" style={{ height: `${(percent / maxPercent) * 100}%` }}>
+                <div className="absolute inset-0 bg-[#D98B1F] opacity-60 group-hover:opacity-100 transition-opacity rounded-t-sm" style={{ height: `${percent}%` }} />
               </div>
               <span className="text-[11px] font-bold text-slate-300">{i}</span>
             </div>

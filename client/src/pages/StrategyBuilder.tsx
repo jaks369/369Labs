@@ -85,10 +85,10 @@ export default function StrategyBuilder() {
   };
 
   const blockTypes: { type: StrategyBlock["type"]; icon: any; color: string }[] = [
-    { type: "market", icon: Database, color: "text-orange-400" },
+    { type: "market", icon: Database, color: "text-[#E89A2A]" },
     { type: "condition", icon: Activity, color: "text-emerald-500" },
     { type: "indicator", icon: Layers, color: "text-purple-500" },
-    { type: "risk", icon: ShieldCheck, color: "text-orange-500" },
+    { type: "risk", icon: ShieldCheck, color: "text-[#D98B1F]" },
     { type: "trade", icon: Zap, color: "text-yellow-500" },
     { type: "exit", icon: ChevronRight, color: "text-red-500" },
   ];
@@ -122,11 +122,11 @@ export default function StrategyBuilder() {
                   <button
                     key={bt.type}
                     onClick={() => addBlock(bt.type)}
-                    className="flex items-center gap-3 p-3 rounded-lg bg-[rgba(30,30,34,0.6)] border border-[rgba(255,255,255,0.08)] hover:border-orange-400 transition-all text-left group"
+                    className="flex items-center gap-3 p-3 rounded-lg bg-[rgba(30,30,34,0.6)] border border-[rgba(255,255,255,0.08)] hover:border-[#E89A2A] transition-all text-left group"
                   >
                     <bt.icon className={`w-4 h-4 ${bt.color}`} />
                     <span className="text-xs font-semibold text-slate-300 group-hover:text-white capitalize">{bt.type}</span>
-                    <Plus className="w-3 h-3 ml-auto text-slate-600 group-hover:text-orange-400" />
+                    <Plus className="w-3 h-3 ml-auto text-slate-600 group-hover:text-[#E89A2A]" />
                   </button>
                 ))}
               </div>
@@ -136,7 +136,7 @@ export default function StrategyBuilder() {
               <h3 className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-6">Saved Strategies</h3>
               <div className="space-y-3">
                 {strategiesQuery.data?.slice(0, 5).map(s => (
-                  <div key={s.id} className="p-3 rounded-lg bg-black/20 border border-white/5 hover:border-orange-400/50 cursor-pointer transition-all">
+                  <div key={s.id} className="p-3 rounded-lg bg-black/20 border border-white/5 hover:border-[#E89A2A]/50 cursor-pointer transition-all">
                     <p className="text-xs font-bold text-white truncate">{s.name}</p>
                     <p className="text-[10px] text-slate-500 mt-1">Last edited 2h ago</p>
                   </div>
@@ -181,8 +181,8 @@ export default function StrategyBuilder() {
                   <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Workflow Canvas</span>
                 </div>
                 <div className="flex bg-[rgba(30,30,34,0.6)] rounded-lg p-1">
-                   <button onClick={() => setBuilderMode("blocks")} className={`px-3 py-1 text-[10px] font-bold rounded ${builderMode === "blocks" ? "bg-orange-500 text-white" : "text-slate-500"}`}>BLOCKS</button>
-                   <button onClick={() => setBuilderMode("visual")} className={`px-3 py-1 text-[10px] font-bold rounded ${builderMode === "visual" ? "bg-orange-500 text-white" : "text-slate-500"}`}>IF/THEN</button>
+                   <button onClick={() => setBuilderMode("blocks")} className={`px-3 py-1 text-[10px] font-bold rounded ${builderMode === "blocks" ? "bg-[#D98B1F] text-white" : "text-slate-500"}`}>BLOCKS</button>
+                   <button onClick={() => setBuilderMode("visual")} className={`px-3 py-1 text-[10px] font-bold rounded ${builderMode === "visual" ? "bg-[#D98B1F] text-white" : "text-slate-500"}`}>IF/THEN</button>
                 </div>
               </div>
 
@@ -207,7 +207,7 @@ export default function StrategyBuilder() {
                               {index < blocks.length - 1 && (
                                 <div className="absolute left-6 top-12 w-0.5 h-8 bg-[rgba(255,255,255,0.08)]" />
                               )}
-                              <div className="flex gap-4 items-start bg-[rgba(30,30,34,0.6)] border border-[rgba(255,255,255,0.08)] p-4 rounded-xl group-hover:border-orange-400/50 transition-all">
+                              <div className="flex gap-4 items-start bg-[rgba(30,30,34,0.6)] border border-[rgba(255,255,255,0.08)] p-4 rounded-xl group-hover:border-[#E89A2A]/50 transition-all">
                                 <div className={`w-12 h-12 rounded-lg flex items-center justify-center shrink-0 bg-slate-900 border border-white/5`}>
                                   <typeInfo.icon className={`w-6 h-6 ${typeInfo.color}`} />
                                 </div>
