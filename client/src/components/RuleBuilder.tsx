@@ -12,7 +12,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useState } from "react";
-import { ConditionNode, legacyConditionToNode } from "@/services/conditionEval";
+import { legacyConditionToNode } from "@/services/conditionEval";
 import ConditionTreeEditor from "@/components/ConditionTreeEditor";
 
 // ---- Natural-language -> StrategyRule parser (client-side, no API call) ----
