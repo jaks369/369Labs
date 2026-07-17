@@ -12,7 +12,7 @@ export default function DigitStats({ symbol, decimalPlaces = derivWS.decimalPlac
   const [digits, setDigits] = useState<number[]>([]);
   // The most recent last digit - drives the live pointer.
   const [currentDigit, setCurrentDigit] = useState<number | null>(null);
-  const [selectedDigit, setSelectedDigit] = useState<number | null>(null);
+  const [selectedDigit, setSelectedDigit] = useState<number>(5);
   const selectedDigitRef = useRef<number | null>(null);
   const [stats, setStats] = useState({
     even: 0,
@@ -29,6 +29,19 @@ export default function DigitStats({ symbol, decimalPlaces = derivWS.decimalPlac
     const hist = ticks.map((t) => t.lastDigit).filter((d) => d >= 0 && d <= 9);
     if (hist.length) setDigits(hist);
   }, [historyQuery.data, symbol, maxTicks]);
+
+  // Recompute Over/Under immediately when the selected digit changes, so the
+  // bars/labels update without waiting for the next tick.
+  useEffect(() => {
+    setDigits((prev) => {
+      const next = prev.slice(-maxTicks);
+      let over = 0, under = 0;
+      next.forEach((d) => { if (d > selectedDigit) over++; else if (d < selectedDigit) under++; });
+      const len = next.length || 1;
+      setStats((s) => ({ ...s, over: (over / len) * 100, under: (under / len) * 100 }));
+      return prev;
+    });
+  }, [selectedDigit, maxTicks]);
 
   useEffect(() => {
     const listener: TickStreamListener = {
@@ -126,7 +139,7 @@ export default function DigitStats({ symbol, decimalPlaces = derivWS.decimalPlac
           {stats.counts.map((percent, i) => (
             <div key={i} className="flex-1 flex flex-col items-center gap-2">
               <span className={`text-[7px] font-bold ${hasData && i === maxIdx ? "text-emerald-400" : hasData && i === minIdx ? "text-red-400" : "text-slate-400"}`}>{percent.toFixed(1)}%</span>
-              <div onClick={() => { const next = selectedDigit === i ? null : i; setSelectedDigit(next); selectedDigitRef.current = next; }} className="w-full rounded-t-sm relative group cursor-pointer" style={{ height: `${(percent / maxPercent) * 100}%`, background: hasData && i === maxIdx ? "rgba(16,185,129,0.25)" : hasData && i === minIdx ? "rgba(239,68,68,0.25)" : "rgba(37,99,235,0.2)" }}>
+              <div onClick={() => { setSelectedDigit(i); selectedDigitRef.current = i; }} className="w-full rounded-t-sm relative group cursor-pointer" style={{ height: `${(percent / maxPercent) * 100}%`, background: hasData && i === maxIdx ? "rgba(16,185,129,0.25)" : hasData && i === minIdx ? "rgba(239,68,68,0.25)" : "rgba(37,99,235,0.2)" }}>
                 <div className={`absolute inset-0 rounded-t-sm transition-opacity ${i === currentDigit ? "opacity-100" : "opacity-60 group-hover:opacity-100"}`} style={{ height: `${percent}%`, background: i === currentDigit ? "#f59e0b" : hasData && i === maxIdx ? "#10b981" : hasData && i === minIdx ? "#ef4444" : "#3b82f6" }} />
                 {i === currentDigit && (
                   <div className="absolute -top-3 left-1/2 -translate-x-1/2 text-amber-400 text-[10px] leading-none">▼</div>
