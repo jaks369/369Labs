@@ -1,6 +1,5 @@
 /**
  * Visual IF/THEN Rule Builder
-import { ConditionNode, LegacyConditionToNode } from "@/services/conditionEval";
  * Structured no-code strategy definition with condition/action blocks
  * and trade parameters (Stake, Stop Loss, Take Profit).
  */
@@ -13,7 +12,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useState } from "react";
-
+import { ConditionNode, LegacyConditionToNode } from "@/services/conditionEval";
+import ConditionTreeEditor from "@/components/ConditionTreeEditor";
 
 // ---- Natural-language -> StrategyRule parser (client-side, no API call) ----
 const NL_SYMBOLS = [
