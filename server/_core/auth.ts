@@ -92,7 +92,7 @@ export async function authenticateRequest(req: Request): Promise<User> {
     throw ForbiddenError("User not found");
   }
 
-  const sanitizeUser = (u: any) => { if (!u) return u; const { passwordHash, ...rest } = u; return rest; };
+  export const sanitizeUser = (u: any) => { if (!u) return u; const { passwordHash, ...rest } = u; return rest; };
 
   return sanitizeUser(user);
 }
