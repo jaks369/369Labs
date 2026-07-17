@@ -1,6 +1,6 @@
 import { useAuth } from "@/_core/hooks/useAuth";
 import { trpc } from "@/lib/trpc";
-import { BarChart4, TrendingUp, DollarSign, Activity, ArrowUpRight, ArrowDownRight, Loader2 } from "lucide-react";
+import { BarChart4, TrendingUp, DollarSign, Activity, ArrowUpRight, ArrowDownRight, Loader2, ShieldAlert } from "lucide-react";
 import { useLocation } from "wouter";
 
 export default function Analytics() {
@@ -17,6 +17,48 @@ export default function Analytics() {
   const winRate = totalTrades > 0 ? ((wins / totalTrades) * 100).toFixed(1) : "0.0";
   const totalPnl = trades.reduce((sum, t) => sum + parseFloat(t.profitLoss?.toString() || "0"), 0);
   const avgTrade = totalTrades > 0 ? (totalPnl / totalTrades) : 0;
+
+  // ---- Risk metrics ----
+  // Build an equity curve from trades in time order, then derive drawdowns.
+  const ordered = [...trades].sort((a, b) => new Date(a.entryTime).getTime() - new Date(b.entryTime).getTime());
+  let peak = 0;
+  let cur = 0;
+  let maxDD = 0;
+  const dailyPnl: Record<string, number> = {};
+  const weeklyPnl: Record<string, number> = {};
+  let largestLoss = 0;
+  let winsSum = 0;
+  let lossesSum = 0;
+  for (const t of ordered) {
+    const pnl = parseFloat(t.profitLoss?.toString() || "0");
+    cur += pnl;
+    if (cur > peak) peak = cur;
+    const dd = peak - cur;
+    if (dd > maxDD) maxDD = dd;
+    if (pnl < 0) { largestLoss = Math.min(largestLoss, pnl); lossesSum += -pnl; }
+    else winsSum += pnl;
+    const d = new Date(t.entryTime);
+    const day = d.toISOString().slice(0, 10);
+    const wk = (() => { const x = new Date(d); const onejan = new Date(x.getFullYear(), 0, 1); const wkNum = Math.ceil(((+x - +onejan) / 86400000 + onejan.getDay() + 1) / 7); return `${x.getFullYear()}-W${wkNum}`; })();
+    dailyPnl[day] = (dailyPnl[day] || 0) + pnl;
+    weeklyPnl[wk] = (weeklyPnl[wk] || 0) + pnl;
+  }
+  const dailyDD = Math.min(0, ...Object.values(dailyPnl));
+  const weeklyDD = Math.min(0, ...Object.values(weeklyPnl));
+  const exposure = totalTrades > 0 ? (trades.reduce((s, t) => s + parseFloat(t.stake?.toString() || "0"), 0) / totalTrades) : 0;
+  const rr = lossesSum > 0 ? (winsSum / lossesSum) : 0;
+  const currentDD = peak - cur;
+
+  const riskStats = [
+    { label: "Current Drawdown", value: `$${currentDD.toFixed(2)}`, sub: "peak-to-now", color: currentDD > 0 ? "text-amber-400" : "text-slate-400" },
+    { label: "Max Drawdown", value: `$${maxDD.toFixed(2)}`, sub: "all-time", color: maxDD > 0 ? "text-red-400" : "text-slate-400" },
+    { label: "Daily Drawdown", value: `$${dailyDD.toFixed(2)}`, sub: "worst day", color: dailyDD < 0 ? "text-red-400" : "text-slate-400" },
+    { label: "Weekly Drawdown", value: `$${weeklyDD.toFixed(2)}`, sub: "worst week", color: weeklyDD < 0 ? "text-red-400" : "text-slate-400" },
+    { label: "Largest Loss", value: `$${largestLoss.toFixed(2)}`, sub: "single trade", color: largestLoss < 0 ? "text-red-400" : "text-slate-400" },
+    { label: "Risk : Reward", value: rr.toFixed(2), sub: "gross win/loss", color: rr >= 1 ? "text-emerald-400" : "text-amber-400" },
+    { label: "Avg Exposure", value: `$${exposure.toFixed(2)}`, sub: "per trade stake", color: "text-slate-300" },
+    { label: "Open Risk", value: "—", sub: "live bots", color: "text-slate-500" },
+  ];
 
   const stats = [
     { label: "Total P&L", value: `$${totalPnl.toFixed(2)}`, icon: DollarSign, color: totalPnl >= 0 ? "text-emerald-500" : "text-red-500" },
@@ -47,6 +89,22 @@ export default function Analytics() {
                   <p className={`text-2xl font-bold ${s.color}`}>{s.value}</p>
                 </div>
               ))}
+            </div>
+
+            <div className="bg-[#161B22] border border-[#30363D] rounded-xl p-6">
+              <h2 className="text-lg font-bold text-white mb-1 flex items-center gap-2">
+                <ShieldAlert className="w-5 h-5 text-amber-400" /> Risk Dashboard
+              </h2>
+              <p className="text-xs text-slate-500 mb-4">Drawdown, exposure and risk:reward across all closed trades.</p>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                {riskStats.map(s => (
+                  <div key={s.label} className="bg-black/20 border border-[#30363D] rounded-lg p-4">
+                    <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">{s.label}</p>
+                    <p className={`text-xl font-bold mt-1 ${s.color}`}>{s.value}</p>
+                    <p className="text-[10px] text-slate-600 mt-0.5">{s.sub}</p>
+                  </div>
+                ))}
+              </div>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -100,3 +158,4 @@ export default function Analytics() {
     </div>
   );
 }
+
