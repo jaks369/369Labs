@@ -161,6 +161,10 @@ export default function Dashboard() {
     if (tokenQuery.data?.token) {
       derivWS.setApiToken(tokenQuery.data.token);
     }
+    const authTimer = setInterval(() => {
+      if (tokenQuery.data?.token) derivWS.ensureAuthorized();
+    }, 5000);
+    return () => clearInterval(authTimer);
   }, [tokenQuery.data]);
 
   useEffect(() => {
