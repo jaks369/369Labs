@@ -42,8 +42,10 @@ export function StrategyBuilderContent({ embedded = false, onClose, onSaved }: S
   const [description, setDescription] = useState("");
   const [blocks, setBlocks] = useState<StrategyBlock[]>([]);
   const [rule, setRule] = useState<StrategyRule>(DEFAULT_RULE);
-  const [builderMode, setBuilderMode] = useState<"visual" | "blocks">("blocks");
+  const [builderMode, setBuilderMode] = useState<"visual" | "blocks" | "ensemble">("blocks");
   const [publishToMarketplace, setPublishToMarketplace] = useState(false);
+  const [ensembleVote, setEnsembleVote] = useState<"all" | "majority" | "any">("majority");
+  const [ensembleIds, setEnsembleIds] = useState<number[]>([]);
 
   const publishMutation = trpc.strategies.publish.useMutation();
   const saveStrategyMutation = trpc.strategies.save.useMutation();
@@ -84,13 +86,35 @@ export function StrategyBuilderContent({ embedded = false, onClose, onSaved }: S
     setBlocks(blocks.map(b => b.id === id ? { ...b, value } : b));
   };
 
+  const buildEnsembleRule = (): any => {
+    const all = (strategiesQuery.data || []) as any[];
+    const rules = ensembleIds
+      .map((id) => all.find((s) => s.id === id)?.config?.rule)
+      .filter(Boolean) as StrategyRule[];
+    const firstSym = rules[0]?.symbol || "R_100";
+    return {
+      symbol: firstSym,
+      condition: DEFAULT_RULE.condition,
+      action: rules[0]?.action || DEFAULT_RULE.action,
+      params: rules[0]?.params || DEFAULT_RULE.params,
+      ensemble: { vote: ensembleVote, rules },
+    };
+  };
+
+  const buildConfig = () => {
+    if (builderMode === "visual") return { rule: rule as any, summary: summarizeRule(rule) };
+    if (builderMode === "ensemble") return { rule: buildEnsembleRule(), summary: `Ensemble (${ensembleVote}) of ${ensembleIds.length} strategies` };
+    return { blocks };
+  };
+
   const handleSaveAndDeploy = async () => {
     if (!strategyName) { alert("Please enter a strategy name"); return; }
+    if (builderMode === "ensemble" && ensembleIds.length < 2) { alert("Select at least 2 strategies for an ensemble."); return; }
     try {
       await saveStrategyMutation.mutateAsync({
         name: strategyName,
         description,
-        config: builderMode === "visual" ? { rule: rule as any, summary: summarizeRule(rule) } : { blocks },
+        config: buildConfig(),
         published: publishToMarketplace,
       });
       if (embedded) { onSaved?.(); } else { navigate("/bots"); }
@@ -102,12 +126,13 @@ export function StrategyBuilderContent({ embedded = false, onClose, onSaved }: S
       alert("Please enter a strategy name");
       return;
     }
+    if (builderMode === "ensemble" && ensembleIds.length < 2) { alert("Select at least 2 strategies for an ensemble."); return; }
 
     try {
       await saveStrategyMutation.mutateAsync({
         name: strategyName,
         description,
-        config: builderMode === "visual" ? { rule: rule as any, summary: summarizeRule(rule) } : { blocks },
+        config: buildConfig(),
         published: publishToMarketplace,
       });
       alert("Strategy saved successfully!");
@@ -229,6 +254,7 @@ export function StrategyBuilderContent({ embedded = false, onClose, onSaved }: S
                 <div className="flex bg-[#161B22] rounded-lg p-1">
                    <button onClick={() => setBuilderMode("blocks")} className={`px-3 py-1 text-[10px] font-bold rounded ${builderMode === "blocks" ? "bg-blue-600 text-white" : "text-slate-500"}`}>BLOCKS</button>
                    <button onClick={() => setBuilderMode("visual")} className={`px-3 py-1 text-[10px] font-bold rounded ${builderMode === "visual" ? "bg-blue-600 text-white" : "text-slate-500"}`}>IF/THEN</button>
+                   <button onClick={() => setBuilderMode("ensemble")} className={`px-3 py-1 text-[10px] font-bold rounded ${builderMode === "ensemble" ? "bg-purple-600 text-white" : "text-slate-500"}`}>ENSEMBLE</button>
                 </div>
               </div>
 
@@ -236,6 +262,32 @@ export function StrategyBuilderContent({ embedded = false, onClose, onSaved }: S
                 {builderMode === "visual" ? (
                   <div className="max-w-2xl mx-auto py-10">
                     <RuleBuilder rule={rule} onChange={setRule} />
+                  </div>
+                ) : builderMode === "ensemble" ? (
+                  <div className="max-w-2xl mx-auto space-y-5">
+                    <p className="text-xs text-slate-500">Combine 2–3 saved strategies into one bot. A trade fires only when the chosen number of sub-strategies agree (vote).</p>
+                    <div>
+                      <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Vote rule</label>
+                      <div className="flex gap-2 mt-2">
+                        {(["all", "majority", "any"] as const).map((v) => (
+                          <button key={v} onClick={() => setEnsembleVote(v)} className={`px-3 py-1 text-[10px] font-bold rounded ${ensembleVote === v ? "bg-purple-600 text-white" : "bg-[#161B22] text-slate-500 border border-[#30363D]"}`}>{v === "all" ? "ALL agree" : v === "majority" ? "MAJORITY" : "ANY"}</button>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Select strategies</label>
+                      {((strategiesQuery.data || []) as any[]).filter((s) => s.config?.rule).map((s) => {
+                        const checked = ensembleIds.includes(s.id);
+                        return (
+                          <label key={s.id} className="flex items-center gap-3 bg-[#161B22] border border-[#30363D] rounded-lg p-3 cursor-pointer hover:border-purple-500/50">
+                            <input type="checkbox" checked={checked} onChange={(e) => setEnsembleIds((prev) => e.target.checked ? [...prev, s.id] : prev.filter((id) => id !== s.id))} className="rounded" />
+                            <span className="text-sm text-white">{s.name}</span>
+                            <span className="text-[10px] text-slate-500 ml-auto">{(s.config.rule.symbol) || "R_100"}</span>
+                          </label>
+                        );
+                      })}
+                      {(strategiesQuery.data || []).length === 0 && <p className="text-xs text-slate-600">No saved strategies yet. Build a few in IF/THEN mode first.</p>}
+                    </div>
                   </div>
                 ) : (
                   <div className="max-w-2xl mx-auto space-y-6">
@@ -290,3 +342,4 @@ export default function StrategyBuilder() {
   const [, navigate] = useLocation();
   return <StrategyBuilderContent embedded={false} onClose={() => navigate("/bots")} onSaved={() => navigate("/bots")} />;
 }
+
