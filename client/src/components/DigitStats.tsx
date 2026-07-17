@@ -129,7 +129,7 @@ export default function DigitStats({ symbol, decimalPlaces = derivWS.decimalPlac
               <div onClick={() => { const next = selectedDigit === i ? null : i; setSelectedDigit(next); selectedDigitRef.current = next; }} className="w-full rounded-t-sm relative group cursor-pointer" style={{ height: `${(percent / maxPercent) * 100}%`, background: hasData && i === maxIdx ? "rgba(16,185,129,0.25)" : hasData && i === minIdx ? "rgba(239,68,68,0.25)" : "rgba(37,99,235,0.2)" }}>
                 <div className={`absolute inset-0 rounded-t-sm transition-opacity ${i === currentDigit ? "opacity-100" : "opacity-60 group-hover:opacity-100"}`} style={{ height: `${percent}%`, background: i === currentDigit ? "#f59e0b" : hasData && i === maxIdx ? "#10b981" : hasData && i === minIdx ? "#ef4444" : "#3b82f6" }} />
                 {i === currentDigit && (
-                  <div className="absolute -top-3 left-1/2 -translate-x-1/2 text-amber-400 text-[10px] leading-none">▼</div>
+                  <div className="absolute -top-3 left-1/2 -translate-x-1/2 text-amber-400 text-[10px] leading-none">▼▼</div>
                 )}
               </div>
               <span className={`text-[9px] font-bold ${i === currentDigit ? "text-amber-400" : "text-slate-300"}`}>{i}</span>
