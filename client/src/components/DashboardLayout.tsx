@@ -39,6 +39,10 @@ import {
   BookOpen,
   RotateCcw,
   Workflow,
+  Mic,
+  Square,
+  Code2,
+  Plug,
 } from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
@@ -46,6 +50,7 @@ import { DashboardLayoutSkeleton } from './DashboardLayoutSkeleton';
 import { Button } from "./ui/button";
 import AITimeline from "./AITimeline";
 import { openCommandPalette } from "./CommandPalette";
+import { useVoiceCommands } from "./useVoiceCommands";
 
 type NavItem = { icon: React.ComponentType<{ className?: string }>; label: string; path: string };
 type NavGroup = { title: string; items: NavItem[] };
@@ -66,6 +71,8 @@ const navGroups: NavGroup[] = [
           { icon: RotateCcw, label: "Replay", path: "/replay" },
           { icon: CandlestickChart, label: "AI Signals", path: "/marketplace" },
           { icon: Workflow, label: "Workflows", path: "/workflow" },
+          { icon: Code2, label: "AI Coding", path: "/coding" },
+          { icon: Plug, label: "Plugins", path: "/plugins" },
         ],
       },
     {
@@ -176,6 +183,7 @@ function DashboardLayoutContent({
   const activeMenuItem = menuItems.find(item => item.path === location);
   const isMobile = useIsMobile();
   const [riskDismissed, setRiskDismissed] = useState(false);
+  const voice = useVoiceCommands(true);
 
 
   useEffect(() => {
@@ -280,6 +288,21 @@ function DashboardLayoutContent({
               <span className="flex-1 text-left">Command Center</span>
               <kbd className="text-[9px] border border-[#30363D] rounded px-1">⌘K</kbd>
             </button>
+
+            <button
+              onClick={() => (voice.listening ? voice.stop() : voice.start())}
+              className={`w-full flex items-center gap-2 rounded-md border px-3 py-2 text-xs transition-colors ${
+                voice.listening
+                  ? "border-red-500/50 bg-red-500/10 text-red-400 animate-pulse"
+                  : "border-[#30363D] bg-[#0D1117] text-slate-400 hover:text-white hover:border-blue-500/50"
+              }`}
+            >
+              {voice.listening ? <Square className="w-3.5 h-3.5" /> : <Mic className="w-3.5 h-3.5" />}
+              <span className="flex-1 text-left">{voice.listening ? "Listening…" : "Voice Command"}</span>
+            </button>
+            {voice.listening && voice.transcript && (
+              <p className="text-[10px] text-blue-300 px-1 truncate">“{voice.transcript}”</p>
+            )}
 
             {!isCollapsed && (
               <div className="rounded-md border border-[#30363D] bg-[#0D1117] p-2.5">
