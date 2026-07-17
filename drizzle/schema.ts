@@ -159,3 +159,16 @@ export const signals = mysqlTable("signals", {
 
 export type Signal = typeof signals.$inferSelect;
 export type InsertSignal = typeof signals.$inferInsert;
+
+// Audit log: who changed what and when (token add, strategy edit, bot start/stop, SL change).
+export const auditLogs = mysqlTable("auditLogs", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  action: varchar("action", { length: 48 }).notNull(), // e.g. "token.add", "strategy.create", "bot.start", "bot.stop", "strategy.edit", "sl.change"
+  target: varchar("target", { length: 64 }), // strategy id, bot id, etc.
+  detail: json("detail"), // before/after snapshot where relevant
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type AuditLog = typeof auditLogs.$inferSelect;
+export type InsertAuditLog = typeof auditLogs.$inferInsert;
