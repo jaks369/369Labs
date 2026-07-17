@@ -26,7 +26,6 @@ export default function TickChart({ symbol, maxDataPoints = 100, decimalPlaces =
     }));
     if (hist.length) setData(hist);
   }, [historyQuery.data, symbol, maxDataPoints]);
-  const [isConnected, setIsConnected] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [currentPrice, setCurrentPrice] = useState<number | null>(null);
   const [priceColor, setPriceColor] = useState<"up" | "down">("up");
@@ -72,9 +71,7 @@ export default function TickChart({ symbol, maxDataPoints = 100, decimalPlaces =
         setError(null);
       },
       onError: (err: Error) => setError(err.message),
-      onConnect: () => setIsConnected(true),
-      onDisconnect: () => setIsConnected(false),
-    };
+        };
 
     const id = derivWS.subscribe(symbol);
     derivWS.addListener(listener);
@@ -103,10 +100,6 @@ export default function TickChart({ symbol, maxDataPoints = 100, decimalPlaces =
   return (
     <div className="w-full">
       <div className="flex items-center justify-between mb-3 px-3 py-2 bg-[#0D1117] rounded border border-[#30363D]">
-        <div className="flex items-center gap-2">
-          <div className={`w-2 h-2 rounded-full ${isConnected ? "bg-green-500" : "bg-red-500"}`} />
-          <span className="text-[10px] text-slate-400">{isConnected ? "CONNECTED" : "DISCONNECTED"}</span>
-        </div>
         <span className="text-xs font-bold text-white">{symbol}</span>
         <span className={`text-lg font-bold ${priceColor === "up" ? "text-green-500" : "text-red-500"}`}>
           {currentPrice !== null ? currentPrice.toFixed(decimalPlaces) : "--"}
