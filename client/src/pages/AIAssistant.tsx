@@ -193,10 +193,13 @@ export default function AIAssistant() {
               <Send className="w-4 h-4" />
             </button>
           </div>
-          <div className="flex items-center justify-center gap-6 text-[10px] font-bold text-slate-600 uppercase tracking-widest">
-            <div className="flex items-center gap-1.5"><Code className="w-3 h-3" /> Strategy Generation</div>
-            <div className="flex items-center gap-1.5"><LineChart className="w-3 h-3" /> Market Analysis</div>
-            <div className="flex items-center gap-1.5"><ShieldCheck className="w-3 h-3" /> Risk Management</div>
+          <div className="flex items-center justify-center gap-3 text-[10px] font-bold uppercase tracking-widest">
+            <button onClick={() => handleSend("Give me a live market analysis: pick an active volatility symbol, read its recent ticks, and tell me the current trend, hottest/odd last digits, and any repeatable pattern forming right now.")} className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-900 border border-slate-800 text-slate-400 hover:border-amber-400 hover:text-amber-300 transition-all">
+              <LineChart className="w-3 h-3" /> Market Analysis
+            </button>
+            <button onClick={() => handleSend("What is my risk on the current bots and open positions? Recommend stake sizing, stop-loss and take-profit rules based on the volatility symbols I am trading.")} className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-900 border border-slate-800 text-slate-400 hover:border-amber-400 hover:text-amber-300 transition-all">
+              <ShieldCheck className="w-3 h-3" /> Risk Management
+            </button>
           </div>
         </div>
       </div>
