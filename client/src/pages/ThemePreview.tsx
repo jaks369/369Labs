@@ -1,65 +1,68 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
-import { TrendingUp, TrendingDown, Bot, Brain, ShieldCheck, Zap } from "lucide-react";
+import { TrendingUp, Bot, Brain, ShieldCheck, Zap } from "lucide-react";
 
-// Candidate palettes for the 369Labs redesign. Each is rendered as real UI
-// samples below so the choice is visual, not hex.
+// Candidate palettes provided by the owner for the 369Labs redesign.
 const PALETTES: Record<string, any> = {
-  electric: {
-    name: "Electric Blue",
-    tag: "Fintech / trustworthy",
-    bg: "#0B0E14",
-    surface: "#151A23",
-    border: "#232A36",
-    text: "#E6EAF2",
-    muted: "#8B95A7",
-    accent: "#5B8DEF",
-    accentSoft: "rgba(91,141,239,0.12)",
-    success: "#34D399",
-    danger: "#F87171",
-    warning: "#FBBF24",
+  cyber: {
+    name: "Cyber Professional",
+    tag: "Modern, AI-powered, premium",
+    bg: "#0B0F14",
+    surface: "#151B23",
+    secondary: "#1C2430",
+    border: "#2A3442",
+    text: "#F8FAFC",
+    muted: "#94A3B8",
+    accent: "#22D3EE",
+    accent2: "#8B5CF6",
+    profit: "#22C55E",
+    loss: "#EF4444",
+    warning: "#F59E0B",
   },
-  mint: {
-    name: "Mint",
-    tag: "Profit / fresh",
-    bg: "#0B0E14",
-    surface: "#151A23",
-    border: "#232A36",
-    text: "#E6EAF2",
-    muted: "#8B95A7",
-    accent: "#6EE7B7",
-    accentSoft: "rgba(110,231,183,0.12)",
-    success: "#34D399",
-    danger: "#F87171",
-    warning: "#FBBF24",
+  emerald: {
+    name: "Emerald Trading",
+    tag: "Serious trading desk",
+    bg: "#0A0F0D",
+    surface: "#141B18",
+    secondary: "#1A221E",
+    border: "#22302A",
+    text: "#F8FAFC",
+    muted: "#8AA89A",
+    accent: "#00C853",
+    accent2: "#00E5FF",
+    profit: "#22C55E",
+    loss: "#FF5252",
+    warning: "#F59E0B",
   },
-  violet: {
-    name: "Violet",
-    tag: "AI / modern",
-    bg: "#0B0E14",
-    surface: "#151A23",
-    border: "#232A36",
-    text: "#E6EAF2",
-    muted: "#8B95A7",
-    accent: "#A78BFA",
-    accentSoft: "rgba(167,139,250,0.12)",
-    success: "#34D399",
-    danger: "#F87171",
-    warning: "#FBBF24",
-  },
-  amber: {
-    name: "Refined Amber",
-    tag: "Keep gold, cleaned up",
+  blue: {
+    name: "Blue Intelligence",
+    tag: "Enterprise AI platform",
     bg: "#0D1117",
     surface: "#161B22",
     border: "#30363D",
+    secondary: "#1C2430",
     text: "#F8FAFC",
-    muted: "#8B949E",
-    accent: "#F0B90B",
-    accentSoft: "rgba(240,185,11,0.12)",
-    success: "#10B981",
-    danger: "#EF4444",
-    warning: "#FBBF24",
+    muted: "#94A3B8",
+    accent: "#3B82F6",
+    accent2: "#06B6D4",
+    profit: "#22C55E",
+    loss: "#EF4444",
+    warning: "#F59E0B",
+  },
+  purple: {
+    name: "Purple AI",
+    tag: "AI-first identity",
+    bg: "#0A0912",
+    surface: "#15132A",
+    border: "#2A2650",
+    secondary: "#1E1B3A",
+    text: "#F8FAFC",
+    muted: "#A39DCB",
+    accent: "#8B5CF6",
+    accent2: "#22D3EE",
+    profit: "#10B981",
+    loss: "#F43F5E",
+    warning: "#F59E0B",
   },
 };
 
@@ -74,19 +77,19 @@ function Sample({ p }: { p: any }) {
           <Bot className="w-4 h-4" />
           <span className="text-sm font-bold" style={{ color: p.text }}>Bots</span>
         </div>
-        <span className="text-[10px] font-bold px-2 py-0.5 rounded" style={{ background: p.accentSoft, color: p.accent }}>
+        <span className="text-[10px] font-bold px-2 py-0.5 rounded" style={{ background: "rgba(255,255,255,0.06)", color: p.accent }}>
           LIVE
         </span>
       </div>
 
       <div className="grid grid-cols-2 gap-3">
-        <div className="rounded-lg p-3" style={{ background: p.bg }}>
+        <div className="rounded-lg p-3" style={{ background: p.secondary }}>
           <p className="text-[10px] uppercase tracking-wider" style={{ color: p.muted }}>Win rate</p>
-          <p className="text-xl font-bold" style={{ color: p.success }}>68.4%</p>
+          <p className="text-xl font-bold" style={{ color: p.profit }}>68.4%</p>
         </div>
-        <div className="rounded-lg p-3" style={{ background: p.bg }}>
+        <div className="rounded-lg p-3" style={{ background: p.secondary }}>
           <p className="text-[10px] uppercase tracking-wider" style={{ color: p.muted }}>P&L</p>
-          <p className="text-xl font-bold flex items-center gap-1" style={{ color: p.success }}>
+          <p className="text-xl font-bold flex items-center gap-1" style={{ color: p.profit }}>
             <TrendingUp className="w-4 h-4" />+$42.10
           </p>
         </div>
@@ -97,7 +100,7 @@ function Sample({ p }: { p: any }) {
           <ShieldCheck className="w-3.5 h-3.5" style={{ color: p.warning }} /> Risk review passed
         </div>
         <div className="flex items-center gap-2 text-xs" style={{ color: p.muted }}>
-          <Brain className="w-3.5 h-3.5" style={{ color: p.accent }} /> 369AI suggested this
+          <Brain className="w-3.5 h-3.5" style={{ color: p.accent2 }} /> 369AI suggested this
         </div>
       </div>
 
@@ -105,16 +108,17 @@ function Sample({ p }: { p: any }) {
         <button className="flex-1 rounded-lg py-2 text-sm font-bold" style={{ background: p.accent, color: p.bg }}>
           <Zap className="w-3.5 h-3.5 inline mr-1" /> Deploy
         </button>
-        <button className="rounded-lg px-3 py-2 text-sm font-bold" style={{ background: p.bg, color: p.muted, border: `1px solid ${p.border}` }}>
+        <button className="rounded-lg px-3 py-2 text-sm font-bold" style={{ background: p.secondary, color: p.muted, border: `1px solid ${p.border}` }}>
           Stop
         </button>
       </div>
 
       <div className="flex gap-1">
-        <span className="h-8 flex-1 rounded" style={{ background: p.success, opacity: 0.7 }} />
-        <span className="h-8 flex-1 rounded" style={{ background: p.accent, opacity: 0.7 }} />
-        <span className="h-8 flex-1 rounded" style={{ background: p.warning, opacity: 0.7 }} />
-        <span className="h-8 flex-1 rounded" style={{ background: p.danger, opacity: 0.7 }} />
+        <span className="h-8 flex-1 rounded" style={{ background: p.profit, opacity: 0.8 }} />
+        <span className="h-8 flex-1 rounded" style={{ background: p.accent, opacity: 0.8 }} />
+        <span className="h-8 flex-1 rounded" style={{ background: p.accent2, opacity: 0.8 }} />
+        <span className="h-8 flex-1 rounded" style={{ background: p.warning, opacity: 0.8 }} />
+        <span className="h-8 flex-1 rounded" style={{ background: p.loss, opacity: 0.8 }} />
       </div>
     </div>
   );
@@ -125,12 +129,12 @@ export default function ThemePreview() {
   const [chosen, setChosen] = useState<string | null>(null);
 
   return (
-    <div className="min-h-screen p-8" style={{ background: "#07090D", color: "#E6EAF2" }}>
-      <div className="max-w-5xl mx-auto">
+    <div className="min-h-screen p-8" style={{ background: "#06080B", color: "#E6EAF2" }}>
+      <div className="max-w-6xl mx-auto">
         <div className="flex items-center justify-between mb-8">
           <div>
             <h1 className="text-3xl font-bold">369Labs — Palette Preview</h1>
-            <p className="text-slate-400 text-sm mt-1">Pick the accent for the redesign. Chosen: <b className="text-white">{chosen ?? "none"}</b></p>
+            <p className="text-slate-400 text-sm mt-1">Pick the palette for the redesign. Chosen: <b className="text-white">{chosen ?? "none"}</b></p>
           </div>
           <button onClick={() => navigate("/dashboard")} className="text-sm text-slate-400 hover:text-white">← Back</button>
         </div>
@@ -149,22 +153,22 @@ export default function ThemePreview() {
                   style={{
                     borderColor: chosen === p.name ? p.accent : "#232A36",
                     color: chosen === p.name ? p.accent : "#8B95A7",
-                    background: chosen === p.name ? p.accentSoft : "transparent",
+                    background: chosen === p.name ? "rgba(255,255,255,0.06)" : "transparent",
                   }}
                 >
                   {chosen === p.name ? "✓ Selected" : "Select"}
                 </button>
               </div>
               <Sample p={p} />
-              <div className="flex gap-2 text-[10px] font-mono text-slate-500">
-                <span>bg {p.bg}</span><span>surface {p.surface}</span><span>accent {p.accent}</span>
+              <div className="flex gap-2 text-[10px] font-mono text-slate-500 flex-wrap">
+                <span>bg {p.bg}</span><span>card {p.surface}</span><span>accent {p.accent}</span><span>2nd {p.accent2}</span>
               </div>
             </div>
           ))}
         </div>
 
         {chosen && (
-          <div className="mt-8 p-4 rounded-xl border border-[#232A36] bg-[#151A23] text-center">
+          <div className="mt-8 p-4 rounded-xl border border-[#232A36] bg-[#151B23] text-center">
             <p className="text-sm text-slate-300">
               Selected <b className="text-white">{chosen}</b>. Tell me and I'll roll this exact palette into{" "}
               <code className="text-slate-400">index.css</code> across the whole app.
