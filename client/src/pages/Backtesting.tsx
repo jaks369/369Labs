@@ -132,7 +132,7 @@ export default function Backtesting() {
   };
 
   return (
-    <div className="min-h-screen bg-[#0D1117] p-6">
+    <div className="min-h-screen bg-[#0D0D0D] p-6">
       <div className="max-w-6xl mx-auto space-y-8">
         <div className="flex items-center justify-between">
           <div>
@@ -142,12 +142,12 @@ export default function Backtesting() {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-1 bg-[#161B22] border border-[#30363D] rounded-xl p-6 space-y-4">
+          <div className="lg:col-span-1 bg-[#151515] border border-[#2A2A2A] rounded-xl p-6 space-y-4">
             <h2 className="text-lg font-bold text-white">Parameters</h2>
 
             <div>
               <label className="text-xs text-slate-500 font-bold uppercase tracking-wider">Symbol</label>
-              <select value={symbol} onChange={e => setSymbol(e.target.value)} className="w-full mt-1 bg-[#0D1117] border border-[#30363D] rounded-lg px-3 py-2 text-white text-sm">
+              <select value={symbol} onChange={e => setSymbol(e.target.value)} className="w-full mt-1 bg-[#0D0D0D] border border-[#2A2A2A] rounded-lg px-3 py-2 text-white text-sm">
                 {IT_SYMBOLS.map(s => <option key={s} value={s}>{s}</option>)}
               </select>
             </div>
@@ -162,7 +162,7 @@ export default function Backtesting() {
                 </div>
               </div>
             )}
-            <select value={selectedStrategyId || ""} onChange={e => setSelectedStrategyId(Number(e.target.value))} className="w-full mt-1 bg-[#0D1117] border border-[#30363D] rounded-lg px-3 py-2 text-white text-sm">
+            <select value={selectedStrategyId || ""} onChange={e => setSelectedStrategyId(Number(e.target.value))} className="w-full mt-1 bg-[#0D0D0D] border border-[#2A2A2A] rounded-lg px-3 py-2 text-white text-sm">
                 <option value="">Select a strategy...</option>
                 {(strategiesQuery.data || []).filter(s => s.config?.rule).map(s => (
                   <option key={s.id} value={s.id}>{s.name}</option>
@@ -175,17 +175,17 @@ export default function Backtesting() {
 
             <div>
               <label className="text-xs text-slate-500 font-bold uppercase tracking-wider">Start Date</label>
-              <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} className="w-full mt-1 bg-[#0D1117] border border-[#30363D] rounded-lg px-3 py-2 text-white text-sm" />
+              <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} className="w-full mt-1 bg-[#0D0D0D] border border-[#2A2A2A] rounded-lg px-3 py-2 text-white text-sm" />
             </div>
 
             <div>
               <label className="text-xs text-slate-500 font-bold uppercase tracking-wider">End Date</label>
-              <input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} className="w-full mt-1 bg-[#0D1117] border border-[#30363D] rounded-lg px-3 py-2 text-white text-sm" />
+              <input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} className="w-full mt-1 bg-[#0D0D0D] border border-[#2A2A2A] rounded-lg px-3 py-2 text-white text-sm" />
             </div>
 
             <div>
               <label className="text-xs text-slate-500 font-bold uppercase tracking-wider">Stake ($)</label>
-              <input type="number" value={stake} onChange={e => setStake(Number(e.target.value))} min={0.35} step={0.5} className="w-full mt-1 bg-[#0D1117] border border-[#30363D] rounded-lg px-3 py-2 text-white text-sm" />
+              <input type="number" value={stake} onChange={e => setStake(Number(e.target.value))} min={0.35} step={0.5} className="w-full mt-1 bg-[#0D0D0D] border border-[#2A2A2A] rounded-lg px-3 py-2 text-white text-sm" />
             </div>
 
             <Button onClick={runBacktestHandler} disabled={running || !selectedStrategyId} className="w-full bg-[#D98B1F] hover:bg-[#C07B1A] text-white">
@@ -202,7 +202,7 @@ export default function Backtesting() {
             )}
 
             {running && (
-              <div className="bg-[#161B22] border border-[#30363D] rounded-xl p-8 flex items-center justify-center">
+              <div className="bg-[#151515] border border-[#2A2A2A] rounded-xl p-8 flex items-center justify-center">
                 <div className="text-center">
                   <Loader2 className="w-10 h-10 animate-spin text-[#E89A2A] mx-auto mb-4" />
                   <p className="text-slate-400">Fetching historical ticks from Deriv and running simulation...</p>
@@ -213,37 +213,37 @@ export default function Backtesting() {
             {result && !running && (
               <>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  <div className="bg-[#161B22] border border-[#30363D] rounded-xl p-4">
+                  <div className="bg-[#151515] border border-[#2A2A2A] rounded-xl p-4">
                     <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Total Trades</p>
                     <p className="text-2xl font-bold text-white mt-1">{result.totalTrades}</p>
                   </div>
-                  <div className="bg-[#161B22] border border-[#30363D] rounded-xl p-4">
+                  <div className="bg-[#151515] border border-[#2A2A2A] rounded-xl p-4">
                     <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Win Rate</p>
                     <p className={`text-2xl font-bold mt-1 ${result.winRate >= 50 ? "text-emerald-500" : "text-red-500"}`}>{result.winRate.toFixed(1)}%</p>
                   </div>
-                  <div className="bg-[#161B22] border border-[#30363D] rounded-xl p-4">
+                  <div className="bg-[#151515] border border-[#2A2A2A] rounded-xl p-4">
                     <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Total P&L</p>
                     <p className={`text-2xl font-bold mt-1 ${result.totalPnl >= 0 ? "text-emerald-500" : "text-red-500"}`}>
                       {result.totalPnl >= 0 ? "+" : ""}${result.totalPnl.toFixed(2)}
                     </p>
                   </div>
-                  <div className="bg-[#161B22] border border-[#30363D] rounded-xl p-4">
+                  <div className="bg-[#151515] border border-[#2A2A2A] rounded-xl p-4">
                     <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Max Drawdown</p>
                     <p className="text-2xl font-bold text-red-500 mt-1">-${result.maxDrawdown.toFixed(2)}</p>
                   </div>
                 </div>
 
-                <div className="bg-[#161B22] border border-[#30363D] rounded-xl p-6">
+                <div className="bg-[#151515] border border-[#2A2A2A] rounded-xl p-6">
                   <h3 className="text-sm font-bold text-white mb-4">Equity Curve (cumulative P&L)</h3>
                   <Sparkline data={(result.equityCurve || []).map((v: number) => ({ value: v }))} />
                 </div>
 
-                <div className="bg-[#161B22] border border-[#30363D] rounded-xl p-6">
+                <div className="bg-[#151515] border border-[#2A2A2A] rounded-xl p-6">
                   <h3 className="text-sm font-bold text-white mb-4">Trade Log ({result.trades.length} trades)</h3>
                   <div className="overflow-x-auto max-h-80 overflow-y-auto">
                     <table className="w-full text-left text-xs">
                       <thead>
-                        <tr className="text-slate-500 border-b border-[#30363D]">
+                        <tr className="text-slate-500 border-b border-[#2A2A2A]">
                           <th className="pb-3 font-bold">#</th>
                           <th className="pb-3 font-bold">ENTRY</th>
                           <th className="pb-3 font-bold">EXIT</th>
@@ -252,7 +252,7 @@ export default function Backtesting() {
                           <th className="pb-3 font-bold text-right">P&L</th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-[#30363D]">
+                      <tbody className="divide-y divide-[#2A2A2A]">
                         {result.trades.slice(0, 100).map((t, i) => (
                           <tr key={i} className="hover:bg-white/5">
                             <td className="py-3 text-slate-500">{i + 1}</td>
@@ -272,7 +272,7 @@ export default function Backtesting() {
                   </div>
                 </div>
 
-                <div className="bg-[#161B22] border border-[#30363D] rounded-xl p-6">
+                <div className="bg-[#151515] border border-[#2A2A2A] rounded-xl p-6">
                   <h3 className="text-sm font-bold text-white mb-4">Equity Curve</h3>
                   <div className="h-48 flex items-end gap-0.5">
                     {result.equityCurve.map((val, i) => {
@@ -295,11 +295,11 @@ export default function Backtesting() {
                   </div>
                 </div>
 
-                <div className="bg-[#161B22] border border-[#30363D] rounded-xl p-6">
+                <div className="bg-[#151515] border border-[#2A2A2A] rounded-xl p-6">
                   <h3 className="text-sm font-bold text-white mb-1">Parameter Sweep</h3>
                   <p className="text-xs text-slate-500 mb-4">Stress-test one parameter across a range on the same tick window. Cells show win rate (green = strong, red = weak).</p>
                   <div className="flex items-center gap-2 mb-4">
-                    <select value={sweepParam} onChange={(e) => setSweepParam(e.target.value as any)} className="bg-[#0D1117] border border-[#30363D] rounded-lg px-3 py-2 text-white text-sm">
+                    <select value={sweepParam} onChange={(e) => setSweepParam(e.target.value as any)} className="bg-[#0D0D0D] border border-[#2A2A2A] rounded-lg px-3 py-2 text-white text-sm">
                       <option value="barrier">Barrier digit (0-9)</option>
                       <option value="count">Count / frequency (1-10)</option>
                       <option value="stake">Stake ($)</option>
@@ -313,14 +313,14 @@ export default function Backtesting() {
                     <div className="overflow-x-auto">
                       <table className="w-full text-left text-xs">
                         <thead>
-                          <tr className="text-slate-500 border-b border-[#30363D]">
+                          <tr className="text-slate-500 border-b border-[#2A2A2A]">
                             <th className="pb-2 font-bold">{sweepParam}</th>
                             <th className="pb-2 font-bold">Win Rate</th>
                             <th className="pb-2 font-bold">Trades</th>
                             <th className="pb-2 font-bold text-right">P&L</th>
                           </tr>
                         </thead>
-                        <tbody className="divide-y divide-[#30363D]">
+                        <tbody className="divide-y divide-[#2A2A2A]">
                           {sweepGrid.map((c) => (
                             <tr key={c.value} className="hover:bg-white/5">
                               <td className="py-2 font-bold text-white">{c.value}</td>
@@ -338,7 +338,7 @@ export default function Backtesting() {
             )}
 
             {!result && !running && !error && (
-              <div className="bg-[#161B22] border border-[#30363D] rounded-xl p-8 flex items-center justify-center h-64">
+              <div className="bg-[#151515] border border-[#2A2A2A] rounded-xl p-8 flex items-center justify-center h-64">
                 <div className="text-center">
                   <BarChart3 className="w-12 h-12 mx-auto mb-4 text-slate-700" />
                   <p className="text-slate-500">Configure parameters and run a backtest to see results</p>

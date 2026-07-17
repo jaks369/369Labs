@@ -32,7 +32,7 @@ export default function TelegramSettings() {
   };
 
   return (
-    <div className="min-h-screen bg-[#0D1117] p-6">
+    <div className="min-h-screen bg-[#0D0D0D] p-6">
       <div className="max-w-3xl mx-auto space-y-8">
         <div className="flex items-center justify-between">
           <div>
@@ -45,7 +45,7 @@ export default function TelegramSettings() {
         {settingsQuery.isLoading ? (
           <div className="flex items-center justify-center h-64"><Loader2 className="w-8 h-8 animate-spin text-[#E89A2A]" /></div>
         ) : (
-          <div className="bg-[#161B22] border border-[#30363D] rounded-xl p-6 space-y-6">
+          <div className="bg-[#151515] border border-[#2A2A2A] rounded-xl p-6 space-y-6">
             <div className="p-4 bg-amber-500/10 border border-amber-500/20 rounded-xl flex items-start gap-3">
               <AlertCircle className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
               <div className="text-xs text-amber-400">
@@ -65,7 +65,7 @@ export default function TelegramSettings() {
                 value={botToken}
                 onChange={e => setBotToken(e.target.value)}
                 placeholder="1234567890:ABCdefGHIjklMNOpqrsTUVwxyz"
-                className="mt-1 bg-[#0D1117] border-[#30363D] text-white"
+                className="mt-1 bg-[#0D0D0D] border-[#2A2A2A] text-white"
                 type="password"
               />
             </div>
@@ -76,7 +76,7 @@ export default function TelegramSettings() {
                 value={chatId}
                 onChange={e => setChatId(e.target.value)}
                 placeholder="-1234567890"
-                className="mt-1 bg-[#0D1117] border-[#30363D] text-white"
+                className="mt-1 bg-[#0D0D0D] border-[#2A2A2A] text-white"
               />
             </div>
 

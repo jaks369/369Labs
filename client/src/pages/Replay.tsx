@@ -68,7 +68,7 @@ export default function Replay() {
   };
 
   return (
-    <div className="min-h-screen bg-[#0D1117] p-6">
+    <div className="min-h-screen bg-[#0D0D0D] p-6">
       <div className="max-w-5xl mx-auto space-y-6">
         <div className="flex items-center justify-between flex-wrap gap-4">
           <div>
@@ -77,7 +77,7 @@ export default function Replay() {
             </h1>
             <p className="text-slate-400 text-sm mt-1">Replay historical ticks. Trade manually and let 369AI score your decision.</p>
           </div>
-          <select value={symbol} onChange={(e) => setSymbol(e.target.value)} className="bg-[#161B22] border border-[#30363D] rounded-lg px-3 py-2 text-white text-sm">
+          <select value={symbol} onChange={(e) => setSymbol(e.target.value)} className="bg-[#151515] border border-[#2A2A2A] rounded-lg px-3 py-2 text-white text-sm">
             {SYMBOLS.map((s) => <option key={s} value={s}>{s}</option>)}
           </select>
         </div>
@@ -87,7 +87,7 @@ export default function Replay() {
 
         {!loading && ticks.length > 0 && (
           <>
-            <div className="bg-[#161B22] border border-[#30363D] rounded-xl p-6">
+            <div className="bg-[#151515] border border-[#2A2A2A] rounded-xl p-6">
               <div className="flex items-end justify-between mb-4">
                 <div>
                   <p className="text-xs text-slate-500 uppercase">Replaying</p>
@@ -110,7 +110,7 @@ export default function Replay() {
                 <input type="range" min={0} max={ticks.length - 1} value={idx} onChange={(e) => { setPlaying(false); setIdx(Number(e.target.value)); }} className="flex-1" />
                 <div className="flex items-center gap-1">
                   <FastForward className="w-4 h-4 text-slate-500" />
-                  <select value={speed} onChange={(e) => setSpeed(Number(e.target.value))} className="bg-[#0D1117] border border-[#30363D] rounded px-2 py-1 text-xs text-white">
+                  <select value={speed} onChange={(e) => setSpeed(Number(e.target.value))} className="bg-[#0D0D0D] border border-[#2A2A2A] rounded px-2 py-1 text-xs text-white">
                     {[1, 2, 4, 8, 16].map((s) => <option key={s} value={s}>{s}x</option>)}
                   </select>
                 </div>
@@ -118,7 +118,7 @@ export default function Replay() {
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <div className="bg-[#161B22] border border-[#30363D] rounded-xl p-6">
+              <div className="bg-[#151515] border border-[#2A2A2A] rounded-xl p-6">
                 <h2 className="text-sm font-bold text-white mb-4">Manual Trade</h2>
                 <div className="flex gap-3">
                   <button onClick={() => takeTrade("rise")} className={`flex-1 py-3 rounded-lg flex items-center justify-center gap-2 font-bold ${trade?.type === "rise" ? "bg-emerald-500 text-white" : "bg-emerald-500/10 text-emerald-400 border border-emerald-500/30"}`}>
@@ -131,7 +131,7 @@ export default function Replay() {
                 {trade && <p className="text-xs text-slate-400 mt-3">Open {trade.type} at {trade.entryPrice.toFixed(4)}. Press again to close and score.</p>}
               </div>
 
-              <div className="bg-[#161B22] border border-[#30363D] rounded-xl p-6">
+              <div className="bg-[#151515] border border-[#2A2A2A] rounded-xl p-6">
                 <h2 className="text-sm font-bold text-white mb-4">Your Decisions</h2>
                 {results.length === 0 ? <p className="text-sm text-slate-500">No trades yet — replay and take a position.</p> : (
                   <div className="space-y-1.5 max-h-64 overflow-y-auto font-mono text-xs">

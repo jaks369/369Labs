@@ -43,7 +43,7 @@ export default function Notifications() {
   ];
 
   return (
-    <div className="min-h-screen bg-[#0D1117] p-6">
+    <div className="min-h-screen bg-[#0D0D0D] p-6">
       <div className="max-w-3xl mx-auto space-y-8">
         <div className="flex items-center justify-between">
           <div>
@@ -56,9 +56,9 @@ export default function Notifications() {
         {settingsQuery.isLoading ? (
           <div className="flex items-center justify-center h-64"><Loader2 className="w-8 h-8 animate-spin text-[#E89A2A]" /></div>
         ) : (
-          <div className="bg-[#161B22] border border-[#30363D] rounded-xl p-6 space-y-6">
+          <div className="bg-[#151515] border border-[#2A2A2A] rounded-xl p-6 space-y-6">
             {toggles.map(t => (
-              <div key={t.label} className="flex items-center justify-between py-4 border-b border-[#30363D] last:border-0">
+              <div key={t.label} className="flex items-center justify-between py-4 border-b border-[#2A2A2A] last:border-0">
                 <div>
                   <h3 className="text-sm font-bold text-white">{t.label}</h3>
                   <p className="text-xs text-slate-500 mt-0.5">{t.desc}</p>

@@ -18,7 +18,7 @@ export default function Journal() {
   };
 
   return (
-    <div className="min-h-screen bg-[#0D1117] p-6">
+    <div className="min-h-screen bg-[#0D0D0D] p-6">
       <div className="max-w-3xl mx-auto space-y-6">
         <div>
           <h1 className="text-3xl font-bold text-white flex items-center gap-3">
@@ -27,13 +27,13 @@ export default function Journal() {
           <p className="text-slate-400 text-sm mt-1">369AI explains WHY your trades won or lost — educational, data-driven.</p>
         </div>
 
-        <div className="bg-[#161B22] border border-[#30363D] rounded-xl p-6 space-y-4">
+        <div className="bg-[#151515] border border-[#2A2A2A] rounded-xl p-6 space-y-4">
           <div>
             <label className="text-xs text-slate-500 font-bold uppercase tracking-wider">Focus on a strategy (optional)</label>
             <select
               value={strategyId ?? ""}
               onChange={(e) => setStrategyId(e.target.value ? Number(e.target.value) : undefined)}
-              className="w-full mt-1 bg-[#0D1117] border border-[#30363D] rounded-lg px-3 py-2 text-white text-sm"
+              className="w-full mt-1 bg-[#0D0D0D] border border-[#2A2A2A] rounded-lg px-3 py-2 text-white text-sm"
             >
               <option value="">All strategies</option>
               {(strategiesQuery.data || []).filter((s: any) => s.config?.rule).map((s: any) => (
@@ -52,7 +52,7 @@ export default function Journal() {
         </div>
 
         {journalMutation.data?.analysis && (
-          <div className="bg-[#161B22] border border-[#30363D] rounded-xl p-6">
+          <div className="bg-[#151515] border border-[#2A2A2A] rounded-xl p-6">
             <div className="prose prose-invert max-w-none text-sm text-slate-300 leading-relaxed whitespace-pre-wrap">
               {journalMutation.data.analysis}
             </div>

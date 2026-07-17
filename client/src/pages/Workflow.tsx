@@ -50,7 +50,7 @@ export default function Workflow() {
   };
 
   return (
-    <div className="min-h-screen bg-[#0D1117] p-6">
+    <div className="min-h-screen bg-[#0D0D0D] p-6">
       <div className="max-w-4xl mx-auto space-y-6">
         <div>
           <h1 className="text-3xl font-bold text-white flex items-center gap-3">
@@ -61,7 +61,7 @@ export default function Workflow() {
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {PRESETS.map((w) => (
-            <div key={w.id} className="bg-[#161B22] border border-[#30363D] rounded-xl p-6">
+            <div key={w.id} className="bg-[#151515] border border-[#2A2A2A] rounded-xl p-6">
               <h2 className="text-lg font-bold text-white mb-4">{w.name}</h2>
               <div className="space-y-2 mb-4">
                 {w.steps.map((s, i) => (
@@ -87,7 +87,7 @@ export default function Workflow() {
         </div>
 
         {log.length > 0 && (
-          <div className="bg-[#161B22] border border-[#30363D] rounded-xl p-6">
+          <div className="bg-[#151515] border border-[#2A2A2A] rounded-xl p-6">
             <h2 className="text-sm font-bold text-white mb-3 flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-emerald-400" /> Run Log</h2>
             <div className="space-y-1 font-mono text-xs">
               {log.map((l, i) => (

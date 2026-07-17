@@ -21,7 +21,7 @@ export default function Logs() {
   const logs = logsQuery.data?.logs || [];
 
   return (
-    <div className="min-h-screen bg-[#0D1117] p-6">
+    <div className="min-h-screen bg-[#0D0D0D] p-6">
       <div className="max-w-5xl mx-auto space-y-6">
         <div>
           <h1 className="text-3xl font-bold text-white flex items-center gap-3">
@@ -31,14 +31,14 @@ export default function Logs() {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <div className="bg-[#161B22] border border-[#30363D] rounded-xl p-6">
+          <div className="bg-[#151515] border border-[#2A2A2A] rounded-xl p-6">
             <h2 className="text-sm font-bold text-white mb-4 flex items-center gap-2">
               <Activity className="w-4 h-4 text-[#E89A2A]" /> Live Agent Activity
             </h2>
             <AITimeline />
           </div>
 
-          <div className="bg-[#161B22] border border-[#30363D] rounded-xl p-6">
+          <div className="bg-[#151515] border border-[#2A2A2A] rounded-xl p-6">
             <h2 className="text-sm font-bold text-white mb-4">Audit Trail</h2>
             {logs.length === 0 ? (
               <p className="text-sm text-slate-500">No recorded actions yet.</p>
