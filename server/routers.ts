@@ -517,12 +517,24 @@ HOW TO RESPOND:
           let reply = "No response";
           const steps: any[] = [];
           for (let round = 0; round < 5; round++) {
-            const res = await ai.chat.completions.create({
-              model: "llama-3.3-70b-versatile",
-              messages,
-              tools: TOOL_DEFS,
-              tool_choice: "auto",
-            });
+            let res: any;
+            try {
+              res = await ai.chat.completions.create({
+                model: "llama-3.3-70b-versatile",
+                messages,
+                tools: TOOL_DEFS,
+                tool_choice: "auto",
+              });
+            } catch (toolErr: any) {
+              const isToolErr = String(toolErr?.message || "").includes("tool_use_failed") || String(toolErr?.error?.code || "").includes("tool_use_failed");
+              if (!isToolErr) throw toolErr;
+              console.warn("[AI] tool_use_failed, retrying without tools:", String(toolErr?.message || "").slice(0, 200));
+              res = await ai.chat.completions.create({
+                model: "llama-3.3-70b-versatile",
+                messages: messages.map((m: any) => ({ role: m.role, content: m.content })),
+                tool_choice: "none",
+              });
+            }
             const msg = res.choices[0]?.message;
             if (!msg) break;
             messages.push(msg);
