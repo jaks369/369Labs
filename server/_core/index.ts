@@ -51,7 +51,7 @@ export async function createApp() {
   if (!process.env.VERCEL && process.env.NODE_ENV !== "development") {
     serveStatic(app);
     const port = parseInt(process.env.PORT || "3000");
-    app.listen(port, () => {
+    app.listen(port, async () => {
       console.log(`Server running on http://localhost:${port}/`);
       startTickCollector();
       startAlwaysOnScanner();
