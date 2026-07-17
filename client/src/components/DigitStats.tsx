@@ -12,8 +12,8 @@ export default function DigitStats({ symbol, decimalPlaces = derivWS.decimalPlac
   const [digits, setDigits] = useState<number[]>([]);
   // The most recent last digit - drives the live pointer.
   const [currentDigit, setCurrentDigit] = useState<number | null>(null);
-  const [selectedDigit, setSelectedDigit] = useState<number>(5);
-  const selectedDigitRef = useRef<number | null>(null);
+  const [selectedDigit, setSelectedDigit] = useState<number | null>(null);
+  const selectedDigitRef = useRef<number | null>(5);
   const [stats, setStats] = useState({
     even: 0,
     odd: 0,
@@ -92,7 +92,7 @@ export default function DigitStats({ symbol, decimalPlaces = derivWS.decimalPlac
   const maxPercent = Math.max(...stats.counts, 1);
   // Derive Over/Under live from the current digits array so they always reflect
   // the latest ticks (not just when onTick fires).
-  const th = selectedDigit;
+  const th = selectedDigit ?? 5;
   let _over = 0, _under = 0;
   digits.forEach((d) => { if (d > th) _over++; else if (d < th) _under++; });
   const _len = digits.length || 1;
