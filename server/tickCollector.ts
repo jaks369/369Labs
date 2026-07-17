@@ -6,6 +6,12 @@ const VOLATILITY_PREFIXES = ["R_10", "R_25", "R_50", "R_75", "R_100", "1HZ10V", 
 
 let ws: WebSocket | null = null;
 let started = false;
+// Feed integrity tracking. Bots/strategies should pause when feed is stale or out of order.
+const lastTickEpoch: Record<string, number> = {};
+let lastAnyTickEpoch = 0;
+let feedStale = false;
+export function isFeedStale(): boolean { return feedStale; }
+export function getFeedHealth(): { stale: boolean; lastTickEpoch: number } { return { stale: feedStale, lastTickEpoch: lastAnyTickEpoch }; }
 let msgId = 1;
 
 function decimalPlacesFor(symbol: string): number {
@@ -64,6 +70,15 @@ export function startTickCollector() {
         // e.g. 95.2144 -> 4, 95.2279 -> 9. This is what digit strategies analyze.
         const numStr = String(quote).replace(".", "");
         const lastDigit = parseInt(numStr[numStr.length - 1], 10) || 0;
+        const prev = lastTickEpoch[symbol] || 0;
+        const outOfOrder = prev && epoch < prev;
+        const nowSec = Math.floor(Date.now() / 1000);
+        if (nowSec - lastAnyTickEpoch > 30) feedStale = true; // no tick across all symbols for 30s
+        lastAnyTickEpoch = nowSec;
+        lastTickEpoch[symbol] = epoch;
+        if (outOfOrder) {
+          console.warn(`[tickCollector] out-of-order tick for ${symbol}: ${epoch} < ${prev}`);
+        }
         saveTickHistory({
           symbol,
           price: quote,
