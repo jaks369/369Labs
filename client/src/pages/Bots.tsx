@@ -291,18 +291,6 @@ export default function Bots() {
             <h3 className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-6">System Health</h3>
             <div className="space-y-4">
               <div className="flex justify-between items-center">
-                <span className="text-xs text-slate-400">Deriv Connection</span>
-                <span className={`text-[10px] font-bold uppercase ${derivWS.isConnected() ? "text-emerald-500" : "text-red-500"}`}>
-                  {derivWS.isConnected() ? "Connected" : "Offline"}
-                </span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-xs text-slate-400">API Token</span>
-                <span className={`text-[10px] font-bold uppercase ${derivTokenQuery.data?.token ? "text-emerald-500" : "text-red-500"}`}>
-                  {derivTokenQuery.data?.token ? "Configured" : "Missing"}
-                </span>
-              </div>
-              <div className="flex justify-between items-center">
                 <span className="text-xs text-slate-400">Active Bots</span>
                 <span className="text-[10px] font-bold text-slate-300 uppercase">{runningBots.length}</span>
               </div>
