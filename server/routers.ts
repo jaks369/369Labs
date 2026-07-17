@@ -538,6 +538,37 @@ export const appRouter = router({
 
   // AI Agent - ReAct-style multi-step reasoning with persistent history
   ai: router({
+    journal: protectedProcedure
+      .input(z.object({ strategyId: z.number().optional(), limit: z.number().default(50) }))
+      .mutation(async ({ ctx, input }) => {
+        if (!process.env.AI_API_KEY) return { analysis: "AI not configured. Add AI_API_KEY to enable journal analysis." };
+        try {
+          const trades = await db.getTradesByUserId(ctx.user.id, input.limit);
+          const filtered = input.strategyId ? trades.filter((t: any) => t.strategyId === input.strategyId) : trades;
+          if (!filtered.length) return { analysis: "No trades yet. Deploy a bot and let it trade to generate a journal." };
+          const summary = filtered.slice(0, 40).map((t: any) => ({
+            symbol: t.symbol, result: t.result, pnl: t.profitLoss, stake: t.stake,
+            contractType: t.contractType, entryPrice: t.entryPrice,
+            time: t.entryTime ? new Date(t.entryTime).toISOString() : null,
+          }));
+          const wins = filtered.filter((t: any) => t.result === "win").length;
+          const losses = filtered.length - wins;
+          const net = filtered.reduce((a: number, t: any) => a + (Number(t.profitLoss) || 0), 0);
+          const ai = await getAI();
+          const res = await ai.chat.completions.create({
+            model: process.env.AI_MODEL || "llama-3.3-70b-versatile",
+            messages: [
+              { role: "system", content: "You are 369AI's trading journal analyst. Given a trader's recent trades, write a concise, educational post-trade journal. Explain WHY trades likely won or lost (market regime, digit distribution, entry timing), surface patterns in their results, note risk observations, and give 2-3 concrete improvements. Be specific and reference the data. Plain text, max 350 words." },
+              { role: "user", content: `Recent trades (last ${filtered.length}): wins=${wins}, losses=${losses}, net P&L=$${net.toFixed(2)}.\nTrade data: ${JSON.stringify(summary)}` },
+            ],
+            temperature: 0.4,
+          });
+          return { analysis: res.choices?.[0]?.message?.content || "No analysis returned.", wins, losses, net: +net.toFixed(2), sampleSize: filtered.length };
+        } catch (e: any) {
+          return { analysis: "Journal analysis failed: " + (e?.message || "unknown error") };
+        }
+      }),
+
     ask: protectedProcedure
       .input(z.object({
         message: z.string().min(1),
@@ -721,4 +752,5 @@ Return ONLY the JSON.`;
 });
 
 export type AppRouter = typeof appRouter;
+
 
