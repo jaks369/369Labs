@@ -103,7 +103,7 @@ export default function DigitStats({ symbol, decimalPlaces = derivWS.decimalPlac
         </div>
         <div className="bg-slate-900/50 p-3 rounded border border-slate-800">
           <div className="flex justify-between text-[10px] font-bold text-slate-500 mb-2 uppercase">
-            <span>Over {selectedDigit ?? 5}</span>
+            <span>Over {th !== null ? th : "—"}</span>
             <span className="text-purple-500">{overPct.toFixed(1)}%</span>
           </div>
           <div className="h-1.5 w-full bg-slate-800 rounded-full overflow-hidden">
@@ -112,7 +112,7 @@ export default function DigitStats({ symbol, decimalPlaces = derivWS.decimalPlac
         </div>
         <div className="bg-slate-900/50 p-3 rounded border border-slate-800">
           <div className="flex justify-between text-[10px] font-bold text-slate-500 mb-2 uppercase">
-            <span>Under {selectedDigit ?? 5}</span>
+            <span>Under {th !== null ? th : "—"}</span>
             <span className="text-orange-500">{underPct.toFixed(1)}%</span>
           </div>
           <div className="h-1.5 w-full bg-slate-800 rounded-full overflow-hidden">
@@ -121,11 +121,14 @@ export default function DigitStats({ symbol, decimalPlaces = derivWS.decimalPlac
         </div>
       </div>
 
+      {th === null && (
+        <p className="text-[10px] text-slate-500 mb-2">Click a digit above to set the Over/Under barrier.</p>
+      )}
       <div className="bg-slate-900/50 p-4 rounded border border-slate-800">
         <h4 className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-4">Digit Frequency (Last {maxTicks} Ticks)</h4>
         <div className="flex items-end justify-between h-28 gap-0.5 overflow-x-auto">
           {stats.counts.map((percent, i) => (
-            <div key={i} onClick={() => { setSelectedDigit(i); selectedDigitRef.current = i; }} className={`flex-1 flex flex-col items-center gap-2 cursor-pointer ${selectedDigit === i ? "ring-1 ring-amber-400 rounded" : ""}`}>
+            <div key={i} onClick={() => { setSelectedDigit(i); }} className={`flex-1 flex flex-col items-center gap-2 cursor-pointer ${selectedDigit === i ? "ring-1 ring-amber-400 rounded" : ""}`}>
               <span className={`text-[7px] font-bold ${hasData && i === maxIdx ? "text-emerald-400" : hasData && i === minIdx ? "text-red-400" : "text-slate-400"}`}>{percent.toFixed(1)}%</span>
               <div className="w-full rounded-t-sm relative group cursor-pointer" style={{ height: `${(percent / maxPercent) * 100}%`, background: hasData && i === maxIdx ? "rgba(16,185,129,0.25)" : hasData && i === minIdx ? "rgba(239,68,68,0.25)" : "rgba(37,99,235,0.2)" }}>
                 <div className={`absolute inset-0 rounded-t-sm transition-opacity ${i === currentDigit ? "opacity-100" : "opacity-60 group-hover:opacity-100"}`} style={{ height: `${percent}%`, background: i === currentDigit ? "#f59e0b" : hasData && i === maxIdx ? "#10b981" : hasData && i === minIdx ? "#ef4444" : "#3b82f6" }} />
