@@ -13,10 +13,26 @@ export default function Marketplace() {
   const [symbol, setSymbol] = useState<string>("");
   const [expanded, setExpanded] = useState<number | null>(null);
 
+  const createBotMutation = trpc.strategies.save.useMutation();
+  const [sentId, setSentId] = useState<number | null>(null);
   const signalsQuery = trpc.signals.list.useQuery(
     symbol ? { symbol } : {},
     { refetchInterval: 30000 }
   );
+
+  const sendToBot = async (sig: any) => {
+    try {
+      const strategy = await createBotMutation.mutateAsync({
+        name: sig.title || (sig.symbol + " insight"),
+        description: sig.description || "Created from a 369AI signal.",
+        config: { rule: sig.rule, source: "ai_signal", signalId: sig.id },
+      });
+      setSentId(sig.id);
+      setTimeout(() => navigate("/bots"), 600);
+    } catch (e) {
+      alert("Failed to create bot from signal: " + (e instanceof Error ? e.message : String(e)));
+    }
+  };
 
   if (!isAuthenticated) { navigate("/login"); return null; }
   const signals = (signalsQuery.data as any[]) || [];
