@@ -301,7 +301,23 @@ class DerivWebSocketService {
   private notifyBalance(b: any): void { this.balanceListeners.forEach(cb => { try { cb(b); } catch {} }); }
   private notifyTokenError(msg: string): void { this.tokenListeners.forEach(cb => { try { cb(msg); } catch {} }); }
   public disconnect(): void { this.intentionallyDisconnected = true; if (this.ws) { this.ws.close(); this.ws = null; } this.contractListeners.clear(); this.pendingRequests.forEach(p => p.reject(new Error("Connection closed"))); this.pendingRequests.clear(); }
-  public setApiToken(token: string): void { if (this.apiToken !== token) this.authorized = false; this.apiToken = token; if (this.ws && this.ws.readyState === WebSocket.OPEN) { this.authorized = false; this.authorize(); } }
+  public setApiToken(token: string): void {
+    if (this.apiToken !== token) this.authorized = false;
+    this.apiToken = token;
+    if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
+      this.setupWebSocket();
+      return;
+    }
+    if (this.authorized) return;
+    this.authorized = false;
+    this.authorize();
+  }
+
+  public ensureAuthorized(): void {
+    if (!this.apiToken || this.authorized) return;
+    if (!this.ws || this.ws.readyState !== WebSocket.OPEN) { this.setupWebSocket(); return; }
+    this.authorize();
+  }
 }
 
 export const derivWS = new DerivWebSocketService();
