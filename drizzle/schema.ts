@@ -172,3 +172,17 @@ export const auditLogs = mysqlTable("auditLogs", {
 
 export type AuditLog = typeof auditLogs.$inferSelect;
 export type InsertAuditLog = typeof auditLogs.$inferInsert;
+
+// AI Memory: persistent user preferences/context so agents remember trader profile
+// (favorite symbols, risk %, no-martingale rule, trading style, notes). Keyed per user.
+export const userMemory = mysqlTable("userMemory", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull().unique(),
+  // JSON blob of remembered preferences, e.g.
+  // { symbols: ["R_75"], riskPct: 2, noMartingale: true, style: "volatility 1m", notes: "" }
+  memory: json("memory").notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type UserMemory = typeof userMemory.$inferSelect;
+export type InsertUserMemory = typeof userMemory.$inferInsert;
