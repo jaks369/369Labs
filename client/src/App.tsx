@@ -3,6 +3,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/NotFound";
 import { Route, Switch } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
+import CommandPalette from "./components/CommandPalette";
 import DashboardLayout from "./components/DashboardLayout";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import Home from "./pages/Home";
@@ -48,6 +49,8 @@ function Router() {
         <AppLayout><Settings /></AppLayout>
       </Route>
       <Route path={"/marketplace"}>
+        <AppLayout><Marketplace /></AppLayout>
+      </Route>
       <Route path={"/backtesting"}>
         <AppLayout><Backtesting /></AppLayout>
       </Route>
@@ -57,19 +60,8 @@ function Router() {
       <Route path={"/cloud-bots"}>
         <AppLayout><CloudBots /></AppLayout>
       </Route>
-        <AppLayout><Marketplace /></AppLayout>
-      </Route>
       <Route path={"/ai-assistant"}>
         <AppLayout><AIAssistant /></AppLayout>
-      </Route>
-      <Route path={"/backtesting"}>
-        <AppLayout><Bots /></AppLayout>
-      </Route>
-      <Route path={"/analytics"}>
-        <AppLayout><Dashboard /></AppLayout>
-      </Route>
-      <Route path={"/cloud-bots"}>
-        <AppLayout><Bots /></AppLayout>
       </Route>
       <Route path={"/trades"}>
         <AppLayout><TradeHistory /></AppLayout>
@@ -87,6 +79,7 @@ function App() {
         <TooltipProvider>
           <Toaster />
           <Router />
+          <CommandPalette />
         </TooltipProvider>
       </ThemeProvider>
     </ErrorBoundary>
@@ -94,3 +87,4 @@ function App() {
 }
 
 export default App;
+
