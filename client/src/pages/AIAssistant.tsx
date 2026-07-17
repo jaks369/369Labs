@@ -4,6 +4,7 @@ import { trpc } from "@/lib/trpc";
 import { Brain, Send, Bot, Sparkles, Code, LineChart, ShieldCheck, Zap, Loader2, ChevronDown, ChevronRight, Wrench, Activity, CandlestickChart } from "lucide-react";
 import { useLocation } from "wouter";
 import { derivWS } from "@/services/derivWebSocket";
+import { pushTimeline } from "@/components/AITimeline";
 
 interface Message { role: "user" | "ai"; content: string; steps?: any[]; }
 interface PendingAction { action: string; params: any; }
@@ -36,6 +37,7 @@ export default function AIAssistant() {
     setInput("");
     setIsTyping(true);
     setTypingLabel("Analyzing");
+    pushTimeline({ icon: "ai", text: `369AI: ${text.length > 60 ? text.slice(0, 60) + "…" : text}` });
     try {
       const history = nextMessages
         .slice(1)
