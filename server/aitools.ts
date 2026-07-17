@@ -216,11 +216,19 @@ export const TOOL_DEFS = [
     type: 'function',
     function: {
       name: 'deployBot',
-      description: 'Deploy a saved bot/strategy to start trading live. Requires confirm=true and a strategyId.',
+      description: 'Create a DRAFT bot from an insight, or deploy a saved strategy. To turn a plain-language insight into a bot, call with { name, description, rule } (no confirm needed) - this saves a draft the user starts manually. To start an existing saved bot, call with { strategyId, confirm: true } (requires user confirmation).',
       parameters: {
         type: 'object',
-        properties: { strategyId: { type: 'number' }, symbol: { type: 'string' }, stake: { type: 'number' }, confirm: { type: 'boolean' } },
-        required: ['strategyId', 'confirm'],
+        properties: {
+          name: { type: 'string', description: 'Bot name when creating from an insight' },
+          description: { type: 'string' },
+          rule: { type: 'object', description: 'StrategyRule object: { symbol, condition: { indicator: "last_digit" or "parity", comparison: "equals" or "appears_consecutively", count: number, barrier: number }, action: { tradeType: "buy_rise" or "buy_fall" }, params: { stake, stopLoss, takeProfit } }' },
+          strategyId: { type: 'number' },
+          symbol: { type: 'string' },
+          stake: { type: 'number' },
+          confirm: { type: 'boolean' },
+        },
+        required: [],
       },
     },
   },
