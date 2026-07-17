@@ -604,8 +604,10 @@ export const appRouter = router({
           const ai = await getAI();
           const key = (ctx.user?.id ? String(ctx.user.id) : "anon") + ":" + (input.chatId || "default");
           const prior = (input.history && input.history.length) ? input.history : (agentHistory.get(key) || []);
+          const memory = await db.getUserMemory(ctx.user.id);
+          const memoryStr = formatMemoryForPrompt(memory);
           const messages: any[] = [
-            { role: "system", content: `You are 369AI, the personal trading strategist for 369Labs - a live Deriv trading platform. You are smart, concise, and sound like an expert human strategist chatting with a trader.
+            { role: "system", content: `You are 369AI, the personal trading strategist for 369Labs - a live Deriv trading platform. You are smart, concise, and sound like an expert human strategist chatting with a trader.${memoryStr}
 
 PLATFORM FACTS:
 - Trades Deriv synthetic volatility indices. Valid symbols: R_10, R_25, R_50, R_75, R_100 and 1-second variants 1HZ10V, 1HZ15V, 1HZ25V, 1HZ30V, 1HZ50V, 1HZ75V, 1HZ90V, 1HZ100V. Users may type "R10" (you mean R_10) or "1HZ10" (you mean 1HZ10V) - the system normalizes these, so just call tools with the normalized symbol.
@@ -772,9 +774,48 @@ Return ONLY the JSON.`;
         }
       }),
   }),
+  memory: router({
+    get: protectedProcedure.query(async ({ ctx }) => {
+      const mem = await db.getUserMemory(ctx.user.id);
+      return { memory: mem || {} };
+    }),
+    set: protectedProcedure
+      .input(z.object({ memory: z.record(z.any()) }))
+      .mutation(async ({ ctx, input }) => {
+        await db.setUserMemory(ctx.user.id, input.memory);
+        await db.saveAuditLog({ userId: ctx.user.id, action: "memory.update", detail: input.memory });
+        return { ok: true };
+      }),
+  }),
+  logs: router({
+    recent: protectedProcedure
+      .input(z.object({ limit: z.number().default(100) }))
+      .query(async ({ ctx, input }) => {
+        const rows = await db.getAuditLogs(ctx.user.id, input.limit);
+        return { logs: rows.map((r: any) => ({
+          action: r.action,
+          target: r.target,
+          detail: r.detail,
+          at: Number(new Date(r.createdAt).getTime()),
+        })) };
+      }),
+  }),
 });
 
+// Render the user's remembered profile into a compact string for the AI system prompt.
+export function formatMemoryForPrompt(mem: Record<string, any> | null | undefined): string {
+  if (!mem || Object.keys(mem).length === 0) return "";
+  const parts: string[] = [];
+  if (mem.symbols?.length) parts.push(`Preferred symbols: ${mem.symbols.join(", ")}`);
+  if (mem.riskPct != null) parts.push(`Risk per trade: ${mem.riskPct}%`);
+  if (mem.noMartingale) parts.push("Hard rule: NO martingale / no grid averaging");
+  if (mem.style) parts.push(`Style: ${mem.style}`);
+  if (mem.notes) parts.push(`Notes: ${mem.notes}`);
+  return parts.length ? `\n\nREMEMBERED TRADER PROFILE (apply automatically):\n- ` + parts.join("\n- ") : "";
+}
+
 export type AppRouter = typeof appRouter;
+
 
 
 
