@@ -24,6 +24,8 @@ import Logs from "./pages/Logs";
 import Journal from "./pages/Journal";
 import Replay from "./pages/Replay";
 import Workflow from "./pages/Workflow";
+import Coding from "./pages/Coding";
+import Plugins from "./pages/Plugins";
 
 function AppLayout({ children }: { children: React.ReactNode }) {
   return <DashboardLayout>{children}</DashboardLayout>;
@@ -81,6 +83,12 @@ function Router() {
       </Route>
       <Route path={"/workflow"}>
         <AppLayout><Workflow /></AppLayout>
+      </Route>
+      <Route path={"/coding"}>
+        <AppLayout><Coding /></AppLayout>
+      </Route>
+      <Route path={"/plugins"}>
+        <AppLayout><Plugins /></AppLayout>
       </Route>
       <Route path={"/404"} component={NotFound} />
       <Route component={NotFound} />
