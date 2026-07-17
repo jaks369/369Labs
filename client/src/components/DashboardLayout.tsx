@@ -135,6 +135,8 @@ function DashboardLayoutContent({
   const sidebarRef = useRef<HTMLDivElement>(null);
   const activeMenuItem = menuItems.find(item => item.path === location);
   const isMobile = useIsMobile();
+  const [riskDismissed, setRiskDismissed] = useState(false);
+
 
   useEffect(() => {
     if (isCollapsed) {
@@ -267,9 +269,19 @@ function DashboardLayoutContent({
           </div>
         )}
         <main className="flex-1 overflow-y-auto">
+          {!riskDismissed && (
+            <div className="flex items-center gap-3 bg-amber-500/10 border-b border-amber-500/30 px-4 py-2 text-xs text-amber-200">
+              <span className="font-bold uppercase tracking-wider">Risk</span>
+              <span className="flex-1">
+                Trading involves substantial risk. 369Labs is an analysis tool, not financial advice. Never trade with money you cannot afford to lose, and verify every strategy on a demo account first.
+              </span>
+              <button onClick={() => setRiskDismissed(true)} className="text-amber-300 hover:text-white font-bold px-2">✕</button>
+            </div>
+          )}
           {children}
         </main>
       </SidebarInset>
     </div>
   );
 }
+
