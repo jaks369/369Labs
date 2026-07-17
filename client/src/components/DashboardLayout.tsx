@@ -21,34 +21,66 @@ import {
 } from "@/components/ui/sidebar";
 import { getLoginUrl } from "@/const";
 import { useIsMobile } from "@/hooks/useMobile";
-import { 
-  LayoutDashboard, 
-  LogOut, 
-  Bot, 
-  Zap, 
-  Brain, 
-  CandlestickChart, 
+import {
+  LayoutDashboard,
+  LogOut,
+  Bot,
+  Zap,
+  Brain,
+  CandlestickChart,
   Settings,
   Activity,
   Bell,
   MessageCircle,
   Home,
+  FlaskConical,
+  Command,
 } from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { DashboardLayoutSkeleton } from './DashboardLayoutSkeleton';
 import { Button } from "./ui/button";
+import AITimeline from "./AITimeline";
+import { openCommandPalette } from "./CommandPalette";
 
-const menuItems = [
-  { icon: Home, label: "Home", path: "/?home=1" },
-  { icon: LayoutDashboard, label: "Dashboard", path: "/dashboard" },
-  { icon: Bot, label: "Bots", path: "/bots" },
-  { icon: Brain, label: "369AI Assistant", path: "/ai-assistant" },
-  { icon: CandlestickChart, label: "AI Signals", path: "/marketplace" },
-  { icon: MessageCircle, label: "Telegram", path: "/telegram" },
-  { icon: Bell, label: "Notifications", path: "/notifications" },
-  { icon: Settings, label: "Settings", path: "/settings" },
+type NavItem = { icon: React.ComponentType<{ className?: string }>; label: string; path: string };
+type NavGroup = { title: string; items: NavItem[] };
+
+const navGroups: NavGroup[] = [
+  {
+    title: "Workspace",
+    items: [
+      { icon: LayoutDashboard, label: "Command Center", path: "/dashboard" },
+      { icon: Brain, label: "369AI Assistant", path: "/ai-assistant" },
+    ],
+  },
+  {
+    title: "Build",
+    items: [
+      { icon: Zap, label: "Strategy Builder", path: "/strategy-builder" },
+      { icon: FlaskConical, label: "Backtesting", path: "/backtesting" },
+      { icon: CandlestickChart, label: "AI Signals", path: "/marketplace" },
+    ],
+  },
+  {
+    title: "Operate",
+    items: [
+      { icon: Bot, label: "Bots", path: "/bots" },
+      { icon: Activity, label: "Analytics", path: "/analytics" },
+      { icon: Home, label: "Home", path: "/?home=1" },
+    ],
+  },
+  {
+    title: "Connect",
+    items: [
+      { icon: MessageCircle, label: "Telegram", path: "/telegram" },
+      { icon: Bell, label: "Notifications", path: "/notifications" },
+      { icon: Settings, label: "Settings", path: "/settings" },
+    ],
+  },
 ];
+
+const menuItems: NavItem[] = navGroups.flatMap((g) => g.items);
 
 const SIDEBAR_WIDTH_KEY = "sidebar-width";
 const DEFAULT_WIDTH = 260;
@@ -195,34 +227,58 @@ function DashboardLayoutContent({
             </button>
           </SidebarHeader>
 
-          <SidebarContent className="py-6">
-            <SidebarMenu className="px-3 gap-1">
-              {menuItems.map(item => {
-                const isActive = location === item.path;
-                return (
-                  <SidebarMenuItem key={item.path}>
-                    <SidebarMenuButton
-                      isActive={isActive}
-                      onClick={() => setLocation(item.path)}
-                      tooltip={item.label}
-                      className={`h-11 px-3 rounded-md transition-all ${
-                        isActive 
-                          ? "bg-blue-600/10 text-blue-500 font-semibold" 
-                          : "text-slate-400 hover:text-white hover:bg-white/5"
-                      }`}
-                    >
-                      <item.icon
-                        className={`h-5 w-5 ${isActive ? "text-blue-500" : ""}`}
-                      />
-                      <span>{item.label}</span>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                );
-              })}
-            </SidebarMenu>
+          <SidebarContent className="py-4">
+            {navGroups.map((group) => (
+              <div key={group.title} className="mb-3">
+                {!isCollapsed && (
+                  <p className="px-4 mb-1 text-[10px] font-bold uppercase tracking-wider text-slate-600">
+                    {group.title}
+                  </p>
+                )}
+                <SidebarMenu className="px-3 gap-1">
+                  {group.items.map((item) => {
+                    const isActive = location === item.path;
+                    return (
+                      <SidebarMenuItem key={item.path}>
+                        <SidebarMenuButton
+                          isActive={isActive}
+                          onClick={() => setLocation(item.path)}
+                          tooltip={item.label}
+                          className={`h-10 px-3 rounded-md transition-all ${
+                            isActive
+                              ? "bg-blue-600/10 text-blue-500 font-semibold"
+                              : "text-slate-400 hover:text-white hover:bg-white/5"
+                          }`}
+                        >
+                          <item.icon
+                            className={`h-5 w-5 ${isActive ? "text-blue-500" : ""}`}
+                          />
+                          <span>{item.label}</span>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    );
+                  })}
+                </SidebarMenu>
+              </div>
+            ))}
           </SidebarContent>
 
-          <SidebarFooter className="p-4 border-t border-[#30363D]">
+          <SidebarFooter className="p-3 border-t border-[#30363D] space-y-3">
+            <button
+              onClick={() => openCommandPalette()}
+              className="w-full flex items-center gap-2 rounded-md border border-[#30363D] bg-[#0D1117] px-3 py-2 text-xs text-slate-400 hover:text-white hover:border-blue-500/50 transition-colors"
+            >
+              <Command className="w-3.5 h-3.5" />
+              <span className="flex-1 text-left">Command Center</span>
+              <kbd className="text-[9px] border border-[#30363D] rounded px-1">⌘K</kbd>
+            </button>
+
+            {!isCollapsed && (
+              <div className="rounded-md border border-[#30363D] bg-[#0D1117] p-2.5">
+                <AITimeline compact />
+              </div>
+            )}
+
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <button className="flex items-center gap-3 rounded-lg px-2 py-2 hover:bg-white/5 transition-colors w-full text-left group-data-[collapsible=icon]:justify-center focus:outline-none">
@@ -284,4 +340,5 @@ function DashboardLayoutContent({
     </div>
   );
 }
+
 
