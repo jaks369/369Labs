@@ -380,3 +380,92 @@ export async function pruneBadTicks(): Promise<number> {
     return 0;
   }
 }
+
+const SEED_PLUGINS = [
+  { name: "MartingaleGuard", description: "Auto-cancels a bot if its stake doubles more than twice in a row (anti-martingale safety).", author: "369Labs", hook: "onTrade", enabledByDefault: false },
+  { name: "DailyPnLCap", description: "Stops all bots when account daily loss exceeds a user-set %.", author: "369Labs", hook: "onTrade", enabledByDefault: false },
+  { name: "SignalBooster", description: "Re-ranks AI signals by confidence × winRate before showing them.", author: "community", hook: "onSignal", enabledByDefault: true },
+  { name: "TelegramRecap", description: "Sends a nightly PnL + open-positions recap via Telegram.", author: "community", hook: "scheduled", enabledByDefault: false },
+  { name: "VolatilityWatchdog", description: "Pauses bots when realized volatility spikes > 2x its 1h average.", author: "369Labs", hook: "onTick", enabledByDefault: false },
+];
+
+export async function ensurePluginsTable(): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+  try {
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS plugins (
+        id int NOT NULL AUTO_INCREMENT,
+        name varchar(128) NOT NULL,
+        description text,
+        author varchar(128),
+        hook varchar(64),
+        config json,
+        enabled_by_default tinyint(1) NOT NULL DEFAULT 0,
+        created_at timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (id),
+        UNIQUE KEY plugins_name (name)
+      )
+    `);
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS plugin_installs (
+        id int NOT NULL AUTO_INCREMENT,
+        userId int NOT NULL,
+        pluginId int NOT NULL,
+        enabled tinyint(1) NOT NULL DEFAULT 1,
+        installed_at timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (id),
+        UNIQUE KEY plugin_installs_uniq (userId, pluginId)
+      )
+    `);
+    for (const p of SEED_PLUGINS) {
+      await db.execute(sql`
+        INSERT IGNORE INTO plugins (name, description, author, hook, enabled_by_default)
+        VALUES (${p.name}, ${p.description}, ${p.author}, ${p.hook}, ${p.enabledByDefault ? 1 : 0})
+      `);
+    }
+  } catch (e: any) {
+    console.error("[ensurePluginsTable] failed", e?.message || e);
+  }
+}
+
+export async function getPluginMarketplace(): Promise<any[]> {
+  const db = await getDb();
+  if (!db) return [];
+  try {
+    const rows = await db.execute(sql`SELECT * FROM plugins ORDER BY id`);
+    return (rows as any)[0] ?? [];
+  } catch (e: any) {
+    console.error("[getPluginMarketplace] failed", e?.message || e);
+    return [];
+  }
+}
+
+export async function getInstalledPlugins(userId: number): Promise<any[]> {
+  const db = await getDb();
+  if (!db) return [];
+  try {
+    const rows = await db.execute(
+      sql`SELECT p.*, pi.enabled AS installedEnabled FROM plugins p
+          LEFT JOIN plugin_installs pi ON pi.pluginId = p.id AND pi.userId = ${userId}
+          ORDER BY p.id`
+    );
+    return (rows as any)[0] ?? [];
+  } catch (e: any) {
+    console.error("[getInstalledPlugins] failed", e?.message || e);
+    return [];
+  }
+}
+
+export async function installPlugin(userId: number, pluginId: number, enabled: boolean): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+  try {
+    await db.execute(
+      sql`INSERT INTO plugin_installs (userId, pluginId, enabled) VALUES (${userId}, ${pluginId}, ${enabled ? 1 : 0})
+          ON DUPLICATE KEY UPDATE enabled = ${enabled ? 1 : 0}`
+    );
+  } catch (e: any) {
+    console.error("[installPlugin] failed", e?.message || e);
+  }
+}
