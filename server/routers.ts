@@ -294,6 +294,7 @@ export const appRouter = router({
         name: z.string().min(1),
         description: z.string().optional(),
         config: z.record(z.string(), z.any()),
+        published: z.boolean().optional(),
       }))
       .mutation(async ({ ctx, input }) => {
         try {
@@ -303,6 +304,7 @@ export const appRouter = router({
             description: input.description,
             config: input.config,
             isActive: true,
+            published: input.published ?? false,
           });
           return strategy;
         } catch (error) {
@@ -320,6 +322,17 @@ export const appRouter = router({
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
           message: "Failed to retrieve strategies",
+        });
+      }
+    }),
+
+    publishedList: protectedProcedure.query(async ({ ctx }) => {
+      try {
+        return await db.getPublishedStrategies();
+      } catch (error) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Failed to retrieve published strategies",
         });
       }
     }),
@@ -815,6 +828,7 @@ export function formatMemoryForPrompt(mem: Record<string, any> | null | undefine
 }
 
 export type AppRouter = typeof appRouter;
+
 
 
 
