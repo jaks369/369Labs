@@ -186,3 +186,44 @@ export const userMemory = mysqlTable("userMemory", {
 
 export type UserMemory = typeof userMemory.$inferSelect;
 export type InsertUserMemory = typeof userMemory.$inferInsert;
+
+// Plugin registry: community-contributed extensions that hook into the OS.
+export const plugins = mysqlTable("plugins", {
+  id: int("id").autoincrement().primaryKey(),
+  name: varchar("name", { length: 128 }).notNull().unique(),
+  description: text("description"),
+  author: varchar("author", { length: 128 }),
+  hook: varchar("hook", { length: 64 }), // e.g. "onTrade", "onSignal", "onBotStart"
+  config: json("config"), // default configuration for the plugin
+  enabledByDefault: boolean("enabled_by_default").default(false).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export type Plugin = typeof plugins.$inferSelect;
+export type InsertPlugin = typeof plugins.$inferInsert;
+
+// Which plugins a given user has installed/enabled.
+export const pluginInstalls = mysqlTable("plugin_installs", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  pluginId: int("pluginId").notNull(),
+  enabled: boolean("enabled").default(true).notNull(),
+  installedAt: timestamp("installed_at").defaultNow().notNull(),
+});
+
+export type PluginInstall = typeof pluginInstalls.$inferSelect;
+export type InsertPluginInstall = typeof pluginInstalls.$inferInsert;
+
+// One-shot scheduled task queue (used by plugins / workflows).
+export const jobs = mysqlTable("jobs", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  type: varchar("type", { length: 64 }).notNull(),
+  payload: json("payload"),
+  status: mysqlEnum("status", ["pending", "done", "failed"]).default("pending").notNull(),
+  runAt: bigint("runAt", { mode: "number" }).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export type Job = typeof jobs.$inferSelect;
+export type InsertJob = typeof jobs.$inferInsert;
