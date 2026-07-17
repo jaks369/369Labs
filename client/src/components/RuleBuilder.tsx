@@ -148,8 +148,44 @@ interface RuleBuilderProps {
 export default function RuleBuilder({ rule, onChange }: RuleBuilderProps) {
   const [stakeError, setStakeError] = useState<string | null>(null);
 
+  const [nlText, setNlText] = useState("");
+  const [nlMsg, setNlMsg] = useState<{ kind: "ok" | "err"; text: string } | null>(null);
+
+  const applyNl = () => {
+    const res = parseRuleFromText(nlText, rule);
+    if (res.ok) {
+      onChange(res.rule);
+      const c = res.rule.condition;
+      const trade = res.rule.action.tradeType;
+      setNlMsg({ kind: "ok", text: `Parsed: IF ${c.indicator}${c.barrier !== undefined ? " " + c.barrier : ""} (${c.comparison}) -> ${trade}` });
+    } else {
+      setNlMsg({ kind: "err", text: res.error || "Could not parse." });
+    }
+  };
+
   return (
-    <div className="space-y-4">
+    <div className="space-y-4">      {/* Natural-language input */}
+      <div className="relative border border-amber-400/50 bg-[#0F1629] p-4 rounded">
+        <div className="absolute -top-3 left-4 bg-[#0A0E27] px-2 text-sm font-bold text-amber-400">
+          DESCRIBE IN ENGLISH
+        </div>
+        <div className="mt-2 flex gap-2">
+          <input
+            value={nlText}
+            onChange={(e) => setNlText(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); applyNl(); } }}
+            placeholder={'e.g. "when an even digit appears, buy rise" or "after 3 of digit 5 in a row, buy fall"'}
+            className="flex-1 bg-[#0A0E27] border border-amber-400/30 rounded px-3 py-2 text-sm text-white placeholder:text-slate-600 outline-none focus:border-amber-400"
+          />
+          <button onClick={applyNl} className="px-4 py-2 rounded bg-amber-500 text-black text-sm font-bold hover:bg-amber-400">Build</button>
+        </div>
+        {nlMsg && (
+          <div className={`mt-2 text-xs ${nlMsg.kind === "ok" ? "text-emerald-400" : "text-red-400"}`}>{nlMsg.text}</div>
+        )}
+        <p className="mt-2 text-[10px] text-slate-500">Type a condition in plain English and press Build (or Enter). The dropdowns below still work for fine-tuning.</p>
+      </div>
+
+
       {/* Symbol selector */}
       <div className="relative border border-[#FF00FF]/50 bg-[#0F1629] p-4 rounded">
         <div className="absolute -top-3 left-4 bg-[#0A0E27] px-2 text-sm font-bold text-[#FF00FF]">
