@@ -12,7 +12,7 @@ export default function DigitStats({ symbol, decimalPlaces = derivWS.decimalPlac
   const [digits, setDigits] = useState<number[]>([]);
   // The most recent last digit - drives the live pointer.
   const [currentDigit, setCurrentDigit] = useState<number | null>(null);
-  const [selectedDigit, setSelectedDigit] = useState<number | null>(null);
+  const [selectedDigit, setSelectedDigit] = useState<number | null>(5);
   const [stats, setStats] = useState({
     even: 0,
     odd: 0,
