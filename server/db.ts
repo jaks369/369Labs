@@ -18,12 +18,19 @@ import {
   BotRun,
   TelegramSettings,
   NotificationSettings,
+  InsertUser,
   InsertDerivToken,
   InsertStrategy,
   InsertTrade,
   InsertBotRun,
   InsertTelegramSettings,
   InsertNotificationSettings,
+  trades,
+  signals,
+  strategies,
+  botRuns,
+  derivTokens,
+  users,
 } from "../drizzle/schema";
 import { ENV } from './_core/env';
 import { encrypt, decrypt } from './_core/encryption';
