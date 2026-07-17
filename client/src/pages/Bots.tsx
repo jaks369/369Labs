@@ -8,11 +8,13 @@ import {
   Square,
   Activity,
   AlertCircle,
+  AlertTriangle,
   Zap,
   Plus,
 } from "lucide-react";
 import { useLocation } from "wouter";
 import { BotEngine, BotStatus, BotTrade } from "@/services/BotEngine";
+import { runBacktest } from "@/services/BacktestEngine";
 import { derivWS } from "@/services/derivWebSocket";
 import { StrategyRule } from "@/components/RuleBuilder";
 import { StrategyBuilderContent } from "@/pages/StrategyBuilder";
@@ -26,6 +28,9 @@ interface RunningBot {
   status: BotStatus;
   pnl: number;
   trades: number;
+  wins: number;
+  losses: number;
+  backtestWinRate: number | null;
   lastLog?: string;
 }
 
@@ -114,6 +119,8 @@ export default function Bots() {
           updateBot(botRun.id, {
             pnl: (current?.pnl || 0) + parseFloat(trade.pnl),
             trades: (current?.trades || 0) + 1,
+            wins: (current?.wins || 0) + (trade.result === "win" ? 1 : 0),
+            losses: (current?.losses || 0) + (trade.result === "loss" ? 1 : 0),
           });
           saveTradeMutation.mutate({
             botRunId: botRun.id,
@@ -144,10 +151,26 @@ export default function Bots() {
         status: "running",
         pnl: 0,
         trades: 0,
+        wins: 0,
+        losses: 0,
+        backtestWinRate: null,
       };
       setRunningBots((prev) => [...prev, newBot]);
 
       engine.start({ symbol: rule.symbol || DEFAULT_SYMBOL, strategy: rule });
+
+      // Capture the expected win rate via backtest so we can flag regime drift live.
+      const stake = Number(rule.params?.stake ?? 1);
+      derivWS
+        .fetchTickHistory(rule.symbol || DEFAULT_SYMBOL, Math.floor(Date.now() / 1000) - 7 * 24 * 3600, Math.floor(Date.now() / 1000))
+        .then(async (ticks) => {
+          if (!ticks || ticks.length < 20) return;
+          const res = await runBacktest(ticks, rule, stake);
+          updateBot(botRun.id, { backtestWinRate: res.winRate });
+        })
+        .catch(() => {
+          /* backtest unavailable (e.g. invalid token) — badge stays hidden */
+        });
     } catch (error) {
       alert(error instanceof Error ? error.message : "Failed to deploy bot");
     } finally {
@@ -268,6 +291,24 @@ export default function Bots() {
                             {bot.pnl >= 0 ? "+" : ""}${bot.pnl.toFixed(2)}
                           </p>
                         </div>
+                        {(() => {
+                          const settled = bot.wins + bot.losses;
+                          const liveWinRate = settled > 0 ? (bot.wins / settled) * 100 : null;
+                          if (bot.backtestWinRate == null || liveWinRate == null || settled < 5) return null;
+                          const drift = liveWinRate - bot.backtestWinRate;
+                          const mismatch = drift <= -15 || liveWinRate < bot.backtestWinRate * 0.7;
+                          if (!mismatch) return null;
+                          return (
+                            <div className="max-w-[180px] text-left bg-red-500/10 border border-red-500/30 rounded px-2 py-1">
+                              <div className="flex items-center gap-1 text-[10px] font-bold text-red-400 uppercase">
+                                <AlertTriangle className="w-3 h-3" /> Regime mismatch
+                              </div>
+                              <p className="text-[10px] text-red-300/80 leading-tight mt-0.5">
+                                Live {liveWinRate.toFixed(0)}% vs backtest {bot.backtestWinRate.toFixed(0)}%
+                              </p>
+                            </div>
+                          );
+                        })()}
                         <Button
                           size="sm"
                           variant="destructive"
@@ -326,3 +367,4 @@ export default function Bots() {
     </div>
   );
 }
+
