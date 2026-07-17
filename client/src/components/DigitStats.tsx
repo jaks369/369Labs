@@ -90,6 +90,14 @@ export default function DigitStats({ symbol, decimalPlaces = derivWS.decimalPlac
   }, [symbol, decimalPlaces, maxTicks]);
 
   const maxPercent = Math.max(...stats.counts, 1);
+  // Derive Over/Under live from the current digits array so they always reflect
+  // the latest ticks (not just when onTick fires).
+  const th = selectedDigit;
+  let _over = 0, _under = 0;
+  digits.forEach((d) => { if (d > th) _over++; else if (d < th) _under++; });
+  const _len = digits.length || 1;
+  const overPct = (_over / _len) * 100;
+  const underPct = (_under / _len) * 100;
   const maxIdx = stats.counts.indexOf(Math.max(...stats.counts));
   const minIdx = stats.counts.indexOf(Math.min(...stats.counts));
   const hasData = stats.counts.some((c) => c > 0);
@@ -118,19 +126,19 @@ export default function DigitStats({ symbol, decimalPlaces = derivWS.decimalPlac
         <div className="bg-slate-900/50 p-3 rounded border border-slate-800">
           <div className="flex justify-between text-[10px] font-bold text-slate-500 mb-2 uppercase">
             <span>Over {selectedDigit ?? 5}</span>
-            <span className="text-purple-500">{stats.over.toFixed(1)}%</span>
+            <span className="text-purple-500">{overPct.toFixed(1)}%</span>
           </div>
           <div className="h-1.5 w-full bg-slate-800 rounded-full overflow-hidden">
-            <div className="h-full bg-purple-500 transition-all duration-300" style={{ width: `${stats.over}%` }} />
+            <div className="h-full bg-purple-500 transition-all duration-300" style={{ width: `${overPct}%` }} />
           </div>
         </div>
         <div className="bg-slate-900/50 p-3 rounded border border-slate-800">
           <div className="flex justify-between text-[10px] font-bold text-slate-500 mb-2 uppercase">
             <span>Under {selectedDigit ?? 5}</span>
-            <span className="text-orange-500">{stats.under.toFixed(1)}%</span>
+            <span className="text-orange-500">{underPct.toFixed(1)}%</span>
           </div>
           <div className="h-1.5 w-full bg-slate-800 rounded-full overflow-hidden">
-            <div className="h-full bg-orange-500 transition-all duration-300" style={{ width: `${stats.under}%` }} />
+            <div className="h-full bg-orange-500 transition-all duration-300" style={{ width: `${underPct}%` }} />
           </div>
         </div>
       </div>
