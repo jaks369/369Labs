@@ -155,6 +155,7 @@ export default function RuleBuilder({ rule, onChange }: RuleBuilderProps) {
   const [nlText, setNlText] = useState("");
   const [nlMsg, setNlMsg] = useState<{ kind: "ok" | "err"; text: string } | null>(null);
   const parseRuleMutation = trpc.ai.parseRule.useMutation();
+  const [showTree, setShowTree] = useState<boolean>(!!rule.conditions);
 
   const applyNl = async () => {
     const text = nlText.trim();
@@ -319,6 +320,36 @@ export default function RuleBuilder({ rule, onChange }: RuleBuilderProps) {
               }
               className="border-[#00FFFF]/40 text-[#00FFFF]"
             />
+          </div>
+        )}
+      </div>
+
+      {/* ADVANCED: composable AND/OR/NOT conditions */}
+      <div className="mt-3">
+        <button
+          type="button"
+          onClick={() => {
+            if (!showTree) {
+              onChange({ ...rule, conditions: rule.conditions ?? LegacyConditionToNode(rule.condition) });
+            } else {
+              onChange({ ...rule, conditions: undefined });
+            }
+            setShowTree(!showTree);
+          }}
+          className="text-xs px-3 py-1 rounded border border-[#FF00FF]/50 text-[#FF00FF] hover:bg-[#FF00FF]/15"
+        >
+          {showTree ? "← Back to simple condition" : "+ Combine conditions (AND / OR / NOT)"}
+        </button>
+        {showTree && (
+          <div className="mt-3">
+            <div className="absolute -top-3 left-4 bg-[#0A0E27] px-2 text-sm font-bold text-[#FF00FF] hidden" />
+            <ConditionTreeEditor
+              value={rule.conditions ?? LegacyConditionToNode(rule.condition)}
+              onChange={(node) => onChange({ ...rule, conditions: node })}
+            />
+            <p className="mt-2 text-[10px] text-slate-500">
+              Composable logic overrides the simple condition above when saved. The engine evaluates the whole tree.
+            </p>
           </div>
         )}
       </div>
