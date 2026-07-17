@@ -140,9 +140,9 @@ export class BotEngine {
    * Returns true if the current tick satisfies the strategy's per-tick condition,
    * given the rule's indicator (digit_over/under/even/odd, consecutive_rise/fall).
    */
-  private tickSatisfiesIndicator(index: number): boolean {
+  private tickSatisfiesIndicator(index: number, r?: StrategyRule): boolean {
     if (!this.config) return false;
-    const rule = this.config.strategy;
+    const rule = r || this.config.strategy;
     const tick = this.tickHistory[index];
     const indicator = rule.condition.indicator;
 
@@ -194,6 +194,7 @@ export class BotEngine {
       lossStreak: this.lossStreak,
       window: 20,
     };
+    if (rule.ensemble && rule.ensemble.rules.length > 0) return this.ensembleTriggered(rule.ensemble);
     if (rule.conditions) return evaluateNode(rule.conditions as ConditionNode, ctx);
     // Backward-compatible flat condition path.
     const { comparison, count } = rule.condition;
@@ -210,6 +211,38 @@ export class BotEngine {
       if (this.tickSatisfiesIndicator(i)) occurrences++;
     }
     return occurrences >= count;
+  }
+
+  private ruleTriggers(rule: StrategyRule): boolean {
+    const digits = this.tickHistory.map((t) => lastDigitOf(Number(t.price)));
+    const ctx: EvalContext = {
+      prices: this.tickHistory.map((t) => Number(t.price)),
+      digits,
+      lossStreak: this.lossStreak,
+      window: 20,
+    };
+    if (rule.conditions) return evaluateNode(rule.conditions as ConditionNode, ctx);
+    const { comparison, count } = rule.condition;
+    if (this.tickHistory.length < count) return false;
+    if (comparison === "appears_consecutively") {
+      for (let i = this.tickHistory.length - count; i < this.tickHistory.length; i++) {
+        if (!this.tickSatisfiesIndicator(i, rule)) return false;
+      }
+      return true;
+    }
+    const windowStart = Math.max(0, this.tickHistory.length - 20);
+    let occurrences = 0;
+    for (let i = windowStart; i < this.tickHistory.length; i++) {
+      if (this.tickSatisfiesIndicator(i, rule)) occurrences++;
+    }
+    return occurrences >= count;
+  }
+
+  private ensembleTriggered(ensemble: NonNullable<StrategyRule["ensemble"]>): boolean {
+    const votes = ensemble.rules.filter((r) => this.ruleTriggers(r)).length;
+    if (ensemble.vote === "all") return votes === ensemble.rules.length;
+    if (ensemble.vote === "any") return votes >= 1;
+    return votes >= Math.ceil(ensemble.rules.length / 2);
   }
 
       private async executeTrade() {
@@ -355,3 +388,4 @@ export class BotEngine {
     return this.trades;
   }
 }
+
