@@ -299,6 +299,33 @@ export async function saveAuditLog(entry: { userId: number; action: string; targ
   }
 }
 
+export async function getAuditLogs(userId: number, limit: number = 100): Promise<any[]> {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(auditLogs).where(eq(auditLogs.userId, userId)).orderBy(desc(auditLogs.createdAt)).limit(limit);
+}
+
+// Idempotent: create the userMemory table if it doesn't exist yet (TiDB ignores
+// IF NOT EXISTS). Keeps the AI Memory feature working without a manual migration.
+export async function ensureUserMemoryTable(): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+  try {
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS userMemory (
+        id int NOT NULL AUTO_INCREMENT,
+        userId int NOT NULL,
+        memory json NOT NULL,
+        updatedAt timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        PRIMARY KEY (id),
+        UNIQUE KEY userMemory_userId (userId)
+      )
+    `);
+  } catch (e: any) {
+    console.error("[ensureUserMemoryTable] failed", e?.message || e);
+  }
+}
+
 export async function ensureSignalExpiryColumn(): Promise<void> {
   const db = await getDb();
   if (!db) return;
