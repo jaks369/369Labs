@@ -22,10 +22,19 @@ export default function Marketplace() {
 
   const sendToBot = async (sig: any) => {
     try {
+      // Confidence-weighted stake: stronger signals trade bigger, weak ones trade small.
+      const confidence = Number(sig.confidence) || 50;
+      const BASE_STAKE = 2;
+      const MIN_STAKE = 0.35;
+      const scaledStake = Math.max(MIN_STAKE, +(BASE_STAKE * (confidence / 100)).toFixed(2));
+      const rule = {
+        ...(sig.rule || {}),
+        params: { ...(sig.rule?.params || {}), stake: scaledStake, confidence },
+      };
       const strategy = await createBotMutation.mutateAsync({
         name: sig.title || (sig.symbol + " insight"),
         description: sig.description || "Created from a 369AI signal.",
-        config: { rule: sig.rule, source: "ai_signal", signalId: sig.id },
+        config: { rule, source: "ai_signal", signalId: sig.id },
       });
       setSentId(sig.id);
       setTimeout(() => navigate("/bots"), 600);
@@ -101,6 +110,7 @@ export default function Marketplace() {
                         <span className="flex items-center gap-1 text-slate-500"><TrendingUp className="w-3 h-3" /> Win rate <b className={win >= 65 ? "text-emerald-400" : "text-amber-400"}>{win}%</b></span>
                         <span className="text-slate-500">Samples <b className="text-white">{sig.sampleSize}</b></span>
                         <span className="text-slate-500">Confidence <b className="text-white">{sig.confidence}%</b></span>
+                        <span className="text-slate-500">Stake <b className="text-amber-400">${(Math.max(0.35, +(2 * (Number(sig.confidence) || 50) / 100)).toFixed(2))}</b> <span className="text-slate-600">(scaled)</span></span>
                         <span className="flex items-center gap-1 text-slate-500"><Clock className="w-3 h-3" /> {new Date((sig.discoveredAt || 0) * 1000).toLocaleString()}</span>
                       </div>
                     </div>
