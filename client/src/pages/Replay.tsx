@@ -3,7 +3,7 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import { derivWS } from "@/services/derivWebSocket";
 import { useLocation } from "wouter";
 import { Play, Pause, RotateCcw, FastForward, TrendingUp, TrendingDown, Loader2 } from "lucide-react";
-import { Sparkline } from "@/components/Sparkline";
+import Sparkline from "@/components/Sparkline";
 
 type Tick = { epoch: number; price: number; lastDigit: number };
 
