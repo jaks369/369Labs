@@ -813,6 +813,48 @@ Return ONLY the JSON.`;
         })) };
       }),
   }),
+  coding: router({
+    list: protectedProcedure.query(async () => {
+      const { listFiles } = await import("./fileOps");
+      return { files: listFiles() };
+    }),
+    read: protectedProcedure
+      .input(z.object({ path: z.string() }))
+      .query(async ({ input }) => {
+        const { readFile } = await import("./fileOps");
+        return { content: readFile(input.path) };
+      }),
+    write: protectedProcedure
+      .input(z.object({ path: z.string(), content: z.string() }))
+      .mutation(async ({ ctx, input }) => {
+        const { writeFile } = await import("./fileOps");
+        writeFile(input.path, input.content);
+        await db.saveAuditLog({ userId: ctx.user.id, action: "coding.write", target: input.path });
+        return { ok: true };
+      }),
+  }),
+  plugins: router({
+    marketplace: protectedProcedure.query(async () => {
+      return { plugins: await db.getPluginMarketplace() };
+    }),
+    my: protectedProcedure.query(async ({ ctx }) => {
+      return { plugins: await db.getInstalledPlugins(ctx.user.id) };
+    }),
+    install: protectedProcedure
+      .input(z.object({ pluginId: z.number(), enabled: z.boolean().default(true) }))
+      .mutation(async ({ ctx, input }) => {
+        await db.installPlugin(ctx.user.id, input.pluginId, input.enabled);
+        await db.saveAuditLog({ userId: ctx.user.id, action: "plugin.install", target: String(input.pluginId) });
+        const mem = await db.getUserMemory(ctx.user.id);
+        if (Array.isArray(mem?.memory?.plugins)) {
+          const set = new Set(mem.memory.plugins as number[]);
+          if (input.enabled) set.add(input.pluginId); else set.delete(input.pluginId);
+          mem.memory.plugins = [...set];
+          await db.setUserMemory(ctx.user.id, mem.memory);
+        }
+        return { ok: true };
+      }),
+  }),
 });
 
 // Render the user's remembered profile into a compact string for the AI system prompt.
