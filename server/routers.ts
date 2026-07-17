@@ -29,6 +29,19 @@ import { getTickHistory, getActiveSymbols, getDigitStats, getTrend, suggestStrat
       }
       if (name === "deployBot") {
         if (!ctxUser) return { error: "Not authenticated" };
+        // Create a DRAFT bot from an AI insight / natural-language rule.
+        // This only saves the strategy - it does NOT start trading. The user
+        // presses Start in the Bots page (safety: draft-first).
+        if (args.rule && args.name) {
+          const strategy = await db.saveStrategy({
+            userId: ctxUser.id,
+            name: args.name,
+            description: args.description || "Created from a 369AI insight.",
+            config: { rule: args.rule, source: "ai_insight" },
+            isActive: true,
+          });
+          return { data: { createdStrategyId: strategy.id, name: strategy.name, status: "draft", started: false, message: "Draft bot created. Open the Bots page and press Start to go live." } };
+        }
         if (!args.confirm) return { error: "Confirmation required. Ask the user to confirm deploying this bot before proceeding." };
         return buildActionIntent("deployBot", { strategyId: args.strategyId, symbol: normalizeSymbol(args.symbol || ""), stake: args.stake || 1 });
       }
