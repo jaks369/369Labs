@@ -56,7 +56,6 @@ export function StrategyBuilderContent({ embedded = false, onClose, onSaved }: S
   const [ensembleVote, setEnsembleVote] = useState<"all" | "majority" | "any">("majority");
   const [ensembleIds, setEnsembleIds] = useState<number[]>([]);
   const [versions, setVersions] = useState<{ savedAt: string; rule: any }[]>([]);
-  const [showHistory, setShowHistory] = useState(false);
   const [compareIdx, setCompareIdx] = useState<[number, number] | null>(null);
 
   const publishMutation = trpc.strategies.publish.useMutation();
