@@ -299,6 +299,22 @@ export async function ensureSignalExpiryColumn(): Promise<void> {
 }
 
 
+// Recompute lastDigit from price for every row (corrects old data that stored
+// the units digit before the decimal instead of the true last decimal digit).
+// Gated behind RECOMPUTE_DIGITS=1 so it does not run on every boot.
+export async function recomputeLastDigits(): Promise<number> {
+  if (process.env.RECOMPUTE_DIGITS !== "1") { console.log("[recomputeLastDigits] skipped (set RECOMPUTE_DIGITS=1 to run once)"); return 0; }
+  const db = await getDb();
+  if (!db) return 0;
+  try {
+    const res = await db.execute(sql`UPDATE tickHistory SET lastDigit = CAST(RIGHT(REPLACE(CAST(price AS CHAR), ".", ""), 1) AS UNSIGNED) WHERE lastDigit <> CAST(RIGHT(REPLACE(CAST(price AS CHAR), ".", ""), 1) AS UNSIGNED)`);
+    console.log(`[recomputeLastDigits] updated ${(res as any)?.affectedRows ?? 0} rows`);
+    return (res as any)?.affectedRows ?? 0;
+  } catch (e) {
+    console.error("[recomputeLastDigits] failed", e);
+    return 0;
+  }
+}
 // One-time data hygiene: during a past bug, ticks were stored with lastDigit=0.
 // Remove those rows so digit stats / scanners aren't skewed by bad data.
 export async function pruneBadTicks(): Promise<number> {
