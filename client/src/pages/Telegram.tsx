@@ -39,11 +39,11 @@ export default function TelegramSettings() {
             <h1 className="text-3xl font-bold text-white">Telegram Integration</h1>
             <p className="text-slate-400 text-sm mt-1">Receive trade alerts and bot notifications on Telegram</p>
           </div>
-          <MessageCircle className="w-6 h-6 text-blue-500" />
+          <MessageCircle className="w-6 h-6 text-[#E89A2A]" />
         </div>
 
         {settingsQuery.isLoading ? (
-          <div className="flex items-center justify-center h-64"><Loader2 className="w-8 h-8 animate-spin text-blue-500" /></div>
+          <div className="flex items-center justify-center h-64"><Loader2 className="w-8 h-8 animate-spin text-[#E89A2A]" /></div>
         ) : (
           <div className="bg-[#161B22] border border-[#30363D] rounded-xl p-6 space-y-6">
             <div className="p-4 bg-amber-500/10 border border-amber-500/20 rounded-xl flex items-start gap-3">
@@ -81,7 +81,7 @@ export default function TelegramSettings() {
             </div>
 
             <div className="flex items-center gap-4">
-              <Button onClick={handleSave} disabled={saveMutation.isPending || !botToken} className="bg-blue-600 hover:bg-blue-700 text-white">
+              <Button onClick={handleSave} disabled={saveMutation.isPending || !botToken} className="bg-[#D98B1F] hover:bg-[#C07B1A] text-white">
                 {saveMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Send className="w-4 h-4 mr-2" />}
                 Save & Connect
               </Button>

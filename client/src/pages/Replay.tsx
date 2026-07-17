@@ -73,7 +73,7 @@ export default function Replay() {
         <div className="flex items-center justify-between flex-wrap gap-4">
           <div>
             <h1 className="text-3xl font-bold text-white flex items-center gap-3">
-              <RotateCcw className="w-7 h-7 text-blue-400" /> Replay Mode
+              <RotateCcw className="w-7 h-7 text-[#E89A2A]" /> Replay Mode
             </h1>
             <p className="text-slate-400 text-sm mt-1">Replay historical ticks. Trade manually and let 369AI score your decision.</p>
           </div>
@@ -83,7 +83,7 @@ export default function Replay() {
         </div>
 
         {error && <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-4 text-sm text-red-400">{error}</div>}
-        {loading && <div className="flex items-center justify-center h-64"><Loader2 className="w-8 h-8 animate-spin text-blue-500" /></div>}
+        {loading && <div className="flex items-center justify-center h-64"><Loader2 className="w-8 h-8 animate-spin text-[#E89A2A]" /></div>}
 
         {!loading && ticks.length > 0 && (
           <>
@@ -104,7 +104,7 @@ export default function Replay() {
 
               <div className="flex items-center gap-3 mt-4">
                 <button onClick={() => { setIdx(0); setPlaying(false); }} className="p-2 rounded-lg bg-white/5 text-slate-300 hover:bg-white/10"><RotateCcw className="w-4 h-4" /></button>
-                <button onClick={() => setPlaying((p) => !p)} className="p-2 rounded-lg bg-blue-600 text-white hover:bg-blue-500">
+                <button onClick={() => setPlaying((p) => !p)} className="p-2 rounded-lg bg-[#D98B1F] text-white hover:bg-[#E89A2A]">
                   {playing ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
                 </button>
                 <input type="range" min={0} max={ticks.length - 1} value={idx} onChange={(e) => { setPlaying(false); setIdx(Number(e.target.value)); }} className="flex-1" />

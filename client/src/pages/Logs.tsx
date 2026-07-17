@@ -33,7 +33,7 @@ export default function Logs() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <div className="bg-[#161B22] border border-[#30363D] rounded-xl p-6">
             <h2 className="text-sm font-bold text-white mb-4 flex items-center gap-2">
-              <Activity className="w-4 h-4 text-blue-400" /> Live Agent Activity
+              <Activity className="w-4 h-4 text-[#E89A2A]" /> Live Agent Activity
             </h2>
             <AITimeline />
           </div>

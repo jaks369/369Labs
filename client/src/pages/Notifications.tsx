@@ -50,11 +50,11 @@ export default function Notifications() {
             <h1 className="text-3xl font-bold text-white">Notification Settings</h1>
             <p className="text-slate-400 text-sm mt-1">Configure which events trigger alerts</p>
           </div>
-          <Bell className="w-6 h-6 text-blue-500" />
+          <Bell className="w-6 h-6 text-[#E89A2A]" />
         </div>
 
         {settingsQuery.isLoading ? (
-          <div className="flex items-center justify-center h-64"><Loader2 className="w-8 h-8 animate-spin text-blue-500" /></div>
+          <div className="flex items-center justify-center h-64"><Loader2 className="w-8 h-8 animate-spin text-[#E89A2A]" /></div>
         ) : (
           <div className="bg-[#161B22] border border-[#30363D] rounded-xl p-6 space-y-6">
             {toggles.map(t => (
@@ -65,7 +65,7 @@ export default function Notifications() {
                 </div>
                 <button
                   onClick={() => t.set(!t.value)}
-                  className={`relative w-12 h-6 rounded-full transition-colors ${t.value ? "bg-blue-600" : "bg-slate-700"}`}
+                  className={`relative w-12 h-6 rounded-full transition-colors ${t.value ? "bg-[#D98B1F]" : "bg-slate-700"}`}
                 >
                   <div className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${t.value ? "translate-x-6" : "translate-x-0.5"}`} />
                 </button>
@@ -73,7 +73,7 @@ export default function Notifications() {
             ))}
 
             <div className="flex items-center gap-4 pt-2">
-              <Button onClick={handleSave} disabled={saveMutation.isPending} className="bg-blue-600 hover:bg-blue-700 text-white">
+              <Button onClick={handleSave} disabled={saveMutation.isPending} className="bg-[#D98B1F] hover:bg-[#C07B1A] text-white">
                 {saveMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
                 Save Settings
               </Button>

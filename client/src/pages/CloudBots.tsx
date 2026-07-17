@@ -26,7 +26,7 @@ export default function CloudBots() {
         </div>
 
         {botRunsQuery.isLoading ? (
-          <div className="flex items-center justify-center h-64"><Loader2 className="w-8 h-8 animate-spin text-blue-500" /></div>
+          <div className="flex items-center justify-center h-64"><Loader2 className="w-8 h-8 animate-spin text-[#E89A2A]" /></div>
         ) : bots.length === 0 ? (
           <div className="text-center py-20">
             <Cloud className="w-12 h-12 text-slate-700 mx-auto mb-4" />

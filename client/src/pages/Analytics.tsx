@@ -62,7 +62,7 @@ export default function Analytics() {
 
   const stats = [
     { label: "Total P&L", value: `$${totalPnl.toFixed(2)}`, icon: DollarSign, color: totalPnl >= 0 ? "text-emerald-500" : "text-red-500" },
-    { label: "Win Rate", value: `${winRate}%`, icon: TrendingUp, color: "text-blue-500" },
+    { label: "Win Rate", value: `${winRate}%`, icon: TrendingUp, color: "text-[#E89A2A]" },
     { label: "Total Trades", value: totalTrades.toString(), icon: Activity, color: "text-purple-500" },
     { label: "Avg. Trade", value: `${avgTrade >= 0 ? "+" : ""}$${avgTrade.toFixed(2)}`, icon: BarChart4, color: avgTrade >= 0 ? "text-emerald-500" : "text-red-500" },
   ];
@@ -76,7 +76,7 @@ export default function Analytics() {
         </div>
 
         {tradesQuery.isLoading ? (
-          <div className="flex items-center justify-center h-64"><Loader2 className="w-8 h-8 animate-spin text-blue-500" /></div>
+          <div className="flex items-center justify-center h-64"><Loader2 className="w-8 h-8 animate-spin text-[#E89A2A]" /></div>
         ) : (
           <>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -141,7 +141,7 @@ export default function Analytics() {
                   </div>
                   <div className="flex justify-between p-3 bg-black/20 rounded-lg">
                     <span className="text-slate-400">Win Rate</span>
-                    <span className="text-blue-500 font-bold">{winRate}%</span>
+                    <span className="text-[#E89A2A] font-bold">{winRate}%</span>
                   </div>
                   <div className="flex justify-between p-3 bg-black/20 rounded-lg border border-[#30363D]">
                     <span className="text-white font-bold">Total P&L</span>

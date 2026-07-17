@@ -188,7 +188,7 @@ export default function Backtesting() {
               <input type="number" value={stake} onChange={e => setStake(Number(e.target.value))} min={0.35} step={0.5} className="w-full mt-1 bg-[#0D1117] border border-[#30363D] rounded-lg px-3 py-2 text-white text-sm" />
             </div>
 
-            <Button onClick={runBacktestHandler} disabled={running || !selectedStrategyId} className="w-full bg-blue-600 hover:bg-blue-700 text-white">
+            <Button onClick={runBacktestHandler} disabled={running || !selectedStrategyId} className="w-full bg-[#D98B1F] hover:bg-[#C07B1A] text-white">
               {running ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Fetching ticks...</> : <><Play className="w-4 h-4 mr-2" /> Run Backtest</>}
             </Button>
           </div>
@@ -204,7 +204,7 @@ export default function Backtesting() {
             {running && (
               <div className="bg-[#161B22] border border-[#30363D] rounded-xl p-8 flex items-center justify-center">
                 <div className="text-center">
-                  <Loader2 className="w-10 h-10 animate-spin text-blue-500 mx-auto mb-4" />
+                  <Loader2 className="w-10 h-10 animate-spin text-[#E89A2A] mx-auto mb-4" />
                   <p className="text-slate-400">Fetching historical ticks from Deriv and running simulation...</p>
                 </div>
               </div>
