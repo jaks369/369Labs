@@ -214,6 +214,15 @@ export default function Dashboard() {
             <span className="text-sm font-bold text-white">
               {balance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} {balanceInfo?.currency || "USD"}
             </span>
+            {balanceInfo?.accountType ? (
+              <span className={`text-[10px] font-bold uppercase px-1.5 py-0.5 rounded ${balanceInfo.accountType === "demo" ? "bg-amber-500/20 text-amber-400" : "bg-red-500/20 text-red-400"}`}>
+                {balanceInfo.accountType}
+              </span>
+            ) : (
+              <span className="text-[10px] font-bold uppercase px-1.5 py-0.5 rounded bg-slate-500/20 text-slate-400">
+                no token
+              </span>
+            )}
 
           </div>
           <Button onClick={() => setShowTokenModal(true)} className="btn-primary gap-2">
