@@ -303,7 +303,7 @@ export async function ensureSignalExpiryColumn(): Promise<void> {
 // the units digit before the decimal instead of the true last decimal digit).
 // Gated behind RECOMPUTE_DIGITS=1 so it does not run on every boot.
 export async function recomputeLastDigits(): Promise<number> {
-  if (process.env.RECOMPUTE_DIGITS !== "1") { console.log("[recomputeLastDigits] skipped (set RECOMPUTE_DIGITS=1 to run once)"); return 0; }
+  // Runs every boot: idempotent - only updates rows whose stored lastDigit != recomputed. Self-heals after the pre-fix bug.
   const db = await getDb();
   if (!db) return 0;
   try {
