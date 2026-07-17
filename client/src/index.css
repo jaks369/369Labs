@@ -116,7 +116,7 @@
 
 @layer components {
   .btn-primary {
-    @apply px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition-all duration-200 shadow-lg shadow-blue-900/20 active:scale-[0.98];
+    @apply px-6 py-2.5 bg-[#F0B90B] hover:bg-[#FFD23F] text-[#0D1117] font-semibold rounded-lg transition-all duration-200 shadow-lg shadow-amber-900/20 active:scale-[0.98];
   }
   
   .btn-secondary {
