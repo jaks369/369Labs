@@ -36,6 +36,9 @@ import {
   FlaskConical,
   Command,
   Terminal,
+  BookOpen,
+  RotateCcw,
+  Workflow,
 } from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
@@ -55,19 +58,22 @@ const navGroups: NavGroup[] = [
       { icon: Brain, label: "369AI Assistant", path: "/ai-assistant" },
     ],
   },
-  {
-    title: "Build",
-    items: [
-      { icon: Zap, label: "Strategy Builder", path: "/strategy-builder" },
-      { icon: FlaskConical, label: "Backtesting", path: "/backtesting" },
-      { icon: CandlestickChart, label: "AI Signals", path: "/marketplace" },
-    ],
-  },
+      {
+        title: "Build",
+        items: [
+          { icon: Zap, label: "Strategy Builder", path: "/strategy-builder" },
+          { icon: FlaskConical, label: "Backtesting", path: "/backtesting" },
+          { icon: RotateCcw, label: "Replay", path: "/replay" },
+          { icon: CandlestickChart, label: "AI Signals", path: "/marketplace" },
+          { icon: Workflow, label: "Workflows", path: "/workflow" },
+        ],
+      },
     {
       title: "Operate",
       items: [
         { icon: Bot, label: "Bots", path: "/bots" },
         { icon: Activity, label: "Analytics", path: "/analytics" },
+        { icon: BookOpen, label: "Journal", path: "/journal" },
         { icon: Terminal, label: "Observability", path: "/logs" },
         { icon: Home, label: "Home", path: "/?home=1" },
       ],
