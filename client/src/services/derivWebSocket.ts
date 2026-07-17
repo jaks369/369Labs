@@ -288,7 +288,11 @@ class DerivWebSocketService {
   public isConnected(): boolean { return this.ws !== null && this.ws.readyState === WebSocket.OPEN; }
   public isAuthorized(): boolean { return this.authorized; }
   public getAccountType(): string { return this.lastAccountType; }
-  public onBalance(cb: (b: any) => void): void { this.balanceListeners.add(cb); if (this.lastBalance) cb(this.lastBalance); }
+  public onBalance(cb: (b: any) => void): void {
+    this.balanceListeners.add(cb);
+    if (this.lastBalance) { try { cb(this.lastBalance); } catch {} }
+    if (this.authorized) this.fetchBalance();
+  }
   public onSymbols(cb: (symbols: DerivSymbol[]) => void): void { this.symbolListeners.add(cb); if (this._activeSymbols.length > 0) cb(this._activeSymbols); }
   public onTokenError(cb: (msg: string) => void): void { this.tokenListeners.add(cb); }
   public get activeSymbols(): DerivSymbol[] { return this._activeSymbols; }
