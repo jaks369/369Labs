@@ -2,7 +2,7 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import { trpc } from "@/lib/trpc";
 import { useLocation } from "wouter";
 import { Terminal, Activity, Bot, Brain, ShieldCheck } from "lucide-react";
-import { AITimeline } from "@/components/AITimeline";
+import AITimeline from "@/components/AITimeline";
 
 const ACTION_ICON: Record<string, any> = {
   "bot.start": Bot,
