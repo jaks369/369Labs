@@ -340,25 +340,6 @@ export const appRouter = router({
       }
     }),
 
-    get: protectedProcedure
-      .input(z.object({ id: z.number() }))
-      .query(async ({ ctx, input }) => {
-        try {
-          const strategy = await db.getStrategyById(input.id, ctx.user.id);
-          if (!strategy) {
-            throw new TRPCError({ code: "NOT_FOUND", message: "Strategy not found" });
-          }
-          return strategy;
-        } catch (error) {
-          if (error instanceof TRPCError) throw error;
-          throw new TRPCError({
-            code: "INTERNAL_SERVER_ERROR",
-            message: "Failed to retrieve strategy",
-          });
-        }
-      }),
-
-    // Alias used by the client (trpc.strategies.getById)
     getById: protectedProcedure
       .input(z.object({ id: z.number() }))
       .query(async ({ ctx, input }) => {
@@ -422,7 +403,6 @@ export const appRouter = router({
         try {
           return await db.getTradesByUserId(ctx.user.id, input.limit);
         } catch (error) {
-          console.error("[Trades] Query error:", error);
           throw new TRPCError({
             code: "INTERNAL_SERVER_ERROR",
             message: "Failed to retrieve trades",
@@ -865,23 +845,31 @@ Return ONLY the JSON.`;
     list: protectedProcedure
       .input(z.object({ symbol: z.string().optional() }).optional())
       .query(async ({ ctx, input }) => {
-        const list = input?.symbol
-          ? await db.getSignalsBySymbol(ctx.user.id, normalizeSymbol(input.symbol))
-          : await db.getSignalsByUserId(ctx.user.id);
-        return list;
+        try {
+          const list = input?.symbol
+            ? await db.getSignalsBySymbol(ctx.user.id, normalizeSymbol(input.symbol))
+            : await db.getSignalsByUserId(ctx.user.id);
+          return list;
+        } catch {
+          return [];
+        }
       }),
     watch: protectedProcedure
       .input(z.object({ symbol: z.string(), durationMinutes: z.number().default(30), patternType: z.string().default('any'), minWinRate: z.number().default(62) }))
       .mutation(async ({ ctx, input }) => {
-        const { runWatch } = await import('./signalScanner');
-        const saved = await runWatch({
-          userId: ctx.user.id,
-          symbol: input.symbol,
-          sampleSize: Math.min(2000, input.durationMinutes * 20),
-          minWinRate: input.minWinRate,
-          patternType: input.patternType,
-        });
-        return { scanned: true, signalsFound: saved.length, signals: saved };
+        try {
+          const { runWatch } = await import('./signalScanner');
+          const saved = await runWatch({
+            userId: ctx.user.id,
+            symbol: input.symbol,
+            sampleSize: Math.min(2000, input.durationMinutes * 20),
+            minWinRate: input.minWinRate,
+            patternType: input.patternType,
+          });
+          return { scanned: true, signalsFound: saved.length, signals: saved };
+        } catch {
+          return { scanned: false, signalsFound: 0, signals: [] };
+        }
       }),
   }),
   market: router({
@@ -896,8 +884,7 @@ Return ONLY the JSON.`;
             lastDigit: r.lastDigit,
             epoch: Number(r.epoch),
           })) };
-        } catch (e) {
-          console.error("[market.getHistory] error:", e);
+        } catch {
           return { ticks: [] };
         }
       }),
