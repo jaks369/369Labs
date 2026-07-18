@@ -15,17 +15,25 @@ interface TickChartProps {
 
 export default function TickChart({ symbol, maxDataPoints = 100, decimalPlaces = 3 }: TickChartProps) {
   const [data, setData] = useState<ChartData[]>([]);
+  const [window, setWindow] = useState<number>(maxDataPoints);
+  const TIMEFRAMES = [
+    { label: "25", n: 25 },
+    { label: "50", n: 50 },
+    { label: "100", n: 100 },
+    { label: "250", n: 250 },
+    { label: "500", n: 500 },
+  ];
 
-  const historyQuery = trpc.market.getHistory.useQuery({ symbol, limit: maxDataPoints }, { enabled: Boolean(symbol) });
+  const historyQuery = trpc.market.getHistory.useQuery({ symbol, limit: window }, { enabled: Boolean(symbol) });
   useEffect(() => {
     const ticks = historyQuery.data?.ticks;
     if (!ticks || !ticks.length) return;
-    const hist = ticks.slice(-maxDataPoints).map((t) => ({
+    const hist = ticks.slice(-window).map((t) => ({
       time: new Date((t.epoch || 0) * 1000).toLocaleTimeString(),
       price: Number(t.price),
     }));
     if (hist.length) setData(hist);
-  }, [historyQuery.data, symbol, maxDataPoints]);
+  }, [historyQuery.data, symbol, window]);
   const [error, setError] = useState<string | null>(null);
   const [currentPrice, setCurrentPrice] = useState<number | null>(null);
   const [priceColor, setPriceColor] = useState<"up" | "down">("up");
@@ -34,9 +42,9 @@ export default function TickChart({ symbol, maxDataPoints = 100, decimalPlaces =
   useEffect(() => {
     // Seed from the in-memory buffer so the chart is continuous even after
     // navigating away and back (Deriv-style persistent line).
-    const buffered = derivWS.getRecentTicks(symbol, maxDataPoints);
+    const buffered = derivWS.getRecentTicks(symbol, window);
     if (buffered.length) {
-      setData(buffered.slice(-maxDataPoints).map((t) => ({
+      setData(buffered.slice(-window).map((t) => ({
         time: new Date(t.timestamp).toLocaleTimeString(),
         price: t.price,
       })));
@@ -59,7 +67,7 @@ export default function TickChart({ symbol, maxDataPoints = 100, decimalPlaces =
               time: new Date(tick.timestamp).toLocaleTimeString(),
               price: tick.price,
             },
-          ].slice(-maxDataPoints);
+          ].slice(-window);
           return next;
         });
         setCurrentPrice((prev) => {
@@ -80,7 +88,7 @@ export default function TickChart({ symbol, maxDataPoints = 100, decimalPlaces =
       derivWS.removeListener(listener);
       derivWS.unsubscribe(id);
     };
-  }, [symbol, maxDataPoints]);
+  }, [symbol, window]);
 
   const prices = data.map((d) => d.price);
   const minPrice = prices.length ? Math.min(...prices) : 0;
@@ -101,9 +109,22 @@ export default function TickChart({ symbol, maxDataPoints = 100, decimalPlaces =
     <div className="w-full">
       <div className="flex items-center justify-between mb-3 px-3 py-2 bg-[#0B0F14] rounded border border-[#252B35]">
         <span className="text-xs font-bold text-white">{symbol}</span>
-        <span className={`text-lg font-bold ${priceColor === "up" ? "text-[#22C55E]" : "text-[#EF4444]"}`}>
-          {currentPrice !== null ? currentPrice.toFixed(decimalPlaces) : "--"}
-        </span>
+        <div className="flex items-center gap-2">
+          <div className="flex items-center gap-0.5 p-0.5 bg-[#151B23] rounded border border-[#252B35]">
+            {TIMEFRAMES.map((tf) => (
+              <button
+                key={tf.n}
+                onClick={() => setWindow(tf.n)}
+                className={`px-2 py-0.5 rounded text-[10px] font-bold transition-colors ${window === tf.n ? "bg-[#F59E0B] text-black" : "text-[#64748B] hover:text-white"}`}
+              >
+                {tf.label}
+              </button>
+            ))}
+          </div>
+          <span className={`text-lg font-bold ${priceColor === "up" ? "text-[#22C55E]" : "text-[#EF4444]"}`}>
+            {currentPrice !== null ? currentPrice.toFixed(decimalPlaces) : "--"}
+          </span>
+        </div>
       </div>
 
       {error ? (
