@@ -13,6 +13,7 @@ import {
   Plus,
 } from "lucide-react";
 import { useLocation } from "wouter";
+import { toast } from "@/components/Toast";
 import { BotEngine, BotStatus, BotTrade } from "@/services/BotEngine";
 import { runBacktest } from "@/services/BacktestEngine";
 import { derivWS } from "@/services/derivWebSocket";
@@ -88,11 +89,11 @@ export default function Bots() {
   const handleDeploy = async (strategy: { id: number; name: string; config: any }) => {
     const rule = extractRule(strategy.config);
     if (!rule) {
-      alert("This strategy was built in freeform notes mode and can't be deployed yet — rebuild it using the visual IF/THEN rule builder.");
+      toast("This strategy was built in freeform notes mode and can't be deployed yet — rebuild it using the visual IF/THEN rule builder.", "error");
       return;
     }
     if (!derivTokenQuery.data?.token) {
-      alert("Add your Deriv API token in Settings before deploying a bot.");
+      toast("Add your Deriv API token in Settings before deploying a bot.", "error");
       navigate("/settings");
       return;
     }
@@ -167,7 +168,7 @@ export default function Bots() {
           /* backtest unavailable (e.g. invalid token) — badge stays hidden */
         });
     } catch (error) {
-      alert(error instanceof Error ? error.message : "Failed to deploy bot");
+      toast(error instanceof Error ? error.message : "Failed to deploy bot", "error");
     } finally {
       setDeployingId(null);
     }
@@ -364,5 +365,6 @@ export default function Bots() {
     </div>
   );
 }
+
 
 
