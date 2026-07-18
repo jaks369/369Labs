@@ -17,12 +17,19 @@ export default function TickChart({ symbol, maxDataPoints = 100, decimalPlaces =
   const [data, setData] = useState<ChartData[]>([]);
   const [window, setWindow] = useState<number>(maxDataPoints);
   const TIMEFRAMES = [
-    { label: "25", n: 25 },
-    { label: "50", n: 50 },
-    { label: "100", n: 100 },
-    { label: "250", n: 250 },
-    { label: "500", n: 500 },
+    { label: "Fast (25)", n: 25 },
+    { label: "Normal (50)", n: 50 },
+    { label: "Slow (100)", n: 100 },
+    { label: "Wide (250)", n: 250 },
+    { label: "Ultra (500)", n: 500 },
   ];
+  const TIMEFRAME_LABELS: Record<number, string> = {
+    25: "Fast (25 ticks)",
+    50: "Normal (50 ticks)",
+    100: "Slow (100 ticks)",
+    250: "Wide (250 ticks)",
+    500: "Ultra (500 ticks)",
+  };
 
   const historyQuery = trpc.market.getHistory.useQuery({ symbol, limit: window }, { enabled: Boolean(symbol) });
   useEffect(() => {
@@ -56,6 +63,15 @@ export default function TickChart({ symbol, maxDataPoints = 100, decimalPlaces =
       setPriceColor("up");
     }
     setError(null);
+
+    // Human-friendly timeframe labels for UI
+    const TIMEFRAME_LABELS = {
+      25: "Fast",
+      50: "Normal", 
+      100: "Slow",
+      250: "Wide",
+      500: "Ultra",
+    };
 
     const listener = {
       onTick: (tick: Tick) => {
@@ -125,6 +141,16 @@ export default function TickChart({ symbol, maxDataPoints = 100, decimalPlaces =
             {currentPrice !== null ? currentPrice.toFixed(decimalPlaces) : "--"}
           </span>
         </div>
+      </div>
+
+      {/* Descriptive timeframe labels */}
+      <div className="pb-2 px-3 flex items-center gap-2 text-xs text-[#64748B]">
+        <span className="uppercase tracking-wider font-medium">View:</span>
+        <span className="text-[#F59E0B] font-bold">{TIMEFRAME_LABELS[window] || "Custom"}</span>
+        <span className="text-[#64748B]">— shows last {window} tick{window === 1 ? '' : 's'}</span>
+        <span className="ml-auto text-[#64748B]/70">
+          {window <= 50 ? 'Focuses on recent market dynamics' : window <= 100 ? 'Balanced view of recent activity' : 'Broader market context for trend analysis'}
+        </span>
       </div>
 
       {error ? (
