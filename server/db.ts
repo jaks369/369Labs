@@ -31,6 +31,9 @@ import {
   botRuns,
   derivTokens,
   users,
+  passwordResetTokens,
+  PasswordResetToken,
+  chatMessages,
 } from "../drizzle/schema";
 import { ENV } from './_core/env';
 import { encrypt, decrypt } from './_core/encryption';
@@ -117,6 +120,55 @@ export async function touchUserLastSignedIn(id: number): Promise<void> {
   const db = await getDb();
   if (!db) return;
   await db.update(users).set({ lastSignedIn: new Date() }).where(eq(users.id, id));
+}
+
+export async function updateUserPassword(userId: number, passwordHash: string): Promise<void> {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.update(users).set({ passwordHash }).where(eq(users.id, userId));
+}
+
+export async function createPasswordResetToken(userId: number, token: string, expiresAt: Date): Promise<void> {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  // Expire any previously issued tokens for this user
+  await db.update(passwordResetTokens).set({ usedAt: new Date() }).where(eq(passwordResetTokens.userId, userId));
+  await db.insert(passwordResetTokens).values({ userId, token, expiresAt });
+}
+
+export async function getValidPasswordResetToken(token: string): Promise<PasswordResetToken | undefined> {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db
+    .select()
+    .from(passwordResetTokens)
+    .where(and(eq(passwordResetTokens.token, token), sql`${passwordResetTokens.usedAt} IS NULL`, gt(passwordResetTokens.expiresAt, new Date())))
+    .limit(1);
+  return result.length > 0 ? result[0] : undefined;
+}
+
+export async function markPasswordResetTokenUsed(token: string): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(passwordResetTokens).set({ usedAt: new Date() }).where(eq(passwordResetTokens.token, token));
+}
+
+export async function getChatHistory(userId: number, chatId: string, limit = 50): Promise<{ role: string; content: string; steps?: any }[]> {
+  const db = await getDb();
+  if (!db) return [];
+  const rows = await db
+    .select()
+    .from(chatMessages)
+    .where(and(eq(chatMessages.userId, userId), eq(chatMessages.chatId, chatId)))
+    .orderBy(chatMessages.id)
+    .limit(limit);
+  return rows.map((r) => ({ role: r.role, content: r.content, steps: (r.steps as any) ?? undefined }));
+}
+
+export async function addChatMessage(userId: number, chatId: string, role: string, content: string, steps?: any): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+  await db.insert(chatMessages).values({ userId, chatId, role, content, steps: steps ? steps : null });
 }
 
 export async function saveDerivToken(token: InsertDerivToken): Promise<DerivToken> {
