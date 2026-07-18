@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
-import { History, Play, BarChart3, TrendingUp, Clock, Loader2, CheckCircle2, XCircle, AlertCircle, Search, CandlestickChart } from "lucide-react";
+import { Play, BarChart3, Loader2, CheckCircle2, XCircle, AlertCircle, Search, CandlestickChart } from "lucide-react";
 import { useLocation } from "wouter";
 import { toast } from "@/components/Toast";
 import { derivWS } from "@/services/derivWebSocket";
