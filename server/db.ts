@@ -332,6 +332,40 @@ export async function ensureUserMemoryTable(): Promise<void> {
   }
 }
 
+export async function getUserMemory(userId: number): Promise<Record<string, any> | null> {
+  const db = await getDb();
+  if (!db) return null;
+  try {
+    const rows = await db.execute(sql`SELECT memory FROM userMemory WHERE userId = ${userId}`);
+    const row = Array.isArray(rows) ? rows[0] : (rows as any)?.rows?.[0];
+    if (!row) return null;
+    const raw = row.memory;
+    if (raw == null) return null;
+    if (typeof raw === "string") {
+      try { return JSON.parse(raw); } catch { return null; }
+    }
+    return raw as Record<string, any>;
+  } catch (e: any) {
+    if (e?.errno !== 1146) console.error("[getUserMemory] failed", e?.message || e);
+    return null;
+  }
+}
+
+export async function setUserMemory(userId: number, memory: Record<string, any>): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+  const payload = JSON.stringify(memory ?? {});
+  try {
+    await db.execute(sql`
+      INSERT INTO userMemory (userId, memory, updatedAt)
+      VALUES (${userId}, ${payload}, NOW())
+      ON DUPLICATE KEY UPDATE memory = ${payload}, updatedAt = NOW()
+    `);
+  } catch (e: any) {
+    console.error("[setUserMemory] failed", e?.message || e);
+  }
+}
+
 export async function ensureSignalExpiryColumn(): Promise<void> {
   const db = await getDb();
   if (!db) return;
