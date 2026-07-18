@@ -8,6 +8,7 @@ import { Loader2, Save, Brain } from "lucide-react";
 import { useLocation } from "wouter";
 import { derivWS } from "@/services/derivWebSocket";
 import { pushTimeline } from "@/components/AITimeline";
+import { toast } from "@/components/Toast";
 
 export default function Settings() {
   const { user, isAuthenticated, logout } = useAuth();
@@ -92,9 +93,9 @@ export default function Settings() {
     try {
       await saveMemoryMutation.mutateAsync({ memory });
       pushTimeline({ icon: "ai", text: "Updated AI memory (trader profile)" });
-      alert("Trader profile saved — 369AI will remember these preferences.");
+      toast("Trader profile saved — 369AI will remember these preferences.", "success");
     } catch (e) {
-      alert("Failed to save memory: " + (e instanceof Error ? e.message : String(e)));
+      toast("Failed to save memory: " + (e instanceof Error ? e.message : String(e)), "error");
     }
   };
 
@@ -105,9 +106,9 @@ export default function Settings() {
         accountType: "demo",
       });
       derivWS.setApiToken(derivToken);
-      alert("Deriv token saved and connected!");
+      toast("Deriv token saved and connected!", "success");
     } catch (error) {
-      alert("Failed to save Deriv token");
+      toast("Failed to save Deriv token", "error");
     }
   };
 
@@ -116,18 +117,18 @@ export default function Settings() {
       await saveTelegramMutation.mutateAsync({
         chatId,
       });
-      alert("Telegram settings saved successfully!");
+      toast("Telegram settings saved successfully!", "success");
     } catch (error) {
-      alert("Failed to save Telegram settings");
+      toast("Failed to save Telegram settings", "error");
     }
   };
 
   const handleSaveNotifications = async () => {
     try {
       await saveNotificationsMutation.mutateAsync(notificationSettings);
-      alert("Notification settings saved successfully!");
+      toast("Notification settings saved successfully!", "success");
     } catch (error) {
-      alert("Failed to save notification settings");
+      toast("Failed to save notification settings", "error");
     }
   };
 
