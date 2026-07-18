@@ -147,7 +147,6 @@ export default function Bots() {
           });
           const decimalRegex = /^\d+(\.\d{1,8})?$/;
           if (!decimalRegex.test(trade.stake.toString())) {
-            console.warn(`Trade saved with unexpected stake format: ${trade.stake}`);
           }
           alertTg(`🔔 ${strategy.name} [${trade.symbol}] trade ${trade.result.toUpperCase()} · stake $${trade.stake} · P&L ${trade.pnl >= 0 ? "+" : ""}${trade.pnl}`);
         },
@@ -184,8 +183,6 @@ export default function Bots() {
         })
         .catch((error) => {
           // Backtest unavailable (e.g. invalid token) — badge stays hidden
-          // Log the error but don't fail the deployment
-          console.warn('[Bots] Backtest failed:', error.message);
         });
     } catch (error) {
       toast(error instanceof Error ? error.message : "Failed to deploy bot", "error");
