@@ -1,5 +1,7 @@
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { ToastViewport, useToast } from "@/components/Toast";
+import { useState } from "react";
 import NotFound from "@/pages/NotFound";
 import { Route, Switch } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
@@ -20,6 +22,7 @@ import CloudBots from "./pages/CloudBots";
 import Bots from "./pages/Bots";
 import TradeHistory from "./pages/TradeHistory";
 import Login from "./pages/Login";
+import ResetPassword from "./pages/ResetPassword";
 import Logs from "./pages/Logs";
 import Journal from "./pages/Journal";
 import Replay from "./pages/Replay";
@@ -36,6 +39,7 @@ function Router() {
     <Switch>
       <Route path={"/"} component={Home} />
       <Route path={"/login"} component={Login} />
+      <Route path={"/reset"} component={ResetPassword} />
       <Route path={"/dashboard"}>
         <AppLayout><Dashboard /></AppLayout>
       </Route>
@@ -97,6 +101,11 @@ function Router() {
 }
 
 function App() {
+  const [toasts, setToasts] = useState<{ id: number; kind: any; text: string }[]>([]);
+  useToast((t) => {
+    setToasts((prev) => [...prev, t]);
+    setTimeout(() => setToasts((prev) => prev.filter((x) => x.id !== t.id)), 4000);
+  });
   return (
     <ErrorBoundary>
       <ThemeProvider defaultTheme="dark">
@@ -104,6 +113,7 @@ function App() {
           <Toaster />
           <Router />
           <CommandPalette />
+          <ToastViewport items={toasts} onDismiss={(id) => setToasts((prev) => prev.filter((x) => x.id !== id))} />
         </TooltipProvider>
       </ThemeProvider>
     </ErrorBoundary>
