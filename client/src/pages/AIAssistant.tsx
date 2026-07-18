@@ -61,11 +61,11 @@ export default function AIAssistant() {
         .slice(1)
         .map(m => ({ role: m.role === "user" ? "user" as const : "assistant" as const, content: m.content }));
       // light up the thinking label based on likely intent
-      if (/trend|digit|hot|cold|price|analy|stat/i.test(input)) setTypingLabel("Reading ticks");
-      else if (/strateg|bot|rule|suggest/i.test(input)) setTypingLabel("Forming strategy");
-      else if (/trade|buy|sell|place/i.test(input)) setTypingLabel("Preparing order");
-      else if (/backtest/i.test(input)) setTypingLabel("Simulating");
-      const res = await askMutation.mutateAsync({ message: input, history, chatId: chatIdRef.current });
+      if (/trend|digit|hot|cold|price|analy|stat/i.test(text)) setTypingLabel("Reading ticks");
+      else if (/strateg|bot|rule|suggest/i.test(text)) setTypingLabel("Forming strategy");
+      else if (/trade|buy|sell|place/i.test(text)) setTypingLabel("Preparing order");
+      else if (/backtest/i.test(text)) setTypingLabel("Simulating");
+      const res = await askMutation.mutateAsync({ message: text, history, chatId: chatIdRef.current });
       const aiMsg: Message = { role: "ai", content: res.reply, steps: res.steps };
       setMessages(prev => {
         const next = [...prev, aiMsg];
@@ -82,8 +82,20 @@ export default function AIAssistant() {
         return next;
       });
       if (res.action) setPending(res.action);
-    } catch {
-      setMessages(prev => [...prev, { role: "ai", content: "Connection dropped. Try again." }]);
+    } catch (error) {
+      console.error('[AI Assistant] Error:', error);
+      let errorMessage = error instanceof Error ? error.message : 'Connection error.';
+      let isProviderError = errorMessage.toLowerCase().includes('ai') || errorMessage.toLowerCase().includes('api') || errorMessage.toLowerCase().includes('timeout') || errorMessage.toLowerCase().includes('fetch');
+      // Store the failed message so user can retry
+      const failedMsg = text;
+      setMessages(prev => [...prev, {
+        role: "ai",
+        content: isProviderError
+          ? `⚠️ AI provider error: ${errorMessage}\n\nTap "Retry" below to try again.`
+          : `⚠️ Error: ${errorMessage}`
+      }]);
+      // Store the failed attempt for retry
+      setInput(failedMsg);
     } finally { setIsTyping(false); }
   }, [input, isTyping, askMutation, messages]);
 
@@ -154,6 +166,13 @@ export default function AIAssistant() {
                 </div>
                 <div className={`p-4 rounded-2xl text-sm leading-relaxed whitespace-pre-line ${msg.role === "ai" ? "bg-[#151B23] border border-[#252B35] text-[#94A3B8] border-l-2 border-l-amber-400/60" : "bg-[#22D3EE] text-black font-medium"}`}>
                   {msg.content.slice(0, reveal[i] ?? msg.content.length)}{reveal[i] !== undefined && reveal[i] < msg.content.length ? <span className="inline-block w-1.5 h-3 bg-[#22D3EE] ml-0.5 align-middle animate-pulse" /> : null}
+                  {msg.role === "ai" && msg.content.includes('"Retry"') && input ? (
+                    <div className="mt-3">
+                      <button onClick={() => handleSend(input)} disabled={isTyping} className="px-3 py-1.5 rounded bg-[#22D3EE] text-black text-xs font-bold hover:bg-[#22D3EE] transition-colors disabled:opacity-50">
+                        {isTyping ? <><Loader2 className="w-3 h-3 animate-spin inline mr-1" />Retrying...</> : "Retry"}
+                      </button>
+                    </div>
+                  ) : null}
                   {msg.steps && msg.steps.length > 0 && (
                     <div className="mt-3 border-t border-[#252B35] pt-2">
                       <button onClick={() => setExpanded(e => ({ ...e, [i]: !e[i] }))} className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-[#64748B] hover:text-[#22D3EE]">
