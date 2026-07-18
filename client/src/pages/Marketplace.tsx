@@ -4,6 +4,7 @@ import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { CandlestickChart, Sparkles, TrendingUp, Clock, Bot, Loader2, ChevronDown, ChevronRight, FlaskConical, Users } from "lucide-react";
 import { useLocation } from "wouter";
+import { toast } from "@/components/Toast";
 
 const SYMBOLS = ["R_10", "R_25", "R_50", "R_75", "R_100", "1HZ10V", "1HZ50V", "1HZ100V"];
 
@@ -41,7 +42,7 @@ export default function Marketplace() {
       setSentId(sig.id);
       setTimeout(() => navigate("/bots"), 600);
     } catch (e) {
-      alert("Failed to create bot from signal: " + (e instanceof Error ? e.message : String(e)));
+      toast("Failed to create bot from signal: " + (e instanceof Error ? e.message : String(e)), "error");
     }
   };
 
@@ -53,9 +54,9 @@ export default function Marketplace() {
         config: s.config,
         published: false,
       });
-      alert("Cloned to your strategies. Open Strategy Builder or Bots to use it.");
+      toast("Cloned to your strategies. Open Strategy Builder or Bots to use it.", "success");
     } catch (e) {
-      alert("Clone failed: " + (e instanceof Error ? e.message : String(e)));
+      toast("Clone failed: " + (e instanceof Error ? e.message : String(e)), "error");
     }
   };
 
