@@ -15,6 +15,7 @@ export default function Settings() {
   const [, navigate] = useLocation();
   const [derivToken, setDerivToken] = useState("");
   const [tokenChanged, setTokenChanged] = useState(false);
+  const [accountType, setAccountType] = useState<"demo" | "real">("demo");
   const [chatId, setChatId] = useState("");
   const [notificationSettings, setNotificationSettings] = useState({
     tradeExecuted: true,
@@ -103,7 +104,7 @@ export default function Settings() {
     try {
       await saveDerivTokenMutation.mutateAsync({
         token: derivToken,
-        accountType: "demo",
+        accountType,
       });
       derivWS.setApiToken(derivToken);
       toast("Deriv token saved and connected!", "success");
@@ -157,8 +158,15 @@ export default function Settings() {
                 className="border-[#F59E0B]/40 text-[#F59E0B]"
               />
               <p className="text-xs text-[#F59E0B]/60 mt-2">
-                Generated from Deriv app settings. Only demo tokens are accepted for safety.
+                Generated from Deriv app settings. Demo recommended for testing.
               </p>
+            </div>
+            <div>
+              <label className="text-sm text-[#F59E0B] block mb-2">Account Type</label>
+              <div className="flex gap-2">
+                <button onClick={() => setAccountType("demo")} className={`flex-1 py-2 px-4 rounded text-sm font-bold transition-colors ${accountType === "demo" ? "bg-[#F59E0B] text-[#0B0F14]" : "bg-[#151B23] text-[#64748B] border border-[#252B35]"}`}>DEMO</button>
+                <button onClick={() => setAccountType("real")} className={`flex-1 py-2 px-4 rounded text-sm font-bold transition-colors ${accountType === "real" ? "bg-[#EF4444] text-white" : "bg-[#151B23] text-[#64748B] border border-[#252B35]"}`}>REAL</button>
+              </div>
             </div>
             <Button
               onClick={handleSaveDerivToken}
