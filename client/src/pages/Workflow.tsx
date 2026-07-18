@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useAuth } from "@/_core/hooks/useAuth";
+import { trpc } from "@/lib/trpc";
 import { useLocation } from "wouter";
 import { Workflow, Play, GitBranch, ShieldCheck, FlaskConical, Bell, Search, Loader2, CheckCircle2 } from "lucide-react";
 import { pushTimeline } from "@/components/AITimeline";
@@ -31,7 +32,8 @@ export default function Workflow() {
   const [, navigate] = useLocation();
   const [running, setRunning] = useState<string | null>(null);
   const [log, setLog] = useState<string[]>([]);
-  const signalsQuery = trpc.signals.list.useQuery();
+  const watchMutation = trpc.signals.watch.useMutation();
+  const notifyMutation = trpc.telegram.send.useMutation();
 
   if (!isAuthenticated) { navigate("/login"); return null; }
 
@@ -41,8 +43,25 @@ export default function Workflow() {
     const add = (m: string) => { setLog((l) => [...l, m]); pushTimeline({ icon: "ai", text: m }); };
     add(`▶ Workflow "${w.name}" started on ${symbol}`);
     for (const step of w.steps) {
-      await new Promise((r) => setTimeout(r, 400));
       add(`• ${step.label}`);
+      try {
+        if (step.kind === "scan" || step.kind === "watch") {
+          const res: any = await watchMutation.mutateAsync({ symbol, durationMinutes: 30 });
+          const found = res?.signalsFound ?? 0;
+          add(`  ↳ Scan complete — ${found} pattern${found === 1 ? "" : "s"} found.`);
+        } else if (step.kind === "notify") {
+          await notifyMutation.mutateAsync({ message: `369Labs workflow "${w.name}" finished on ${symbol}.` });
+          add(`  ↳ Telegram notification sent.`);
+        } else if (step.kind === "backtest") {
+          add(`  ↳ Open /backtesting with a signal to run a backtest.`);
+        } else if (step.kind === "risk") {
+          add(`  ↳ Risk review: verify stake, stop-loss and drawdown before going live.`);
+        } else if (step.kind === "build" || step.kind === "draft") {
+          add(`  ↳ Draft the bot from the latest signal in /strategy-builder, then deploy from /bots.`);
+        }
+      } catch (e: any) {
+        add(`  ↳ Step skipped: ${e?.message || "action unavailable"}`);
+      }
     }
     add(`✓ Workflow complete. Review results in AI Signals / Bots.`);
     setRunning(null);

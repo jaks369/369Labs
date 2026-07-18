@@ -4,17 +4,17 @@ import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { 
-  Loader2, 
-  Plus, 
-  Trash2, 
-  Play, 
-  Settings2, 
-  Layers, 
-  Activity, 
+import {
+  Loader2,
+  Plus,
+  Trash2,
+  Play,
+  Settings2,
+  Layers,
+  Activity,
   ChevronRight,
   Database,
-  Search,
+  Copy,
   Zap,
   ShieldCheck,
   GitCompare,
@@ -58,14 +58,16 @@ export function StrategyBuilderContent({ embedded = false, onClose, onSaved }: S
   const [versions, setVersions] = useState<{ savedAt: string; rule: any }[]>([]);
   const [compareIdx, setCompareIdx] = useState<[number, number] | null>(null);
 
-  const publishMutation = trpc.strategies.publish.useMutation();
   const saveStrategyMutation = trpc.strategies.save.useMutation();
+  const duplicateMutation = trpc.strategies.duplicate.useMutation({
+    onSuccess: () => strategiesQuery.refetch(),
+  });
   const critiqueMutation = trpc.ai.critique.useMutation();
   const strategiesQuery = trpc.strategies.list.useQuery();
 
   const search = useSearch();
   const editId = new URLSearchParams(search).get("edit");
-  const editQuery = trpc.strategies.getById.useQuery(Number(editId), { enabled: !!editId });
+  const editQuery = trpc.strategies.getById.useQuery({ id: Number(editId) }, { enabled: !!editId });
 
   useEffect(() => {
     if (editQuery.data) {
@@ -228,9 +230,23 @@ export function StrategyBuilderContent({ embedded = false, onClose, onSaved }: S
               <h3 className="text-[10px] font-bold text-[#64748B] uppercase tracking-widest mb-6">Saved Strategies</h3>
               <div className="space-y-3">
                 {strategiesQuery.data?.slice(0, 5).map(s => (
-                  <div key={s.id} className="p-3 rounded-lg bg-black/20 border border-white/5 hover:border-[#F59E0B]/50 cursor-pointer transition-all">
-                    <p className="text-xs font-bold text-white truncate">{s.name}</p>
-                    <p className="text-[10px] text-[#64748B] mt-1">Last edited 2h ago</p>
+                  <div key={s.id} className="p-3 rounded-lg bg-black/20 border border-white/5 hover:border-[#F59E0B]/50 transition-all">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0 flex-1">
+                        <p className="text-xs font-bold text-white truncate">{s.name}</p>
+                        <p className="text-[10px] text-[#64748B] mt-1">
+                          {s.updatedAt ? new Date(s.updatedAt).toLocaleDateString() : "Not saved yet"}
+                        </p>
+                      </div>
+                      <button
+                        onClick={() => duplicateMutation.mutate({ id: s.id })}
+                        disabled={duplicateMutation.isPending}
+                        title="Duplicate strategy"
+                        className="p-1.5 rounded-md text-[#64748B] hover:text-[#F59E0B] hover:bg-[#F59E0B]/10 transition-colors disabled:opacity-50"
+                      >
+                        <Copy className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
                   </div>
                 ))}
                 {(!strategiesQuery.data || strategiesQuery.data.length === 0) && (

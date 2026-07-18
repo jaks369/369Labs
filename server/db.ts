@@ -178,6 +178,30 @@ export async function getStrategyById(id: number, userId: number): Promise<Strat
   return result.length > 0 ? result[0] : undefined;
 }
 
+export async function setStrategyPublished(id: number, userId: number, published: boolean): Promise<Strategy | undefined> {
+  const db = await getDb();
+  if (!db) return undefined;
+  await db.update(strategies).set({ published }).where(and(eq(strategies.id, id), eq(strategies.userId, userId)));
+  return getStrategyById(id, userId);
+}
+
+export async function duplicateStrategy(id: number, userId: number): Promise<Strategy | undefined> {
+  const db = await getDb();
+  if (!db) return undefined;
+  const original = await getStrategyById(id, userId);
+  if (!original) return undefined;
+  const result = await db.insert(strategies).values({
+    userId,
+    name: `${original.name} (copy)`,
+    description: original.description,
+    config: original.config,
+    isActive: false,
+    published: false,
+  });
+  const newId = result[0].insertId;
+  return (await db.select().from(strategies).where(eq(strategies.id, newId as number)).limit(1))[0];
+}
+
 export async function saveTrade(trade: InsertTrade): Promise<Trade> {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
@@ -238,6 +262,24 @@ export async function getTelegramSettingsByUserId(userId: number): Promise<Teleg
   
   const result = await db.select().from(telegramSettings).where(eq(telegramSettings.userId, userId)).limit(1);
   return result.length > 0 ? result[0] : undefined;
+}
+
+export async function sendTelegramMessage(botToken: string, chatId: string, text: string): Promise<boolean> {
+  try {
+    const res = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ chat_id: chatId, text, parse_mode: "HTML" }),
+    });
+    if (!res.ok) {
+      console.error("[Telegram] send failed:", res.status, await res.text().catch(() => ""));
+      return false;
+    }
+    return true;
+  } catch (e) {
+    console.error("[Telegram] send error:", e);
+    return false;
+  }
 }
 
 export async function saveNotificationSettings(settings: InsertNotificationSettings): Promise<NotificationSettings> {

@@ -1,7 +1,7 @@
 import { useState, useCallback, useRef } from "react";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { trpc } from "@/lib/trpc";
-import { Brain, Send, Bot, Sparkles, Code, LineChart, ShieldCheck, Zap, Loader2, ChevronDown, ChevronRight, Wrench, Activity, CandlestickChart } from "lucide-react";
+import { Send, LineChart, ShieldCheck, Loader2, ChevronDown, ChevronRight, Wrench, Activity, CandlestickChart } from "lucide-react";
 import { useLocation } from "wouter";
 import { derivWS } from "@/services/derivWebSocket";
 import { pushTimeline } from "@/components/AITimeline";

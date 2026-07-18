@@ -116,7 +116,10 @@ import { getTickHistory, getActiveSymbols, getDigitStats, getTrend, suggestStrat
         return { data: { bots: enriched, totalRuns: runs.length } };
       }
       return { error: "Unknown tool" };
-    } catch (e) { return { error: String(e) }; }
+    } catch (e) {
+      console.error("[tool]", e);
+      return { error: "The tool could not complete. Please try a different request." };
+    }
   }
 
   // In-memory agent conversation history (per user+chat) for continuity
@@ -354,6 +357,61 @@ export const appRouter = router({
           });
         }
       }),
+
+    // Alias used by the client (trpc.strategies.getById)
+    getById: protectedProcedure
+      .input(z.object({ id: z.number() }))
+      .query(async ({ ctx, input }) => {
+        try {
+          const strategy = await db.getStrategyById(input.id, ctx.user.id);
+          if (!strategy) {
+            throw new TRPCError({ code: "NOT_FOUND", message: "Strategy not found" });
+          }
+          return strategy;
+        } catch (error) {
+          if (error instanceof TRPCError) throw error;
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: "Failed to retrieve strategy",
+          });
+        }
+      }),
+
+    publish: protectedProcedure
+      .input(z.object({ id: z.number(), published: z.boolean().default(true) }))
+      .mutation(async ({ ctx, input }) => {
+        try {
+          const strategy = await db.setStrategyPublished(input.id, ctx.user.id, input.published);
+          if (!strategy) {
+            throw new TRPCError({ code: "NOT_FOUND", message: "Strategy not found" });
+          }
+          return strategy;
+        } catch (error) {
+          if (error instanceof TRPCError) throw error;
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: "Failed to publish strategy",
+          });
+        }
+      }),
+
+    duplicate: protectedProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ ctx, input }) => {
+        try {
+          const copy = await db.duplicateStrategy(input.id, ctx.user.id);
+          if (!copy) {
+            throw new TRPCError({ code: "NOT_FOUND", message: "Strategy not found" });
+          }
+          return copy;
+        } catch (error) {
+          if (error instanceof TRPCError) throw error;
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: "Failed to duplicate strategy",
+          });
+        }
+      }),
   }),
 
   // Trade History
@@ -510,6 +568,28 @@ export const appRouter = router({
         });
       }
     }),
+
+    send: protectedProcedure
+      .input(z.object({ message: z.string().min(1) }))
+      .mutation(async ({ ctx, input }) => {
+        try {
+          const settings = await db.getTelegramSettingsByUserId(ctx.user.id);
+          if (!settings?.botToken || !settings?.chatId) {
+            throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Telegram not configured. Add a bot token and chat ID in Settings." });
+          }
+          const ok = await db.sendTelegramMessage(settings.botToken, settings.chatId, input.message);
+          if (!ok) {
+            throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Failed to send Telegram message" });
+          }
+          return { ok: true };
+        } catch (error) {
+          if (error instanceof TRPCError) throw error;
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: "Failed to send Telegram message",
+          });
+        }
+      }),
   }),
 
   // Notification Settings
@@ -711,7 +791,10 @@ HOW TO RESPOND:
           }
 
           return { reply, steps };
-        } catch (e) { console.error("[AI]", e); return { reply: "Error: " + String(e) }; }
+        } catch (e) {
+          console.error("[AI]", e);
+          return { reply: "I'm having trouble reaching the AI service right now. Please try again in a moment." };
+        }
       }),
     parseRule: protectedProcedure
       .input(z.object({ text: z.string().min(1), symbol: z.string().optional() }))

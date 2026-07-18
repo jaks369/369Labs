@@ -1,19 +1,33 @@
 import { useState } from "react";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { trpc } from "@/lib/trpc";
-import { Cloud, Server, Power, PowerOff, Globe, Clock, Activity, Loader2 } from "lucide-react";
+import { Cloud, Server, PowerOff, Clock, Activity, Loader2 } from "lucide-react";
 import { useLocation } from "wouter";
 
 export default function CloudBots() {
   const { isAuthenticated } = useAuth();
   const [, navigate] = useLocation();
   const botRunsQuery = trpc.bot.getRuns.useQuery();
-  const stopRunMutation = trpc.bot.stopRun.useMutation();
+  const stopRunMutation = trpc.bot.stopRun.useMutation({
+    onSuccess: () => botRunsQuery.refetch(),
+  });
   const [stoppingId, setStoppingId] = useState<number | null>(null);
 
   if (!isAuthenticated) { navigate("/login"); return null; }
 
   const bots = botRunsQuery.data || [];
+
+  const handleStop = async (id: number) => {
+    setStoppingId(id);
+    try {
+      await stopRunMutation.mutateAsync({ id, status: "stopped" });
+    } catch {
+      // Non-fatal — refresh to reflect current state.
+      botRunsQuery.refetch();
+    } finally {
+      setStoppingId(null);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-[#151B23] p-6">
@@ -23,6 +37,9 @@ export default function CloudBots() {
             <h1 className="text-3xl font-bold text-white">Cloud Bots</h1>
             <p className="text-[#94A3B8] text-sm mt-1">Manage bots running on 369Labs cloud infrastructure</p>
           </div>
+          <button onClick={() => navigate("/bots")} className="btn-outline text-xs flex items-center gap-2">
+            <Server className="w-3.5 h-3.5" /> Manage Live Bots
+          </button>
         </div>
 
         {botRunsQuery.isLoading ? (
@@ -55,6 +72,16 @@ export default function CloudBots() {
                   <span className={`text-xs font-bold uppercase ${bot.status === "running" ? "text-[#22C55E]" : "text-[#64748B]"}`}>
                     {bot.status}
                   </span>
+                  {bot.status === "running" && (
+                    <button
+                      onClick={() => handleStop(bot.id)}
+                      disabled={stoppingId === bot.id}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[#EF4444]/30 text-[#EF4444] hover:bg-[#EF4444]/10 text-xs font-bold transition-colors disabled:opacity-50"
+                    >
+                      {stoppingId === bot.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <PowerOff className="w-3.5 h-3.5" />}
+                      Stop
+                    </button>
+                  )}
                 </div>
               </div>
             ))}

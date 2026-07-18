@@ -76,19 +76,7 @@ export default function Bots() {
   // Stop all engines if the user navigates away / unmounts, so bots don't keep
   // trading in the background with no visible controls.
   useEffect(() => {
-    if (creating) {
-    return (
-      <div className="p-6 lg:p-10">
-        <StrategyBuilderContent
-          embedded
-          onClose={() => setCreating(false)}
-          onSaved={() => { setCreating(false); strategiesQuery.refetch(); }}
-        />
-      </div>
-    );
-  }
-
-  return () => {
+    return () => {
       botsRef.current.forEach((b) => b.engine.stop());
     };
   }, []);

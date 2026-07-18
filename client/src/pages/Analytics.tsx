@@ -1,6 +1,6 @@
 import { useAuth } from "@/_core/hooks/useAuth";
 import { trpc } from "@/lib/trpc";
-import { BarChart4, TrendingUp, DollarSign, Activity, ArrowUpRight, ArrowDownRight, Loader2, ShieldAlert } from "lucide-react";
+import { BarChart4, TrendingUp, DollarSign, Activity, Loader2, ShieldAlert } from "lucide-react";
 import { useLocation } from "wouter";
 
 export default function Analytics() {
