@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { trpc } from "@/lib/trpc";
+import { toast } from "@/components/Toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -18,7 +19,9 @@ import {
   Zap,
   ShieldCheck,
   GitCompare,
-  History
+  History,
+  ArrowUp,
+  ArrowDown
 } from "lucide-react";
 import { useLocation, useSearch } from "wouter";
 import RuleBuilder, { StrategyRule, DEFAULT_RULE, summarizeRule } from "@/components/RuleBuilder";
@@ -96,6 +99,16 @@ export function StrategyBuilderContent({ embedded = false, onClose, onSaved }: S
   const removeBlock = (id: string) => {
     setBlocks(blocks.filter(b => b.id !== id));
   };
+  const moveBlock = (id: string, dir: -1 | 1) => {
+    setBlocks(prev => {
+      const i = prev.findIndex(b => b.id === id);
+      const j = i + dir;
+      if (i < 0 || j < 0 || j >= prev.length) return prev;
+      const next = [...prev];
+      [next[i], next[j]] = [next[j], next[i]];
+      return next;
+    });
+  };
 
   const updateBlock = (id: string, value: string) => {
     setBlocks(blocks.map(b => b.id === id ? { ...b, value } : b));
@@ -128,8 +141,8 @@ export function StrategyBuilderContent({ embedded = false, onClose, onSaved }: S
   };
 
   const handleSaveAndDeploy = async () => {
-    if (!strategyName) { alert("Please enter a strategy name"); return; }
-    if (builderMode === "ensemble" && ensembleIds.length < 2) { alert("Select at least 2 strategies for an ensemble."); return; }
+    if (!strategyName) { toast("Please enter a strategy name", "error"); return; }
+    if (builderMode === "ensemble" && ensembleIds.length < 2) { toast("Select at least 2 strategies for an ensemble.", "error"); return; }
     try {
       await saveStrategyMutation.mutateAsync({
         name: strategyName,
@@ -138,15 +151,15 @@ export function StrategyBuilderContent({ embedded = false, onClose, onSaved }: S
         published: publishToMarketplace,
       });
       if (embedded) { onSaved?.(); } else { navigate("/bots"); }
-    } catch { alert("Failed to save strategy"); }
+    } catch { toast("Failed to save strategy", "error"); }
   };
 
   const handleSaveStrategy = async () => {
     if (!strategyName) {
-      alert("Please enter a strategy name");
+      toast("Please enter a strategy name", "error");
       return;
     }
-    if (builderMode === "ensemble" && ensembleIds.length < 2) { alert("Select at least 2 strategies for an ensemble."); return; }
+    if (builderMode === "ensemble" && ensembleIds.length < 2) { toast("Select at least 2 strategies for an ensemble.", "error"); return; }
 
     try {
       await saveStrategyMutation.mutateAsync({
@@ -155,14 +168,14 @@ export function StrategyBuilderContent({ embedded = false, onClose, onSaved }: S
         config: buildConfig(),
         published: publishToMarketplace,
       });
-      alert("Strategy saved successfully!");
+      toast("Strategy saved successfully!", "success");
       setStrategyName("");
       setDescription("");
       setBlocks([]);
       setRule(DEFAULT_RULE);
       if (embedded) { onSaved?.(); }
     } catch (error) {
-      alert("Failed to save strategy");
+      toast("Failed to save strategy", "error");
     }
   };
 
@@ -401,7 +414,11 @@ export function StrategyBuilderContent({ embedded = false, onClose, onSaved }: S
                                 <div className="flex-1 space-y-1">
                                   <div className="flex items-center justify-between">
                                     <span className="text-[10px] font-bold text-[#64748B] uppercase tracking-widest">{block.type}</span>
-                                    <button onClick={() => removeBlock(block.id)} className="text-[#64748B] hover:text-[#EF4444] transition-colors"><Trash2 className="w-3 h-3" /></button>
+                                    <div className="flex items-center gap-1">
+                                      <button onClick={() => moveBlock(block.id, -1)} disabled={index === 0} className="text-[#64748B] hover:text-[#22D3EE] disabled:opacity-25 transition-colors" aria-label="Move up"><ArrowUp className="w-3 h-3" /></button>
+                                      <button onClick={() => moveBlock(block.id, 1)} disabled={index === blocks.length - 1} className="text-[#64748B] hover:text-[#22D3EE] disabled:opacity-25 transition-colors" aria-label="Move down"><ArrowDown className="w-3 h-3" /></button>
+                                      <button onClick={() => removeBlock(block.id)} className="text-[#64748B] hover:text-[#EF4444] transition-colors"><Trash2 className="w-3 h-3" /></button>
+                                    </div>
                                   </div>
                                   <Input 
                                     value={block.value}
