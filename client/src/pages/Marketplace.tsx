@@ -64,25 +64,25 @@ export default function Marketplace() {
   const published = (publishedQuery.data as any[]) || [];
 
   return (
-    <div className="min-h-screen bg-[#151515] text-white">
-      <div className="p-6 border-b border-[#2A2A2A] flex items-center justify-between bg-[#151515]/60 backdrop-blur-xl sticky top-0 z-10">
+    <div className="min-h-screen bg-[#151B23] text-white">
+      <div className="p-6 border-b border-[#252B35] flex items-center justify-between bg-[#151B23]/60 backdrop-blur-xl sticky top-0 z-10">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-[#D98B1F]/10 rounded-xl flex items-center justify-center border border-[#D98B1F]/30">
-            <CandlestickChart className="w-6 h-6 text-[#D98B1F]" />
+          <div className="w-10 h-10 bg-[#22D3EE]/10 rounded-xl flex items-center justify-center border border-[#22D3EE]/30">
+            <CandlestickChart className="w-6 h-6 text-[#22D3EE]" />
           </div>
           <div>
-            <h1 className="text-xl font-bold tracking-tight">AI <span className="text-[#D98B1F]">Signals</span></h1>
-            <p className="text-xs text-[#6F6F6F] flex items-center gap-1.5">
-              <Sparkles className="w-3 h-3 text-[#D98B1F]" /> What 369AI discovered from live market data
+            <h1 className="text-xl font-bold tracking-tight">AI <span className="text-[#22D3EE]">Signals</span></h1>
+            <p className="text-xs text-[#64748B] flex items-center gap-1.5">
+              <Sparkles className="w-3 h-3 text-[#22D3EE]" /> What 369AI discovered from live market data
             </p>
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <select value={symbol} onChange={(e) => setSymbol(e.target.value)} className="bg-[#151515] border border-[#2A2A2A] rounded-lg px-3 py-2 text-sm text-white focus:border-[#D98B1F] outline-none">
+          <select value={symbol} onChange={(e) => setSymbol(e.target.value)} className="bg-[#151B23] border border-[#252B35] rounded-lg px-3 py-2 text-sm text-white focus:border-[#F59E0B] outline-none">
             <option value="">All symbols</option>
             {SYMBOLS.map((s) => <option key={s} value={s}>{s}</option>)}
           </select>
-          <Button onClick={() => navigate("/ai-assistant")} className="bg-[#D98B1F] hover:bg-[#D98B1F] text-black text-xs px-4 py-2 rounded-lg flex items-center gap-1">
+          <Button onClick={() => navigate("/ai-assistant")} className="bg-[#22D3EE] hover:bg-[#22D3EE] text-black text-xs px-4 py-2 rounded-lg flex items-center gap-1">
             <Bot className="w-4 h-4" /> Ask 369AI
           </Button>
         </div>
@@ -90,19 +90,19 @@ export default function Marketplace() {
 
       <div className="p-6 max-w-5xl mx-auto">
         {signalsQuery.isLoading ? (
-          <div className="flex items-center justify-center gap-2 text-[#6F6F6F] py-20">
+          <div className="flex items-center justify-center gap-2 text-[#64748B] py-20">
             <Loader2 className="w-5 h-5 animate-spin" /> Scanning market intelligence...
           </div>
         ) : signals.length === 0 ? (
           <div className="text-center py-20">
-            <div className="w-16 h-16 mx-auto bg-[#D98B1F]/10 rounded-2xl flex items-center justify-center border border-[#D98B1F]/30 mb-4">
-              <CandlestickChart className="w-8 h-8 text-[#D98B1F]" />
+            <div className="w-16 h-16 mx-auto bg-[#22D3EE]/10 rounded-2xl flex items-center justify-center border border-[#22D3EE]/30 mb-4">
+              <CandlestickChart className="w-8 h-8 text-[#22D3EE]" />
             </div>
             <h3 className="text-lg font-bold text-white">No signals yet</h3>
-            <p className="text-sm text-[#6F6F6F] mt-1 max-w-md mx-auto">
+            <p className="text-sm text-[#64748B] mt-1 max-w-md mx-auto">
               Tell 369AI to watch a market e.g. "Watch R_50 for 30 minutes and find repeatable patterns" or wait for the always-on scanner to surface setups here with full evidence.
             </p>
-            <Button onClick={() => navigate("/ai-assistant")} className="mt-4 bg-[#D98B1F] hover:bg-[#D98B1F] text-black text-sm px-4 py-2 rounded-lg">
+            <Button onClick={() => navigate("/ai-assistant")} className="mt-4 bg-[#22D3EE] hover:bg-[#22D3EE] text-black text-sm px-4 py-2 rounded-lg">
               Start a watch
             </Button>
           </div>
@@ -113,56 +113,56 @@ export default function Marketplace() {
               const isOpen = expanded === sig.id;
               const ev = (sig.evidence || []).slice(0, 12);
               return (
-                <div key={sig.id} className="bg-[#151515] border border-[#2A2A2A] rounded-xl overflow-hidden">
+                <div key={sig.id} className="bg-[#151B23] border border-[#252B35] rounded-xl overflow-hidden">
                   <div className="p-4 flex items-start justify-between gap-4">
                     <div className="flex-1">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <span className="px-2 py-0.5 rounded bg-[#D98B1F]/10 border border-[#D98B1F]/30 text-[#D98B1F] text-[10px] font-bold uppercase">{sig.symbol}</span>
-                        <span className="px-2 py-0.5 rounded bg-white/5 text-[#A8A8A8] text-[10px] font-bold uppercase">{sig.patternType}</span>
-                        <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${sig.source === "always-on" ? "bg-[#D98B1F]/10 text-[#E89A2A]" : "bg-[#D98B1F]/10 text-[#E89A2A]"}`}>{sig.source}</span>
+                        <span className="px-2 py-0.5 rounded bg-[#F59E0B]/10 border border-[#F59E0B]/30 text-[#F59E0B] text-[10px] font-bold uppercase">{sig.symbol}</span>
+                        <span className="px-2 py-0.5 rounded bg-white/5 text-[#94A3B8] text-[10px] font-bold uppercase">{sig.patternType}</span>
+                        <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${sig.source === "always-on" ? "bg-[#F59E0B]/10 text-[#FBBF24]" : "bg-[#F59E0B]/10 text-[#FBBF24]"}`}>{sig.source}</span>
                       </div>
                       <h3 className="font-bold text-white mt-2">{sig.title}</h3>
-                      <p className="text-sm text-[#A8A8A8] mt-1">{sig.description}</p>
+                      <p className="text-sm text-[#94A3B8] mt-1">{sig.description}</p>
                       <div className="flex items-center gap-4 mt-3 text-xs">
-                        <span className="flex items-center gap-1 text-[#6F6F6F]"><TrendingUp className="w-3 h-3" /> Win rate <b className={win >= 65 ? "text-[#22C55E]" : "text-[#D98B1F]"}>{win}%</b></span>
-                        <span className="text-[#6F6F6F]">Samples <b className="text-white">{sig.sampleSize}</b></span>
-                        <span className="text-[#6F6F6F]">Confidence <b className="text-white">{sig.confidence}%</b></span>
-                        <span className="text-[#6F6F6F]">Stake <b className="text-[#D98B1F]">${(Math.max(0.35, +(2 * (Number(sig.confidence) || 50) / 100)).toFixed(2))}</b> <span className="text-[#6F6F6F]">(scaled)</span></span>
-                        <span className="flex items-center gap-1 text-[#6F6F6F]"><Clock className="w-3 h-3" /> {new Date((sig.discoveredAt || 0) * 1000).toLocaleString()}</span>
+                        <span className="flex items-center gap-1 text-[#64748B]"><TrendingUp className="w-3 h-3" /> Win rate <b className={win >= 65 ? "text-[#22C55E]" : "text-[#22C55E]"}>{win}%</b></span>
+                        <span className="text-[#64748B]">Samples <b className="text-white">{sig.sampleSize}</b></span>
+                        <span className="text-[#64748B]">Confidence <b className="text-white">{sig.confidence}%</b></span>
+                        <span className="text-[#64748B]">Stake <b className="text-[#F59E0B]">${(Math.max(0.35, +(2 * (Number(sig.confidence) || 50) / 100)).toFixed(2))}</b> <span className="text-[#64748B]">(scaled)</span></span>
+                        <span className="flex items-center gap-1 text-[#64748B]"><Clock className="w-3 h-3" /> {new Date((sig.discoveredAt || 0) * 1000).toLocaleString()}</span>
                       </div>
                     </div>
                     <div className="flex flex-col gap-2 shrink-0">
-                      <Button onClick={() => navigate("/backtesting?signal=" + sig.id)} className="bg-[#D98B1F] hover:bg-[#D98B1F] text-black text-xs px-3 py-1.5 rounded-lg flex items-center gap-1">
+                      <Button onClick={() => navigate("/backtesting?signal=" + sig.id)} className="bg-[#F59E0B] hover:bg-[#F59E0B] text-black text-xs px-3 py-1.5 rounded-lg flex items-center gap-1">
                         <FlaskConical className="w-3.5 h-3.5" /> Backtest
                       </Button>
-                      <button onClick={() => setExpanded(isOpen ? null : sig.id)} className="text-[11px] text-[#A8A8A8] hover:text-[#D98B1F] flex items-center gap-1 justify-center">
+                      <button onClick={() => setExpanded(isOpen ? null : sig.id)} className="text-[11px] text-[#94A3B8] hover:text-[#F59E0B] flex items-center gap-1 justify-center">
                         {isOpen ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />} Evidence
                       </button>
                     </div>
                   </div>
                   {isOpen && (
-                    <div className="border-t border-[#2A2A2A] bg-[#0D0D0D] p-4">
-                      <div className="text-[10px] uppercase tracking-widest text-[#6F6F6F] font-bold mb-2">Raw evidence (tick window)</div>
+                    <div className="border-t border-[#252B35] bg-[#0B0F14] p-4">
+                      <div className="text-[10px] uppercase tracking-widest text-[#64748B] font-bold mb-2">Raw evidence (tick window)</div>
                       <div className="overflow-x-auto">
                         <table className="w-full text-left text-xs font-mono">
                           <thead>
-                            <tr className="text-[#6F6F6F] border-b border-[#2A2A2A]">
+                            <tr className="text-[#64748B] border-b border-[#252B35]">
                               <th className="p-2">#</th><th className="p-2">Time</th><th className="p-2 text-right">Price</th><th className="p-2 text-right">Digit</th>
                             </tr>
                           </thead>
-                          <tbody className="divide-y divide-[#2A2A2A]">
+                          <tbody className="divide-y divide-[#252B35]">
                             {ev.map((t: any, i: number) => (
                               <tr key={i}>
-                                <td className="p-2 text-[#6F6F6F]">{i + 1}</td>
-                                <td className="p-2 text-[#A8A8A8]">{new Date((t.epoch || 0) * 1000).toLocaleTimeString()}</td>
+                                <td className="p-2 text-[#64748B]">{i + 1}</td>
+                                <td className="p-2 text-[#94A3B8]">{new Date((t.epoch || 0) * 1000).toLocaleTimeString()}</td>
                                 <td className="p-2 text-right text-white">{Number(t.price).toFixed(4)}</td>
-                                <td className="p-2 text-right text-[#D98B1F]">{t.lastDigit}</td>
+                                <td className="p-2 text-right text-[#F59E0B]">{t.lastDigit}</td>
                               </tr>
                             ))}
                           </tbody>
                         </table>
                       </div>
-                      <pre className="mt-3 text-[11px] text-[#A8A8A8] bg-black/40 rounded-lg p-3 overflow-x-auto">{JSON.stringify(sig.rule, null, 2)}</pre>
+                      <pre className="mt-3 text-[11px] text-[#94A3B8] bg-black/40 rounded-lg p-3 overflow-x-auto">{JSON.stringify(sig.rule, null, 2)}</pre>
                     </div>
                   )}
                 </div>
@@ -173,23 +173,23 @@ export default function Marketplace() {
 
         <div className="mt-10">
           <h2 className="text-xl font-bold text-white mb-1 flex items-center gap-2">
-            <Users className="w-5 h-5 text-[#E89A2A]" /> Community Strategies
+            <Users className="w-5 h-5 text-[#FBBF24]" /> Community Strategies
           </h2>
-          <p className="text-sm text-[#6F6F6F] mb-4">Strategies traders published. Clone any into your account to backtest or deploy.</p>
+          <p className="text-sm text-[#64748B] mb-4">Strategies traders published. Clone any into your account to backtest or deploy.</p>
           {publishedQuery.isLoading ? (
-            <p className="text-sm text-[#6F6F6F]">Loading community strategies…</p>
+            <p className="text-sm text-[#64748B]">Loading community strategies…</p>
           ) : published.length === 0 ? (
-            <p className="text-sm text-[#6F6F6F]">No published strategies yet. Publish one from the Strategy Builder.</p>
+            <p className="text-sm text-[#64748B]">No published strategies yet. Publish one from the Strategy Builder.</p>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {published.map((s: any) => (
-                <div key={s.id} className="bg-[#151515] border border-[#2A2A2A] rounded-xl p-4 flex items-center justify-between gap-4">
+                <div key={s.id} className="bg-[#151B23] border border-[#252B35] rounded-xl p-4 flex items-center justify-between gap-4">
                   <div className="flex-1 min-w-0">
                     <h3 className="font-bold text-white truncate">{s.name}</h3>
-                    <p className="text-xs text-[#A8A8A8] mt-1 truncate">{s.description || "No description"}</p>
-                    <span className="text-[10px] text-[#6F6F6F]">by user #{s.userId}</span>
+                    <p className="text-xs text-[#94A3B8] mt-1 truncate">{s.description || "No description"}</p>
+                    <span className="text-[10px] text-[#64748B]">by user #{s.userId}</span>
                   </div>
-                  <Button onClick={() => cloneStrategy(s)} className="bg-[#D98B1F] hover:bg-[#E89A2A] text-white text-xs px-3 py-1.5 rounded-lg shrink-0">
+                  <Button onClick={() => cloneStrategy(s)} className="bg-[#F59E0B] hover:bg-[#FBBF24] text-white text-xs px-3 py-1.5 rounded-lg shrink-0">
                     Clone
                   </Button>
                 </div>

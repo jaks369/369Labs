@@ -10,7 +10,7 @@ interface SparklineProps {
 
 export default function Sparkline({
   data,
-  color = "#D98B1F",
+  color = "#F59E0B",
   height = 40,
   width = "100%",
   trend,
@@ -19,7 +19,7 @@ export default function Sparkline({
     return (
       <div
         style={{ width, height }}
-        className="flex items-center justify-center text-[#D98B1F]/40 text-xs"
+        className="flex items-center justify-center text-[#F59E0B]/40 text-xs"
       >
         No data
       </div>

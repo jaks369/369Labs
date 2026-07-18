@@ -36,13 +36,13 @@ export default function Plugins() {
   };
 
   return (
-    <div className="min-h-screen bg-[#151515] p-6">
+    <div className="min-h-screen bg-[#151B23] p-6">
       <div className="max-w-4xl mx-auto space-y-6">
         <div>
           <h1 className="text-3xl font-bold text-white flex items-center gap-3">
-            <Plug className="w-7 h-7 text-[#E89A2A]" /> Plugins
+            <Plug className="w-7 h-7 text-[#FBBF24]" /> Plugins
           </h1>
-          <p className="text-[#A8A8A8] text-sm mt-1">Extend 369Labs with safety, signal and automation hooks. Installed plugins run inside the OS event bus.</p>
+          <p className="text-[#94A3B8] text-sm mt-1">Extend 369Labs with safety, signal and automation hooks. Installed plugins run inside the OS event bus.</p>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -51,22 +51,22 @@ export default function Plugins() {
             const rec = installed.get(p.id);
             const on = rec?.installedEnabled ?? false;
             return (
-              <div key={p.id} className="bg-[#151515] border border-[#2A2A2A] rounded-xl p-4 space-y-3">
+              <div key={p.id} className="bg-[#151B23] border border-[#252B35] rounded-xl p-4 space-y-3">
                 <div className="flex items-start gap-3">
-                  <div className="h-9 w-9 rounded-lg bg-[#D98B1F]/15 flex items-center justify-center shrink-0">
-                    <Icon className="w-4 h-4 text-[#E89A2A]" />
+                  <div className="h-9 w-9 rounded-lg bg-[#F59E0B]/15 flex items-center justify-center shrink-0">
+                    <Icon className="w-4 h-4 text-[#FBBF24]" />
                   </div>
                   <div className="flex-1">
                     <p className="text-sm font-semibold text-white">{p.name}</p>
-                    <p className="text-[11px] text-[#6F6F6F]">by {p.author} · hook: {p.hook}</p>
+                    <p className="text-[11px] text-[#64748B]">by {p.author} · hook: {p.hook}</p>
                   </div>
                 </div>
-                <p className="text-xs text-[#A8A8A8] leading-relaxed">{p.description}</p>
+                <p className="text-xs text-[#94A3B8] leading-relaxed">{p.description}</p>
                 <button
                   onClick={() => toggle(p)}
                   disabled={busy === p.id}
                   className={`w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-xs font-bold transition-colors disabled:opacity-50 ${
-                    on ? "bg-[#1FA64B]/20 text-[#22C55E] border border-[#22C55E]/40 hover:bg-[#1FA64B]/30" : "bg-[#D98B1F] text-white hover:bg-[#D98B1F]"
+                    on ? "bg-[#22C55E]/20 text-[#22C55E] border border-[#22C55E]/40 hover:bg-[#22C55E]/30" : "bg-[#F59E0B] text-white hover:bg-[#F59E0B]"
                   }`}
                 >
                   {busy === p.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : on ? <Check className="w-3.5 h-3.5" /> : <Plus className="w-3.5 h-3.5" />}
@@ -75,7 +75,7 @@ export default function Plugins() {
               </div>
             );
           })}
-          {marketplace.isLoading && <p className="text-sm text-[#6F6F6F] col-span-2 p-4">Loading marketplace…</p>}
+          {marketplace.isLoading && <p className="text-sm text-[#64748B] col-span-2 p-4">Loading marketplace…</p>}
         </div>
       </div>
     </div>

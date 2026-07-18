@@ -31,17 +31,17 @@ export default function DerivTokenModal({ open, onClose }: Props) {
 
   return (
     <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4">
-      <div className="w-full max-w-md bg-[#151515] border border-[#2A2A2A] rounded-xl">
-        <div className="flex items-center justify-between p-5 border-b border-[#2A2A2A]">
+      <div className="w-full max-w-md bg-[#151B23] border border-[#252B35] rounded-xl">
+        <div className="flex items-center justify-between p-5 border-b border-[#252B35]">
           <h2 className="text-lg font-bold text-white">Connect Deriv Account</h2>
-          <button onClick={onClose} className="text-[#A8A8A8] hover:text-white"><X className="w-5 h-5" /></button>
+          <button onClick={onClose} className="text-[#94A3B8] hover:text-white"><X className="w-5 h-5" /></button>
         </div>
         <div className="p-5 space-y-4">
           <div>
-            <label className="text-xs font-bold text-[#6F6F6F] block mb-2">Deriv API Token</label>
-            <Input type="text" autoComplete="off" placeholder={preview ? 'Enter new token' : 'Paste your Deriv API token'} value={token} onChange={e => { setToken(e.target.value); setStatus('idle'); setMsg(''); }} className="bg-[#151515] border-[#2A2A2A] text-white" />
+            <label className="text-xs font-bold text-[#64748B] block mb-2">Deriv API Token</label>
+            <Input type="text" autoComplete="off" placeholder={preview ? 'Enter new token' : 'Paste your Deriv API token'} value={token} onChange={e => { setToken(e.target.value); setStatus('idle'); setMsg(''); }} className="bg-[#151B23] border-[#252B35] text-white" />
             {preview && <p className="text-xs text-[#22C55E] mt-1">Current: {preview}</p>}
-            <p className="text-xs text-[#6F6F6F] mt-2">Get token from app.deriv.com/account/api-token</p>
+            <p className="text-xs text-[#64748B] mt-2">Get token from app.deriv.com/account/api-token</p>
           </div>
           {status === 'ok' && <div className="flex items-center gap-2 text-[#22C55E] text-sm"><CheckCircle2 className="w-4 h-4" />{msg}</div>}
           {status === 'error' && <div className="flex items-center gap-2 text-[#EF4444] text-sm"><AlertCircle className="w-4 h-4" />{msg}</div>}

@@ -32,23 +32,23 @@ export default function TelegramSettings() {
   };
 
   return (
-    <div className="min-h-screen bg-[#151515] p-6">
+    <div className="min-h-screen bg-[#151B23] p-6">
       <div className="max-w-3xl mx-auto space-y-8">
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold text-white">Telegram Integration</h1>
-            <p className="text-[#A8A8A8] text-sm mt-1">Receive trade alerts and bot notifications on Telegram</p>
+            <p className="text-[#94A3B8] text-sm mt-1">Receive trade alerts and bot notifications on Telegram</p>
           </div>
-          <MessageCircle className="w-6 h-6 text-[#D98B1F]" />
+          <MessageCircle className="w-6 h-6 text-[#F59E0B]" />
         </div>
 
         {settingsQuery.isLoading ? (
-          <div className="flex items-center justify-center h-64"><Loader2 className="w-8 h-8 animate-spin text-[#D98B1F]" /></div>
+          <div className="flex items-center justify-center h-64"><Loader2 className="w-8 h-8 animate-spin text-[#F59E0B]" /></div>
         ) : (
-          <div className="bg-[#151515] border border-[#2A2A2A] rounded-xl p-6 space-y-6">
-            <div className="p-4 bg-[#D98B1F]/10 border border-[#D98B1F]/20 rounded-xl flex items-start gap-3">
-              <AlertCircle className="w-5 h-5 text-[#D98B1F] shrink-0 mt-0.5" />
-              <div className="text-xs text-[#D98B1F]">
+          <div className="bg-[#151B23] border border-[#252B35] rounded-xl p-6 space-y-6">
+            <div className="p-4 bg-[#F59E0B]/10 border border-[#F59E0B]/20 rounded-xl flex items-start gap-3">
+              <AlertCircle className="w-5 h-5 text-[#F59E0B] shrink-0 mt-0.5" />
+              <div className="text-xs text-[#F59E0B]">
                 <p className="font-bold mb-1">How to set up:</p>
                 <ol className="list-decimal ml-4 space-y-1">
                   <li>Create a bot on Telegram via <strong>@BotFather</strong> and copy the token</li>
@@ -60,28 +60,28 @@ export default function TelegramSettings() {
             </div>
 
             <div>
-              <label className="text-xs text-[#6F6F6F] font-bold uppercase tracking-wider">Bot Token</label>
+              <label className="text-xs text-[#64748B] font-bold uppercase tracking-wider">Bot Token</label>
               <Input
                 value={botToken}
                 onChange={e => setBotToken(e.target.value)}
                 placeholder="1234567890:ABCdefGHIjklMNOpqrsTUVwxyz"
-                className="mt-1 bg-[#151515] border-[#2A2A2A] text-white"
+                className="mt-1 bg-[#151B23] border-[#252B35] text-white"
                 type="password"
               />
             </div>
 
             <div>
-              <label className="text-xs text-[#6F6F6F] font-bold uppercase tracking-wider">Chat ID</label>
+              <label className="text-xs text-[#64748B] font-bold uppercase tracking-wider">Chat ID</label>
               <Input
                 value={chatId}
                 onChange={e => setChatId(e.target.value)}
                 placeholder="-1234567890"
-                className="mt-1 bg-[#151515] border-[#2A2A2A] text-white"
+                className="mt-1 bg-[#151B23] border-[#252B35] text-white"
               />
             </div>
 
             <div className="flex items-center gap-4">
-              <Button onClick={handleSave} disabled={saveMutation.isPending || !botToken} className="bg-[#D98B1F] hover:bg-[#C07B1A] text-white">
+              <Button onClick={handleSave} disabled={saveMutation.isPending || !botToken} className="bg-[#F59E0B] hover:bg-[#F59E0B] text-white">
                 {saveMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Send className="w-4 h-4 mr-2" />}
                 Save & Connect
               </Button>

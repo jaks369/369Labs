@@ -231,7 +231,7 @@ export default function Bots() {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-10">
         <div>
           <h1 className="text-3xl font-bold text-white mb-2">Automated Bots</h1>
-          <p className="text-[#6F6F6F] text-sm font-medium">Manage and monitor your 24/7 trading instances.</p>
+          <p className="text-[#64748B] text-sm font-medium">Manage and monitor your 24/7 trading instances.</p>
         </div>
         <Button onClick={() => setCreating(true)} className="btn-primary flex items-center gap-2">
           <Plus className="w-4 h-4" /> Create New Bot
@@ -239,9 +239,9 @@ export default function Bots() {
       </div>
 
       {!derivTokenQuery.data?.token && (
-        <div className="mb-6 p-4 rounded-lg border border-[#D98B1F]/30 bg-[#D98B1F]/10 flex items-center gap-3">
-          <AlertCircle className="w-4 h-4 text-[#D98B1F] shrink-0" />
-          <p className="text-xs text-[#D98B1F]">
+        <div className="mb-6 p-4 rounded-lg border border-[#F59E0B]/30 bg-[#F59E0B]/10 flex items-center gap-3">
+          <AlertCircle className="w-4 h-4 text-[#F59E0B] shrink-0" />
+          <p className="text-xs text-[#F59E0B]">
             No Deriv API token on file — bots can't place real trades until you add one in{" "}
             <button className="underline font-bold" onClick={() => navigate("/settings")}>
               Settings
@@ -255,8 +255,8 @@ export default function Bots() {
         {/* Active Bots List */}
         <div className="lg:col-span-2 space-y-6">
           <div className="bloomberg-panel">
-            <div className="p-4 border-b border-[#2A2A2A] flex items-center justify-between bg-black/20">
-              <h2 className="text-[10px] font-bold text-[#6F6F6F] uppercase tracking-widest">Running Instances</h2>
+            <div className="p-4 border-b border-[#252B35] flex items-center justify-between bg-black/20">
+              <h2 className="text-[10px] font-bold text-[#64748B] uppercase tracking-widest">Running Instances</h2>
               <div className="flex items-center gap-2">
                 <span className="text-[10px] font-bold text-[#22C55E]">{runningBots.length} Active</span>
               </div>
@@ -265,37 +265,37 @@ export default function Bots() {
             <div className="p-0">
               {runningBots.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-20 text-center">
-                  <div className="w-12 h-12 bg-[#151515] rounded-full flex items-center justify-center mb-4 border border-[#2A2A2A]">
-                    <Bot className="w-6 h-6 text-[#6F6F6F]" />
+                  <div className="w-12 h-12 bg-[#151B23] rounded-full flex items-center justify-center mb-4 border border-[#252B35]">
+                    <Bot className="w-6 h-6 text-[#64748B]" />
                   </div>
-                  <p className="text-[#6F6F6F] text-sm mb-6">No bots are currently running.</p>
+                  <p className="text-[#64748B] text-sm mb-6">No bots are currently running.</p>
                   <Button variant="outline" className="btn-outline text-xs" onClick={() => navigate("/strategy-builder")}>
                     Deploy your first strategy
                   </Button>
                 </div>
               ) : (
-                <div className="divide-y divide-[#2A2A2A]">
+                <div className="divide-y divide-[#252B35]">
                   {runningBots.map((bot) => (
                     <div key={bot.runId} className="p-6 flex items-center justify-between hover:bg-white/5 transition-colors">
                       <div className="flex items-center gap-4">
                         <div className={`w-10 h-10 rounded-lg flex items-center justify-center border ${
                           bot.status === "error"
-                            ? "bg-[#D63A3A]/10 border-[#D63A3A]/20"
-                            : "bg-[#D98B1F]/10 border-[#D98B1F]/20"
+                            ? "bg-[#EF4444]/10 border-[#EF4444]/20"
+                            : "bg-[#F59E0B]/10 border-[#F59E0B]/20"
                         }`}>
-                          <Activity className={`w-5 h-5 ${bot.status === "error" ? "text-[#EF4444]" : "text-[#D98B1F] animate-pulse"}`} />
+                          <Activity className={`w-5 h-5 ${bot.status === "error" ? "text-[#EF4444]" : "text-[#F59E0B] animate-pulse"}`} />
                         </div>
                         <div>
                           <h3 className="text-sm font-bold text-white">{bot.name}</h3>
-                          <p className="text-[10px] text-[#6F6F6F] uppercase font-bold tracking-wider">
+                          <p className="text-[10px] text-[#64748B] uppercase font-bold tracking-wider">
                             {bot.symbol} • {bot.trades} trades • {bot.status}
                           </p>
-                          {bot.lastLog && <p className="text-[10px] text-[#6F6F6F] mt-1">{bot.lastLog}</p>}
+                          {bot.lastLog && <p className="text-[10px] text-[#64748B] mt-1">{bot.lastLog}</p>}
                         </div>
                       </div>
                       <div className="flex items-center gap-8">
                         <div className="text-right">
-                          <p className="text-[10px] font-bold text-[#6F6F6F] uppercase mb-1">Profit/Loss</p>
+                          <p className="text-[10px] font-bold text-[#64748B] uppercase mb-1">Profit/Loss</p>
                           <p className={`text-sm font-bold ${bot.pnl >= 0 ? "text-[#22C55E]" : "text-[#EF4444]"}`}>
                             {bot.pnl >= 0 ? "+" : ""}${bot.pnl.toFixed(2)}
                           </p>
@@ -338,26 +338,26 @@ export default function Bots() {
         {/* Sidebar - Quick Stats & Available Strategies */}
         <div className="space-y-8">
           <div className="bloomberg-panel p-6">
-            <h3 className="text-[10px] font-bold text-[#6F6F6F] uppercase tracking-widest mb-6">System Health</h3>
+            <h3 className="text-[10px] font-bold text-[#64748B] uppercase tracking-widest mb-6">System Health</h3>
             <div className="space-y-4">
               <div className="flex justify-between items-center">
-                <span className="text-xs text-[#A8A8A8]">Active Bots</span>
-                <span className="text-[10px] font-bold text-[#A8A8A8] uppercase">{runningBots.length}</span>
+                <span className="text-xs text-[#94A3B8]">Active Bots</span>
+                <span className="text-[10px] font-bold text-[#94A3B8] uppercase">{runningBots.length}</span>
               </div>
             </div>
           </div>
 
           <div className="bloomberg-panel p-6">
-            <h3 className="text-[10px] font-bold text-[#6F6F6F] uppercase tracking-widest mb-6">Ready to Deploy</h3>
+            <h3 className="text-[10px] font-bold text-[#64748B] uppercase tracking-widest mb-6">Ready to Deploy</h3>
             <div className="space-y-3">
               {strategiesQuery.data?.map((s: any) => (
-                <div key={s.id} className="p-4 rounded-xl bg-[#151515] border border-[#2A2A2A] hover:border-[#D98B1F]/50 transition-all group">
+                <div key={s.id} className="p-4 rounded-xl bg-[#151B23] border border-[#252B35] hover:border-[#F59E0B]/50 transition-all group">
                   <div className="flex justify-between items-start mb-3">
                     <h4 className="text-xs font-bold text-white">{s.name}</h4>
-                    <Zap className="w-3 h-3 text-[#D98B1F]" />
+                    <Zap className="w-3 h-3 text-[#F59E0B]" />
                   </div>
                   <Button
-                    className="w-full h-8 text-[10px] font-bold bg-[#D98B1F]/10 text-[#D98B1F] hover:bg-[#D98B1F] hover:text-white border border-[#D98B1F]/20"
+                    className="w-full h-8 text-[10px] font-bold bg-[#F59E0B]/10 text-[#F59E0B] hover:bg-[#F59E0B] hover:text-white border border-[#F59E0B]/20"
                     disabled={deployingId === s.id || runningBots.some((b) => b.strategyId === s.id)}
                     onClick={() => handleDeploy(s)}
                   >
@@ -367,7 +367,7 @@ export default function Bots() {
                 </div>
               ))}
               {(!strategiesQuery.data || strategiesQuery.data.length === 0) && (
-                <p className="text-xs text-[#6F6F6F] italic text-center py-4">No strategies found.</p>
+                <p className="text-xs text-[#64748B] italic text-center py-4">No strategies found.</p>
               )}
             </div>
           </div>

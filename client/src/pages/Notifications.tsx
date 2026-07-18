@@ -43,29 +43,29 @@ export default function Notifications() {
   ];
 
   return (
-    <div className="min-h-screen bg-[#151515] p-6">
+    <div className="min-h-screen bg-[#151B23] p-6">
       <div className="max-w-3xl mx-auto space-y-8">
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold text-white">Notification Settings</h1>
-            <p className="text-[#A8A8A8] text-sm mt-1">Configure which events trigger alerts</p>
+            <p className="text-[#94A3B8] text-sm mt-1">Configure which events trigger alerts</p>
           </div>
-          <Bell className="w-6 h-6 text-[#D98B1F]" />
+          <Bell className="w-6 h-6 text-[#F59E0B]" />
         </div>
 
         {settingsQuery.isLoading ? (
-          <div className="flex items-center justify-center h-64"><Loader2 className="w-8 h-8 animate-spin text-[#D98B1F]" /></div>
+          <div className="flex items-center justify-center h-64"><Loader2 className="w-8 h-8 animate-spin text-[#F59E0B]" /></div>
         ) : (
-          <div className="bg-[#151515] border border-[#2A2A2A] rounded-xl p-6 space-y-6">
+          <div className="bg-[#151B23] border border-[#252B35] rounded-xl p-6 space-y-6">
             {toggles.map(t => (
-              <div key={t.label} className="flex items-center justify-between py-4 border-b border-[#2A2A2A] last:border-0">
+              <div key={t.label} className="flex items-center justify-between py-4 border-b border-[#252B35] last:border-0">
                 <div>
                   <h3 className="text-sm font-bold text-white">{t.label}</h3>
-                  <p className="text-xs text-[#6F6F6F] mt-0.5">{t.desc}</p>
+                  <p className="text-xs text-[#64748B] mt-0.5">{t.desc}</p>
                 </div>
                 <button
                   onClick={() => t.set(!t.value)}
-                  className={`relative w-12 h-6 rounded-full transition-colors ${t.value ? "bg-[#D98B1F]" : "bg-[#2A2A2A]"}`}
+                  className={`relative w-12 h-6 rounded-full transition-colors ${t.value ? "bg-[#F59E0B]" : "bg-[#252B35]"}`}
                 >
                   <div className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${t.value ? "translate-x-6" : "translate-x-0.5"}`} />
                 </button>
@@ -73,7 +73,7 @@ export default function Notifications() {
             ))}
 
             <div className="flex items-center gap-4 pt-2">
-              <Button onClick={handleSave} disabled={saveMutation.isPending} className="bg-[#D98B1F] hover:bg-[#C07B1A] text-white">
+              <Button onClick={handleSave} disabled={saveMutation.isPending} className="bg-[#F59E0B] hover:bg-[#F59E0B] text-white">
                 {saveMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
                 Save Settings
               </Button>

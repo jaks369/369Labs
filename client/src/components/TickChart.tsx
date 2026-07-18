@@ -99,7 +99,7 @@ export default function TickChart({ symbol, maxDataPoints = 100, decimalPlaces =
 
   return (
     <div className="w-full">
-      <div className="flex items-center justify-between mb-3 px-3 py-2 bg-[#151515] rounded border border-[#2A2A2A]">
+      <div className="flex items-center justify-between mb-3 px-3 py-2 bg-[#0B0F14] rounded border border-[#252B35]">
         <span className="text-xs font-bold text-white">{symbol}</span>
         <span className={`text-lg font-bold ${priceColor === "up" ? "text-[#22C55E]" : "text-[#EF4444]"}`}>
           {currentPrice !== null ? currentPrice.toFixed(decimalPlaces) : "--"}
@@ -107,16 +107,23 @@ export default function TickChart({ symbol, maxDataPoints = 100, decimalPlaces =
       </div>
 
       {error ? (
-        <div className="w-full h-64 flex items-center justify-center bg-[#151515] rounded border border-[#EF4444]/30">
+        <div className="w-full h-64 flex items-center justify-center bg-[#0B0F14] rounded border border-[#EF4444]/30">
           <p className="text-[#EF4444] text-sm">Connection Error: {error}</p>
         </div>
       ) : data.length > 1 ? (
         <svg ref={svgRef} viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="none" className="w-full h-[280px]">
-          <defs>
+           <defs>
             <linearGradient id="lineGrad" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#D98B1F" stopOpacity="0.3" />
-              <stop offset="100%" stopColor="#D98B1F" stopOpacity="0" />
+              <stop offset="0%" stopColor="#F59E0B" stopOpacity="0.18" />
+              <stop offset="100%" stopColor="#F59E0B" stopOpacity="0" />
             </linearGradient>
+            <filter id="lineGlow" x="-20%" y="-20%" width="140%" height="140%">
+              <feGaussianBlur stdDeviation="2.5" result="blur" />
+              <feMerge>
+                <feMergeNode in="blur" />
+                <feMergeNode in="SourceGraphic" />
+              </feMerge>
+            </filter>
           </defs>
           <polyline
             points={`0,${height} ${points.join(" ")} ${width},${height}`}
@@ -126,9 +133,13 @@ export default function TickChart({ symbol, maxDataPoints = 100, decimalPlaces =
           <polyline
             points={points.join(" ")}
             fill="none"
-            stroke={priceColor === "up" ? "#D98B1F" : "#EF4444"}
-            strokeWidth="2"
+            stroke={priceColor === "up" ? "#F59E0B" : "#EF4444"}
+            strokeWidth="1.5"
+            strokeLinejoin="round"
+            strokeLinecap="round"
             vectorEffect="non-scaling-stroke"
+            filter="url(#lineGlow)"
+            opacity="0.95"
           />
           {points.length > 0 && (() => {
             const last = points[points.length - 1].split(",");
@@ -139,7 +150,7 @@ export default function TickChart({ symbol, maxDataPoints = 100, decimalPlaces =
             const placeLeft = lx + tagW > width - 4;
             const tx = placeLeft ? lx - tagW - 6 : lx + 6;
             const ty = Math.min(Math.max(ly - 11, 2), height - 22);
-            const color = priceColor === "up" ? "#D98B1F" : "#EF4444";
+            const color = priceColor === "up" ? "#F59E0B" : "#EF4444";
             return (
               <g>
                 <circle cx={lx} cy={ly} r="4" fill={color} />
@@ -150,7 +161,7 @@ export default function TickChart({ symbol, maxDataPoints = 100, decimalPlaces =
                   textAnchor="middle"
                   fontSize="13"
                   fontWeight="bold"
-                  fill="#151515"
+                  fill="#0B0F14"
                 >
                   {label}
                 </text>
@@ -159,22 +170,22 @@ export default function TickChart({ symbol, maxDataPoints = 100, decimalPlaces =
           })()}
         </svg>
       ) : (
-        <div className="w-full h-64 flex items-center justify-center bg-[#151515] rounded border border-[#2A2A2A]">
-          <p className="text-[#6F6F6F] text-sm">Waiting for tick data...</p>
+        <div className="w-full h-64 flex items-center justify-center bg-[#0B0F14] rounded border border-[#252B35]">
+          <p className="text-[#64748B] text-sm">Waiting for tick data...</p>
         </div>
       )}
 
       <div className="mt-3 grid grid-cols-3 gap-3 text-xs">
-        <div className="bg-[#151515]/50 p-2 rounded border border-[#151515]">
-          <span className="text-[#6F6F6F] text-[10px] uppercase">High</span>
+        <div className="bg-[#0B0F14]/50 p-2 rounded border border-[#0B0F14]">
+          <span className="text-[#64748B] text-[10px] uppercase">High</span>
           <p className="text-white font-bold">{maxPrice.toFixed(decimalPlaces)}</p>
         </div>
-        <div className="bg-[#151515]/50 p-2 rounded border border-[#151515]">
-          <span className="text-[#6F6F6F] text-[10px] uppercase">Low</span>
+        <div className="bg-[#0B0F14]/50 p-2 rounded border border-[#0B0F14]">
+          <span className="text-[#64748B] text-[10px] uppercase">Low</span>
           <p className="text-white font-bold">{minPrice.toFixed(decimalPlaces)}</p>
         </div>
-        <div className="bg-[#151515]/50 p-2 rounded border border-[#151515]">
-          <span className="text-[#6F6F6F] text-[10px] uppercase">Ticks</span>
+        <div className="bg-[#0B0F14]/50 p-2 rounded border border-[#0B0F14]">
+          <span className="text-[#64748B] text-[10px] uppercase">Ticks</span>
           <p className="text-white font-bold">{data.length}</p>
         </div>
       </div>
