@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+
 import { useAuth } from "@/_core/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { getLoginUrl } from "@/const";
