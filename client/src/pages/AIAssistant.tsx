@@ -83,7 +83,6 @@ export default function AIAssistant() {
       });
       if (res.action) setPending(res.action);
     } catch (error) {
-      console.error('[AI Assistant] Error:', error);
       let errorMessage = error instanceof Error ? error.message : 'Connection error.';
       let isProviderError = errorMessage.toLowerCase().includes('ai') || errorMessage.toLowerCase().includes('api') || errorMessage.toLowerCase().includes('timeout') || errorMessage.toLowerCase().includes('fetch');
       // Store the failed message so user can retry
