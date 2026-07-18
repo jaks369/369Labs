@@ -8,10 +8,9 @@ export default function ForgotPassword() {
   const [email, setEmail] = useState('');
   const [msg, setMsg] = useState('');
   const [resetUrl, setResetUrl] = useState('');
-  const [, navigate] = useLocation();
   const m = trpc.auth.forgotPassword.useMutation();
 
-  const submit = async (e) => {
+  const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email) { setMsg('Enter your email'); return; }
     try {
