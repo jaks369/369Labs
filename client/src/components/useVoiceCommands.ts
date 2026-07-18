@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { openCommandPalette } from "./CommandPalette";
 import { pushTimeline } from "./AITimeline";
+import { toast } from "./Toast";
 
 // Maps spoken phrases to app actions. Uses the browser SpeechRecognition API
 // (Chrome/Edge). No backend needed.
@@ -30,7 +31,7 @@ export function useVoiceCommands(enabled: boolean) {
 
   const start = useCallback(() => {
     const SR: any = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-    if (!SR) { alert("Voice control needs Chrome/Edge (Web Speech API)."); return; }
+    if (!SR) { toast("Voice control needs Chrome/Edge (Web Speech API).", "error"); return; }
     const rec = new SR();
     rec.continuous = false;
     rec.interimResults = true;
