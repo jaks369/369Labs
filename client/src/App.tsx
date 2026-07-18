@@ -22,6 +22,7 @@ import CloudBots from "./pages/CloudBots";
 import Bots from "./pages/Bots";
 import TradeHistory from "./pages/TradeHistory";
 import Login from "./pages/Login";
+import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
 import Logs from "./pages/Logs";
 import Journal from "./pages/Journal";
@@ -39,6 +40,7 @@ function Router() {
     <Switch>
       <Route path={"/"} component={Home} />
       <Route path={"/login"} component={Login} />
+      <Route path={"/forgot-password"} component={ForgotPassword} />
       <Route path={"/reset"} component={ResetPassword} />
       <Route path={"/dashboard"}>
         <AppLayout><Dashboard /></AppLayout>
