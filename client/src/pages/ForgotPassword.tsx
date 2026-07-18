@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 export default function ForgotPassword() {
   const [email, setEmail] = useState('');
   const [msg, setMsg] = useState('');
+  const [resetUrl, setResetUrl] = useState('');
   const [, navigate] = useLocation();
   const m = trpc.auth.forgotPassword.useMutation();
 
@@ -14,8 +15,11 @@ export default function ForgotPassword() {
     e.preventDefault();
     if (!email) { setMsg('Enter your email'); return; }
     try {
-      await m.mutateAsync({ email });
-      setMsg('If the email exists, a reset link was sent');
+      const res: any = await m.mutateAsync({ email });
+      setMsg('If the email exists, a reset link was sent.');
+      // Email delivery is not configured on this deployment, so surface the
+      // dev reset link directly so the flow remains testable end-to-end.
+      if (res?.resetUrl) setResetUrl(res.resetUrl);
     } catch { setMsg('Error sending reset email'); }
   };
 
@@ -32,6 +36,12 @@ export default function ForgotPassword() {
             {m.isPending ? 'Sending...' : 'SEND RESET LINK'}
           </Button>
           {msg && <p className='text-sm text-center text-[#22C55E]'>{msg}</p>}
+          {resetUrl && (
+            <div className='text-sm text-center text-[#94A3B8] p-3 rounded-lg border border-[#252B35] bg-[#151B23]'>
+              <p className='mb-1'>Email isn't configured yet, so use this dev link:</p>
+              <a href={resetUrl} className='text-[#F59E0B] hover:underline break-all'>{resetUrl}</a>
+            </div>
+          )}
         </form>
         <p className='mt-6 text-center text-sm text-[#64748B]'>
           <Link to='/login' className='text-[#F59E0B] hover:underline'>Back to login</Link>
