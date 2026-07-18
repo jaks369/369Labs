@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect } from "react";
 
 export type ToastKind = "success" | "error" | "info" | "warning" | "loading";
 
@@ -39,5 +39,3 @@ export function ToastViewport({ items, onDismiss }: {
     </div>
   );
 }
-
-export { toast };
