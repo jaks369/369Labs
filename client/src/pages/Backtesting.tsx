@@ -4,6 +4,7 @@ import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { History, Play, BarChart3, TrendingUp, Clock, Loader2, CheckCircle2, XCircle, AlertCircle, Search, CandlestickChart } from "lucide-react";
 import { useLocation } from "wouter";
+import { toast } from "@/components/Toast";
 import { derivWS } from "@/services/derivWebSocket";
 import { runBacktest, BacktestResult } from "@/services/BacktestEngine";
 import Sparkline from "@/components/Sparkline";
@@ -54,7 +55,7 @@ export default function Backtesting() {
     const rule = (selectedStrategyId
       ? strategiesQuery.data?.find(s => s.id === selectedStrategyId)?.config?.rule
       : signalRule) as StrategyRule | undefined;
-    if (!rule) { alert(selectedStrategyId ? "Selected strategy has no deployable rule. Use visual IF/THEN mode." : "No strategy or signal selected."); return; }
+    if (!rule) { toast(selectedStrategyId ? "Selected strategy has no deployable rule. Use visual IF/THEN mode." : "No strategy or signal selected.", "error"); return; }
 
     setRunning(true);
     setError(null);
@@ -86,7 +87,7 @@ export default function Backtesting() {
     const rule = (selectedStrategyId
       ? strategiesQuery.data?.find(s => s.id === selectedStrategyId)?.config?.rule
       : signalRule) as StrategyRule | undefined;
-    if (!rule) { alert("Select a strategy or signal first."); return; }
+    if (!rule) { toast("Select a strategy or signal first.", "error"); return; }
     setSweepRunning(true);
     setSweepError(null);
     setSweepGrid(null);
