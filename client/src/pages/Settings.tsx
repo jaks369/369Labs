@@ -145,6 +145,36 @@ export default function Settings() {
         </div>
 
         <div className="hud-panel mb-6">
+          <h2 className="text-lg font-bold text-[#FBBF24] mb-4">DERIV API TOKEN</h2>
+          <div className="space-y-4">
+            <div>
+              <label className="text-sm text-[#F59E0B] block mb-2">API Token</label>
+              <Input
+                type="password"
+                placeholder="Enter your Deriv API token"
+                value={derivToken}
+                onChange={(e) => { setDerivToken(e.target.value); setTokenChanged(true); }}
+                className="border-[#F59E0B]/40 text-[#F59E0B]"
+              />
+              <p className="text-xs text-[#F59E0B]/60 mt-2">
+                Generated from Deriv app settings. Only demo tokens are accepted for safety.
+              </p>
+            </div>
+            <Button
+              onClick={handleSaveDerivToken}
+              disabled={saveDerivTokenMutation.isPending || !tokenChanged}
+              className="w-full bg-[#F59E0B] text-[#0B0F14] hover:bg-[#F59E0B]/80 font-bold py-2 px-4 rounded"
+            >
+              {saveDerivTokenMutation.isPending ? (
+                <><Loader2 className="w-4 h-4 mr-2 animate-spin" />SAVING...</>
+              ) : (
+                <><Save className="w-4 h-4 mr-2" />SAVE DERIV TOKEN</>
+              )}
+            </Button>
+          </div>
+        </div>
+
+        <div className="hud-panel mb-6">
           <h2 className="text-lg font-bold text-[#FBBF24] mb-4">TELEGRAM NOTIFICATIONS</h2>
           <div className="space-y-4">
             <div>
