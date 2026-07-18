@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
-import { Bell, BellOff, Volume2, Loader2, CheckCircle2 } from "lucide-react";
+import { Bell, Loader2, CheckCircle2 } from "lucide-react";
 import { useLocation } from "wouter";
 
 export default function Notifications() {
