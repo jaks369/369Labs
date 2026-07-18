@@ -22,26 +22,38 @@ export default function Coding() {
   if (!isAuthenticated) { navigate("/login"); return null; }
 
   const openFile = async (p: string) => {
-    const res = await readMutation.mutateAsync({ path: p });
-    setSelected(p);
-    setContent(res.content);
-    setDirty(false);
+    try {
+      const res = await readMutation.mutateAsync({ path: p });
+      setSelected(p);
+      setContent(res.content);
+      setDirty(false);
+    } catch {
+      setAiReply("Failed to read file.");
+    }
   };
 
   const save = async () => {
     if (!selected) return;
-    await writeMutation.mutateAsync({ path: selected, content });
-    setDirty(false);
-    pushTimeline({ icon: "ai", text: `Edited ${selected} via AI Coding mode` });
+    try {
+      await writeMutation.mutateAsync({ path: selected, content });
+      setDirty(false);
+      pushTimeline({ icon: "ai", text: `Edited ${selected} via AI Coding mode` });
+    } catch {
+      setAiReply("Failed to save file.");
+    }
   };
 
   const askAI = async () => {
     if (!selected || !prompt.trim()) return;
-    const res = await askMutation.mutateAsync({
-      message: `I'm editing the file "${selected}". Here is its current content:\n\n'''${content}\n'''\n\nInstruction: ${prompt}\n\nRespond with the FULL updated file content inside a single code block, plus 1-2 sentences explaining the change.`,
-    });
-    setAiReply(res.reply || "");
-    pushTimeline({ icon: "ai", text: `369AI suggested a change to ${selected}` });
+    try {
+      const res = await askMutation.mutateAsync({
+        message: `I'm editing the file "${selected}". Here is its current content:\n\n'''${content}\n'''\n\nInstruction: ${prompt}\n\nRespond with the FULL updated file content inside a single code block, plus 1-2 sentences explaining the change.`,
+      });
+      setAiReply(res.reply || "");
+      pushTimeline({ icon: "ai", text: `369AI suggested a change to ${selected}` });
+    } catch {
+      setAiReply("AI request failed.");
+    }
   };
 
   return (
