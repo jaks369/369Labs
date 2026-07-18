@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { trpc } from "@/lib/trpc";
 import { Send, LineChart, ShieldCheck, Loader2, ChevronDown, ChevronRight, Wrench, Activity, CandlestickChart } from "lucide-react";
@@ -24,9 +24,27 @@ export default function AIAssistant() {
   const [typingLabel, setTypingLabel] = useState("Analyzing");
   const [pending, setPending] = useState<PendingAction | null>(null);
   const [expanded, setExpanded] = useState<Record<number, boolean>>({});
+  const [reveal, setReveal] = useState<Record<number, number>>({});
   const askMutation = trpc.ai.ask.useMutation();
   const strategiesQuery = trpc.strategies.list.useQuery();
   const chatIdRef = useRef("main");
+  const historyQuery = trpc.ai.history.useQuery({ chatId: chatIdRef.current });
+
+  // Seed messages from persisted history on first load.
+  const seededRef = useRef(false);
+  useEffect(() => {
+    if (seededRef.current) return;
+    if (historyQuery.isLoading) return;
+    seededRef.current = true;
+    const hist = historyQuery.data || [];
+    if (hist.length > 0) {
+      const seeded = hist.map((m: any) => ({ role: m.role, content: m.content, steps: m.steps }));
+      setMessages(seeded);
+      const full: Record<number, number> = {};
+      seeded.forEach((m: any, idx: number) => { full[idx] = m.content.length; });
+      setReveal(full);
+    }
+  }, [historyQuery.data, historyQuery.isLoading]);
 
   const handleSend = useCallback(async (override?: string) => {
     const text = (override ?? input).trim();
@@ -49,7 +67,20 @@ export default function AIAssistant() {
       else if (/backtest/i.test(input)) setTypingLabel("Simulating");
       const res = await askMutation.mutateAsync({ message: input, history, chatId: chatIdRef.current });
       const aiMsg: Message = { role: "ai", content: res.reply, steps: res.steps };
-      setMessages(prev => [...prev, aiMsg]);
+      setMessages(prev => {
+        const next = [...prev, aiMsg];
+        const idx = next.length - 1;
+        // Progressive (streaming-style) reveal of the reply.
+        setReveal(r => ({ ...r, [idx]: 0 }));
+        let n = 0;
+        const full = aiMsg.content;
+        const timer = setInterval(() => {
+          n += Math.max(3, Math.round(full.length / 60));
+          if (n >= full.length) { clearInterval(timer); setReveal(r => ({ ...r, [idx]: full.length })); }
+          else setReveal(r => ({ ...r, [idx]: n }));
+        }, 16);
+        return next;
+      });
       if (res.action) setPending(res.action);
     } catch {
       setMessages(prev => [...prev, { role: "ai", content: "Connection dropped. Try again." }]);
@@ -122,7 +153,7 @@ export default function AIAssistant() {
                   {msg.role === "ai" ? <CandlestickChart className={`w-4 h-4 ${ACCENT}`} /> : <div className="text-[10px] font-bold text-white">{user?.name?.charAt(0)}</div>}
                 </div>
                 <div className={`p-4 rounded-2xl text-sm leading-relaxed whitespace-pre-line ${msg.role === "ai" ? "bg-[#151B23] border border-[#252B35] text-[#94A3B8] border-l-2 border-l-amber-400/60" : "bg-[#22D3EE] text-black font-medium"}`}>
-                  {msg.content}
+                  {msg.content.slice(0, reveal[i] ?? msg.content.length)}{reveal[i] !== undefined && reveal[i] < msg.content.length ? <span className="inline-block w-1.5 h-3 bg-[#22D3EE] ml-0.5 align-middle animate-pulse" /> : null}
                   {msg.steps && msg.steps.length > 0 && (
                     <div className="mt-3 border-t border-[#252B35] pt-2">
                       <button onClick={() => setExpanded(e => ({ ...e, [i]: !e[i] }))} className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-[#64748B] hover:text-[#22D3EE]">
