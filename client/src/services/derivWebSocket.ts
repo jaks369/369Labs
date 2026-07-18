@@ -66,6 +66,7 @@ class DerivWebSocketService {
   private pendingSubscriptionSymbols: string[] = [];
   private pendingRequests: Map<number, { resolve: (v: any) => void; reject: (e: Error) => void }> = new Map();
   private contractListeners: Map<number, (c: ContractUpdate) => void> = new Map();
+  private subSymbolById: Map<number, string> = new Map();
   private intentionallyDisconnected = false;
   private lastBalance: any = null;
   private lastAccountType: string = "";
@@ -257,6 +258,7 @@ class DerivWebSocketService {
   public subscribe(symbol: string): number {
     const subId = this.msgId++;
     if (this.subscribedSymbols.has(symbol)) return subId;
+    this.subSymbolById.set(subId, symbol);
     if (!this.ws || this.ws.readyState !== WebSocket.OPEN) { this.pendingSubscriptionSymbols.push(symbol); return subId; }
     if (!this.authorized && this.apiToken) { this.pendingSubscriptionSymbols.push(symbol); return subId; }
     this.doSubscribe(symbol);
@@ -267,14 +269,19 @@ class DerivWebSocketService {
     if (this.subscribedSymbols.has(symbol)) return;
     this.subscribedSymbols.add(symbol);
     const reqId = this.msgId++;
-    try { this.ws!.send(JSON.stringify({ ticks: symbol, subscribe: 1, req_id: reqId })); console.log(`[Deriv WS] Subscribed to ${symbol}`); }
+    try { this.ws!.send(JSON.stringify({ ticks: symbol, subscribe: 1, req_id: reqId })); }
     catch (error) { console.error("[Deriv WS] Failed to subscribe:", error); this.subscribedSymbols.delete(symbol); }
   }
 
   public unsubscribe(subscriptionId: number): void {
-    // We can't track which symbol maps to which subscriptionId easily,
-    // so just let the listener removal handle it.
-    // The real cleanup happens when removeListener is called.
+    const symbol = this.subSymbolById.get(subscriptionId);
+    this.subSymbolById.delete(subscriptionId);
+    if (!symbol) return;
+    this.subscribedSymbols.delete(symbol);
+    if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+      try { this.ws.send(JSON.stringify({ ticks: symbol, subscribe: 0, req_id: this.msgId++ })); }
+      catch (error) { console.error("[Deriv WS] Failed to unsubscribe:", error); }
+    }
   }
   public addListener(listener: TickStreamListener): void { this.listeners.add(listener); if (this.ws && this.ws.readyState === WebSocket.OPEN) { try { listener.onConnect?.(); } catch {} } }
   public removeListener(listener: TickStreamListener): void { this.listeners.delete(listener); }
