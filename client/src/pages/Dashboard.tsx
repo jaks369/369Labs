@@ -54,6 +54,7 @@ export default function Dashboard() {
   const [showSymbolPicker, setShowSymbolPicker] = useState(false);
   const [showTokenModal, setShowTokenModal] = useState(false);
   const [tokenError, setTokenError] = useState<string | null>(null);
+  const [tokenSaved, setTokenSaved] = useState(false);
   const [contract, setContract] = useState<ContractSelection>({ category: "rise_fall", direction: "rise" });
   const [stake, setStake] = useState<number>(1);
   const [tradeBusy, setTradeBusy] = useState(false);
@@ -158,6 +159,7 @@ export default function Dashboard() {
   }, []);
 
   useEffect(() => {
+    setTokenSaved(Boolean(tokenQuery.data?.token));
     if (tokenQuery.data?.token) {
       derivWS.setApiToken(tokenQuery.data.token);
       if (derivWS.isAuthorized()) derivWS.fetchBalance();
@@ -170,6 +172,10 @@ export default function Dashboard() {
     }, 5000);
     return () => clearInterval(authTimer);
   }, [tokenQuery.data]);
+
+  // Three distinct token states: none saved | saved but invalid/unauthorized | connected.
+  const tokenStatus: "none" | "invalid" | "connected" =
+    !tokenSaved ? "none" : tokenError || !derivWS.isAuthorized() ? "invalid" : "connected";
 
   useEffect(() => {
     const unsub = derivWS.onTokenError((msg) => setTokenError(msg));
@@ -222,9 +228,17 @@ export default function Dashboard() {
               <span className={`text-[10px] font-bold uppercase px-1.5 py-0.5 rounded ${balanceInfo.accountType === "demo" ? "bg-amber-500/20 text-amber-400" : "bg-red-500/20 text-red-400"}`}>
                 {balanceInfo.accountType}
               </span>
-            ) : (
+            ) : tokenStatus === "invalid" ? (
+              <span className="text-[10px] font-bold uppercase px-1.5 py-0.5 rounded bg-red-500/20 text-red-400" title={tokenError || "Token saved but not authorized by Deriv"}>
+                token invalid
+              </span>
+            ) : tokenStatus === "none" ? (
               <span className="text-[10px] font-bold uppercase px-1.5 py-0.5 rounded bg-slate-500/20 text-slate-400">
                 no token
+              </span>
+            ) : (
+              <span className="text-[10px] font-bold uppercase px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400">
+                connected
               </span>
             )}
 
@@ -419,8 +433,8 @@ export default function Dashboard() {
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-xs font-bold text-slate-500 uppercase tracking-widest">Trade Studio</h3>
               <div className="flex items-center gap-2">
-                <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded ${accountType === "real" ? "bg-red-500/20 text-red-400" : accountType === "demo" ? "bg-amber-500/20 text-amber-400" : "bg-slate-500/20 text-slate-400"}`}>
-                  {accountType === "real" ? "REAL" : accountType === "demo" ? "DEMO" : "NO TOKEN"}
+                <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded ${accountType === "real" ? "bg-red-500/20 text-red-400" : accountType === "demo" ? "bg-amber-500/20 text-amber-400" : tokenStatus === "invalid" ? "bg-red-500/20 text-red-400" : "bg-slate-500/20 text-slate-400"}`}>
+                  {accountType === "real" ? "REAL" : accountType === "demo" ? "DEMO" : tokenStatus === "invalid" ? "INVALID" : "NO TOKEN"}
                 </span>
               </div>
             </div>
