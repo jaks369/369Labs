@@ -33,7 +33,7 @@ export function parseRuleFromText(text: string, fallback: StrategyRule): { rule:
   const t = text.toLowerCase();
   if (!t.trim()) return { rule: fallback, ok: false, error: "Empty input" };
   let symbol = fallback.symbol;
-  const symMatch = t.match(/\b(r\d{1,3}|1hz\d{1,3}|volatility\s*\d{1,3})\b/);
+  const symMatch = t.match(/\b(r\d{1,3}|1hz\d{1,3}|volatility\s*\d{1,3}|1hz\d{1,3}v?)\b/);
   if (symMatch) {
     const norm = nlNormalizeSymbol(symMatch[1].replace("volatility", "r").replace(/\s+/g, ""));
     if (NL_SYMBOLS.includes(norm)) symbol = norm;
@@ -48,8 +48,8 @@ export function parseRuleFromText(text: string, fallback: StrategyRule): { rule:
   const parityMatch = t.match(/\b(even|odd)\b/);
   const digitMatch = t.match(/\bdigit\s*(\d)\b/);
   const afterDigit = t.match(/after\s*(digit\s*)?(\d)/);
-  const consec = /\b(consecutiv|in a row|row|streak|same)\b/.test(t);
-  const consecCount = (t.match(/(\d+)\s*(consecutiv|in a row|row|streak|same)/) || [])[1];
+  const consec = /\b(consecutiv|in a row|row|streak|same|consecutively)\b/.test(t);
+  const consecCount = (t.match(/(\d+)\s*(consecutiv|in a row|row|streak|same|consecutively)/) || [])[1];
   let condition: StrategyRule["condition"];
   if (parityMatch && !digitMatch) {
     const isEven = parityMatch[1] === "even";
@@ -70,8 +70,11 @@ export function parseRuleFromText(text: string, fallback: StrategyRule): { rule:
   } else if (/\bunder\b/.test(t)) {
     const un = (t.match(/under\s*(\d)/) || [])[1];
     condition = { indicator: "last_digit", comparison: "less_than", count: 1, barrier: un ? parseInt(un, 10) : 4 };
+  } else if (/\bloss(\s*streak)?\b/.test(t)) {
+    const ls = (t.match(/(\d+)\s*(consecutiv|in a row|loss|losestreak)/) || [])[1];
+    condition = { indicator: "loss_streak", comparison: "greater_than", count: 1, barrier: ls ? parseInt(ls, 10) : 2 };
   } else {
-    return { rule: fallback, ok: false, error: "Could not understand the condition. Try e.g. \"when an even digit appears, buy rise\"." };
+    return { rule: fallback, ok: false, error: "Could not understand the condition. Try e.g. \"when an even digit appears, buy rise\" or \"after 3 losses in a row, buy fall\"." };
   }
   return { rule: { symbol, condition, action: { tradeType }, params: fallback.params }, ok: true };
 }
@@ -121,6 +124,9 @@ const INDICATORS = [
   { value: "digit_odd", label: "Digit ODD" },
   { value: "consecutive_rise", label: "Consecutive RISE" },
   { value: "consecutive_fall", label: "Consecutive FALL" },
+  { value: "parity", label: "Parity (0=even, 1=odd)" },
+  { value: "last_digit", label: "Last digit op" },
+  { value: "loss_streak", label: "Loss streak >= N" },
 ];
 
 const SYMBOLS = [
@@ -174,7 +180,10 @@ export default function RuleBuilder({ rule, onChange }: RuleBuilderProps) {
         setNlMsg({ kind: "ok", text: `AI parsed: IF ${c.indicator}${c.barrier !== undefined ? " " + c.barrier : ""} (${c.comparison || "equals"}) -> ${ai.rule.action.tradeType}` });
         return;
       }
-    } catch (e) { /* fall through to local parser */ }
+    } catch (error) { 
+      // Log error but continue with local parser fallback
+      console.warn('[RuleBuilder] AI parse failed, using local parser:', error);
+    }
     // Fallback: lightweight local parser (no API needed)
     const res = parseRuleFromText(text, rule);
     if (res.ok) {
