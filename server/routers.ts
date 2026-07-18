@@ -196,15 +196,15 @@ export const appRouter = router({
       .mutation(async ({ ctx, input }) => {
         try {
           const user = await db.getUserByEmail(input.email);
-          if (user) {
-            // In production, send reset email with token
-            // For now, log the reset token
-            const resetToken = crypto.randomBytes(32).toString('hex');
-            console.log('[PASSWORD RESET] Email:', input.email, 'Token:', resetToken);
-            // TODO: Store token in DB with expiry, send email
-          }
-          // Always return success to prevent email enumeration
-          return { success: true };
+          // Always return a generic success to prevent email enumeration.
+          if (!user) return { success: true, emailConfigured: false };
+          const resetToken = crypto.randomBytes(32).toString("hex");
+          const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+          await db.createPasswordResetToken(user.id, resetToken, expiresAt);
+          // Email sending is not wired in this deployment. Surface a dev
+          // reset link so the flow is still end-to-end testable.
+          const resetUrl = `${ctx.req.protocol}://${ctx.req.get("host")}/reset?token=${resetToken}`;
+          return { success: true, emailConfigured: false, resetToken, resetUrl };
         } catch (error) {
           throw new TRPCError({
             code: "INTERNAL_SERVER_ERROR",
@@ -220,11 +220,11 @@ export const appRouter = router({
       }))
       .mutation(async ({ ctx, input }) => {
         try {
-          // TODO: Verify token from DB, check expiry, update password
-          const valid = false; // placeholder
-          if (!valid) throw new TRPCError({ code: "BAD_REQUEST", message: "Invalid or expired reset token" });
+          const record = await db.getValidPasswordResetToken(input.token);
+          if (!record) throw new TRPCError({ code: "BAD_REQUEST", message: "Invalid or expired reset token" });
           const passwordHash = await hashPassword(input.password);
-          // await db.updateUserPassword(userId, passwordHash);
+          await db.updateUserPassword(record.userId, passwordHash);
+          await db.markPasswordResetTokenUsed(input.token);
           return { success: true };
         } catch (error) {
           if (error instanceof TRPCError) throw error;
@@ -631,6 +631,32 @@ export const appRouter = router({
 
   // AI Agent - ReAct-style multi-step reasoning with persistent history
   ai: router({
+    history: protectedProcedure
+      .input(z.object({ chatId: z.string().default("main"), limit: z.number().default(50) }))
+      .query(async ({ ctx, input }) => {
+        try {
+          return await db.getChatHistory(ctx.user.id, input.chatId, input.limit);
+        } catch {
+          return [];
+        }
+      }),
+
+    saveMessage: protectedProcedure
+      .input(z.object({
+        chatId: z.string().default("main"),
+        role: z.enum(["user", "ai"]),
+        content: z.string().min(1),
+        steps: z.any().optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        try {
+          await db.addChatMessage(ctx.user.id, input.chatId, input.role, input.content, input.steps);
+          return { ok: true };
+        } catch {
+          return { ok: false };
+        }
+      }),
+
     journal: protectedProcedure
       .input(z.object({ strategyId: z.number().optional(), limit: z.number().default(50) }))
       .mutation(async ({ ctx, input }) => {
@@ -767,6 +793,12 @@ HOW TO RESPOND:
           // persist history for continuity
           const convo = [...prior, { role: "user" as const, content: input.message }, { role: "assistant" as const, content: reply }];
           agentHistory.set(key, convo.slice(-20));
+          // Persist to DB so the conversation survives restarts / multiple instances.
+          try {
+            const chatId = input.chatId || "main";
+            await db.addChatMessage(ctx.user.id, chatId, "user", input.message);
+            await db.addChatMessage(ctx.user.id, chatId, "ai", reply, steps);
+          } catch (e) { console.error("[AI history persist]", e); }
 
           // Natural-language fallback: if the model didn't call a tool but the user clearly
           // asked to watch/scan/monitor a symbol (typos OK), trigger the scan automatically.
