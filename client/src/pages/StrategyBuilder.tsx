@@ -99,10 +99,11 @@ export function StrategyBuilderContent({ embedded = false, onClose, onSaved }: S
   const removeBlock = (id: string) => {
     setBlocks(blocks.filter(b => b.id !== id));
   };
-  const moveBlock = (id: string, dir: -1 | 1) => {
+
+  const moveBlock = (id: string, direction: -1 | 1) => {
     setBlocks(prev => {
       const i = prev.findIndex(b => b.id === id);
-      const j = i + dir;
+      const j = i + direction;
       if (i < 0 || j < 0 || j >= prev.length) return prev;
       const next = [...prev];
       [next[i], next[j]] = [next[j], next[i]];
@@ -150,8 +151,11 @@ export function StrategyBuilderContent({ embedded = false, onClose, onSaved }: S
         config: buildConfig(),
         published: publishToMarketplace,
       });
+      toast("Strategy saved and deployed successfully!", "success");
       if (embedded) { onSaved?.(); } else { navigate("/bots"); }
-    } catch { toast("Failed to save strategy", "error"); }
+    } catch (error) {
+      toast(error instanceof Error ? error.message : "Failed to save strategy", "error");
+    }
   };
 
   const handleSaveStrategy = async () => {
