@@ -206,7 +206,7 @@ export default function Dashboard() {
   if (!isAuthenticated || !user) {
     return (
       <div className="flex items-center justify-center h-full">
-        <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+        <Loader2 className="w-8 h-8 animate-spin text-[#D98B1F]" />
       </div>
     );
   }
@@ -216,28 +216,28 @@ export default function Dashboard() {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
         <div>
           <h1 className="text-3xl font-bold text-white mb-1">Market Overview</h1>
-          <p className="text-slate-500 text-sm font-medium">Volatility Indices &middot; Live Trading</p>
+          <p className="text-[#6F6F6F] text-sm font-medium">Volatility Indices &middot; Live Trading</p>
         </div>
         <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-[#161B22] border border-[#30363D]">
-            <Wallet className="w-4 h-4 text-emerald-400" />
+          <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-[#151515] border border-[#2A2A2A]">
+            <Wallet className="w-4 h-4 text-[#22C55E]" />
             <span className="text-sm font-bold text-white">
               {balance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} {balanceInfo?.currency || "USD"}
             </span>
             {balanceInfo?.accountType ? (
-              <span className={`text-[10px] font-bold uppercase px-1.5 py-0.5 rounded ${balanceInfo.accountType === "demo" ? "bg-amber-500/20 text-amber-400" : "bg-red-500/20 text-red-400"}`}>
+              <span className={`text-[10px] font-bold uppercase px-1.5 py-0.5 rounded ${balanceInfo.accountType === "demo" ? "bg-[#D98B1F]/20 text-[#D98B1F]" : "bg-[#EF4444]/20 text-[#EF4444]"}`}>
                 {balanceInfo.accountType}
               </span>
             ) : tokenStatus === "invalid" ? (
-              <span className="text-[10px] font-bold uppercase px-1.5 py-0.5 rounded bg-red-500/20 text-red-400" title={tokenError || "Token saved but not authorized by Deriv"}>
+              <span className="text-[10px] font-bold uppercase px-1.5 py-0.5 rounded bg-[#EF4444]/20 text-[#EF4444]" title={tokenError || "Token saved but not authorized by Deriv"}>
                 token invalid
               </span>
             ) : tokenStatus === "none" ? (
-              <span className="text-[10px] font-bold uppercase px-1.5 py-0.5 rounded bg-slate-500/20 text-slate-400">
+              <span className="text-[10px] font-bold uppercase px-1.5 py-0.5 rounded bg-[#6F6F6F]/20 text-[#A8A8A8]">
                 no token
               </span>
             ) : (
-              <span className="text-[10px] font-bold uppercase px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400">
+              <span className="text-[10px] font-bold uppercase px-1.5 py-0.5 rounded bg-[#22C55E]/20 text-[#22C55E]">
                 connected
               </span>
             )}
@@ -254,9 +254,9 @@ export default function Dashboard() {
       </div>
 
       {tokenError && (
-        <div className="flex items-center justify-between gap-3 bg-amber-500/10 border border-amber-500/40 text-amber-400 text-sm rounded-lg px-4 py-2 mb-4">
+        <div className="flex items-center justify-between gap-3 bg-[#D98B1F]/10 border border-[#D98B1F]/40 text-[#D98B1F] text-sm rounded-lg px-4 py-2 mb-4">
           <span>Deriv token issue: {tokenError}. Update it to trade.</span>
-          <Button onClick={() => setShowTokenModal(true)} className="btn-outline text-amber-400 border-amber-500/40 text-xs px-3 py-1">UPDATE TOKEN</Button>
+          <Button onClick={() => setShowTokenModal(true)} className="btn-outline text-[#D98B1F] border-[#D98B1F]/40 text-xs px-3 py-1">UPDATE TOKEN</Button>
         </div>
       )}
 
@@ -272,13 +272,13 @@ export default function Dashboard() {
             {showSymbolPicker ? (
               <div className="max-h-[420px] overflow-y-auto space-y-5 pr-1">
                 <div>
-                  <h3 className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2">Volatility 1s Indices</h3>
+                  <h3 className="text-[10px] font-bold text-[#6F6F6F] uppercase tracking-widest mb-2">Volatility 1s Indices</h3>
                   <div className="grid grid-cols-2 gap-2">
                     {vol1sSymbols.map(s => (
                       <button
                         key={s.symbol}
                         onClick={() => { setSelectedSymbol(s.symbol); setShowSymbolPicker(false); }}
-                        className={`text-left px-3 py-2 rounded-lg text-xs font-semibold transition-colors ${selectedSymbol === s.symbol ? "bg-blue-600/20 text-blue-400 border border-blue-600/40" : "bg-white/5 text-slate-300 hover:bg-white/10 border border-transparent"}`}
+                        className={`text-left px-3 py-2 rounded-lg text-xs font-semibold transition-colors ${selectedSymbol === s.symbol ? "bg-[#D98B1F]/20 text-[#E89A2A] border border-[#D98B1F]/40" : "bg-white/5 text-[#A8A8A8] hover:bg-white/10 border border-transparent"}`}
                       >
                         {s.displayName || s.symbol}
                       </button>
@@ -286,13 +286,13 @@ export default function Dashboard() {
                   </div>
                 </div>
                 <div>
-                  <h3 className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2">Volatility Indices</h3>
+                  <h3 className="text-[10px] font-bold text-[#6F6F6F] uppercase tracking-widest mb-2">Volatility Indices</h3>
                   <div className="grid grid-cols-2 gap-2">
                     {volRegularSymbols.map(s => (
                       <button
                         key={s.symbol}
                         onClick={() => { setSelectedSymbol(s.symbol); setShowSymbolPicker(false); }}
-                        className={`text-left px-3 py-2 rounded-lg text-xs font-semibold transition-colors ${selectedSymbol === s.symbol ? "bg-blue-600/20 text-blue-400 border border-blue-600/40" : "bg-white/5 text-slate-300 hover:bg-white/10 border border-transparent"}`}
+                        className={`text-left px-3 py-2 rounded-lg text-xs font-semibold transition-colors ${selectedSymbol === s.symbol ? "bg-[#D98B1F]/20 text-[#E89A2A] border border-[#D98B1F]/40" : "bg-white/5 text-[#A8A8A8] hover:bg-white/10 border border-transparent"}`}
                       >
                         {s.displayName || s.symbol}
                       </button>
@@ -308,11 +308,11 @@ export default function Dashboard() {
           </div>
 
           <div className="bloomberg-panel">
-            <div className="p-4 border-b border-[#30363D] flex items-center justify-between">
+            <div className="p-4 border-b border-[#2A2A2A] flex items-center justify-between">
               <h2 className="font-bold text-white uppercase text-xs tracking-widest">History</h2>
-              <div className="flex gap-1 p-1 bg-[#0D1117] rounded-lg border border-[#30363D]">
-                <button onClick={() => setHistoryTab("trades")} className={`px-3 py-1 rounded text-[10px] font-bold uppercase transition-colors ${historyTab === "trades" ? "bg-blue-600/20 text-blue-400" : "text-slate-500 hover:text-white"}`}>Trades</button>
-                <button onClick={() => setHistoryTab("prices")} className={`px-3 py-1 rounded text-[10px] font-bold uppercase transition-colors ${historyTab === "prices" ? "bg-blue-600/20 text-blue-400" : "text-slate-500 hover:text-white"}`}>Price History</button>
+              <div className="flex gap-1 p-1 bg-[#151515] rounded-lg border border-[#2A2A2A]">
+                <button onClick={() => setHistoryTab("trades")} className={`px-3 py-1 rounded text-[10px] font-bold uppercase transition-colors ${historyTab === "trades" ? "bg-[#D98B1F]/20 text-[#E89A2A]" : "text-[#6F6F6F] hover:text-white"}`}>Trades</button>
+                <button onClick={() => setHistoryTab("prices")} className={`px-3 py-1 rounded text-[10px] font-bold uppercase transition-colors ${historyTab === "prices" ? "bg-[#D98B1F]/20 text-[#E89A2A]" : "text-[#6F6F6F] hover:text-white"}`}>Price History</button>
               </div>
             </div>
 
@@ -326,22 +326,22 @@ export default function Dashboard() {
                   const net = grossProfit + grossLoss;
                   const winRate = symTrades.length ? Math.round((wins / symTrades.length) * 100) : 0;
                   return (
-                    <div className="p-4 grid grid-cols-4 gap-3 border-b border-[#30363D]">
-                      <div className="rounded-lg bg-[#0D1117] border border-[#30363D] p-3">
-                        <div className="text-[10px] uppercase tracking-widest text-slate-500 font-bold">Trades</div>
+                    <div className="p-4 grid grid-cols-4 gap-3 border-b border-[#2A2A2A]">
+                      <div className="rounded-lg bg-[#151515] border border-[#2A2A2A] p-3">
+                        <div className="text-[10px] uppercase tracking-widest text-[#6F6F6F] font-bold">Trades</div>
                         <div className="text-lg font-bold text-white mt-1">{symTrades.length}</div>
                       </div>
-                      <div className="rounded-lg bg-[#0D1117] border border-[#30363D] p-3">
-                        <div className="text-[10px] uppercase tracking-widest text-slate-500 font-bold">Win Rate</div>
+                      <div className="rounded-lg bg-[#151515] border border-[#2A2A2A] p-3">
+                        <div className="text-[10px] uppercase tracking-widest text-[#6F6F6F] font-bold">Win Rate</div>
                         <div className="text-lg font-bold text-white mt-1">{winRate}%</div>
                       </div>
-                      <div className="rounded-lg bg-[#0D1117] border border-[#30363D] p-3">
-                        <div className="text-[10px] uppercase tracking-widest text-slate-500 font-bold">Gross Profit</div>
-                        <div className="text-lg font-bold text-emerald-500 mt-1">+{grossProfit.toFixed(2)}</div>
+                      <div className="rounded-lg bg-[#151515] border border-[#2A2A2A] p-3">
+                        <div className="text-[10px] uppercase tracking-widest text-[#6F6F6F] font-bold">Gross Profit</div>
+                        <div className="text-lg font-bold text-[#22C55E] mt-1">+{grossProfit.toFixed(2)}</div>
                       </div>
-                      <div className="rounded-lg bg-[#0D1117] border border-[#30363D] p-3">
-                        <div className="text-[10px] uppercase tracking-widest text-slate-500 font-bold">Net P&L</div>
-                        <div className={`text-lg font-bold mt-1 ${net >= 0 ? "text-emerald-500" : "text-red-500"}`}>{net >= 0 ? "+" : ""}{net.toFixed(2)}</div>
+                      <div className="rounded-lg bg-[#151515] border border-[#2A2A2A] p-3">
+                        <div className="text-[10px] uppercase tracking-widest text-[#6F6F6F] font-bold">Net P&L</div>
+                        <div className={`text-lg font-bold mt-1 ${net >= 0 ? "text-[#22C55E]" : "text-[#EF4444]"}`}>{net >= 0 ? "+" : ""}{net.toFixed(2)}</div>
                       </div>
                     </div>
                   );
@@ -350,12 +350,12 @@ export default function Dashboard() {
                   {(() => {
                     const symTrades = (tradesQuery.data || []).filter((t: any) => (t.symbol || "") === selectedSymbol);
                     if (symTrades.length === 0) {
-                      return <div className="p-10 text-center text-slate-600 italic text-sm">No trades for {selectedSymbol} yet. Deploy a bot or place a quick trade.</div>;
+                      return <div className="p-10 text-center text-[#6F6F6F] italic text-sm">No trades for {selectedSymbol} yet. Deploy a bot or place a quick trade.</div>;
                     }
                     return (
                       <table className="w-full text-left text-xs">
                         <thead>
-                          <tr className="text-slate-500 border-b border-[#30363D]">
+                          <tr className="text-[#6F6F6F] border-b border-[#2A2A2A]">
                             <th className="p-3 font-bold">#</th>
                             <th className="p-3 font-bold">TYPE</th>
                             <th className="p-3 font-bold">STAKE</th>
@@ -364,21 +364,21 @@ export default function Dashboard() {
                             <th className="p-3 font-bold text-right">P&L</th>
                           </tr>
                         </thead>
-                        <tbody className="divide-y divide-[#30363D]">
+                        <tbody className="divide-y divide-[#2A2A2A]">
                           {symTrades.slice(0, 10).map((trade: any, i: number) => (
                             <tr key={trade.id} className="hover:bg-white/5 transition-colors">
-                              <td className="p-3 text-slate-600 font-mono">{i + 1}</td>
-                              <td className="p-3"><span className="px-2 py-0.5 rounded bg-white/5 text-slate-300 font-semibold">{trade.contractType || "-"}</span></td>
-                              <td className="p-3 text-slate-400">${trade.stake}</td>
-                              <td className="p-3 text-slate-400 font-mono">{trade.entryPrice}</td>
+                              <td className="p-3 text-[#6F6F6F] font-mono">{i + 1}</td>
+                              <td className="p-3"><span className="px-2 py-0.5 rounded bg-white/5 text-[#A8A8A8] font-semibold">{trade.contractType || "-"}</span></td>
+                              <td className="p-3 text-[#A8A8A8]">${trade.stake}</td>
+                              <td className="p-3 text-[#A8A8A8] font-mono">{trade.entryPrice}</td>
                               <td className="p-3">
                                 <span className={`px-2 py-0.5 rounded-sm font-bold text-[10px] ${
-                                  trade.result === "win" ? "bg-emerald-500/10 text-emerald-500" : "bg-red-500/10 text-red-500"
+                                  trade.result === "win" ? "bg-[#22C55E]/10 text-[#22C55E]" : "bg-[#EF4444]/10 text-[#EF4444]"
                                 }`}>
                                   {trade.result.toUpperCase()}
                                 </span>
                               </td>
-                              <td className={`p-3 text-right font-bold font-mono ${parseFloat(trade.profitLoss?.toString() || "0") >= 0 ? "text-emerald-500" : "text-red-500"}`}>
+                              <td className={`p-3 text-right font-bold font-mono ${parseFloat(trade.profitLoss?.toString() || "0") >= 0 ? "text-[#22C55E]" : "text-[#EF4444]"}`}>
                                 {parseFloat(trade.profitLoss?.toString() || "0") >= 0 ? "+" : ""}{trade.profitLoss}
                               </td>
                             </tr>
@@ -392,28 +392,28 @@ export default function Dashboard() {
             ) : (
               <div className="p-4">
                 {priceQuery.isLoading ? (
-                  <div className="p-10 text-center text-slate-600 italic text-sm">Loading price history...</div>
+                  <div className="p-10 text-center text-[#6F6F6F] italic text-sm">Loading price history...</div>
                 ) : priceQuery.data?.ticks?.length ? (
                   <div className="overflow-x-auto">
                     <table className="w-full text-left text-xs">
                       <thead>
-                        <tr className="text-slate-500 border-b border-[#30363D]">
+                        <tr className="text-[#6F6F6F] border-b border-[#2A2A2A]">
                           <th className="p-3 font-bold">#</th>
                           <th className="p-3 font-bold">TIME</th>
                           <th className="p-3 font-bold text-right">PRICE</th>
                           <th className="p-3 font-bold text-right">LAST DIGIT</th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-[#30363D]">
+                      <tbody className="divide-y divide-[#2A2A2A]">
                         {displayTicks.map((t: any, i: number) => {
                           const priceStr = String(t.price);
                           const lastDigit = t.lastDigit;
                           return (
                             <tr key={i} className="hover:bg-white/5 transition-colors">
-                              <td className="p-3 text-slate-600 font-mono">{i + 1}</td>
-                              <td className="p-3 text-slate-400">{new Date((t.epoch || 0) * 1000).toLocaleTimeString()}</td>
+                              <td className="p-3 text-[#6F6F6F] font-mono">{i + 1}</td>
+                              <td className="p-3 text-[#A8A8A8]">{new Date((t.epoch || 0) * 1000).toLocaleTimeString()}</td>
                               <td className="p-3 text-right text-white font-mono">{Number(t.price).toFixed(decimalPlaces)}</td>
-                              <td className="p-3 text-right text-slate-400 font-mono">{lastDigit}</td>
+                              <td className="p-3 text-right text-[#A8A8A8] font-mono">{lastDigit}</td>
                             </tr>
                           );
                         })}
@@ -421,7 +421,7 @@ export default function Dashboard() {
                     </table>
                   </div>
                 ) : (
-                  <div className="p-10 text-center text-slate-600 italic text-sm">No price history for {selectedSymbol} yet. It populates as ticks arrive.</div>
+                  <div className="p-10 text-center text-[#6F6F6F] italic text-sm">No price history for {selectedSymbol} yet. It populates as ticks arrive.</div>
                 )}
               </div>
             )}
@@ -431,28 +431,28 @@ export default function Dashboard() {
         <div className="space-y-8">
           <div className="bloomberg-panel p-6 border-l-4 border-l-purple-600">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-xs font-bold text-slate-500 uppercase tracking-widest">Trade Studio</h3>
+              <h3 className="text-xs font-bold text-[#6F6F6F] uppercase tracking-widest">Trade Studio</h3>
               <div className="flex items-center gap-2">
-                <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded ${accountType === "real" ? "bg-red-500/20 text-red-400" : accountType === "demo" ? "bg-amber-500/20 text-amber-400" : tokenStatus === "invalid" ? "bg-red-500/20 text-red-400" : "bg-slate-500/20 text-slate-400"}`}>
+                <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded ${accountType === "real" ? "bg-[#EF4444]/20 text-[#EF4444]" : accountType === "demo" ? "bg-[#D98B1F]/20 text-[#D98B1F]" : tokenStatus === "invalid" ? "bg-[#EF4444]/20 text-[#EF4444]" : "bg-[#6F6F6F]/20 text-[#A8A8A8]"}`}>
                   {accountType === "real" ? "REAL" : accountType === "demo" ? "DEMO" : tokenStatus === "invalid" ? "INVALID" : "NO TOKEN"}
                 </span>
               </div>
             </div>
             <div className="space-y-3">
               <div>
-                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Symbol</label>
-                <div className="mt-1 px-3 py-2 rounded-lg bg-[#0D1117] border border-[#30363D] text-sm text-white">{selectedSymbol}</div>
+                <label className="text-[10px] font-bold text-[#6F6F6F] uppercase tracking-widest">Symbol</label>
+                <div className="mt-1 px-3 py-2 rounded-lg bg-[#151515] border border-[#2A2A2A] text-sm text-white">{selectedSymbol}</div>
               </div>
               <ContractTypeSelector selection={contract} onChange={setContract} />
               <div>
-                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Stake ($)</label>
+                <label className="text-[10px] font-bold text-[#6F6F6F] uppercase tracking-widest">Stake ($)</label>
                 <input
                   type="number"
                   min={0.35}
                   step="0.01"
                   value={stake}
                   onChange={(e) => setStake(Math.max(0, parseFloat(e.target.value) || 0))}
-                  className="mt-1 w-full bg-[#0D1117] border border-[#30363D] rounded-lg px-3 py-2 text-sm text-white focus:border-blue-500 focus:outline-none"
+                  className="mt-1 w-full bg-[#151515] border border-[#2A2A2A] rounded-lg px-3 py-2 text-sm text-white focus:border-[#D98B1F] focus:outline-none"
                 />
               </div>
               <Button onClick={handleQuickTrade} disabled={tradeBusy} className="w-full btn-primary flex items-center justify-center gap-2">
@@ -460,38 +460,38 @@ export default function Dashboard() {
                 {tradeBusy ? "Placing..." : "Buy"}
               </Button>
               {tradeMsg && (
-                <p className={`text-xs ${tradeMsg.kind === "ok" ? "text-emerald-400" : "text-red-400"}`}>{tradeMsg.text}</p>
+                <p className={`text-xs ${tradeMsg.kind === "ok" ? "text-[#22C55E]" : "text-[#EF4444]"}`}>{tradeMsg.text}</p>
               )}
               {!derivWS.isAuthorized() && (
-                <p className="text-[10px] text-slate-500">Connect a Deriv token in Settings to enable trading.</p>
+                <p className="text-[10px] text-[#6F6F6F]">Connect a Deriv token in Settings to enable trading.</p>
               )}
             </div>
-            <div className="mt-6 pt-6 border-t border-[#30363D]">
+            <div className="mt-6 pt-6 border-t border-[#2A2A2A]">
               <DigitStats symbol={selectedSymbol} decimalPlaces={decimalPlaces} />
             </div>
           </div>
 
 
-          <div className="bloomberg-panel p-6 bg-amber-400/5 border-amber-400/20">
+          <div className="bloomberg-panel p-6 bg-[#D98B1F]/5 border-[#D98B1F]/20">
             <div className="flex items-center gap-2 mb-4">
-              <Sparkles className="w-4 h-4 text-amber-400" />
-              <h3 className="text-xs font-bold text-amber-400 uppercase tracking-widest">369AI Insight</h3>
+              <Sparkles className="w-4 h-4 text-[#D98B1F]" />
+              <h3 className="text-xs font-bold text-[#D98B1F] uppercase tracking-widest">369AI Insight</h3>
             </div>
             {(() => {
               const sigs = (signalsQuery.data as any[]) || [];
               const latest = sigs[0];
               if (!latest) {
-                return <p className="text-xs text-slate-500 leading-relaxed">No signals yet. Ask 369AI to watch a market, or wait for the always-on scanner to surface a pattern.</p>;
+                return <p className="text-xs text-[#6F6F6F] leading-relaxed">No signals yet. Ask 369AI to watch a market, or wait for the always-on scanner to surface a pattern.</p>;
               }
               return (
                 <div>
-                  <p className="text-xs text-slate-300 leading-relaxed">{latest.description}</p>
+                  <p className="text-xs text-[#A8A8A8] leading-relaxed">{latest.description}</p>
                   <div className="flex items-center gap-3 mt-3 text-[10px]">
-                    <span className="px-2 py-0.5 rounded bg-amber-400/10 border border-amber-400/30 text-amber-400 font-bold uppercase">{latest.symbol}</span>
-                    <span className="text-slate-500">win rate <b className="text-emerald-400">{latest.winRate}%</b></span>
-                    <span className="text-slate-500">{new Date((latest.discoveredAt || 0) * 1000).toLocaleString()}</span>
+                    <span className="px-2 py-0.5 rounded bg-[#D98B1F]/10 border border-[#D98B1F]/30 text-[#D98B1F] font-bold uppercase">{latest.symbol}</span>
+                    <span className="text-[#6F6F6F]">win rate <b className="text-[#22C55E]">{latest.winRate}%</b></span>
+                    <span className="text-[#6F6F6F]">{new Date((latest.discoveredAt || 0) * 1000).toLocaleString()}</span>
                   </div>
-                  <button onClick={() => navigate("/marketplace")} className="mt-3 text-[11px] text-amber-400 hover:underline flex items-center gap-1">
+                  <button onClick={() => navigate("/marketplace")} className="mt-3 text-[11px] text-[#D98B1F] hover:underline flex items-center gap-1">
                     View all signals <ArrowRight className="w-3 h-3" />
                   </button>
                 </div>

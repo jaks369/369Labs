@@ -7,7 +7,7 @@ export type BotStatus = "idle" | "running" | "error" | "stopped";
 export interface BotConfig {
   symbol: string;
   // Full rule from the visual builder. This is the only strategy shape the
-  // engine currently understands how to trade for real â€” the freeform
+  // engine currently understands how to trade for real — the freeform
   // "blocks" builder mode is a draft/notes format, not executable.
   strategy: StrategyRule;
   decimalPlaces?: number; // last-digit precision for this symbol; default 2
@@ -122,7 +122,7 @@ export class BotEngine {
       this.tickHistory.shift();
     }
 
-    // Never stack trades â€” wait for the open contract to resolve first.
+    // Never stack trades — wait for the open contract to resolve first.
     if (this.hasOpenTrade) return;
 
     if (this.evaluateStrategy()) {
@@ -262,7 +262,7 @@ export class BotEngine {
       return;
     }
 
-    this.log(`Signal detected at ${currentTick.price} â€” placing ${contractType} for $${stake}`);
+    this.log(`Signal detected at ${currentTick.price} — placing ${contractType} for $${stake}`);
     this.hasOpenTrade = true;
 
     const pendingTrade: BotTrade = {
@@ -292,10 +292,10 @@ export class BotEngine {
 
         derivWS.subscribeToContract(purchase.contractId, (update) => this.handleContractUpdate(pendingTrade, update));
       } else {
-        // No live/authorized connection â€” engine is in demo/offline mode.
+        // No live/authorized connection — engine is in demo/offline mode.
         // We do NOT fabricate a win/loss here; the bot simply can't trade for real right now.
         this.hasOpenTrade = false;
-        this.handleError(new Error("Not connected to a live, authorized Deriv session â€” cannot place a real trade. Add a Deriv API token in Settings."));
+        this.handleError(new Error("Not connected to a live, authorized Deriv session — cannot place a real trade. Add a Deriv API token in Settings."));
         return;
       }
     } catch (error) {

@@ -143,7 +143,7 @@
     try {
       var t = (s || "").trim().replace(/\s+/g, " ");
       if (!t) return "";
-      return t.length > maxLen ? t.slice(0, maxLen) + "â€¦" : t;
+      return t.length > maxLen ? t.slice(0, maxLen) + "…" : t;
     } catch (e) {
       return "";
     }
@@ -233,7 +233,7 @@
 
     if (isSensitiveField(el)) return { masked: true, length: v.length };
 
-    if (v.length > CONFIG.uiInputMaxLen) v = v.slice(0, CONFIG.uiInputMaxLen) + "â€¦";
+    if (v.length > CONFIG.uiInputMaxLen) v = v.slice(0, CONFIG.uiInputMaxLen) + "…";
     return v;
   }
 

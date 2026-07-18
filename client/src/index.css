@@ -43,72 +43,75 @@
 }
 
 :root {
-  /* 369Labs Terminal Palette - unified amber/terminal theme across the whole app */
-  --black: #0D1117;
-  --terminal: #0A0D12;
-  --amber: #F0B90B;
-  --amber-soft: rgba(240, 185, 11, 0.12);
-  --amber-border: rgba(240, 185, 11, 0.32);
-  --electric-blue: #2563EB;
-  --white: #F8FAFC;
-  --emerald: #10B981;
-  --slate: #8B949E;
+  /* 369Labs Premium Fintech Palette */
+  --black: #0D0D0D;
+  --surface: #151515;
+  --surface-2: #1A1A1A;
+  --amber: #D98B1F;
+  --amber-hover: #E89A2A;
+  --amber-soft: rgba(217, 139, 31, 0.12);
+  --amber-border: rgba(217, 139, 31, 0.32);
+  --white: #FFFFFF;
+  --gray: #A8A8A8;
+  --muted: #6F6F6F;
+  --emerald: #22C55E;
+  --red: #EF4444;
 
   --background: var(--black);
   --foreground: var(--white);
 
-  --card: #161B22;
+  --card: var(--surface);
   --card-foreground: var(--white);
 
-  --popover: #161B22;
+  --popover: var(--surface-2);
   --popover-foreground: var(--white);
 
   --primary: var(--amber);
-  --primary-foreground: #0D1117;
+  --primary-foreground: #0D0D0D;
 
-  --secondary: #21262D;
+  --secondary: #1A1A1A;
   --secondary-foreground: var(--white);
 
-  --muted: #21262D;
-  --muted-foreground: var(--slate);
+  --muted: #1A1A1A;
+  --muted-foreground: var(--gray);
 
   --accent: var(--amber-soft);
   --accent-foreground: var(--amber);
 
-  --destructive: #EF4444;
+  --destructive: var(--red);
   --destructive-foreground: var(--white);
 
-  --border: #30363D;
-  --input: #30363D;
+  --border: #2A2A2A;
+  --input: #2A2A2A;
   --ring: var(--amber);
 
-  --radius: 0.5rem;
+  --radius: 1rem;
 
-  --sidebar: #0A0D12;
-  --sidebar-foreground: var(--slate);
+  --sidebar: #0D0D0D;
+  --sidebar-foreground: var(--gray);
   --sidebar-primary: var(--amber);
-  --sidebar-primary-foreground: #0D1117;
-  --sidebar-accent: #161B22;
+  --sidebar-primary-foreground: #0D0D0D;
+  --sidebar-accent: var(--surface);
   --sidebar-accent-foreground: var(--white);
-  --sidebar-border: #30363D;
+  --sidebar-border: #2A2A2A;
   --sidebar-ring: var(--amber);
 }
 
 @layer base {
-  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
 
   * {
     @apply border-border outline-ring/50;
   }
   body {
     @apply bg-background text-foreground font-['Inter',sans-serif] antialiased;
-    background-image: 
-      radial-gradient(circle at 50% 0%, rgba(37, 99, 235, 0.05) 0%, transparent 50%),
-      linear-gradient(rgba(13, 17, 23, 0.9) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(13, 17, 23, 0.9) 1px, transparent 1px);
-    background-size: 100% 100%, 40px 40px, 40px 40px;
+    background-image:
+      radial-gradient(circle at 50% -10%, rgba(217, 139, 31, 0.05) 0%, transparent 45%),
+      linear-gradient(rgba(255, 255, 255, 0.015) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255, 255, 255, 0.015) 1px, transparent 1px);
+    background-size: 100% 100%, 44px 44px, 44px 44px;
   }
-  
+
   h1, h2, h3, h4, h5, h6 {
     @apply font-bold tracking-tight text-white;
   }
@@ -116,34 +119,34 @@
 
 @layer components {
   .btn-primary {
-    @apply px-6 py-2.5 bg-[#F0B90B] hover:bg-[#FFD23F] text-[#0D1117] font-semibold rounded-lg transition-all duration-200 shadow-lg shadow-amber-900/20 active:scale-[0.98];
+    @apply px-6 py-2.5 bg-[#D98B1F] hover:bg-[#E89A2A] text-[#0D0D0D] font-semibold rounded-xl transition-all duration-200 active:scale-[0.98];
   }
-  
+
   .btn-secondary {
-    @apply px-6 py-2.5 bg-slate-800 hover:bg-slate-700 text-white font-semibold rounded-lg transition-all duration-200 border border-slate-700 active:scale-[0.98];
+    @apply px-6 py-2.5 bg-transparent border border-[#2A2A2A] hover:border-[#2A2A2A] text-white font-semibold rounded-xl transition-all duration-200 active:scale-[0.98];
   }
-  
+
   .btn-outline {
-    @apply px-6 py-2.5 bg-transparent border border-slate-700 hover:border-blue-600 text-white font-semibold rounded-lg transition-all duration-200 active:scale-[0.98];
+    @apply px-6 py-2.5 bg-transparent border border-[#2A2A2A] hover:border-[#D98B1F] text-white font-semibold rounded-xl transition-all duration-200 active:scale-[0.98];
   }
 
   .glass-card {
-    @apply bg-slate-900/50 border border-slate-800 backdrop-blur-md rounded-xl p-6;
+    @apply bg-[#151515] border border-[#2A2A2A] backdrop-blur-md rounded-2xl p-6;
   }
-  
+
   .bloomberg-panel {
-    @apply bg-[#0D1117] border border-[#30363D] rounded-none;
+    @apply bg-[#151515] border border-[#2A2A2A] rounded-2xl;
   }
-  
+
   .status-dot {
     @apply w-2 h-2 rounded-full;
   }
-  
+
   .status-dot-success {
-    @apply bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)];
+    @apply bg-[#22C55E];
   }
-  
+
   .status-dot-error {
-    @apply bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.5)];
+    @apply bg-[#EF4444];
   }
 }

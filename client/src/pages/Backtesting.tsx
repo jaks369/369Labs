@@ -65,7 +65,7 @@ export default function Backtesting() {
       const endEpoch = Math.floor(new Date(endDate).getTime() / 1000);
 
       const ticks = await derivWS.fetchTickHistory(symbol, startEpoch, endEpoch);
-      if (ticks.length < 20) { throw new Error(`Only ${ticks.length} ticks returned â€” need at least 20. Try a wider date range.`); }
+      if (ticks.length < 20) { throw new Error(`Only ${ticks.length} ticks returned — need at least 20. Try a wider date range.`); }
 
       const backtestResult = await runBacktest(ticks, rule, stake);
       setResult(backtestResult);
@@ -94,7 +94,7 @@ export default function Backtesting() {
       const startEpoch = Math.floor(new Date(startDate).getTime() / 1000);
       const endEpoch = Math.floor(new Date(endDate).getTime() / 1000);
       const ticks = await derivWS.fetchTickHistory(symbol, startEpoch, endEpoch);
-      if (ticks.length < 20) throw new Error(`Only ${ticks.length} ticks returned â€” need at least 20.`);
+      if (ticks.length < 20) throw new Error(`Only ${ticks.length} ticks returned — need at least 20.`);
       const values = SWEEP_RANGES[sweepParam];
       const grid: { value: number; winRate: number; trades: number; pnl: number }[] = [];
       for (const v of values) {
@@ -124,88 +124,88 @@ export default function Backtesting() {
 
   const heatColor = (wr: number) => {
     // 40% red -> 60% amber -> 75%+ green
-    if (wr >= 75) return "bg-emerald-600/70 text-white";
-    if (wr >= 60) return "bg-emerald-600/30 text-emerald-200";
-    if (wr >= 50) return "bg-amber-600/30 text-amber-200";
-    if (wr >= 40) return "bg-red-600/30 text-red-200";
-    return "bg-red-600/60 text-white";
+    if (wr >= 75) return "bg-[#1FA64B]/70 text-white";
+    if (wr >= 60) return "bg-[#1FA64B]/30 text-[#22C55E]";
+    if (wr >= 50) return "bg-[#C07B1A]/30 text-[#E89A2A]";
+    if (wr >= 40) return "bg-[#D63A3A]/30 text-[#EF4444]";
+    return "bg-[#D63A3A]/60 text-white";
   };
 
   return (
-    <div className="min-h-screen bg-[#0D1117] p-6">
+    <div className="min-h-screen bg-[#151515] p-6">
       <div className="max-w-6xl mx-auto space-y-8">
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold text-white">Backtesting Engine</h1>
-            <p className="text-slate-400 text-sm mt-1">Test your strategies against historical market data from Deriv</p>
+            <p className="text-[#A8A8A8] text-sm mt-1">Test your strategies against historical market data from Deriv</p>
           </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-1 bg-[#161B22] border border-[#30363D] rounded-xl p-6 space-y-4">
+          <div className="lg:col-span-1 bg-[#151515] border border-[#2A2A2A] rounded-xl p-6 space-y-4">
             <h2 className="text-lg font-bold text-white">Parameters</h2>
 
             <div>
-              <label className="text-xs text-slate-500 font-bold uppercase tracking-wider">Symbol</label>
-              <select value={symbol} onChange={e => setSymbol(e.target.value)} className="w-full mt-1 bg-[#0D1117] border border-[#30363D] rounded-lg px-3 py-2 text-white text-sm">
+              <label className="text-xs text-[#6F6F6F] font-bold uppercase tracking-wider">Symbol</label>
+              <select value={symbol} onChange={e => setSymbol(e.target.value)} className="w-full mt-1 bg-[#151515] border border-[#2A2A2A] rounded-lg px-3 py-2 text-white text-sm">
                 {IT_SYMBOLS.map(s => <option key={s} value={s}>{s}</option>)}
               </select>
             </div>
 
             <div>
-              <label className="text-xs text-slate-500 font-bold uppercase tracking-wider">Strategy</label>
+              <label className="text-xs text-[#6F6F6F] font-bold uppercase tracking-wider">Strategy</label>
               {loadedSignal && (
-              <div className="mb-4 p-3 rounded-lg bg-amber-400/10 border border-amber-400/30 flex items-start gap-2">
-                <CandlestickChart className="w-4 h-4 text-amber-400 mt-0.5" />
-                <div className="text-xs text-slate-300">
-                  <b className="text-amber-400">Backtesting AI signal:</b> {loadedSignal.title} (win rate {loadedSignal.winRate}%, {loadedSignal.sampleSize} samples). Rule loaded automatically.
+              <div className="mb-4 p-3 rounded-lg bg-[#D98B1F]/10 border border-[#D98B1F]/30 flex items-start gap-2">
+                <CandlestickChart className="w-4 h-4 text-[#D98B1F] mt-0.5" />
+                <div className="text-xs text-[#A8A8A8]">
+                  <b className="text-[#D98B1F]">Backtesting AI signal:</b> {loadedSignal.title} (win rate {loadedSignal.winRate}%, {loadedSignal.sampleSize} samples). Rule loaded automatically.
                 </div>
               </div>
             )}
-            <select value={selectedStrategyId || ""} onChange={e => setSelectedStrategyId(Number(e.target.value))} className="w-full mt-1 bg-[#0D1117] border border-[#30363D] rounded-lg px-3 py-2 text-white text-sm">
+            <select value={selectedStrategyId || ""} onChange={e => setSelectedStrategyId(Number(e.target.value))} className="w-full mt-1 bg-[#151515] border border-[#2A2A2A] rounded-lg px-3 py-2 text-white text-sm">
                 <option value="">Select a strategy...</option>
                 {(strategiesQuery.data || []).filter(s => s.config?.rule).map(s => (
                   <option key={s.id} value={s.id}>{s.name}</option>
                 ))}
               </select>
               {(!strategiesQuery.data || strategiesQuery.data.length === 0) && (
-                <p className="text-xs text-slate-600 mt-1">No strategies found. Save one in Strategy Builder first.</p>
+                <p className="text-xs text-[#6F6F6F] mt-1">No strategies found. Save one in Strategy Builder first.</p>
               )}
             </div>
 
             <div>
-              <label className="text-xs text-slate-500 font-bold uppercase tracking-wider">Start Date</label>
-              <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} className="w-full mt-1 bg-[#0D1117] border border-[#30363D] rounded-lg px-3 py-2 text-white text-sm" />
+              <label className="text-xs text-[#6F6F6F] font-bold uppercase tracking-wider">Start Date</label>
+              <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} className="w-full mt-1 bg-[#151515] border border-[#2A2A2A] rounded-lg px-3 py-2 text-white text-sm" />
             </div>
 
             <div>
-              <label className="text-xs text-slate-500 font-bold uppercase tracking-wider">End Date</label>
-              <input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} className="w-full mt-1 bg-[#0D1117] border border-[#30363D] rounded-lg px-3 py-2 text-white text-sm" />
+              <label className="text-xs text-[#6F6F6F] font-bold uppercase tracking-wider">End Date</label>
+              <input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} className="w-full mt-1 bg-[#151515] border border-[#2A2A2A] rounded-lg px-3 py-2 text-white text-sm" />
             </div>
 
             <div>
-              <label className="text-xs text-slate-500 font-bold uppercase tracking-wider">Stake ($)</label>
-              <input type="number" value={stake} onChange={e => setStake(Number(e.target.value))} min={0.35} step={0.5} className="w-full mt-1 bg-[#0D1117] border border-[#30363D] rounded-lg px-3 py-2 text-white text-sm" />
+              <label className="text-xs text-[#6F6F6F] font-bold uppercase tracking-wider">Stake ($)</label>
+              <input type="number" value={stake} onChange={e => setStake(Number(e.target.value))} min={0.35} step={0.5} className="w-full mt-1 bg-[#151515] border border-[#2A2A2A] rounded-lg px-3 py-2 text-white text-sm" />
             </div>
 
-            <Button onClick={runBacktestHandler} disabled={running || !selectedStrategyId} className="w-full bg-blue-600 hover:bg-blue-700 text-white">
+            <Button onClick={runBacktestHandler} disabled={running || !selectedStrategyId} className="w-full bg-[#D98B1F] hover:bg-[#C07B1A] text-white">
               {running ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Fetching ticks...</> : <><Play className="w-4 h-4 mr-2" /> Run Backtest</>}
             </Button>
           </div>
 
           <div className="lg:col-span-2 space-y-6">
             {error && (
-              <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-4 flex items-start gap-3">
-                <AlertCircle className="w-5 h-5 text-red-500 shrink-0 mt-0.5" />
-                <p className="text-sm text-red-400">{error}</p>
+              <div className="bg-[#EF4444]/10 border border-[#EF4444]/30 rounded-xl p-4 flex items-start gap-3">
+                <AlertCircle className="w-5 h-5 text-[#EF4444] shrink-0 mt-0.5" />
+                <p className="text-sm text-[#EF4444]">{error}</p>
               </div>
             )}
 
             {running && (
-              <div className="bg-[#161B22] border border-[#30363D] rounded-xl p-8 flex items-center justify-center">
+              <div className="bg-[#151515] border border-[#2A2A2A] rounded-xl p-8 flex items-center justify-center">
                 <div className="text-center">
-                  <Loader2 className="w-10 h-10 animate-spin text-blue-500 mx-auto mb-4" />
-                  <p className="text-slate-400">Fetching historical ticks from Deriv and running simulation...</p>
+                  <Loader2 className="w-10 h-10 animate-spin text-[#D98B1F] mx-auto mb-4" />
+                  <p className="text-[#A8A8A8]">Fetching historical ticks from Deriv and running simulation...</p>
                 </div>
               </div>
             )}
@@ -213,37 +213,37 @@ export default function Backtesting() {
             {result && !running && (
               <>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  <div className="bg-[#161B22] border border-[#30363D] rounded-xl p-4">
-                    <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Total Trades</p>
+                  <div className="bg-[#151515] border border-[#2A2A2A] rounded-xl p-4">
+                    <p className="text-[10px] font-bold text-[#6F6F6F] uppercase tracking-wider">Total Trades</p>
                     <p className="text-2xl font-bold text-white mt-1">{result.totalTrades}</p>
                   </div>
-                  <div className="bg-[#161B22] border border-[#30363D] rounded-xl p-4">
-                    <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Win Rate</p>
-                    <p className={`text-2xl font-bold mt-1 ${result.winRate >= 50 ? "text-emerald-500" : "text-red-500"}`}>{result.winRate.toFixed(1)}%</p>
+                  <div className="bg-[#151515] border border-[#2A2A2A] rounded-xl p-4">
+                    <p className="text-[10px] font-bold text-[#6F6F6F] uppercase tracking-wider">Win Rate</p>
+                    <p className={`text-2xl font-bold mt-1 ${result.winRate >= 50 ? "text-[#22C55E]" : "text-[#EF4444]"}`}>{result.winRate.toFixed(1)}%</p>
                   </div>
-                  <div className="bg-[#161B22] border border-[#30363D] rounded-xl p-4">
-                    <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Total P&L</p>
-                    <p className={`text-2xl font-bold mt-1 ${result.totalPnl >= 0 ? "text-emerald-500" : "text-red-500"}`}>
+                  <div className="bg-[#151515] border border-[#2A2A2A] rounded-xl p-4">
+                    <p className="text-[10px] font-bold text-[#6F6F6F] uppercase tracking-wider">Total P&L</p>
+                    <p className={`text-2xl font-bold mt-1 ${result.totalPnl >= 0 ? "text-[#22C55E]" : "text-[#EF4444]"}`}>
                       {result.totalPnl >= 0 ? "+" : ""}${result.totalPnl.toFixed(2)}
                     </p>
                   </div>
-                  <div className="bg-[#161B22] border border-[#30363D] rounded-xl p-4">
-                    <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Max Drawdown</p>
-                    <p className="text-2xl font-bold text-red-500 mt-1">-${result.maxDrawdown.toFixed(2)}</p>
+                  <div className="bg-[#151515] border border-[#2A2A2A] rounded-xl p-4">
+                    <p className="text-[10px] font-bold text-[#6F6F6F] uppercase tracking-wider">Max Drawdown</p>
+                    <p className="text-2xl font-bold text-[#EF4444] mt-1">-${result.maxDrawdown.toFixed(2)}</p>
                   </div>
                 </div>
 
-                <div className="bg-[#161B22] border border-[#30363D] rounded-xl p-6">
+                <div className="bg-[#151515] border border-[#2A2A2A] rounded-xl p-6">
                   <h3 className="text-sm font-bold text-white mb-4">Equity Curve (cumulative P&L)</h3>
                   <Sparkline data={(result.equityCurve || []).map((v: number) => ({ value: v }))} />
                 </div>
 
-                <div className="bg-[#161B22] border border-[#30363D] rounded-xl p-6">
+                <div className="bg-[#151515] border border-[#2A2A2A] rounded-xl p-6">
                   <h3 className="text-sm font-bold text-white mb-4">Trade Log ({result.trades.length} trades)</h3>
                   <div className="overflow-x-auto max-h-80 overflow-y-auto">
                     <table className="w-full text-left text-xs">
                       <thead>
-                        <tr className="text-slate-500 border-b border-[#30363D]">
+                        <tr className="text-[#6F6F6F] border-b border-[#2A2A2A]">
                           <th className="pb-3 font-bold">#</th>
                           <th className="pb-3 font-bold">ENTRY</th>
                           <th className="pb-3 font-bold">EXIT</th>
@@ -252,17 +252,17 @@ export default function Backtesting() {
                           <th className="pb-3 font-bold text-right">P&L</th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-[#30363D]">
+                      <tbody className="divide-y divide-[#2A2A2A]">
                         {result.trades.slice(0, 100).map((t, i) => (
                           <tr key={i} className="hover:bg-white/5">
-                            <td className="py-3 text-slate-500">{i + 1}</td>
-                            <td className="py-3 text-slate-300">${t.entryPrice.toFixed(2)}</td>
-                            <td className="py-3 text-slate-300">${t.exitPrice.toFixed(2)}</td>
-                            <td className="py-3 text-slate-400">{t.contractType}</td>
+                            <td className="py-3 text-[#6F6F6F]">{i + 1}</td>
+                            <td className="py-3 text-[#A8A8A8]">${t.entryPrice.toFixed(2)}</td>
+                            <td className="py-3 text-[#A8A8A8]">${t.exitPrice.toFixed(2)}</td>
+                            <td className="py-3 text-[#A8A8A8]">{t.contractType}</td>
                             <td className="py-3">
-                              {t.result === "win" ? <CheckCircle2 className="w-4 h-4 text-emerald-500" /> : <XCircle className="w-4 h-4 text-red-500" />}
+                              {t.result === "win" ? <CheckCircle2 className="w-4 h-4 text-[#22C55E]" /> : <XCircle className="w-4 h-4 text-[#EF4444]" />}
                             </td>
-                            <td className={`py-3 text-right font-bold ${t.pnl >= 0 ? "text-emerald-500" : "text-red-500"}`}>
+                            <td className={`py-3 text-right font-bold ${t.pnl >= 0 ? "text-[#22C55E]" : "text-[#EF4444]"}`}>
                               {t.pnl >= 0 ? "+" : ""}${t.pnl.toFixed(2)}
                             </td>
                           </tr>
@@ -272,7 +272,7 @@ export default function Backtesting() {
                   </div>
                 </div>
 
-                <div className="bg-[#161B22] border border-[#30363D] rounded-xl p-6">
+                <div className="bg-[#151515] border border-[#2A2A2A] rounded-xl p-6">
                   <h3 className="text-sm font-bold text-white mb-4">Equity Curve</h3>
                   <div className="h-48 flex items-end gap-0.5">
                     {result.equityCurve.map((val, i) => {
@@ -285,7 +285,7 @@ export default function Backtesting() {
                           className="flex-1 rounded-t"
                           style={{
                             height: `${Math.max(h, 2)}%`,
-                            backgroundColor: val >= 0 ? "#10B981" : "#EF4444",
+                            backgroundColor: val >= 0 ? "#22C55E" : "#EF4444",
                             opacity: 0.7,
                           }}
                           title={`$${val.toFixed(2)}`}
@@ -295,38 +295,38 @@ export default function Backtesting() {
                   </div>
                 </div>
 
-                <div className="bg-[#161B22] border border-[#30363D] rounded-xl p-6">
+                <div className="bg-[#151515] border border-[#2A2A2A] rounded-xl p-6">
                   <h3 className="text-sm font-bold text-white mb-1">Parameter Sweep</h3>
-                  <p className="text-xs text-slate-500 mb-4">Stress-test one parameter across a range on the same tick window. Cells show win rate (green = strong, red = weak).</p>
+                  <p className="text-xs text-[#6F6F6F] mb-4">Stress-test one parameter across a range on the same tick window. Cells show win rate (green = strong, red = weak).</p>
                   <div className="flex items-center gap-2 mb-4">
-                    <select value={sweepParam} onChange={(e) => setSweepParam(e.target.value as any)} className="bg-[#0D1117] border border-[#30363D] rounded-lg px-3 py-2 text-white text-sm">
+                    <select value={sweepParam} onChange={(e) => setSweepParam(e.target.value as any)} className="bg-[#151515] border border-[#2A2A2A] rounded-lg px-3 py-2 text-white text-sm">
                       <option value="barrier">Barrier digit (0-9)</option>
                       <option value="count">Count / frequency (1-10)</option>
                       <option value="stake">Stake ($)</option>
                     </select>
-                    <Button onClick={runSweep} disabled={sweepRunning} className="bg-purple-600 hover:bg-purple-700 text-white">
+                    <Button onClick={runSweep} disabled={sweepRunning} className="bg-[#D98B1F] hover:bg-[#C07B1A] text-white">
                       {sweepRunning ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Sweeping...</> : <><Search className="w-4 h-4 mr-2" /> Run Sweep</>}
                     </Button>
                   </div>
-                  {sweepError && <p className="text-sm text-red-400 mb-3">{sweepError}</p>}
+                  {sweepError && <p className="text-sm text-[#EF4444] mb-3">{sweepError}</p>}
                   {sweepGrid && (
                     <div className="overflow-x-auto">
                       <table className="w-full text-left text-xs">
                         <thead>
-                          <tr className="text-slate-500 border-b border-[#30363D]">
+                          <tr className="text-[#6F6F6F] border-b border-[#2A2A2A]">
                             <th className="pb-2 font-bold">{sweepParam}</th>
                             <th className="pb-2 font-bold">Win Rate</th>
                             <th className="pb-2 font-bold">Trades</th>
                             <th className="pb-2 font-bold text-right">P&L</th>
                           </tr>
                         </thead>
-                        <tbody className="divide-y divide-[#30363D]">
+                        <tbody className="divide-y divide-[#2A2A2A]">
                           {sweepGrid.map((c) => (
                             <tr key={c.value} className="hover:bg-white/5">
                               <td className="py-2 font-bold text-white">{c.value}</td>
                               <td className={`py-2 px-2 rounded font-bold ${heatColor(c.winRate)}`}>{c.winRate.toFixed(1)}%</td>
-                              <td className="py-2 text-slate-400">{c.trades}</td>
-                              <td className={`py-2 text-right font-bold ${c.pnl >= 0 ? "text-emerald-500" : "text-red-500"}`}>{c.pnl >= 0 ? "+" : ""}${c.pnl.toFixed(2)}</td>
+                              <td className="py-2 text-[#A8A8A8]">{c.trades}</td>
+                              <td className={`py-2 text-right font-bold ${c.pnl >= 0 ? "text-[#22C55E]" : "text-[#EF4444]"}`}>{c.pnl >= 0 ? "+" : ""}${c.pnl.toFixed(2)}</td>
                             </tr>
                           ))}
                         </tbody>
@@ -338,10 +338,10 @@ export default function Backtesting() {
             )}
 
             {!result && !running && !error && (
-              <div className="bg-[#161B22] border border-[#30363D] rounded-xl p-8 flex items-center justify-center h-64">
+              <div className="bg-[#151515] border border-[#2A2A2A] rounded-xl p-8 flex items-center justify-center h-64">
                 <div className="text-center">
-                  <BarChart3 className="w-12 h-12 mx-auto mb-4 text-slate-700" />
-                  <p className="text-slate-500">Configure parameters and run a backtest to see results</p>
+                  <BarChart3 className="w-12 h-12 mx-auto mb-4 text-[#2A2A2A]" />
+                  <p className="text-[#6F6F6F]">Configure parameters and run a backtest to see results</p>
                 </div>
               </div>
             )}

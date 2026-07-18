@@ -43,29 +43,29 @@ export default function Notifications() {
   ];
 
   return (
-    <div className="min-h-screen bg-[#0D1117] p-6">
+    <div className="min-h-screen bg-[#151515] p-6">
       <div className="max-w-3xl mx-auto space-y-8">
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold text-white">Notification Settings</h1>
-            <p className="text-slate-400 text-sm mt-1">Configure which events trigger alerts</p>
+            <p className="text-[#A8A8A8] text-sm mt-1">Configure which events trigger alerts</p>
           </div>
-          <Bell className="w-6 h-6 text-blue-500" />
+          <Bell className="w-6 h-6 text-[#D98B1F]" />
         </div>
 
         {settingsQuery.isLoading ? (
-          <div className="flex items-center justify-center h-64"><Loader2 className="w-8 h-8 animate-spin text-blue-500" /></div>
+          <div className="flex items-center justify-center h-64"><Loader2 className="w-8 h-8 animate-spin text-[#D98B1F]" /></div>
         ) : (
-          <div className="bg-[#161B22] border border-[#30363D] rounded-xl p-6 space-y-6">
+          <div className="bg-[#151515] border border-[#2A2A2A] rounded-xl p-6 space-y-6">
             {toggles.map(t => (
-              <div key={t.label} className="flex items-center justify-between py-4 border-b border-[#30363D] last:border-0">
+              <div key={t.label} className="flex items-center justify-between py-4 border-b border-[#2A2A2A] last:border-0">
                 <div>
                   <h3 className="text-sm font-bold text-white">{t.label}</h3>
-                  <p className="text-xs text-slate-500 mt-0.5">{t.desc}</p>
+                  <p className="text-xs text-[#6F6F6F] mt-0.5">{t.desc}</p>
                 </div>
                 <button
                   onClick={() => t.set(!t.value)}
-                  className={`relative w-12 h-6 rounded-full transition-colors ${t.value ? "bg-blue-600" : "bg-slate-700"}`}
+                  className={`relative w-12 h-6 rounded-full transition-colors ${t.value ? "bg-[#D98B1F]" : "bg-[#2A2A2A]"}`}
                 >
                   <div className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${t.value ? "translate-x-6" : "translate-x-0.5"}`} />
                 </button>
@@ -73,12 +73,12 @@ export default function Notifications() {
             ))}
 
             <div className="flex items-center gap-4 pt-2">
-              <Button onClick={handleSave} disabled={saveMutation.isPending} className="bg-blue-600 hover:bg-blue-700 text-white">
+              <Button onClick={handleSave} disabled={saveMutation.isPending} className="bg-[#D98B1F] hover:bg-[#C07B1A] text-white">
                 {saveMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
                 Save Settings
               </Button>
               {saved && (
-                <span className="flex items-center gap-1 text-emerald-500 text-sm font-bold">
+                <span className="flex items-center gap-1 text-[#22C55E] text-sm font-bold">
                   <CheckCircle2 className="w-4 h-4" /> Saved
                 </span>
               )}

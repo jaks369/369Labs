@@ -384,7 +384,7 @@ export async function pruneBadTicks(): Promise<number> {
 const SEED_PLUGINS = [
   { name: "MartingaleGuard", description: "Auto-cancels a bot if its stake doubles more than twice in a row (anti-martingale safety).", author: "369Labs", hook: "onTrade", enabledByDefault: false },
   { name: "DailyPnLCap", description: "Stops all bots when account daily loss exceeds a user-set %.", author: "369Labs", hook: "onTrade", enabledByDefault: false },
-  { name: "SignalBooster", description: "Re-ranks AI signals by confidence Ã— winRate before showing them.", author: "community", hook: "onSignal", enabledByDefault: true },
+  { name: "SignalBooster", description: "Re-ranks AI signals by confidence × winRate before showing them.", author: "community", hook: "onSignal", enabledByDefault: true },
   { name: "TelegramRecap", description: "Sends a nightly PnL + open-positions recap via Telegram.", author: "community", hook: "scheduled", enabledByDefault: false },
   { name: "VolatilityWatchdog", description: "Pauses bots when realized volatility spikes > 2x its 1h average.", author: "369Labs", hook: "onTick", enabledByDefault: false },
 ];

@@ -50,40 +50,40 @@ export default function Analytics() {
   const currentDD = peak - cur;
 
   const riskStats = [
-    { label: "Current Drawdown", value: `$${currentDD.toFixed(2)}`, sub: "peak-to-now", color: currentDD > 0 ? "text-amber-400" : "text-slate-400" },
-    { label: "Max Drawdown", value: `$${maxDD.toFixed(2)}`, sub: "all-time", color: maxDD > 0 ? "text-red-400" : "text-slate-400" },
-    { label: "Daily Drawdown", value: `$${dailyDD.toFixed(2)}`, sub: "worst day", color: dailyDD < 0 ? "text-red-400" : "text-slate-400" },
-    { label: "Weekly Drawdown", value: `$${weeklyDD.toFixed(2)}`, sub: "worst week", color: weeklyDD < 0 ? "text-red-400" : "text-slate-400" },
-    { label: "Largest Loss", value: `$${largestLoss.toFixed(2)}`, sub: "single trade", color: largestLoss < 0 ? "text-red-400" : "text-slate-400" },
-    { label: "Risk : Reward", value: rr.toFixed(2), sub: "gross win/loss", color: rr >= 1 ? "text-emerald-400" : "text-amber-400" },
-    { label: "Avg Exposure", value: `$${exposure.toFixed(2)}`, sub: "per trade stake", color: "text-slate-300" },
-    { label: "Open Risk", value: "â€”", sub: "live bots", color: "text-slate-500" },
+    { label: "Current Drawdown", value: `$${currentDD.toFixed(2)}`, sub: "peak-to-now", color: currentDD > 0 ? "text-[#D98B1F]" : "text-[#A8A8A8]" },
+    { label: "Max Drawdown", value: `$${maxDD.toFixed(2)}`, sub: "all-time", color: maxDD > 0 ? "text-[#EF4444]" : "text-[#A8A8A8]" },
+    { label: "Daily Drawdown", value: `$${dailyDD.toFixed(2)}`, sub: "worst day", color: dailyDD < 0 ? "text-[#EF4444]" : "text-[#A8A8A8]" },
+    { label: "Weekly Drawdown", value: `$${weeklyDD.toFixed(2)}`, sub: "worst week", color: weeklyDD < 0 ? "text-[#EF4444]" : "text-[#A8A8A8]" },
+    { label: "Largest Loss", value: `$${largestLoss.toFixed(2)}`, sub: "single trade", color: largestLoss < 0 ? "text-[#EF4444]" : "text-[#A8A8A8]" },
+    { label: "Risk : Reward", value: rr.toFixed(2), sub: "gross win/loss", color: rr >= 1 ? "text-[#22C55E]" : "text-[#D98B1F]" },
+    { label: "Avg Exposure", value: `$${exposure.toFixed(2)}`, sub: "per trade stake", color: "text-[#A8A8A8]" },
+    { label: "Open Risk", value: "—", sub: "live bots", color: "text-[#6F6F6F]" },
   ];
 
   const stats = [
-    { label: "Total P&L", value: `$${totalPnl.toFixed(2)}`, icon: DollarSign, color: totalPnl >= 0 ? "text-emerald-500" : "text-red-500" },
-    { label: "Win Rate", value: `${winRate}%`, icon: TrendingUp, color: "text-blue-500" },
-    { label: "Total Trades", value: totalTrades.toString(), icon: Activity, color: "text-purple-500" },
-    { label: "Avg. Trade", value: `${avgTrade >= 0 ? "+" : ""}$${avgTrade.toFixed(2)}`, icon: BarChart4, color: avgTrade >= 0 ? "text-emerald-500" : "text-red-500" },
+    { label: "Total P&L", value: `$${totalPnl.toFixed(2)}`, icon: DollarSign, color: totalPnl >= 0 ? "text-[#22C55E]" : "text-[#EF4444]" },
+    { label: "Win Rate", value: `${winRate}%`, icon: TrendingUp, color: "text-[#D98B1F]" },
+    { label: "Total Trades", value: totalTrades.toString(), icon: Activity, color: "text-[#D98B1F]" },
+    { label: "Avg. Trade", value: `${avgTrade >= 0 ? "+" : ""}$${avgTrade.toFixed(2)}`, icon: BarChart4, color: avgTrade >= 0 ? "text-[#22C55E]" : "text-[#EF4444]" },
   ];
 
   return (
-    <div className="min-h-screen bg-[#0D1117] p-6">
+    <div className="min-h-screen bg-[#151515] p-6">
       <div className="max-w-6xl mx-auto space-y-8">
         <div>
           <h1 className="text-3xl font-bold text-white">Analytics</h1>
-          <p className="text-slate-400 text-sm mt-1">Performance overview of all your trading bots</p>
+          <p className="text-[#A8A8A8] text-sm mt-1">Performance overview of all your trading bots</p>
         </div>
 
         {tradesQuery.isLoading ? (
-          <div className="flex items-center justify-center h-64"><Loader2 className="w-8 h-8 animate-spin text-blue-500" /></div>
+          <div className="flex items-center justify-center h-64"><Loader2 className="w-8 h-8 animate-spin text-[#D98B1F]" /></div>
         ) : (
           <>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
               {stats.map(s => (
-                <div key={s.label} className="bg-[#161B22] border border-[#30363D] rounded-xl p-5">
+                <div key={s.label} className="bg-[#151515] border border-[#2A2A2A] rounded-xl p-5">
                   <div className="flex items-center justify-between mb-3">
-                    <span className="text-xs text-slate-500 font-bold uppercase tracking-wider">{s.label}</span>
+                    <span className="text-xs text-[#6F6F6F] font-bold uppercase tracking-wider">{s.label}</span>
                     <s.icon className={`w-5 h-5 ${s.color}`} />
                   </div>
                   <p className={`text-2xl font-bold ${s.color}`}>{s.value}</p>
@@ -91,61 +91,61 @@ export default function Analytics() {
               ))}
             </div>
 
-            <div className="bg-[#161B22] border border-[#30363D] rounded-xl p-6">
+            <div className="bg-[#151515] border border-[#2A2A2A] rounded-xl p-6">
               <h2 className="text-lg font-bold text-white mb-1 flex items-center gap-2">
-                <ShieldAlert className="w-5 h-5 text-amber-400" /> Risk Dashboard
+                <ShieldAlert className="w-5 h-5 text-[#D98B1F]" /> Risk Dashboard
               </h2>
-              <p className="text-xs text-slate-500 mb-4">Drawdown, exposure and risk:reward across all closed trades.</p>
+              <p className="text-xs text-[#6F6F6F] mb-4">Drawdown, exposure and risk:reward across all closed trades.</p>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 {riskStats.map(s => (
-                  <div key={s.label} className="bg-black/20 border border-[#30363D] rounded-lg p-4">
-                    <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">{s.label}</p>
+                  <div key={s.label} className="bg-black/20 border border-[#2A2A2A] rounded-lg p-4">
+                    <p className="text-[10px] font-bold text-[#6F6F6F] uppercase tracking-wider">{s.label}</p>
                     <p className={`text-xl font-bold mt-1 ${s.color}`}>{s.value}</p>
-                    <p className="text-[10px] text-slate-600 mt-0.5">{s.sub}</p>
+                    <p className="text-[10px] text-[#6F6F6F] mt-0.5">{s.sub}</p>
                   </div>
                 ))}
               </div>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <div className="bg-[#161B22] border border-[#30363D] rounded-xl p-6">
+              <div className="bg-[#151515] border border-[#2A2A2A] rounded-xl p-6">
                 <h2 className="text-lg font-bold text-white mb-4">Recent Trades</h2>
                 {trades.length > 0 ? (
                   <div className="space-y-2 max-h-80 overflow-y-auto">
                     {trades.slice(0, 20).map(t => (
                       <div key={t.id} className="flex items-center justify-between p-3 bg-black/20 rounded-lg">
                         <div className="flex items-center gap-3">
-                          <span className={`w-2 h-2 rounded-full ${t.result === "win" ? "bg-emerald-500" : "bg-red-500"}`} />
-                          <span className="text-sm text-slate-300">${t.stake} {t.result}</span>
+                          <span className={`w-2 h-2 rounded-full ${t.result === "win" ? "bg-[#22C55E]" : "bg-[#EF4444]"}`} />
+                          <span className="text-sm text-[#A8A8A8]">${t.stake} {t.result}</span>
                         </div>
-                        <span className={`text-sm font-bold ${parseFloat(t.profitLoss?.toString() || "0") >= 0 ? "text-emerald-500" : "text-red-500"}`}>
+                        <span className={`text-sm font-bold ${parseFloat(t.profitLoss?.toString() || "0") >= 0 ? "text-[#22C55E]" : "text-[#EF4444]"}`}>
                           {parseFloat(t.profitLoss?.toString() || "0") >= 0 ? "+" : ""}${t.profitLoss}
                         </span>
                       </div>
                     ))}
                   </div>
                 ) : (
-                  <div className="flex items-center justify-center h-48 text-slate-500">No trades yet â€” deploy a bot</div>
+                  <div className="flex items-center justify-center h-48 text-[#6F6F6F]">No trades yet — deploy a bot</div>
                 )}
               </div>
-              <div className="bg-[#161B22] border border-[#30363D] rounded-xl p-6">
+              <div className="bg-[#151515] border border-[#2A2A2A] rounded-xl p-6">
                 <h2 className="text-lg font-bold text-white mb-4">Summary</h2>
                 <div className="space-y-4">
                   <div className="flex justify-between p-3 bg-black/20 rounded-lg">
-                    <span className="text-slate-400">Wins</span>
-                    <span className="text-emerald-500 font-bold">{wins}</span>
+                    <span className="text-[#A8A8A8]">Wins</span>
+                    <span className="text-[#22C55E] font-bold">{wins}</span>
                   </div>
                   <div className="flex justify-between p-3 bg-black/20 rounded-lg">
-                    <span className="text-slate-400">Losses</span>
-                    <span className="text-red-500 font-bold">{losses}</span>
+                    <span className="text-[#A8A8A8]">Losses</span>
+                    <span className="text-[#EF4444] font-bold">{losses}</span>
                   </div>
                   <div className="flex justify-between p-3 bg-black/20 rounded-lg">
-                    <span className="text-slate-400">Win Rate</span>
-                    <span className="text-blue-500 font-bold">{winRate}%</span>
+                    <span className="text-[#A8A8A8]">Win Rate</span>
+                    <span className="text-[#D98B1F] font-bold">{winRate}%</span>
                   </div>
-                  <div className="flex justify-between p-3 bg-black/20 rounded-lg border border-[#30363D]">
+                  <div className="flex justify-between p-3 bg-black/20 rounded-lg border border-[#2A2A2A]">
                     <span className="text-white font-bold">Total P&L</span>
-                    <span className={`font-bold ${totalPnl >= 0 ? "text-emerald-500" : "text-red-500"}`}>
+                    <span className={`font-bold ${totalPnl >= 0 ? "text-[#22C55E]" : "text-[#EF4444]"}`}>
                       {totalPnl >= 0 ? "+" : ""}${totalPnl.toFixed(2)}
                     </span>
                   </div>

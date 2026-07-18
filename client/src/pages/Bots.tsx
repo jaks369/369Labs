@@ -100,7 +100,7 @@ export default function Bots() {
   const handleDeploy = async (strategy: { id: number; name: string; config: any }) => {
     const rule = extractRule(strategy.config);
     if (!rule) {
-      alert("This strategy was built in freeform notes mode and can't be deployed yet â€” rebuild it using the visual IF/THEN rule builder.");
+      alert("This strategy was built in freeform notes mode and can't be deployed yet — rebuild it using the visual IF/THEN rule builder.");
       return;
     }
     if (!derivTokenQuery.data?.token) {
@@ -142,7 +142,7 @@ export default function Bots() {
           if (!decimalRegex.test(trade.stake.toString())) {
             console.warn(`Trade saved with unexpected stake format: ${trade.stake}`);
           }
-          alertTg(`ðŸ”” ${strategy.name} [${trade.symbol}] trade ${trade.result.toUpperCase()} Â· stake $${trade.stake} Â· P&L ${trade.pnl >= 0 ? "+" : ""}${trade.pnl}`);
+          alertTg(`🔔 ${strategy.name} [${trade.symbol}] trade ${trade.result.toUpperCase()} · stake $${trade.stake} · P&L ${trade.pnl >= 0 ? "+" : ""}${trade.pnl}`);
         },
         onLog: (message) => updateBot(botRun.id, { lastLog: message }),
       });
@@ -164,7 +164,7 @@ export default function Bots() {
 
       engine.start({ symbol: rule.symbol || DEFAULT_SYMBOL, strategy: rule });
       pushTimeline({ icon: "bot", text: `Bot started: ${strategy.name} on ${rule.symbol || DEFAULT_SYMBOL}` });
-      alertTg(`ðŸš€ Bot deployed: ${strategy.name} on ${rule.symbol || DEFAULT_SYMBOL}`);
+      alertTg(`🚀 Bot deployed: ${strategy.name} on ${rule.symbol || DEFAULT_SYMBOL}`);
 
       // Capture the expected win rate via backtest so we can flag regime drift live.
       const stake = Number(rule.params?.stake ?? 1);
@@ -176,7 +176,7 @@ export default function Bots() {
           updateBot(botRun.id, { backtestWinRate: res.winRate });
         })
         .catch(() => {
-          /* backtest unavailable (e.g. invalid token) â€” badge stays hidden */
+          /* backtest unavailable (e.g. invalid token) — badge stays hidden */
         });
     } catch (error) {
       alert(error instanceof Error ? error.message : "Failed to deploy bot");
@@ -189,7 +189,7 @@ export default function Bots() {
     bot.engine.stop();
 
     if (bot.engine.hasPendingTrade()) {
-      updateBot(bot.runId, { lastLog: "Stopping â€” waiting for open trade to settle..." });
+      updateBot(bot.runId, { lastLog: "Stopping — waiting for open trade to settle..." });
       await bot.engine.waitForOpenTradeToSettle();
     }
 
@@ -200,8 +200,8 @@ export default function Bots() {
     const finalPnl = bot.engine.getTotalPnl();
 
     setRunningBots((prev) => prev.filter((b) => b.runId !== bot.runId));
-    pushTimeline({ icon: "bot", text: `Bot stopped: ${bot.name} Â· ${finalTrades} trades Â· P&L ${finalPnl >= 0 ? "+" : ""}$${finalPnl.toFixed(2)}` });
-    alertTg(`â¹ï¸ Bot stopped: ${bot.name} Â· ${finalTrades} trades Â· P&L ${finalPnl >= 0 ? "+" : ""}$${finalPnl.toFixed(2)}`);
+    pushTimeline({ icon: "bot", text: `Bot stopped: ${bot.name} · ${finalTrades} trades · P&L ${finalPnl >= 0 ? "+" : ""}$${finalPnl.toFixed(2)}` });
+    alertTg(`⏹️ Bot stopped: ${bot.name} · ${finalTrades} trades · P&L ${finalPnl >= 0 ? "+" : ""}$${finalPnl.toFixed(2)}`);
     try {
       await stopRunMutation.mutateAsync({
         id: bot.runId,
@@ -210,7 +210,7 @@ export default function Bots() {
         totalProfitLoss: finalPnl.toFixed(2),
       });
     } catch {
-      // Non-fatal â€” the bot is already stopped client-side.
+      // Non-fatal — the bot is already stopped client-side.
     }
   };
 
@@ -231,7 +231,7 @@ export default function Bots() {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-10">
         <div>
           <h1 className="text-3xl font-bold text-white mb-2">Automated Bots</h1>
-          <p className="text-slate-500 text-sm font-medium">Manage and monitor your 24/7 trading instances.</p>
+          <p className="text-[#6F6F6F] text-sm font-medium">Manage and monitor your 24/7 trading instances.</p>
         </div>
         <Button onClick={() => setCreating(true)} className="btn-primary flex items-center gap-2">
           <Plus className="w-4 h-4" /> Create New Bot
@@ -239,10 +239,10 @@ export default function Bots() {
       </div>
 
       {!derivTokenQuery.data?.token && (
-        <div className="mb-6 p-4 rounded-lg border border-amber-500/30 bg-amber-500/10 flex items-center gap-3">
-          <AlertCircle className="w-4 h-4 text-amber-500 shrink-0" />
-          <p className="text-xs text-amber-400">
-            No Deriv API token on file â€” bots can't place real trades until you add one in{" "}
+        <div className="mb-6 p-4 rounded-lg border border-[#D98B1F]/30 bg-[#D98B1F]/10 flex items-center gap-3">
+          <AlertCircle className="w-4 h-4 text-[#D98B1F] shrink-0" />
+          <p className="text-xs text-[#D98B1F]">
+            No Deriv API token on file — bots can't place real trades until you add one in{" "}
             <button className="underline font-bold" onClick={() => navigate("/settings")}>
               Settings
             </button>
@@ -255,48 +255,48 @@ export default function Bots() {
         {/* Active Bots List */}
         <div className="lg:col-span-2 space-y-6">
           <div className="bloomberg-panel">
-            <div className="p-4 border-b border-[#30363D] flex items-center justify-between bg-black/20">
-              <h2 className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Running Instances</h2>
+            <div className="p-4 border-b border-[#2A2A2A] flex items-center justify-between bg-black/20">
+              <h2 className="text-[10px] font-bold text-[#6F6F6F] uppercase tracking-widest">Running Instances</h2>
               <div className="flex items-center gap-2">
-                <span className="text-[10px] font-bold text-emerald-500">{runningBots.length} Active</span>
+                <span className="text-[10px] font-bold text-[#22C55E]">{runningBots.length} Active</span>
               </div>
             </div>
 
             <div className="p-0">
               {runningBots.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-20 text-center">
-                  <div className="w-12 h-12 bg-slate-900 rounded-full flex items-center justify-center mb-4 border border-[#30363D]">
-                    <Bot className="w-6 h-6 text-slate-600" />
+                  <div className="w-12 h-12 bg-[#151515] rounded-full flex items-center justify-center mb-4 border border-[#2A2A2A]">
+                    <Bot className="w-6 h-6 text-[#6F6F6F]" />
                   </div>
-                  <p className="text-slate-500 text-sm mb-6">No bots are currently running.</p>
+                  <p className="text-[#6F6F6F] text-sm mb-6">No bots are currently running.</p>
                   <Button variant="outline" className="btn-outline text-xs" onClick={() => navigate("/strategy-builder")}>
                     Deploy your first strategy
                   </Button>
                 </div>
               ) : (
-                <div className="divide-y divide-[#30363D]">
+                <div className="divide-y divide-[#2A2A2A]">
                   {runningBots.map((bot) => (
                     <div key={bot.runId} className="p-6 flex items-center justify-between hover:bg-white/5 transition-colors">
                       <div className="flex items-center gap-4">
                         <div className={`w-10 h-10 rounded-lg flex items-center justify-center border ${
                           bot.status === "error"
-                            ? "bg-red-600/10 border-red-600/20"
-                            : "bg-blue-600/10 border-blue-600/20"
+                            ? "bg-[#D63A3A]/10 border-[#D63A3A]/20"
+                            : "bg-[#D98B1F]/10 border-[#D98B1F]/20"
                         }`}>
-                          <Activity className={`w-5 h-5 ${bot.status === "error" ? "text-red-500" : "text-blue-500 animate-pulse"}`} />
+                          <Activity className={`w-5 h-5 ${bot.status === "error" ? "text-[#EF4444]" : "text-[#D98B1F] animate-pulse"}`} />
                         </div>
                         <div>
                           <h3 className="text-sm font-bold text-white">{bot.name}</h3>
-                          <p className="text-[10px] text-slate-500 uppercase font-bold tracking-wider">
-                            {bot.symbol} â€¢ {bot.trades} trades â€¢ {bot.status}
+                          <p className="text-[10px] text-[#6F6F6F] uppercase font-bold tracking-wider">
+                            {bot.symbol} • {bot.trades} trades • {bot.status}
                           </p>
-                          {bot.lastLog && <p className="text-[10px] text-slate-600 mt-1">{bot.lastLog}</p>}
+                          {bot.lastLog && <p className="text-[10px] text-[#6F6F6F] mt-1">{bot.lastLog}</p>}
                         </div>
                       </div>
                       <div className="flex items-center gap-8">
                         <div className="text-right">
-                          <p className="text-[10px] font-bold text-slate-500 uppercase mb-1">Profit/Loss</p>
-                          <p className={`text-sm font-bold ${bot.pnl >= 0 ? "text-emerald-500" : "text-red-500"}`}>
+                          <p className="text-[10px] font-bold text-[#6F6F6F] uppercase mb-1">Profit/Loss</p>
+                          <p className={`text-sm font-bold ${bot.pnl >= 0 ? "text-[#22C55E]" : "text-[#EF4444]"}`}>
                             {bot.pnl >= 0 ? "+" : ""}${bot.pnl.toFixed(2)}
                           </p>
                         </div>
@@ -308,11 +308,11 @@ export default function Bots() {
                           const mismatch = drift <= -15 || liveWinRate < bot.backtestWinRate * 0.7;
                           if (!mismatch) return null;
                           return (
-                            <div className="max-w-[180px] text-left bg-red-500/10 border border-red-500/30 rounded px-2 py-1">
-                              <div className="flex items-center gap-1 text-[10px] font-bold text-red-400 uppercase">
+                            <div className="max-w-[180px] text-left bg-[#EF4444]/10 border border-[#EF4444]/30 rounded px-2 py-1">
+                              <div className="flex items-center gap-1 text-[10px] font-bold text-[#EF4444] uppercase">
                                 <AlertTriangle className="w-3 h-3" /> Regime mismatch
                               </div>
-                              <p className="text-[10px] text-red-300/80 leading-tight mt-0.5">
+                              <p className="text-[10px] text-[#EF4444]/80 leading-tight mt-0.5">
                                 Live {liveWinRate.toFixed(0)}% vs backtest {bot.backtestWinRate.toFixed(0)}%
                               </p>
                             </div>
@@ -321,7 +321,7 @@ export default function Bots() {
                         <Button
                           size="sm"
                           variant="destructive"
-                          className="bg-red-500/10 text-red-500 border-red-500/20 hover:bg-red-500 hover:text-white"
+                          className="bg-[#EF4444]/10 text-[#EF4444] border-[#EF4444]/20 hover:bg-[#EF4444] hover:text-white"
                           onClick={() => handleStop(bot)}
                         >
                           <Square className="w-3 h-3 mr-2 fill-current" /> Stop
@@ -338,26 +338,26 @@ export default function Bots() {
         {/* Sidebar - Quick Stats & Available Strategies */}
         <div className="space-y-8">
           <div className="bloomberg-panel p-6">
-            <h3 className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-6">System Health</h3>
+            <h3 className="text-[10px] font-bold text-[#6F6F6F] uppercase tracking-widest mb-6">System Health</h3>
             <div className="space-y-4">
               <div className="flex justify-between items-center">
-                <span className="text-xs text-slate-400">Active Bots</span>
-                <span className="text-[10px] font-bold text-slate-300 uppercase">{runningBots.length}</span>
+                <span className="text-xs text-[#A8A8A8]">Active Bots</span>
+                <span className="text-[10px] font-bold text-[#A8A8A8] uppercase">{runningBots.length}</span>
               </div>
             </div>
           </div>
 
           <div className="bloomberg-panel p-6">
-            <h3 className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-6">Ready to Deploy</h3>
+            <h3 className="text-[10px] font-bold text-[#6F6F6F] uppercase tracking-widest mb-6">Ready to Deploy</h3>
             <div className="space-y-3">
               {strategiesQuery.data?.map((s: any) => (
-                <div key={s.id} className="p-4 rounded-xl bg-[#161B22] border border-[#30363D] hover:border-blue-500/50 transition-all group">
+                <div key={s.id} className="p-4 rounded-xl bg-[#151515] border border-[#2A2A2A] hover:border-[#D98B1F]/50 transition-all group">
                   <div className="flex justify-between items-start mb-3">
                     <h4 className="text-xs font-bold text-white">{s.name}</h4>
-                    <Zap className="w-3 h-3 text-blue-500" />
+                    <Zap className="w-3 h-3 text-[#D98B1F]" />
                   </div>
                   <Button
-                    className="w-full h-8 text-[10px] font-bold bg-blue-600/10 text-blue-500 hover:bg-blue-600 hover:text-white border border-blue-600/20"
+                    className="w-full h-8 text-[10px] font-bold bg-[#D98B1F]/10 text-[#D98B1F] hover:bg-[#D98B1F] hover:text-white border border-[#D98B1F]/20"
                     disabled={deployingId === s.id || runningBots.some((b) => b.strategyId === s.id)}
                     onClick={() => handleDeploy(s)}
                   >
@@ -367,7 +367,7 @@ export default function Bots() {
                 </div>
               ))}
               {(!strategiesQuery.data || strategiesQuery.data.length === 0) && (
-                <p className="text-xs text-slate-600 italic text-center py-4">No strategies found.</p>
+                <p className="text-xs text-[#6F6F6F] italic text-center py-4">No strategies found.</p>
               )}
             </div>
           </div>

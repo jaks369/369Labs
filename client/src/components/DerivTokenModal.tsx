@@ -31,24 +31,24 @@ export default function DerivTokenModal({ open, onClose }: Props) {
 
   return (
     <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4">
-      <div className="w-full max-w-md bg-[#0D1117] border border-[#30363D] rounded-xl">
-        <div className="flex items-center justify-between p-5 border-b border-[#30363D]">
+      <div className="w-full max-w-md bg-[#151515] border border-[#2A2A2A] rounded-xl">
+        <div className="flex items-center justify-between p-5 border-b border-[#2A2A2A]">
           <h2 className="text-lg font-bold text-white">Connect Deriv Account</h2>
-          <button onClick={onClose} className="text-slate-400 hover:text-white"><X className="w-5 h-5" /></button>
+          <button onClick={onClose} className="text-[#A8A8A8] hover:text-white"><X className="w-5 h-5" /></button>
         </div>
         <div className="p-5 space-y-4">
           <div>
-            <label className="text-xs font-bold text-slate-500 block mb-2">Deriv API Token</label>
-            <Input type="text" autoComplete="off" placeholder={preview ? 'Enter new token' : 'Paste your Deriv API token'} value={token} onChange={e => { setToken(e.target.value); setStatus('idle'); setMsg(''); }} className="bg-[#161B22] border-[#30363D] text-white" />
-            {preview && <p className="text-xs text-emerald-500 mt-1">Current: {preview}</p>}
-            <p className="text-xs text-slate-500 mt-2">Get token from app.deriv.com/account/api-token</p>
+            <label className="text-xs font-bold text-[#6F6F6F] block mb-2">Deriv API Token</label>
+            <Input type="text" autoComplete="off" placeholder={preview ? 'Enter new token' : 'Paste your Deriv API token'} value={token} onChange={e => { setToken(e.target.value); setStatus('idle'); setMsg(''); }} className="bg-[#151515] border-[#2A2A2A] text-white" />
+            {preview && <p className="text-xs text-[#22C55E] mt-1">Current: {preview}</p>}
+            <p className="text-xs text-[#6F6F6F] mt-2">Get token from app.deriv.com/account/api-token</p>
           </div>
-          {status === 'ok' && <div className="flex items-center gap-2 text-emerald-500 text-sm"><CheckCircle2 className="w-4 h-4" />{msg}</div>}
-          {status === 'error' && <div className="flex items-center gap-2 text-red-500 text-sm"><AlertCircle className="w-4 h-4" />{msg}</div>}
+          {status === 'ok' && <div className="flex items-center gap-2 text-[#22C55E] text-sm"><CheckCircle2 className="w-4 h-4" />{msg}</div>}
+          {status === 'error' && <div className="flex items-center gap-2 text-[#EF4444] text-sm"><AlertCircle className="w-4 h-4" />{msg}</div>}
           <div className="flex gap-3">
             <Button onClick={save} disabled={m.isPending || !token} className="flex-1 btn-primary">{m.isPending ? 'SAVING...' : 'SAVE & CONNECT'}</Button>
             {preview && (
-              <Button onClick={forget} disabled={rm.isPending} className="btn-outline gap-2 text-red-400 border-red-500/40 hover:bg-red-500/10">
+              <Button onClick={forget} disabled={rm.isPending} className="btn-outline gap-2 text-[#EF4444] border-[#EF4444]/40 hover:bg-[#EF4444]/10">
                 <Trash2 className="w-4 h-4" /> Forget
               </Button>
             )}

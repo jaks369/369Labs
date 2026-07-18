@@ -92,7 +92,7 @@ export default function Settings() {
     try {
       await saveMemoryMutation.mutateAsync({ memory });
       pushTimeline({ icon: "ai", text: "Updated AI memory (trader profile)" });
-      alert("Trader profile saved â€” 369AI will remember these preferences.");
+      alert("Trader profile saved — 369AI will remember these preferences.");
     } catch (e) {
       alert("Failed to save memory: " + (e instanceof Error ? e.message : String(e)));
     }
@@ -136,32 +136,32 @@ export default function Settings() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0A0E27] text-[#00FFFF] p-8">
+    <div className="min-h-screen bg-[#0D0D0D] text-[#D98B1F] p-8">
       <div className="max-w-2xl mx-auto">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-[#FF00FF] mb-2">SETTINGS</h1>
-          <p className="text-[#00FFFF] text-sm">Configure your trading bot platform</p>
+          <h1 className="text-3xl font-bold text-[#E89A2A] mb-2">SETTINGS</h1>
+          <p className="text-[#D98B1F] text-sm">Configure your trading bot platform</p>
         </div>
 
         <div className="hud-panel mb-6">
-          <h2 className="text-lg font-bold text-[#FF00FF] mb-4">TELEGRAM NOTIFICATIONS</h2>
+          <h2 className="text-lg font-bold text-[#E89A2A] mb-4">TELEGRAM NOTIFICATIONS</h2>
           <div className="space-y-4">
             <div>
-              <label className="text-sm text-[#00FFFF] block mb-2">Chat ID</label>
+              <label className="text-sm text-[#D98B1F] block mb-2">Chat ID</label>
               <Input
                 placeholder="Enter your Telegram Chat ID"
                 value={chatId}
                 onChange={(e) => setChatId(e.target.value)}
-                className="border-[#00FFFF]/40 text-[#00FFFF]"
+                className="border-[#D98B1F]/40 text-[#D98B1F]"
               />
-              <p className="text-xs text-[#00FFFF]/60 mt-2">
+              <p className="text-xs text-[#D98B1F]/60 mt-2">
                 Get your Chat ID by messaging @userinfobot on Telegram
               </p>
             </div>
             <Button
               onClick={handleSaveTelegram}
               disabled={saveTelegramMutation.isPending}
-              className="w-full bg-[#00FFFF] text-[#0A0E27] hover:bg-[#00FFFF]/80 font-bold py-2 px-4 rounded"
+              className="w-full bg-[#D98B1F] text-[#0D0D0D] hover:bg-[#D98B1F]/80 font-bold py-2 px-4 rounded"
             >
               {saveTelegramMutation.isPending ? (
                 <>
@@ -179,10 +179,10 @@ export default function Settings() {
         </div>
 
         <div className="hud-panel mb-6">
-          <h2 className="text-lg font-bold text-[#FF00FF] mb-4">NOTIFICATION PREFERENCES</h2>
+          <h2 className="text-lg font-bold text-[#E89A2A] mb-4">NOTIFICATION PREFERENCES</h2>
           <div className="space-y-4">
             <div className="flex items-center justify-between">
-              <label className="text-sm text-[#00FFFF]">Trade Executed</label>
+              <label className="text-sm text-[#D98B1F]">Trade Executed</label>
               <Switch
                 checked={notificationSettings.tradeExecuted}
                 onCheckedChange={(checked) =>
@@ -194,7 +194,7 @@ export default function Settings() {
               />
             </div>
             <div className="flex items-center justify-between">
-              <label className="text-sm text-[#00FFFF]">Take Profit Hit</label>
+              <label className="text-sm text-[#D98B1F]">Take Profit Hit</label>
               <Switch
                 checked={notificationSettings.takeProfitHit}
                 onCheckedChange={(checked) =>
@@ -206,7 +206,7 @@ export default function Settings() {
               />
             </div>
             <div className="flex items-center justify-between">
-              <label className="text-sm text-[#00FFFF]">Stop Loss Hit</label>
+              <label className="text-sm text-[#D98B1F]">Stop Loss Hit</label>
               <Switch
                 checked={notificationSettings.stopLossHit}
                 onCheckedChange={(checked) =>
@@ -218,7 +218,7 @@ export default function Settings() {
               />
             </div>
             <div className="flex items-center justify-between">
-              <label className="text-sm text-[#00FFFF]">Bot Error</label>
+              <label className="text-sm text-[#D98B1F]">Bot Error</label>
               <Switch
                 checked={notificationSettings.botError}
                 onCheckedChange={(checked) =>
@@ -232,7 +232,7 @@ export default function Settings() {
             <Button
               onClick={handleSaveNotifications}
               disabled={saveNotificationsMutation.isPending}
-              className="w-full bg-[#00FFFF] text-[#0A0E27] hover:bg-[#00FFFF]/80 font-bold py-2 px-4 rounded mt-4"
+              className="w-full bg-[#D98B1F] text-[#0D0D0D] hover:bg-[#D98B1F]/80 font-bold py-2 px-4 rounded mt-4"
             >
               {saveNotificationsMutation.isPending ? (
                 <>
@@ -250,62 +250,62 @@ export default function Settings() {
         </div>
 
         <div className="hud-panel mb-6">
-          <h2 className="text-lg font-bold text-[#FF00FF] mb-4 flex items-center gap-2">
-            <Brain className="w-5 h-5" /> AI MEMORY â€” TRADER PROFILE
+          <h2 className="text-lg font-bold text-[#E89A2A] mb-4 flex items-center gap-2">
+            <Brain className="w-5 h-5" /> AI MEMORY — TRADER PROFILE
           </h2>
-          <p className="text-xs text-[#00FFFF]/70 mb-4">
+          <p className="text-xs text-[#D98B1F]/70 mb-4">
             369AI remembers these so it can auto-apply them to every strategy, backtest and trade suggestion. No need to repeat yourself.
           </p>
           <div className="space-y-4">
             <div>
-              <label className="text-sm text-[#00FFFF] block mb-2">Preferred symbols (comma separated)</label>
+              <label className="text-sm text-[#D98B1F] block mb-2">Preferred symbols (comma separated)</label>
               <Input
                 placeholder="R_75, R_100, 1HZ10V"
                 value={memSymbols}
                 onChange={(e) => setMemSymbols(e.target.value)}
-                className="border-[#00FFFF]/40 text-[#00FFFF]"
+                className="border-[#D98B1F]/40 text-[#D98B1F]"
               />
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="text-sm text-[#00FFFF] block mb-2">Risk % per trade</label>
+                <label className="text-sm text-[#D98B1F] block mb-2">Risk % per trade</label>
                 <Input
                   type="number"
                   placeholder="2"
                   value={memRisk}
                   onChange={(e) => setMemRisk(e.target.value)}
-                  className="border-[#00FFFF]/40 text-[#00FFFF]"
+                  className="border-[#D98B1F]/40 text-[#D98B1F]"
                 />
               </div>
               <div className="flex items-end">
-                <label className="flex items-center gap-2 text-sm text-[#00FFFF] cursor-pointer">
+                <label className="flex items-center gap-2 text-sm text-[#D98B1F] cursor-pointer">
                   <Switch checked={memNoMartingale} onCheckedChange={setMemNoMartingale} />
                   No martingale / no grid averaging
                 </label>
               </div>
             </div>
             <div>
-              <label className="text-sm text-[#00FFFF] block mb-2">Trading style</label>
+              <label className="text-sm text-[#D98B1F] block mb-2">Trading style</label>
               <Input
                 placeholder="e.g. volatility 75 index, 1-minute contracts, trend-follow"
                 value={memStyle}
                 onChange={(e) => setMemStyle(e.target.value)}
-                className="border-[#00FFFF]/40 text-[#00FFFF]"
+                className="border-[#D98B1F]/40 text-[#D98B1F]"
               />
             </div>
             <div>
-              <label className="text-sm text-[#00FFFF] block mb-2">Notes for 369AI</label>
+              <label className="text-sm text-[#D98B1F] block mb-2">Notes for 369AI</label>
               <Input
                 placeholder="e.g. only trade London session; avoid news spikes"
                 value={memNotes}
                 onChange={(e) => setMemNotes(e.target.value)}
-                className="border-[#00FFFF]/40 text-[#00FFFF]"
+                className="border-[#D98B1F]/40 text-[#D98B1F]"
               />
             </div>
             <Button
               onClick={handleSaveMemory}
               disabled={saveMemoryMutation.isPending}
-              className="w-full bg-[#FF00FF] text-[#0A0E27] hover:bg-[#FF00FF]/80 font-bold py-2 px-4 rounded"
+              className="w-full bg-[#E89A2A] text-[#0D0D0D] hover:bg-[#E89A2A]/80 font-bold py-2 px-4 rounded"
             >
               {saveMemoryMutation.isPending ? (
                 <>
@@ -323,12 +323,12 @@ export default function Settings() {
         </div>
 
         <div className="hud-panel mb-6">
-          <h2 className="text-lg font-bold text-[#FF00FF] mb-4">ACCOUNT</h2>
+          <h2 className="text-lg font-bold text-[#E89A2A] mb-4">ACCOUNT</h2>
           <div className="space-y-4">
-            <p className="text-sm text-[#00FFFF]/80">Signed in as <span className="text-[#00FFFF] font-semibold">{user?.email || user?.username || "user"}</span></p>
+            <p className="text-sm text-[#D98B1F]/80">Signed in as <span className="text-[#D98B1F] font-semibold">{user?.email || user?.username || "user"}</span></p>
             <Button
               onClick={logout}
-              className="w-full bg-red-500/20 text-red-400 border border-red-500/40 hover:bg-red-500/30 font-bold py-2 px-4 rounded"
+              className="w-full bg-[#EF4444]/20 text-[#EF4444] border border-[#EF4444]/40 hover:bg-[#EF4444]/30 font-bold py-2 px-4 rounded"
             >
               LOGOUT
             </Button>

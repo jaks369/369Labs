@@ -41,7 +41,7 @@ export function useVoiceCommands(enabled: boolean) {
       if (e.results[e.results.length - 1].isFinal) {
         const hit = PHRASES.find((p) => p.match.test(text));
         if (hit) {
-          pushTimeline({ icon: "ai", text: `ðŸŽ™ Voice: "${text}" â†’ ${hit.label}` });
+          pushTimeline({ icon: "ai", text: `🎙 Voice: "${text}" → ${hit.label}` });
           hit.run();
         }
         setTranscript("");

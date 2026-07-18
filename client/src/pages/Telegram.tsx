@@ -32,23 +32,23 @@ export default function TelegramSettings() {
   };
 
   return (
-    <div className="min-h-screen bg-[#0D1117] p-6">
+    <div className="min-h-screen bg-[#151515] p-6">
       <div className="max-w-3xl mx-auto space-y-8">
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold text-white">Telegram Integration</h1>
-            <p className="text-slate-400 text-sm mt-1">Receive trade alerts and bot notifications on Telegram</p>
+            <p className="text-[#A8A8A8] text-sm mt-1">Receive trade alerts and bot notifications on Telegram</p>
           </div>
-          <MessageCircle className="w-6 h-6 text-blue-500" />
+          <MessageCircle className="w-6 h-6 text-[#D98B1F]" />
         </div>
 
         {settingsQuery.isLoading ? (
-          <div className="flex items-center justify-center h-64"><Loader2 className="w-8 h-8 animate-spin text-blue-500" /></div>
+          <div className="flex items-center justify-center h-64"><Loader2 className="w-8 h-8 animate-spin text-[#D98B1F]" /></div>
         ) : (
-          <div className="bg-[#161B22] border border-[#30363D] rounded-xl p-6 space-y-6">
-            <div className="p-4 bg-amber-500/10 border border-amber-500/20 rounded-xl flex items-start gap-3">
-              <AlertCircle className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
-              <div className="text-xs text-amber-400">
+          <div className="bg-[#151515] border border-[#2A2A2A] rounded-xl p-6 space-y-6">
+            <div className="p-4 bg-[#D98B1F]/10 border border-[#D98B1F]/20 rounded-xl flex items-start gap-3">
+              <AlertCircle className="w-5 h-5 text-[#D98B1F] shrink-0 mt-0.5" />
+              <div className="text-xs text-[#D98B1F]">
                 <p className="font-bold mb-1">How to set up:</p>
                 <ol className="list-decimal ml-4 space-y-1">
                   <li>Create a bot on Telegram via <strong>@BotFather</strong> and copy the token</li>
@@ -60,32 +60,32 @@ export default function TelegramSettings() {
             </div>
 
             <div>
-              <label className="text-xs text-slate-500 font-bold uppercase tracking-wider">Bot Token</label>
+              <label className="text-xs text-[#6F6F6F] font-bold uppercase tracking-wider">Bot Token</label>
               <Input
                 value={botToken}
                 onChange={e => setBotToken(e.target.value)}
                 placeholder="1234567890:ABCdefGHIjklMNOpqrsTUVwxyz"
-                className="mt-1 bg-[#0D1117] border-[#30363D] text-white"
+                className="mt-1 bg-[#151515] border-[#2A2A2A] text-white"
                 type="password"
               />
             </div>
 
             <div>
-              <label className="text-xs text-slate-500 font-bold uppercase tracking-wider">Chat ID</label>
+              <label className="text-xs text-[#6F6F6F] font-bold uppercase tracking-wider">Chat ID</label>
               <Input
                 value={chatId}
                 onChange={e => setChatId(e.target.value)}
                 placeholder="-1234567890"
-                className="mt-1 bg-[#0D1117] border-[#30363D] text-white"
+                className="mt-1 bg-[#151515] border-[#2A2A2A] text-white"
               />
             </div>
 
             <div className="flex items-center gap-4">
-              <Button onClick={handleSave} disabled={saveMutation.isPending || !botToken} className="bg-blue-600 hover:bg-blue-700 text-white">
+              <Button onClick={handleSave} disabled={saveMutation.isPending || !botToken} className="bg-[#D98B1F] hover:bg-[#C07B1A] text-white">
                 {saveMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Send className="w-4 h-4 mr-2" />}
                 Save & Connect
               </Button>
-              {saved && <span className="flex items-center gap-1 text-emerald-500 text-sm font-bold"><CheckCircle2 className="w-4 h-4" /> Connected</span>}
+              {saved && <span className="flex items-center gap-1 text-[#22C55E] text-sm font-bold"><CheckCircle2 className="w-4 h-4" /> Connected</span>}
             </div>
           </div>
         )}

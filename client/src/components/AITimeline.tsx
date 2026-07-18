@@ -14,10 +14,10 @@ const ICONS = {
   risk: AlertTriangle,
 };
 const COLORS = {
-  ai: "text-amber-400",
-  bot: "text-blue-400",
-  market: "text-emerald-400",
-  risk: "text-red-400",
+  ai: "text-[#D98B1F]",
+  bot: "text-[#E89A2A]",
+  market: "text-[#22C55E]",
+  risk: "text-[#EF4444]",
 };
 
 export function pushTimeline(entry: Omit<TimelineEntry, "ts">) {
@@ -44,12 +44,12 @@ export default function AITimeline({ compact = false }: { compact?: boolean }) {
   return (
     <div className="text-left">
       <div className="flex items-center gap-2 mb-2">
-        <Activity className="w-3.5 h-3.5 text-blue-400" />
-        <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">AI Timeline</span>
+        <Activity className="w-3.5 h-3.5 text-[#E89A2A]" />
+        <span className="text-[10px] font-bold uppercase tracking-wider text-[#6F6F6F]">AI Timeline</span>
       </div>
       {entries.length === 0 ? (
-        <p className="text-[10px] text-slate-600 leading-relaxed">
-          Live agent activity will appear here â€” scans, strategy builds, risk checks, trades.
+        <p className="text-[10px] text-[#6F6F6F] leading-relaxed">
+          Live agent activity will appear here — scans, strategy builds, risk checks, trades.
         </p>
       ) : (
         <ul className="space-y-1.5">
@@ -58,8 +58,8 @@ export default function AITimeline({ compact = false }: { compact?: boolean }) {
             return (
               <li key={i} className="flex items-start gap-2">
                 <Icon className={`w-3 h-3 mt-0.5 shrink-0 ${COLORS[e.icon]}`} />
-                <span className="text-[10px] text-slate-400 leading-tight flex-1">{e.text}</span>
-                <span className="text-[9px] text-slate-600 tabular-nums shrink-0">{fmt(e.ts)}</span>
+                <span className="text-[10px] text-[#A8A8A8] leading-tight flex-1">{e.text}</span>
+                <span className="text-[9px] text-[#6F6F6F] tabular-nums shrink-0">{fmt(e.ts)}</span>
               </li>
             );
           })}

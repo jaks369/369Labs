@@ -102,7 +102,7 @@ export async function scanTicks(opts: ScanOptions): Promise<any[]> {
   for (let d = 0; d <= 9; d++) {
     testRule(
       { condition: { indicator: "digit_streak", comparison: "appears_consecutively", count: 3, barrier: d }, action: { tradeType: "buy_fall" } },
-      `After digit ${d} appears 3Ã— in a row, price tends to FALL (reversion)`,
+      `After digit ${d} appears 3× in a row, price tends to FALL (reversion)`,
       "digit_streak",
       evidenceTicks
     );

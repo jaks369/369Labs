@@ -1,11 +1,11 @@
 #!/usr/bin/env tsx
 /**
- * orchestrator.ts â€” free-tier multi-agent pipeline for 369Labs
+ * orchestrator.ts — free-tier multi-agent pipeline for 369Labs
  * ---------------------------------------------------------------
  * Replaces Ruflo's Claude-Code-native orchestration with a DIY
  * sequential pipeline that runs entirely through OpenCode CLI,
  * using a different free-tier model per role. This avoids Gemini
- * CLI's tight free quota (20 requests/day) entirely â€” everything
+ * CLI's tight free quota (20 requests/day) entirely — everything
  * goes through OpenCode's own free model catalog instead.
  *
  *   Planner    -> opencode/deepseek-v4-flash-free
@@ -20,7 +20,7 @@
  * Requirements (install separately, not covered here):
  *   - OpenCode CLI: curl -fsSL https://opencode.ai/install | bash
  *   Run `opencode models` to see what's actually free/available on your
- *   account â€” model names and availability change, so treat the defaults
+ *   account — model names and availability change, so treat the defaults
  *   below as a starting point, not gospel.
  *
  * Usage:
@@ -42,7 +42,7 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
 // ---------------------------------------------------------------------------
-// Config â€” run `opencode models` and adjust these if any stop being free
+// Config — run `opencode models` and adjust these if any stop being free
 // or available on your account.
 // ---------------------------------------------------------------------------
 
@@ -107,7 +107,7 @@ function saveArtifact(name: string, content: string) {
 }
 
 // ---------------------------------------------------------------------------
-// Agent runner â€” single function, all roles go through OpenCode
+// Agent runner — single function, all roles go through OpenCode
 // ---------------------------------------------------------------------------
 
 /** Calls OpenCode CLI headlessly with a given model and returns stdout. Retries on transient errors. */
@@ -123,7 +123,7 @@ async function runAgent(prompt: string, model: string, label: string): Promise<s
 }
 
 function truncate(s: string, n = 80): string {
-  return s.length > n ? s.slice(0, n) + "â€¦" : s;
+  return s.length > n ? s.slice(0, n) + "…" : s;
 }
 
 function sleep(ms: number): Promise<void> {
@@ -132,9 +132,9 @@ function sleep(ms: number): Promise<void> {
 
 /**
  * Retries a synchronous CLI call with exponential backoff. Handles transient
- * failures â€” 503s, rate limits, brief network blips â€” that are common on
+ * failures — 503s, rate limits, brief network blips — that are common on
  * free-tier endpoints and NOT a sign anything is misconfigured. Daily quota
- * exhaustion (429 "exhausted your daily quota") is NOT retried â€” that only
+ * exhaustion (429 "exhausted your daily quota") is NOT retried — that only
  * resolves on a reset cycle, so retrying just burns time.
  */
 async function withRetry<T>(label: string, fn: () => T): Promise<T> {
@@ -149,7 +149,7 @@ async function withRetry<T>(label: string, fn: () => T): Promise<T> {
       const isDailyQuotaExhausted = /exhausted your daily quota|quota exceeded/i.test(message);
       if (isDailyQuotaExhausted) {
         console.error(
-          `\n[${label}] daily quota exhausted on this model â€” not retrying. Try a different model with --${label.toLowerCase()}-model, or wait for reset.`
+          `\n[${label}] daily quota exhausted on this model — not retrying. Try a different model with --${label.toLowerCase()}-model, or wait for reset.`
         );
         throw err;
       }
@@ -218,7 +218,7 @@ async function main() {
 
   console.log(
     dryRun
-      ? "\nDry run complete â€” no commands were actually executed."
+      ? "\nDry run complete — no commands were actually executed."
       : `\nDone. Artifacts written to: ${runDir}`
   );
 }
