@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { derivWS } from "@/services/derivWebSocket";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { trpc } from "@/lib/trpc";
@@ -14,12 +14,6 @@ export default function TradeHistory() {
   const priceQuery = trpc.market.getHistory.useQuery({ symbol: priceSymbol, limit: 200 }, { enabled: tab === "prices" });
   const priceDecimals = derivWS.decimalPlacesFor(priceSymbol);
   const journalMutation = trpc.ai.journal.useMutation();
-
-  useEffect(() => {
-    if (!isAuthenticated) {
-      navigate("/");
-    }
-  }, [isAuthenticated, navigate]);
 
   if (!isAuthenticated) {
     navigate("/login");
