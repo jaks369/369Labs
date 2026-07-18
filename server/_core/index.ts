@@ -11,6 +11,13 @@ import { startTickCollector } from "../tickCollector";
 import { runWatch } from "../signalScanner";
 import { ENV } from "./env";
 
+process.on("unhandledRejection", (reason) => {
+  console.error("[Startup] Unhandled promise rejection:", reason);
+});
+process.on("uncaughtException", (err) => {
+  console.error("[Startup] Uncaught exception:", err);
+});
+
 function logStartupChecks() {
   const missing: string[] = [];
   if (!process.env.DATABASE_URL) missing.push("DATABASE_URL");
@@ -28,7 +35,12 @@ function logStartupChecks() {
 export async function createApp() {
   logStartupChecks();
 
-  const db = await getDb();
+  let db = null;
+  try {
+    db = await getDb();
+  } catch (e) {
+    console.error("[Startup] Database connection failed (continuing without DB):", e);
+  }
   if (!db) {
     console.error(
       "[Startup] Database is not available. API endpoints requiring the database will fail."
@@ -71,17 +83,22 @@ export async function createApp() {
   if (!process.env.VERCEL && process.env.NODE_ENV !== "development") {
     serveStatic(app);
     const port = parseInt(process.env.PORT || "3000");
-    app.listen(port, async () => {
-      console.log(`Server running on http://localhost:${port}/`);
-      startTickCollector();
-      startAlwaysOnScanner();
-      // Non-critical startup hygiene - never allowed to break the live feed
-try { await ensureSignalExpiryColumn(); } catch (e) { console.error('[startup] ensureSignalExpiryColumn failed', e); }
-try { await pruneBadTicks(); } catch (e) { console.error('[startup] pruneBadTicks failed', e); }
-try { await recomputeLastDigits(); } catch (e) { console.error('[startup] recomputeLastDigits failed', e); }
-try { await ensureUserMemoryTable(); } catch (e) { console.error('[startup] ensureUserMemoryTable failed', e); }
-try { await ensurePluginsTable(); } catch (e) { console.error('[startup] ensurePluginsTable failed', e); }
+    // Bind the port FIRST so Render's port scanner always sees an open port,
+    // even if later startup work (DB hygiene, collectors) fails.
+    app.listen(port, () => {
+      console.log(`[Startup] Server listening on 0.0.0.0:${port} (NODE_ENV=${process.env.NODE_ENV})`);
     });
+    // Non-critical startup work - fully isolated so a failure can never
+    // take the server (and its open port) down.
+    (async () => {
+      try { startTickCollector(); } catch (e) { console.error("[startup] startTickCollector failed", e); }
+      try { startAlwaysOnScanner(); } catch (e) { console.error("[startup] startAlwaysOnScanner failed", e); }
+      try { await ensureSignalExpiryColumn(); } catch (e) { console.error("[startup] ensureSignalExpiryColumn failed", e); }
+      try { await pruneBadTicks(); } catch (e) { console.error("[startup] pruneBadTicks failed", e); }
+      try { await recomputeLastDigits(); } catch (e) { console.error("[startup] recomputeLastDigits failed", e); }
+      try { await ensureUserMemoryTable(); } catch (e) { console.error("[startup] ensureUserMemoryTable failed", e); }
+      try { await ensurePluginsTable(); } catch (e) { console.error("[startup] ensurePluginsTable failed", e); }
+    })();
   }
 
   return app;
