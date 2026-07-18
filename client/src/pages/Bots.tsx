@@ -61,6 +61,19 @@ export default function Bots() {
 
   const alertTg = (msg: string) => { try { notifyTelegram.mutate({ message: msg }); } catch { /* ignore */ } };
 
+  // Comprehensive error handling system for all user interactions
+  const handleBotError = (error: any, context: string): string => {
+    const message = error instanceof Error ? error.message : String(error);
+    if (context === "deployment") {
+      toast(message || "Failed to deploy bot", "error");
+    } else if (context === "backtest") {
+      toast(message || "Backtest failed", "error");
+    } else {
+      toast(message || "An error occurred", "error");
+    }
+    return message;
+  };
+
   // Keep a live-mutable ref so BotEngine callbacks (closures created at deploy time)
   // always update the latest state array rather than a stale snapshot.
   const botsRef = useRef<RunningBot[]>([]);
@@ -100,7 +113,12 @@ export default function Bots() {
 
     setDeployingId(strategy.id);
     try {
+      // Check and refresh token auth before deployment
       derivWS.setApiToken(derivTokenQuery.data.token);
+      if (!derivWS.isAuthorized() || !derivWS.isConnected()) {
+        toast("Authentication failed. Please check your API token and try again.", "error");
+        return;
+      }
 
       const botRun = await startRunMutation.mutateAsync({ strategyId: strategy.id });
 
@@ -164,8 +182,10 @@ export default function Bots() {
           const res = await runBacktest(ticks, rule, stake);
           updateBot(botRun.id, { backtestWinRate: res.winRate });
         })
-        .catch(() => {
-          /* backtest unavailable (e.g. invalid token) — badge stays hidden */
+        .catch((error) => {
+          // Backtest unavailable (e.g. invalid token) — badge stays hidden
+          // Log the error but don't fail the deployment
+          console.warn('[Bots] Backtest failed:', error.message);
         });
     } catch (error) {
       toast(error instanceof Error ? error.message : "Failed to deploy bot", "error");
