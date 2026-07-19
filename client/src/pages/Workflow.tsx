@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { trpc } from "@/lib/trpc";
 import { useLocation } from "wouter";
-import { Workflow, Play, GitBranch, ShieldCheck, FlaskConical, Bell, Search, Loader2, CheckCircle2 } from "lucide-react";
+import { Workflow, Play, GitBranch, ShieldCheck, FlaskConical, Bell, Search, Loader2, CheckCircle2, X, Radio, ChevronDown } from "lucide-react";
 import { pushTimeline } from "@/components/AITimeline";
 
 const PRESETS = [
@@ -32,25 +32,33 @@ export default function Workflow() {
   const [, navigate] = useLocation();
   const [running, setRunning] = useState<string | null>(null);
   const [log, setLog] = useState<string[]>([]);
+  const [symbol, setSymbol] = useState("R_100");
+  const [showSymbolMenu, setShowSymbolMenu] = useState(false);
   const watchMutation = trpc.signals.watch.useMutation();
   const notifyMutation = trpc.telegram.send.useMutation();
 
-  if (!isAuthenticated) { navigate("/login"); return null; }
+  const SYMBOLS = ["R_10", "R_25", "R_50", "R_75", "R_100", "1HZ10V", "1HZ15V", "1HZ25V", "1HZ50V", "1HZ75V", "1HZ100V"];
 
-  const runWorkflow = async (w: typeof PRESETS[0], symbol: string) => {
+  const mutateWithTimeout = <T,>(promise: Promise<T>, ms = 60000): Promise<T> =>
+    Promise.race([
+      promise,
+      new Promise<T>((_, reject) => setTimeout(() => reject(new Error("Request timed out")), ms)),
+    ]);
+
+  const runWorkflow = async (w: typeof PRESETS[0], sym: string) => {
     setRunning(w.id);
     setLog([]);
     const add = (m: string) => { setLog((l) => [...l, m]); pushTimeline({ icon: "ai", text: m }); };
-    add(`▶ Workflow "${w.name}" started on ${symbol}`);
+    add(`▶ Workflow "${w.name}" started on ${sym}`);
     for (const step of w.steps) {
       add(`• ${step.label}`);
       try {
         if (step.kind === "scan" || step.kind === "watch") {
-          const res: any = await watchMutation.mutateAsync({ symbol, durationMinutes: 30 });
+          const res: any = await mutateWithTimeout(watchMutation.mutateAsync({ symbol: sym, durationMinutes: 30 }));
           const found = res?.signalsFound ?? 0;
           add(`  ↳ Scan complete — ${found} pattern${found === 1 ? "" : "s"} found.`);
         } else if (step.kind === "notify") {
-          await notifyMutation.mutateAsync({ message: `369Labs workflow "${w.name}" finished on ${symbol}.` });
+          await mutateWithTimeout(notifyMutation.mutateAsync({ message: `369Labs workflow "${w.name}" finished on ${sym}.` }));
           add(`  ↳ Telegram notification sent.`);
         } else if (step.kind === "backtest") {
           add(`  ↳ Open /backtesting with a signal to run a backtest.`);
@@ -66,6 +74,8 @@ export default function Workflow() {
     add(`✓ Workflow complete. Review results in AI Signals / Bots.`);
     setRunning(null);
   };
+
+  if (!isAuthenticated) { navigate("/login"); return null; }
 
   return (
     <div className="min-h-screen bg-[#151B23] p-6">
@@ -92,8 +102,26 @@ export default function Workflow() {
                   </div>
                 ))}
               </div>
+              <div className="flex items-center gap-2 mb-3">
+                <label className="text-xs text-[#64748B] shrink-0">Symbol:</label>
+                <div className="relative flex-1">
+                  <button onClick={() => setShowSymbolMenu(!showSymbolMenu)} className="w-full bg-[#1E252D] border border-[#252B35] text-[#F59E0B] px-3 py-2 rounded-lg text-sm font-medium flex items-center justify-between hover:border-[#F59E0B]/50">
+                    {symbol}
+                    <ChevronDown className={`w-4 h-4 transition-transform ${showSymbolMenu ? "rotate-180" : ""}`} />
+                  </button>
+                  {showSymbolMenu && (
+                    <div className="absolute bottom-full left-0 right-0 mb-1 bg-[#151B23] border border-[#252B35] rounded-lg shadow-lg z-10 max-h-60 overflow-y-auto">
+                      {SYMBOLS.map((s) => (
+                        <button key={s} onClick={() => { setSymbol(s); setShowSymbolMenu(false); }} className={`w-full px-3 py-2 text-left text-sm ${symbol === s ? "bg-[#F59E0B]/20 text-[#F59E0B]" : "text-[#94A3B8] hover:text-white hover:bg-white/5"}`}>
+                          {s}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
               <button
-                onClick={() => runWorkflow(w, "R_100")}
+                onClick={() => runWorkflow(w, symbol)}
                 disabled={running === w.id}
                 className="w-full bg-[#22D3EE] hover:bg-[#22D3EE] text-white text-sm font-bold py-2.5 rounded-lg flex items-center justify-center gap-2"
               >
