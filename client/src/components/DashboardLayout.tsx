@@ -258,8 +258,8 @@ function DashboardLayoutContent({
 
           <SidebarContent className="py-2">
             {navGroups.map((group) => {
-              const sectionColor = group.title === "Workspace" ? "text-[#22BFC8]" : group.title === "Build" ? "text-[#E8A20E]" : group.title === "Operate" ? "text-[#7B61E8]" : "text-[#5A6878]";
-              const dotColor = group.title === "Workspace" ? "accent-dot-cyan" : group.title === "Build" ? "accent-dot-orange" : group.title === "Operate" ? "accent-dot-purple" : "accent-dot-green";
+              const sectionColor = group.title === "Workspace" ? "text-[#22BFC8]" : group.title === "Build" ? "text-[#E8A20E]" : group.title === "Operate" ? "text-[#22BFC8]" : "text-[#5A6878]";
+              const dotColor = group.title === "Workspace" ? "accent-dot-cyan" : group.title === "Build" ? "accent-dot-amber" : group.title === "Operate" ? "accent-dot-cyan" : "accent-dot-green";
               return (
               <div key={group.title} className="mb-1.5">
                 {!isCollapsed && (

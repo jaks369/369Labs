@@ -1,119 +1,118 @@
-# Architecture
+# Architecture (deep dive)
 
-This is the single source of truth for how 369Labs is built. Read this before
-contributing. If a diagram contradicts the code, the code wins — please open an
-issue.
+This document explains how 369Labs is wired internally: the request flow, the
+Deriv integration, the bot execution loop, and the AI/signal pipeline.
 
-## System overview
+## 1. Request & data flow
 
 ```
-                         ┌─────────────────────────────┐
-                         │        Browser (SPA)        │
-                         │  React + Vite (client/src)  │
-                         │  pages/ components/ services│
-                         └──────────────┬──────────────┘
-                    tRPC (HTTPS) │      │  Deriv WS (wss)
-                                    ▼      ▼
-                         ┌─────────────────────────────┐
-                         │   Node server (Express)     │
-                         │   server/_core/index.ts     │
-                         │   ├─ routers.ts (appRouter) │
-                         │   ├─ tickCollector / scanner │
-                         │   └─ aitools / db            │
-                         └───────┬───────────────┬──────┘
-                                 │               │
-                          ┌──────▼──────┐  ┌─────▼──────┐
-                          │ MySQL/TiDB  │  │ Deriv API  │
-                          │ (Drizzle)   │  │ (WS+REST)  │
-                          └─────────────┘  └────────────┘
+Browser ──tRPC (HTTPS)──► server/_core/index.ts (Express)
+                                │
+                                ├─ routers.ts (appRouter)
+                                │    auth, strategies, ai, signals, bots,
+                                │    tick, backtest, telegram, derivToken,
+                                │    audit, memory, logs, coding, plugins
+                                │
+                                ├─ db.ts ──► MySQL/TiDB (Drizzle)
+                                │
+                                └─ background: tickCollector, signalScanner, aitools
+
+Browser ──Deriv WS──► wss://ws.derivws.com/websockets/v3  (ticks, authorize, buy)
 ```
 
-## Component diagrams
+- The **client** is a Vite React SPA. All server calls go through the typed tRPC
+  client (`client/src/lib/trpc.ts`).
+- The **server** (`server/_core/index.ts`) is the template's Express + tRPC host.
+  Feature logic lives in `server/routers.ts`.
+- **Secrets never reach the client.** `DATABASE_URL`, `JWT_SECRET`, `ENCRYPTION_KEY`,
+  and AI keys are server-only. The Deriv token is encrypted at rest and used only by
+  the server/WS session.
 
-### Frontend
-```
-client/src/
-├── pages/        one component per route
-├── components/   DashboardLayout, CommandPalette, AITimeline, RuleBuilder, …
-├── services/     derivWebSocket, BotEngine, BacktestEngine, conditionEval
-├── _core/        template auth/session hooks (useAuth)
-├── lib/trpc.ts   tRPC client
-└── hooks/        shared client hooks
-```
+## 2. Auth & sessions
 
-### tRPC layer
-```
-Client (trpc.react-query)
-        │  typed procedures
-        ▼
-appRouter (server/routers.ts)
-   auth · strategies · ai · signals · bots · tick · backtest
-   telegram · derivToken · audit · memory · logs · coding · plugins
-        │
-        ▼
-ctx.user (JWT) ──► protectedProcedure
-        │
-        ▼
-db (Drizzle) · external APIs (Deriv, Groq)
-```
+- `server/_core/auth.ts` issues a JWT cookie on login/signup (`trpc.auth.*`).
+- `useAuth()` (`client/src/_core/hooks/useAuth.ts`) reads `auth.me` and exposes
+  `isAuthenticated`, `user`, `logout`.
+- `protectedProcedure` in `routers.ts` rejects unauthenticated requests.
 
-### Trading engine (current)
-```
-derivWS (WS singleton)
-   │ subscribe(symbol) ── ticks ──►
-BotEngine.start(config)
-   └─ onTick → tickHistory (ring buffer)
-        └─ evaluateStrategy()
-             ├─ conditionEval tree (all/any/not)
-             ├─ legacy rule.condition
-             └─ ensemble vote
-        └─ executeTrade()
-             └─ purchaseContract → subscribeToContract
-                  └─ handleContractUpdate → settle, SL/TP
-```
-> See [trading-engine.md](trading-engine.md) and the planned `engine/` refactor.
+## 3. Deriv integration
 
-### Database
-```
-users · derivTokens · strategies · trades · botRuns
-telegramSettings · notificationSettings · tickHistory
-signals · auditLogs · userMemory · plugins · pluginInstalls · jobs
-```
-Accessed only via `server/db.ts` (Drizzle). Schema: `drizzle/schema.ts`.
+Two paths:
 
-### Deriv API
-```
-Browser ──wss://ws.derivws.com/websockets/v3──► Deriv
-  ticks (stream) · authorize (token) · proposal · buy
-  proposal_open_contract (settle) · active_symbols · balance
-```
-Real-money requires `derivWS.isConnected() && isAuthorized()`; otherwise demo mode.
+1. **Server-side** (`server/_core`, `derivToken` router): stores/encrypts the user's
+   Deriv token, used for validation.
+2. **Client-side** (`client/src/services/derivWebSocket.ts`): a singleton
+   `derivWS` opens the WS, subscribes to ticks per symbol, authorizes with the
+   user's token, and executes trades (`purchaseContract`, `subscribeToContract`).
 
-### Background jobs
+Real-money actions require `derivWS.isConnected() && isAuthorized()`. Otherwise the
+bot engine reports demo/offline mode.
+
+## 4. Bot execution loop
+
+`client/src/services/BotEngine.ts`:
+
 ```
-tickCollector      – stream & persist ticks
-signalScanner      – AI scan for repeatable patterns → signals table
-aitools            – 369AI chat, critique, deploy/draft
-(planned) jobs     – reconnects, balance sync, market refresh, AI analysis, notify
+start(config)
+  └─ derivWS.subscribe(symbol)
+  └─ on each tick:
+       tickHistory.push(tick)            // capped ring buffer
+       if hasOpenTrade: return           // never stack trades
+       if evaluateStrategy(): executeTrade()
+                                     │
+                                     ├─ actionToContract(rule)  -> DerivContractType
+                                     ├─ derivWS.purchaseContract(...)
+                                     └─ derivWS.subscribeToContract(contractId, onUpdate)
+                                           └─ onUpdate(is_sold): settle, update PnL,
+                                              apply SL/TP stop rules
 ```
 
-## Request lifecycle (auth)
-```
-login ─► JWT cookie ─► useAuth() ─► protectedProcedure(ctx.user) ─► router logic
-```
+Condition evaluation (`client/src/services/conditionEval.ts`) supports:
+- composable trees: `{ all: [...] }`, `{ any: [...] }`, `{ not: {...} }`
+- leaf predicates: `digit_over/under/even/odd`, `parity`, `last_digit`,
+  `consecutive_rise/fall`, `loss_streak`
+- legacy flat `rule.condition` (digit/parity/consecutive indicators)
+- ensemble vote across sub-strategies
 
-## How a trade flows
-1. User deploys a strategy → `bots.start` → `BotEngine` subscribes to symbol ticks.
-2. Each tick is evaluated against the rule (tree / flat / ensemble).
-3. On trigger, if authorized: `proposal` → `buy` → subscribe to contract.
-4. On `proposal_open_contract` settle: update PnL, apply SL/TP stop rules.
-5. If not authorized: demo/offline mode, no fabricated results.
+## 5. Backtesting
 
-## Principles
-- **Secrets never reach the client.** DB/JWT/encryption/AI keys are server-only.
-- **One executable strategy shape.** The bot engine runs `rule` only.
-- **Fail safe.** No token → demo mode; bad external call → classified error.
-- **Audit everything sensitive.** See `auditLogs` + Observability page.
+`client/src/services/BacktestEngine.ts`:
+- Fetches a tick window via `derivWS.fetchTickHistory(symbol, start, end)`.
+- Replays ticks, evaluating the rule on a rolling history, simulating each triggered
+  trade against the next tick.
+- Returns trades, win rate, total P&L, max drawdown, equity curve.
+- Parameter sweep iterates `barrier` / `count` / `stake` ranges on the same window.
 
-Next: [trading-engine.md](trading-engine.md) · [api.md](api.md) ·
-[deployment.md](deployment.md) · [security.md](security.md)
+Limitations: next-tick fill assumption; no slippage/spread/commission modeling.
+
+## 6. AI & signals
+
+- `server/aitools.ts` + `routers.ts` (`ai.*`): the 369AI chat, strategy critique,
+  deploy/draft flows. Uses `AI_API_KEY` (Groq, `llama-3.3-70b-versatile`).
+- `server/signalScanner.ts`: scans recent ticks for repeatable digit/pattern signals
+  and persists them to the `signals` table (with `winRate`, `confidence`,
+  `sampleSize`, `expiresAt`). The Marketplace shows them and can deploy/backtest.
+- **AI Memory** (`userMemory` table): a per-user trader profile (symbols, risk %,
+  no-martingale, style, notes) injected into AI prompts so 369AI remembers context.
+
+## 7. Observability & audit
+
+- `AITimeline` is a client-side event bus (`window` CustomEvent) showing live agent
+  activity in the sidebar and on the Logs page.
+- `auditLogs` table records sensitive actions (token add, strategy edit, bot
+  start/stop, SL change, coding writes, plugin install). `trpc.logs.recent` exposes
+  them on the Observability page.
+
+## 8. Plugins
+
+- `plugins` + `pluginInstalls` tables. `server/db.ts` seeds a marketplace of hooks
+  (martingale guard, daily PnL cap, signal booster, recap, volatility watchdog).
+- Users install/enable via `trpc.plugins.*`; enabled plugin ids are tracked in AI
+  Memory for the event bus to consume.
+
+## 9. In-app coding
+
+- `server/fileOps.ts` exposes a **scoped** read/write layer (only `client/`,
+  `server/`, `shared/`, `drizzle/`, plus config files). `trpc.coding.*` lets the
+  Coding page browse and edit files on disk. Writes are audit-logged. This is a
+  power-user tool, not a replacement for git.
