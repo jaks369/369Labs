@@ -63,7 +63,7 @@ export default function Replay() {
     if (!trade || !cur) return;
     const win = (closeType === "rise" && cur.price > trade.entryPrice) || (closeType === "fall" && cur.price < trade.entryPrice);
     const pnl = win ? 0.95 : -1;
-    setResults((r) => [{ type: `${trade.type} → close ${closeType}`, pnl, at: new Date(cur.epoch * 1000).toLocaleTimeString() }, ...r].slice(0, 20));
+    setResults((r) => [{ type: `${trade.type} â†’ close ${closeType}`, pnl, at: new Date(cur.epoch * 1000).toLocaleTimeString() }, ...r].slice(0, 20));
     setTrade(null);
   };
 
@@ -73,7 +73,7 @@ export default function Replay() {
         <div className="flex items-center justify-between flex-wrap gap-4">
           <div>
             <h1 className="text-3xl font-bold text-white flex items-center gap-3">
-              <RotateCcw className="w-7 h-7 text-[#FBBF24]" /> Replay Mode
+              <RotateCcw className="w-7 h-7 text-[#F5B80B]" /> Replay Mode
             </h1>
             <p className="text-[#94A3B8] text-sm mt-1">Replay historical ticks. Trade manually and let 369AI score your decision.</p>
           </div>
@@ -82,8 +82,8 @@ export default function Replay() {
           </select>
         </div>
 
-        {error && <div className="bg-[#EF4444]/10 border border-[#EF4444]/30 rounded-xl p-4 text-sm text-[#EF4444]">{error}</div>}
-        {loading && <div className="flex items-center justify-center h-64"><Loader2 className="w-8 h-8 animate-spin text-[#F59E0B]" /></div>}
+        {error && <div className="bg-[#DC3545]/10 border border-[#DC3545]/30 rounded-xl p-4 text-sm text-[#DC3545]">{error}</div>}
+        {loading && <div className="flex items-center justify-center h-64"><Loader2 className="w-8 h-8 animate-spin text-[#E8A20E]" /></div>}
 
         {!loading && ticks.length > 0 && (
           <>
@@ -92,11 +92,11 @@ export default function Replay() {
                 <div>
                   <p className="text-xs text-[#64748B] uppercase">Replaying</p>
                   <p className="text-3xl font-bold text-white">{cur?.price?.toFixed(4)}</p>
-                  <p className="text-xs text-[#64748B]">{cur ? new Date(cur.epoch * 1000).toLocaleString() : ""} · tick {idx + 1}/{ticks.length}</p>
+                  <p className="text-xs text-[#64748B]">{cur ? new Date(cur.epoch * 1000).toLocaleString() : ""} Â· tick {idx + 1}/{ticks.length}</p>
                 </div>
                 <div className="text-right">
                   <p className="text-xs text-[#64748B] uppercase">Last digit</p>
-                  <p className="text-4xl font-bold text-[#F59E0B]">{cur?.lastDigit}</p>
+                  <p className="text-4xl font-bold text-[#E8A20E]">{cur?.lastDigit}</p>
                 </div>
               </div>
 
@@ -104,7 +104,7 @@ export default function Replay() {
 
               <div className="flex items-center gap-3 mt-4">
                 <button onClick={() => { setIdx(0); setPlaying(false); }} className="p-2 rounded-lg bg-white/5 text-[#94A3B8] hover:bg-white/10"><RotateCcw className="w-4 h-4" /></button>
-                <button onClick={() => setPlaying((p) => !p)} className="p-2 rounded-lg bg-[#F59E0B] text-white hover:bg-[#F59E0B]">
+                <button onClick={() => setPlaying((p) => !p)} className="p-2 rounded-lg bg-[#E8A20E] text-white hover:bg-[#E8A20E]">
                   {playing ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
                 </button>
                 <input type="range" min={0} max={ticks.length - 1} value={idx} onChange={(e) => { setPlaying(false); setIdx(Number(e.target.value)); }} className="flex-1" />
@@ -121,10 +121,10 @@ export default function Replay() {
               <div className="bg-[#151B23] border border-[#252B35] rounded-xl p-6">
                 <h2 className="text-sm font-bold text-white mb-4">Manual Trade</h2>
                 <div className="flex gap-3">
-                  <button onClick={() => takeTrade("rise")} className={`flex-1 py-3 rounded-lg flex items-center justify-center gap-2 font-bold ${trade?.type === "rise" ? "bg-[#22C55E] text-white" : "bg-[#22C55E]/10 text-[#22C55E] border border-[#22C55E]/30"}`}>
+                  <button onClick={() => takeTrade("rise")} className={`flex-1 py-3 rounded-lg flex items-center justify-center gap-2 font-bold ${trade?.type === "rise" ? "bg-[#28A745] text-white" : "bg-[#28A745]/10 text-[#28A745] border border-[#28A745]/30"}`}>
                     <TrendingUp className="w-4 h-4" /> {trade ? "Close" : "Buy Rise"}
                   </button>
-                  <button onClick={() => takeTrade("fall")} className={`flex-1 py-3 rounded-lg flex items-center justify-center gap-2 font-bold ${trade?.type === "fall" ? "bg-[#EF4444] text-white" : "bg-[#EF4444]/10 text-[#EF4444] border border-[#EF4444]/30"}`}>
+                  <button onClick={() => takeTrade("fall")} className={`flex-1 py-3 rounded-lg flex items-center justify-center gap-2 font-bold ${trade?.type === "fall" ? "bg-[#DC3545] text-white" : "bg-[#DC3545]/10 text-[#DC3545] border border-[#DC3545]/30"}`}>
                     <TrendingDown className="w-4 h-4" /> {trade ? "Close" : "Buy Fall"}
                   </button>
                 </div>
@@ -133,12 +133,12 @@ export default function Replay() {
 
               <div className="bg-[#151B23] border border-[#252B35] rounded-xl p-6">
                 <h2 className="text-sm font-bold text-white mb-4">Your Decisions</h2>
-                {results.length === 0 ? <p className="text-sm text-[#64748B]">No trades yet — replay and take a position.</p> : (
+                {results.length === 0 ? <p className="text-sm text-[#64748B]">No trades yet â€” replay and take a position.</p> : (
                   <div className="space-y-1.5 max-h-64 overflow-y-auto font-mono text-xs">
                     {results.map((r, i) => (
                       <div key={i} className="flex justify-between p-2 bg-black/20 rounded-lg">
                         <span className="text-[#94A3B8]">{r.type} <span className="text-[#64748B]">@ {r.at}</span></span>
-                        <span className={r.pnl >= 0 ? "text-[#22C55E]" : "text-[#EF4444]"}>{r.pnl >= 0 ? "+" : ""}{r.pnl.toFixed(2)}</span>
+                        <span className={r.pnl >= 0 ? "text-[#28A745]" : "text-[#DC3545]"}>{r.pnl >= 0 ? "+" : ""}{r.pnl.toFixed(2)}</span>
                       </div>
                     ))}
                   </div>

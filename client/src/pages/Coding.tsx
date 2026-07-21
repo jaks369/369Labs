@@ -9,9 +9,9 @@ export default function Coding() {
   const { isAuthenticated } = useAuth();
   const [, navigate] = useLocation();
   const filesQuery = trpc.coding.list.useQuery();
-  const readMutation = trpc.coding.read.useMutation();
-  const writeMutation = trpc.coding.write.useMutation();
-  const askMutation = trpc.ai.ask.useMutation();
+  const readMutation = (trpc.coding.read as any).useMutation();
+  const writeMutation = (trpc.coding.write as any).useMutation();
+  const askMutation = (trpc.ai.ask as any).useMutation();
 
   const [selected, setSelected] = useState<string | null>(null);
   const [content, setContent] = useState("");
@@ -61,7 +61,7 @@ export default function Coding() {
       <div className="max-w-6xl mx-auto space-y-4">
         <div>
           <h1 className="text-3xl font-bold text-white flex items-center gap-3">
-            <Code2 className="w-7 h-7 text-[#22C55E]" /> AI Coding Mode
+            <Code2 className="w-7 h-7 text-[#28A745]" /> AI Coding Mode
           </h1>
           <p className="text-[#94A3B8] text-sm mt-1">Read, edit and let 369AI refactor project files. Changes write to disk (scoped to client/server/shared).</p>
         </div>
@@ -74,13 +74,13 @@ export default function Coding() {
                 key={f}
                 onClick={() => openFile(f)}
                 className={`w-full text-left text-xs px-2 py-1.5 rounded flex items-center gap-2 truncate ${
-                  selected === f ? "bg-[#22C55E]/15 text-[#22C55E]" : "text-[#94A3B8] hover:bg-white/5"
+                  selected === f ? "bg-[#28A745]/15 text-[#28A745]" : "text-[#94A3B8] hover:bg-white/5"
                 }`}
               >
                 <FileText className="w-3 h-3 shrink-0" /> <span className="truncate">{f}</span>
               </button>
             ))}
-            {filesQuery.isLoading && <p className="text-xs text-[#64748B] p-2">Loading…</p>}
+            {filesQuery.isLoading && <p className="text-xs text-[#64748B] p-2">Loadingâ€¦</p>}
           </div>
 
           <div className="lg:col-span-3 space-y-3">
@@ -89,7 +89,7 @@ export default function Coding() {
               <button
                 onClick={save}
                 disabled={!selected || !dirty || writeMutation.isPending}
-                className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[#22C55E] text-white text-xs font-bold disabled:opacity-40 hover:bg-[#22C55E]"
+                className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[#28A745] text-white text-xs font-bold disabled:opacity-40 hover:bg-[#28A745]"
               >
                 {writeMutation.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
                 Save
@@ -99,13 +99,13 @@ export default function Coding() {
               value={content}
               onChange={(e) => { setContent(e.target.value); setDirty(true); }}
               spellCheck={false}
-              className="w-full h-[45vh] bg-[#151B23] border border-[#252B35] rounded-xl p-4 text-xs font-mono text-[#94A3B8] outline-none focus:border-[#22C55E]/50 resize-none"
-              placeholder="Open a file to edit…"
+              className="w-full h-[45vh] bg-[#151B23] border border-[#252B35] rounded-xl p-4 text-xs font-mono text-[#94A3B8] outline-none focus:border-[#28A745]/50 resize-none"
+              placeholder="Open a file to editâ€¦"
             />
 
             <div className="bg-[#151B23] border border-[#252B35] rounded-xl p-4 space-y-3">
               <div className="flex items-center gap-2 text-sm text-[#94A3B8]">
-                <Sparkles className="w-4 h-4 text-[#22D3EE]" /> Ask 369AI to modify this file
+                <Sparkles className="w-4 h-4 text-[#22BFC8]" /> Ask 369AI to modify this file
               </div>
               <div className="flex gap-2">
                 <input
@@ -113,9 +113,9 @@ export default function Coding() {
                   onChange={(e) => setPrompt(e.target.value)}
                   onKeyDown={(e) => { if (e.key === "Enter") askAI(); }}
                   placeholder="e.g. extract the win-rate calc into a helper"
-                  className="flex-1 bg-[#151B23] border border-[#252B35] rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-[#22D3EE]"
+                  className="flex-1 bg-[#151B23] border border-[#252B35] rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-[#22BFC8]"
                 />
-                <button onClick={askAI} disabled={askMutation.isPending || !selected} className="flex items-center gap-1 px-3 py-2 rounded-lg bg-[#22D3EE] text-black text-xs font-bold disabled:opacity-40 hover:bg-[#22D3EE]">
+                <button onClick={askAI} disabled={askMutation.isPending || !selected} className="flex items-center gap-1 px-3 py-2 rounded-lg bg-[#22BFC8] text-black text-xs font-bold disabled:opacity-40 hover:bg-[#22BFC8]">
                   {askMutation.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />} Ask
                 </button>
               </div>

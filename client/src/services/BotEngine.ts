@@ -22,6 +22,7 @@ export interface BotTrade {
   result: "win" | "loss" | "open";
   timestamp: Date;
   contractId?: number;
+  contractType?: string;
 }
 
 // Maps the no-code rule's action into a real Deriv contract type + params.
@@ -60,6 +61,7 @@ export class BotEngine {
   // or "3 consecutive rises". Capped so memory doesn't grow unbounded on long runs.
   private tickHistory: Tick[] = [];
   private readonly historyLimit = 200;
+  private lossStreak = 0;
 
   private onStatusChange?: (status: BotStatus) => void;
   private onTick?: (tick: Tick) => void;
@@ -131,7 +133,7 @@ export class BotEngine {
   }
 
   private lastDigit(price: number): number {
-    const decimals = this.config?.decimalPlaces ?? derivWS.decimalPlacesFor(this.config.symbol);
+    const decimals = this.config?.decimalPlaces ?? derivWS.decimalPlacesFor(this.config?.symbol ?? "R_100");
     const fixed = price.toFixed(decimals);
     return parseInt(fixed[fixed.length - 1], 10);
   }

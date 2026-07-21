@@ -25,7 +25,7 @@ export default function Logs() {
       <div className="max-w-5xl mx-auto space-y-6">
         <div>
           <h1 className="text-3xl font-bold text-white flex items-center gap-3">
-            <Terminal className="w-7 h-7 text-[#22C55E]" /> Observability
+            <Terminal className="w-7 h-7 text-[#28A745]" /> Observability
           </h1>
           <p className="text-[#94A3B8] text-sm mt-1">Live agent activity, audit trail, and system events.</p>
         </div>
@@ -33,7 +33,7 @@ export default function Logs() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <div className="bg-[#151B23] border border-[#252B35] rounded-xl p-6">
             <h2 className="text-sm font-bold text-white mb-4 flex items-center gap-2">
-              <Activity className="w-4 h-4 text-[#22D3EE]" /> Live Agent Activity
+              <Activity className="w-4 h-4 text-[#22BFC8]" /> Live Agent Activity
             </h2>
             <AITimeline />
           </div>
@@ -50,8 +50,8 @@ export default function Logs() {
                     <div key={i} className="flex items-start gap-2 p-2 bg-black/20 rounded-lg">
                       <Icon className="w-3.5 h-3.5 text-[#94A3B8] mt-0.5 shrink-0" />
                       <div className="flex-1 min-w-0">
-                        <span className="text-[#22C55E]">{l.action}</span>
-                        {l.target && <span className="text-[#64748B]"> · {l.target}</span>}
+                        <span className="text-[#28A745]">{l.action}</span>
+                        {l.target && <span className="text-[#64748B]"> Â· {l.target}</span>}
                       </div>
                       <span className="text-[#64748B] tabular-nums shrink-0">
                         {new Date(l.at).toLocaleString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}

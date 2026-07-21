@@ -26,7 +26,7 @@ export default function TelegramSettings() {
   if (!isAuthenticated) { navigate("/login"); return null; }
 
   const handleSave = async () => {
-    await saveMutation.mutateAsync({ botToken, chatId: chatId || undefined });
+    await saveMutation.mutateAsync({ botToken, chatId: chatId ?? "" });
     setSaved(true);
     setTimeout(() => setSaved(false), 3000);
   };
@@ -39,16 +39,16 @@ export default function TelegramSettings() {
             <h1 className="text-3xl font-bold text-white">Telegram Integration</h1>
             <p className="text-[#94A3B8] text-sm mt-1">Receive trade alerts and bot notifications on Telegram</p>
           </div>
-          <MessageCircle className="w-6 h-6 text-[#F59E0B]" />
+          <MessageCircle className="w-6 h-6 text-[#E8A20E]" />
         </div>
 
         {settingsQuery.isLoading ? (
-          <div className="flex items-center justify-center h-64"><Loader2 className="w-8 h-8 animate-spin text-[#F59E0B]" /></div>
+          <div className="flex items-center justify-center h-64"><Loader2 className="w-8 h-8 animate-spin text-[#E8A20E]" /></div>
         ) : (
           <div className="bg-[#151B23] border border-[#252B35] rounded-xl p-6 space-y-6">
-            <div className="p-4 bg-[#F59E0B]/10 border border-[#F59E0B]/20 rounded-xl flex items-start gap-3">
-              <AlertCircle className="w-5 h-5 text-[#F59E0B] shrink-0 mt-0.5" />
-              <div className="text-xs text-[#F59E0B]">
+            <div className="p-4 bg-[#E8A20E]/10 border border-[#E8A20E]/20 rounded-xl flex items-start gap-3">
+              <AlertCircle className="w-5 h-5 text-[#E8A20E] shrink-0 mt-0.5" />
+              <div className="text-xs text-[#E8A20E]">
                 <p className="font-bold mb-1">How to set up:</p>
                 <ol className="list-decimal ml-4 space-y-1">
                   <li>Create a bot on Telegram via <strong>@BotFather</strong> and copy the token</li>
@@ -81,11 +81,11 @@ export default function TelegramSettings() {
             </div>
 
             <div className="flex items-center gap-4">
-              <Button onClick={handleSave} disabled={saveMutation.isPending || !botToken} className="bg-[#F59E0B] hover:bg-[#F59E0B] text-white">
+              <Button onClick={handleSave} disabled={saveMutation.isPending || !botToken} className="bg-[#E8A20E] hover:bg-[#E8A20E] text-white">
                 {saveMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Send className="w-4 h-4 mr-2" />}
                 Save & Connect
               </Button>
-              {saved && <span className="flex items-center gap-1 text-[#22C55E] text-sm font-bold"><CheckCircle2 className="w-4 h-4" /> Connected</span>}
+              {saved && <span className="flex items-center gap-1 text-[#28A745] text-sm font-bold"><CheckCircle2 className="w-4 h-4" /> Connected</span>}
             </div>
           </div>
         )}

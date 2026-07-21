@@ -304,7 +304,7 @@ class DerivWebSocketService {
     if (this.authorized) this.fetchBalance();
   }
   public onSymbols(cb: (symbols: DerivSymbol[]) => void): void { this.symbolListeners.add(cb); if (this._activeSymbols.length > 0) cb(this._activeSymbols); }
-  public onTokenError(cb: (msg: string) => void): void { this.tokenListeners.add(cb); }
+  public onTokenError(cb: (msg: string) => void): () => void { this.tokenListeners.add(cb); return () => this.tokenListeners.delete(cb); }
   public get activeSymbols(): DerivSymbol[] { return this._activeSymbols; }
   public getSymbol(symbol: string): DerivSymbol | undefined { return this._activeSymbols.find(s => s.symbol === symbol); }
   public getRecentTicks(symbol: string, limit = 100): Tick[] {

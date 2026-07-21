@@ -22,7 +22,7 @@ export default function CloudBots() {
     try {
       await stopRunMutation.mutateAsync({ id, status: "stopped" });
     } catch {
-      // Non-fatal — refresh to reflect current state.
+      // Non-fatal â€” refresh to reflect current state.
       botRunsQuery.refetch();
     } finally {
       setStoppingId(null);
@@ -43,7 +43,7 @@ export default function CloudBots() {
         </div>
 
         {botRunsQuery.isLoading ? (
-          <div className="flex items-center justify-center h-64"><Loader2 className="w-8 h-8 animate-spin text-[#F59E0B]" /></div>
+          <div className="flex items-center justify-center h-64"><Loader2 className="w-8 h-8 animate-spin text-[#E8A20E]" /></div>
         ) : bots.length === 0 ? (
           <div className="text-center py-20">
             <Cloud className="w-12 h-12 text-[#252B35] mx-auto mb-4" />
@@ -54,29 +54,29 @@ export default function CloudBots() {
             {bots.map(bot => (
               <div key={bot.id} className="bg-[#151B23] border border-[#252B35] rounded-xl p-5 flex items-center justify-between">
                 <div className="flex items-center gap-4">
-                  <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${bot.status === "running" ? "bg-[#22C55E]/10" : "bg-[#151B23]"}`}>
-                    <Server className={`w-5 h-5 ${bot.status === "running" ? "text-[#22C55E]" : "text-[#64748B]"}`} />
+                  <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${bot.status === "running" ? "bg-[#28A745]/10" : "bg-[#151B23]"}`}>
+                    <Server className={`w-5 h-5 ${bot.status === "running" ? "text-[#28A745]" : "text-[#64748B]"}`} />
                   </div>
                   <div>
                     <h3 className="font-bold text-white">Bot Run #{bot.id}</h3>
                     <div className="flex items-center gap-3 text-xs text-[#64748B] mt-1">
                       <span className="flex items-center gap-1"><Clock className="w-3 h-3" /> {new Date(bot.startTime).toLocaleDateString()}</span>
                       <span className="flex items-center gap-1"><Activity className="w-3 h-3" /> {bot.totalTrades} trades</span>
-                      <span className={`font-bold ${parseFloat(bot.totalProfitLoss?.toString() || "0") >= 0 ? "text-[#22C55E]" : "text-[#EF4444]"}`}>
+                      <span className={`font-bold ${parseFloat(bot.totalProfitLoss?.toString() || "0") >= 0 ? "text-[#28A745]" : "text-[#DC3545]"}`}>
                         ${bot.totalProfitLoss}
                       </span>
                     </div>
                   </div>
                 </div>
                 <div className="flex items-center gap-3">
-                  <span className={`text-xs font-bold uppercase ${bot.status === "running" ? "text-[#22C55E]" : "text-[#64748B]"}`}>
+                  <span className={`text-xs font-bold uppercase ${bot.status === "running" ? "text-[#28A745]" : "text-[#64748B]"}`}>
                     {bot.status}
                   </span>
                   {bot.status === "running" && (
                     <button
                       onClick={() => handleStop(bot.id)}
                       disabled={stoppingId === bot.id}
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[#EF4444]/30 text-[#EF4444] hover:bg-[#EF4444]/10 text-xs font-bold transition-colors disabled:opacity-50"
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[#DC3545]/30 text-[#DC3545] hover:bg-[#DC3545]/10 text-xs font-bold transition-colors disabled:opacity-50"
                     >
                       {stoppingId === bot.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <PowerOff className="w-3.5 h-3.5" />}
                       Stop

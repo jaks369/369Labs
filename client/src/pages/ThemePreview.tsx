@@ -36,7 +36,7 @@ const PALETTES: P[] = [
     muted: "#C7C7C7",
     accent: "#FF5FA2",
     accent2: "#A855F7",
-    accent3: "#22D3EE",
+    accent3: "#22BFC8",
     profit: "#34D399",
     loss: "#FF6B6B",
     warning: "#FB923C",
@@ -54,11 +54,11 @@ const PALETTES: P[] = [
     text: "#FFFFFF",
     muted: "#9CA3AF",
     accent: "#FB923C",
-    accent2: "#22C55E",
+    accent2: "#28A745",
     accent3: "#FB923C",
-    profit: "#22C55E",
-    loss: "#EF4444",
-    warning: "#F59E0B",
+    profit: "#28A745",
+    loss: "#DC3545",
+    warning: "#E8A20E",
     headingFont: "Inter, system-ui, sans-serif",
     radius: "16px",
     shadow: "0 8px 30px rgba(0,0,0,0.4)",
@@ -74,10 +74,10 @@ const PALETTES: P[] = [
     muted: "#94A3B8",
     accent: "#14B8A6",
     accent2: "#3B82F6",
-    accent3: "#22C55E",
-    profit: "#22C55E",
-    loss: "#EF4444",
-    warning: "#F59E0B",
+    accent3: "#28A745",
+    profit: "#28A745",
+    loss: "#DC3545",
+    warning: "#E8A20E",
     headingFont: "Inter, system-ui, sans-serif",
     radius: "6px",
     shadow: "none",
@@ -197,10 +197,10 @@ export default function ThemePreview() {
       <div className="max-w-6xl mx-auto">
         <div className="flex items-center justify-between mb-8">
           <div>
-            <h1 className="text-3xl font-bold">369Labs — Palette Preview</h1>
+            <h1 className="text-3xl font-bold">369Labs â€” Palette Preview</h1>
             <p className="text-slate-400 text-sm mt-1">Pick the direction for the redesign. Chosen: <b className="text-white">{chosen ?? "none"}</b></p>
           </div>
-          <button onClick={() => navigate("/dashboard")} className="text-sm text-slate-400 hover:text-white">← Back</button>
+          <button onClick={() => navigate("/dashboard")} className="text-sm text-slate-400 hover:text-white">â† Back</button>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -216,7 +216,7 @@ export default function ThemePreview() {
                   className="text-xs px-3 py-1.5 rounded-lg font-bold border"
                   style={{ borderColor: chosen === p.name ? p.accent : "#232A36", color: chosen === p.name ? p.accent : "#8B95A7", background: chosen === p.name ? "rgba(255,255,255,0.06)" : "transparent" }}
                 >
-                  {chosen === p.name ? "✓ Selected" : "Select"}
+                  {chosen === p.name ? "âœ“ Selected" : "Select"}
                 </button>
               </div>
               {render(p)}

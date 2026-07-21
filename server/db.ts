@@ -34,6 +34,10 @@ import {
   passwordResetTokens,
   PasswordResetToken,
   chatMessages,
+  aiKnowledge,
+  AiKnowledge,
+  InsertAiKnowledge,
+  AiKnowledgeResult,
 } from "../drizzle/schema";
 import { ENV } from './_core/env';
 import { encrypt, decrypt } from './_core/encryption';
@@ -268,6 +272,32 @@ export async function getTradesByUserId(userId: number, limit: number = 50): Pro
   if (!db) return [];
   
   return db.select().from(trades).where(eq(trades.userId, userId)).orderBy(desc(trades.updatedAt)).limit(limit);
+}
+
+export async function getAccountByUserId(userId: number): Promise<{ balance: string } | null> {
+  return null;
+}
+
+export async function getAiKnowledge(userId: number, knowledgeType: string, limit: number = 50): Promise<AiKnowledgeResult[]> {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(aiKnowledge)
+    .where(and(eq(aiKnowledge.userId, userId), eq(aiKnowledge.knowledgeType, knowledgeType)))
+    .orderBy(desc(aiKnowledge.createdAt)).limit(limit);
+}
+
+export async function saveAiKnowledge(data: InsertAiKnowledge): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+  await db.insert(aiKnowledge).values(data);
+}
+
+export async function getAiKnowledgeByRelatedTradeId(userId: number, tradeId: number): Promise<AiKnowledgeResult[]> {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(aiKnowledge)
+    .where(and(eq(aiKnowledge.userId, userId), eq(aiKnowledge.relatedTradeId, tradeId)))
+    .orderBy(desc(aiKnowledge.createdAt)).limit(20);
 }
 
 export async function saveBotRun(botRun: InsertBotRun): Promise<BotRun> {

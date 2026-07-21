@@ -40,15 +40,15 @@ export default function DerivTokenModal({ open, onClose }: Props) {
           <div>
             <label className="text-xs font-bold text-[#64748B] block mb-2">Deriv API Token</label>
             <Input type="text" autoComplete="off" placeholder={preview ? 'Enter new token' : 'Paste your Deriv API token'} value={token} onChange={e => { setToken(e.target.value); setStatus('idle'); setMsg(''); }} className="bg-[#151B23] border-[#252B35] text-white" />
-            {preview && <p className="text-xs text-[#22C55E] mt-1">Current: {preview}</p>}
+            {preview && <p className="text-xs text-[#28A745] mt-1">Current: {preview}</p>}
             <p className="text-xs text-[#64748B] mt-2">Get token from app.deriv.com/account/api-token</p>
           </div>
-          {status === 'ok' && <div className="flex items-center gap-2 text-[#22C55E] text-sm"><CheckCircle2 className="w-4 h-4" />{msg}</div>}
-          {status === 'error' && <div className="flex items-center gap-2 text-[#EF4444] text-sm"><AlertCircle className="w-4 h-4" />{msg}</div>}
+          {status === 'ok' && <div className="flex items-center gap-2 text-[#28A745] text-sm"><CheckCircle2 className="w-4 h-4" />{msg}</div>}
+          {status === 'error' && <div className="flex items-center gap-2 text-[#DC3545] text-sm"><AlertCircle className="w-4 h-4" />{msg}</div>}
           <div className="flex gap-3">
             <Button onClick={save} disabled={m.isPending || !token} className="flex-1 btn-primary">{m.isPending ? 'SAVING...' : 'SAVE & CONNECT'}</Button>
             {preview && (
-              <Button onClick={forget} disabled={rm.isPending} className="btn-outline gap-2 text-[#EF4444] border-[#EF4444]/40 hover:bg-[#EF4444]/10">
+              <Button onClick={forget} disabled={rm.isPending} className="btn-outline gap-2 text-[#DC3545] border-[#DC3545]/40 hover:bg-[#DC3545]/10">
                 <Trash2 className="w-4 h-4" /> Forget
               </Button>
             )}

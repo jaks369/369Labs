@@ -22,9 +22,9 @@ export default function Journal() {
       <div className="max-w-3xl mx-auto space-y-6">
         <div>
           <h1 className="text-3xl font-bold text-white flex items-center gap-3">
-            <BookOpen className="w-7 h-7 text-[#F59E0B]" /> Trading Journal
+            <BookOpen className="w-7 h-7 text-[#E8A20E]" /> Trading Journal
           </h1>
-          <p className="text-[#94A3B8] text-sm mt-1">369AI explains WHY your trades won or lost — educational, data-driven.</p>
+          <p className="text-[#94A3B8] text-sm mt-1">369AI explains WHY your trades won or lost â€” educational, data-driven.</p>
         </div>
 
         <div className="bg-[#151B23] border border-[#252B35] rounded-xl p-6 space-y-4">
@@ -44,10 +44,10 @@ export default function Journal() {
           <button
             onClick={runJournal}
             disabled={journalMutation.isPending}
-            className="w-full bg-[#F59E0B] hover:bg-[#F59E0B] text-black text-sm font-bold py-2.5 rounded-lg flex items-center justify-center gap-2"
+            className="w-full bg-[#E8A20E] hover:bg-[#E8A20E] text-black text-sm font-bold py-2.5 rounded-lg flex items-center justify-center gap-2"
           >
             {journalMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
-            {journalMutation.isPending ? "Analyzing trades…" : "Generate AI Journal"}
+            {journalMutation.isPending ? "Analyzing tradesâ€¦" : "Generate AI Journal"}
           </button>
         </div>
 
@@ -59,7 +59,7 @@ export default function Journal() {
           </div>
         )}
         {journalMutation.isError && (
-          <div className="bg-[#EF4444]/10 border border-[#EF4444]/30 rounded-xl p-4 text-sm text-[#EF4444]">
+          <div className="bg-[#DC3545]/10 border border-[#DC3545]/30 rounded-xl p-4 text-sm text-[#DC3545]">
             Could not generate journal. Make sure you have trades and AI is configured.
           </div>
         )}

@@ -26,7 +26,7 @@ function newLeaf(): LeafCondition {
 
 function LeafEditor({ leaf, onChange, onRemove }: { leaf: LeafCondition; onChange: (l: LeafCondition) => void; onRemove?: () => void }) {
   return (
-    <div className="flex flex-wrap items-center gap-2 bg-[#0B0F14] border border-[#252B35] rounded p-2">
+    <div className="flex flex-wrap items-center gap-2 bg-[#0A0E14] border border-[#252B35] rounded p-2">
       <select
         value={leaf.indicator}
         onChange={(e) => onChange({ ...leaf, indicator: e.target.value as LeafCondition["indicator"] })}
@@ -82,7 +82,7 @@ function LeafEditor({ leaf, onChange, onRemove }: { leaf: LeafCondition; onChang
       ) : null}
 
       {onRemove && (
-        <button onClick={onRemove} className="ml-auto text-xs text-[#EF4444] hover:text-[#EF4444]">Remove</button>
+        <button onClick={onRemove} className="ml-auto text-xs text-[#DC3545] hover:text-[#DC3545]">Remove</button>
       )}
     </div>
   );
@@ -109,19 +109,19 @@ export default function ConditionTreeEditor({ value, onChange }: { value: Condit
   };
 
   return (
-    <div className="border border-[#FBBF24]/40 rounded p-3 bg-[#151B23]">
+    <div className="border border-[#F5B80B]/40 rounded p-3 bg-[#151B23]">
       {isGroup && (
         <div className="flex items-center gap-2 mb-2">
-          <span className="text-xs font-bold text-[#FBBF24] uppercase">
+          <span className="text-xs font-bold text-[#F5B80B] uppercase">
             {("all" in value) ? "ALL of:" : ("any" in value) ? "ANY of:" : "NOT:"}
           </span>
           <div className="flex gap-1 ml-auto">
-            <button onClick={() => addChild(newLeaf())} className="text-xs px-2 py-1 rounded bg-[#FBBF24]/20 text-[#FBBF24] hover:bg-[#FBBF24]/30">+ Condition</button>
+            <button onClick={() => addChild(newLeaf())} className="text-xs px-2 py-1 rounded bg-[#F5B80B]/20 text-[#F5B80B] hover:bg-[#F5B80B]/30">+ Condition</button>
             {!("not" in value) && (
               <>
-                <button onClick={() => onChange({ all: "all" in value ? [...value.all] : "any" in value ? value.any : [value as LeafCondition] })} className="text-xs px-2 py-1 rounded bg-[#F59E0B]/20 text-[#F59E0B] hover:bg-[#F59E0B]/30">AND group</button>
-                <button onClick={() => onChange({ any: "any" in value ? [...value.any] : "all" in value ? value.all : [value as LeafCondition] })} className="text-xs px-2 py-1 rounded bg-[#F59E0B]/20 text-[#F59E0B] hover:bg-[#F59E0B]/30">OR group</button>
-                <button onClick={() => onChange({ not: "not" in value ? value.not : value as LeafCondition })} className="text-xs px-2 py-1 rounded bg-[#F59E0B]/20 text-[#F59E0B] hover:bg-[#F59E0B]/30">NOT</button>
+                <button onClick={() => onChange({ all: "all" in value ? [...value.all] : "any" in value ? value.any : [value as LeafCondition] })} className="text-xs px-2 py-1 rounded bg-[#E8A20E]/20 text-[#E8A20E] hover:bg-[#E8A20E]/30">AND group</button>
+                <button onClick={() => onChange({ any: "any" in value ? [...value.any] : "all" in value ? value.all : [value as LeafCondition] })} className="text-xs px-2 py-1 rounded bg-[#E8A20E]/20 text-[#E8A20E] hover:bg-[#E8A20E]/30">OR group</button>
+                <button onClick={() => onChange({ not: value as ConditionNode })} className="text-xs px-2 py-1 rounded bg-[#E8A20E]/20 text-[#E8A20E] hover:bg-[#E8A20E]/30">NOT</button>
               </>
             )}
           </div>

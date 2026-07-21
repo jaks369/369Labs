@@ -123,7 +123,7 @@ export default function TickChart({ symbol, maxDataPoints = 100, decimalPlaces =
 
   return (
     <div className="w-full">
-      <div className="flex items-center justify-between mb-3 px-3 py-2 bg-[#0B0F14] rounded border border-[#252B35]">
+      <div className="flex items-center justify-between mb-3 px-3 py-2 bg-[#0A0E14] rounded border border-[#252B35]">
         <span className="text-xs font-bold text-white">{symbol}</span>
         <div className="flex items-center gap-2">
           <div className="flex items-center gap-0.5 p-0.5 bg-[#151B23] rounded border border-[#252B35]">
@@ -131,13 +131,13 @@ export default function TickChart({ symbol, maxDataPoints = 100, decimalPlaces =
               <button
                 key={tf.n}
                 onClick={() => setWindow(tf.n)}
-                className={`px-2 py-0.5 rounded text-[10px] font-bold transition-colors ${window === tf.n ? "bg-[#F59E0B] text-black" : "text-[#64748B] hover:text-white"}`}
+                className={`px-2 py-0.5 rounded text-[10px] font-bold transition-colors ${window === tf.n ? "bg-[#E8A20E] text-black" : "text-[#64748B] hover:text-white"}`}
               >
                 {tf.label}
               </button>
             ))}
           </div>
-          <span className={`text-lg font-bold ${priceColor === "up" ? "text-[#22C55E]" : "text-[#EF4444]"}`}>
+          <span className={`text-lg font-bold ${priceColor === "up" ? "text-[#28A745]" : "text-[#DC3545]"}`}>
             {currentPrice !== null ? currentPrice.toFixed(decimalPlaces) : "--"}
           </span>
         </div>
@@ -146,7 +146,7 @@ export default function TickChart({ symbol, maxDataPoints = 100, decimalPlaces =
       {/* Descriptive timeframe labels */}
       <div className="pb-2 px-3 flex items-center gap-2 text-xs text-[#64748B]">
         <span className="uppercase tracking-wider font-medium">View:</span>
-        <span className="text-[#F59E0B] font-bold">{TIMEFRAME_LABELS[window] || "Custom"}</span>
+        <span className="text-[#E8A20E] font-bold">{TIMEFRAME_LABELS[window] || "Custom"}</span>
         <span className="text-[#64748B]">— shows last {window} tick{window === 1 ? '' : 's'}</span>
         <span className="ml-auto text-[#64748B]/70">
           {window <= 50 ? 'Focuses on recent market dynamics' : window <= 100 ? 'Balanced view of recent activity' : 'Broader market context for trend analysis'}
@@ -154,15 +154,15 @@ export default function TickChart({ symbol, maxDataPoints = 100, decimalPlaces =
       </div>
 
       {error ? (
-        <div className="w-full h-64 flex items-center justify-center bg-[#0B0F14] rounded border border-[#EF4444]/30">
-          <p className="text-[#EF4444] text-sm">Connection Error: {error}</p>
+        <div className="w-full h-64 flex items-center justify-center bg-[#0A0E14] rounded border border-[#DC3545]/30">
+          <p className="text-[#DC3545] text-sm">Connection Error: {error}</p>
         </div>
       ) : data.length > 1 ? (
         <svg ref={svgRef} viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="none" className="w-full h-[280px]">
            <defs>
             <linearGradient id="lineGrad" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#F59E0B" stopOpacity="0.18" />
-              <stop offset="100%" stopColor="#F59E0B" stopOpacity="0" />
+              <stop offset="0%" stopColor="#E8A20E" stopOpacity="0.18" />
+              <stop offset="100%" stopColor="#E8A20E" stopOpacity="0" />
             </linearGradient>
             <filter id="lineGlow" x="-20%" y="-20%" width="140%" height="140%">
               <feGaussianBlur stdDeviation="2.5" result="blur" />
@@ -180,7 +180,7 @@ export default function TickChart({ symbol, maxDataPoints = 100, decimalPlaces =
           <polyline
             points={points.join(" ")}
             fill="none"
-            stroke={priceColor === "up" ? "#F59E0B" : "#EF4444"}
+            stroke={priceColor === "up" ? "#E8A20E" : "#DC3545"}
             strokeWidth="1.5"
             strokeLinejoin="round"
             strokeLinecap="round"
@@ -197,7 +197,7 @@ export default function TickChart({ symbol, maxDataPoints = 100, decimalPlaces =
             const placeLeft = lx + tagW > width - 4;
             const tx = placeLeft ? lx - tagW - 6 : lx + 6;
             const ty = Math.min(Math.max(ly - 11, 2), height - 22);
-            const color = priceColor === "up" ? "#F59E0B" : "#EF4444";
+            const color = priceColor === "up" ? "#E8A20E" : "#DC3545";
             return (
               <g>
                 <circle cx={lx} cy={ly} r="4" fill={color} />
@@ -208,7 +208,7 @@ export default function TickChart({ symbol, maxDataPoints = 100, decimalPlaces =
                   textAnchor="middle"
                   fontSize="13"
                   fontWeight="bold"
-                  fill="#0B0F14"
+                  fill="#0A0E14"
                 >
                   {label}
                 </text>
@@ -217,21 +217,21 @@ export default function TickChart({ symbol, maxDataPoints = 100, decimalPlaces =
           })()}
         </svg>
       ) : (
-        <div className="w-full h-64 flex items-center justify-center bg-[#0B0F14] rounded border border-[#252B35]">
+        <div className="w-full h-64 flex items-center justify-center bg-[#0A0E14] rounded border border-[#252B35]">
           <p className="text-[#64748B] text-sm">Waiting for tick data...</p>
         </div>
       )}
 
       <div className="mt-3 grid grid-cols-3 gap-3 text-xs">
-        <div className="bg-[#0B0F14]/50 p-2 rounded border border-[#0B0F14]">
+        <div className="bg-[#0A0E14]/50 p-2 rounded border border-[#0A0E14]">
           <span className="text-[#64748B] text-[10px] uppercase">High</span>
           <p className="text-white font-bold">{maxPrice.toFixed(decimalPlaces)}</p>
         </div>
-        <div className="bg-[#0B0F14]/50 p-2 rounded border border-[#0B0F14]">
+        <div className="bg-[#0A0E14]/50 p-2 rounded border border-[#0A0E14]">
           <span className="text-[#64748B] text-[10px] uppercase">Low</span>
           <p className="text-white font-bold">{minPrice.toFixed(decimalPlaces)}</p>
         </div>
-        <div className="bg-[#0B0F14]/50 p-2 rounded border border-[#0B0F14]">
+        <div className="bg-[#0A0E14]/50 p-2 rounded border border-[#0A0E14]">
           <span className="text-[#64748B] text-[10px] uppercase">Ticks</span>
           <p className="text-white font-bold">{data.length}</p>
         </div>

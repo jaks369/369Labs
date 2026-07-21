@@ -113,8 +113,8 @@ function startAlwaysOnScanner() {
     try {
       const db = await getDb();
       if (!db) return;
-      const users = await db.select().from(users);
-      for (const u of users) {
+      const allUsers = await db.select().from(users);
+      for (const u of allUsers) {
         for (const sym of SYMBOLS) {
           try {
             await runWatch({ userId: u.id, symbol: sym, sampleSize: 600, minWinRate: 65, patternType: "any" });

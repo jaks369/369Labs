@@ -23,7 +23,7 @@ export default function ForgotPassword() {
   };
 
   return (
-    <div className='min-h-screen flex items-center justify-center bg-[#0B0F14] p-4'>
+    <div className='min-h-screen flex items-center justify-center bg-[#0A0E14] p-4'>
       <div className='w-full max-w-md'>
         <h1 className='text-2xl font-bold text-white mb-6 text-center'>Reset Password</h1>
         <form onSubmit={submit} className='space-y-4'>
@@ -34,16 +34,16 @@ export default function ForgotPassword() {
           <Button type='submit' disabled={m.isPending} className='w-full btn-primary'>
             {m.isPending ? 'Sending...' : 'SEND RESET LINK'}
           </Button>
-          {msg && <p className='text-sm text-center text-[#22C55E]'>{msg}</p>}
+          {msg && <p className='text-sm text-center text-[#28A745]'>{msg}</p>}
           {resetUrl && (
             <div className='text-sm text-center text-[#94A3B8] p-3 rounded-lg border border-[#252B35] bg-[#151B23]'>
               <p className='mb-1'>Email isn't configured yet, so use this dev link:</p>
-              <a href={resetUrl} className='text-[#F59E0B] hover:underline break-all'>{resetUrl}</a>
+              <a href={resetUrl} className='text-[#E8A20E] hover:underline break-all'>{resetUrl}</a>
             </div>
           )}
         </form>
         <p className='mt-6 text-center text-sm text-[#64748B]'>
-          <Link to='/login' className='text-[#F59E0B] hover:underline'>Back to login</Link>
+          <Link to='/login' className='text-[#E8A20E] hover:underline'>Back to login</Link>
         </p>
       </div>
     </div>

@@ -26,7 +26,7 @@ export default function ResetPassword() {
   };
 
   return (
-    <div className='min-h-screen flex items-center justify-center bg-[#0B0F14] p-4'>
+    <div className='min-h-screen flex items-center justify-center bg-[#0A0E14] p-4'>
       <div className='w-full max-w-md'>
         <h1 className='text-2xl font-bold text-white mb-6 text-center'>Set New Password</h1>
         <form onSubmit={submit} className='space-y-4'>
@@ -37,10 +37,10 @@ export default function ResetPassword() {
           <Button type='submit' disabled={m.isPending || !token} className='w-full btn-primary'>
             {m.isPending ? 'Updating...' : 'UPDATE PASSWORD'}
           </Button>
-          {!token && <p className='text-sm text-center text-[#EF4444]'>Missing or invalid reset token.</p>}
-          {msg && <p className={`text-sm text-center ${done ? 'text-[#22C55E]' : 'text-[#EF4444]'}`}>{msg}</p>}
+          {!token && <p className='text-sm text-center text-[#DC3545]'>Missing or invalid reset token.</p>}
+          {msg && <p className={`text-sm text-center ${done ? 'text-[#28A745]' : 'text-[#DC3545]'}`}>{msg}</p>}
           {done && (
-            <p className='text-center'><button onClick={() => navigate('/login')} className='text-[#F59E0B] hover:underline text-sm'>Back to login</button></p>
+            <p className='text-center'><button onClick={() => navigate('/login')} className='text-[#E8A20E] hover:underline text-sm'>Back to login</button></p>
           )}
         </form>
       </div>

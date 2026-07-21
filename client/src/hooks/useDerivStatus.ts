@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { derivWS } from "@/services/derivWebSocket";
+import { derivWS, TickStreamListener } from "@/services/derivWebSocket";
 
 export type DerivStatus = "connected" | "disconnected" | "needs_token";
 
@@ -24,7 +24,8 @@ export function useDerivStatus(): { status: DerivStatus; accountType: string } {
       setStatus(compute());
       setAccountType(derivWS.getAccountType());
     };
-    const listener = {
+    const listener: TickStreamListener = {
+      onTick: () => {},
       onConnect: update,
       onDisconnect: update,
     };

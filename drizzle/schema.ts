@@ -69,6 +69,7 @@ export const trades = mysqlTable("trades", {
   profitLoss: decimal("profitLoss", { precision: 18, scale: 8 }),
   symbol: varchar("symbol", { length: 32 }).notNull().default("R_100"),
   contractType: varchar("contractType", { length: 32 }).default("CALL"),
+  result: varchar("result", { length: 16 }),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
 
@@ -254,3 +255,22 @@ export const chatMessages = mysqlTable("chatMessages", {
 
 export type ChatMessage = typeof chatMessages.$inferSelect;
 export type InsertChatMessage = typeof chatMessages.$inferInsert;
+
+// AI Knowledge: persistent storage for AI-generated insights (trade reviews, strategy reviews, accuracy logs, market patterns)
+export const aiKnowledge = mysqlTable("aiKnowledge", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  knowledgeType: varchar("knowledgeType", { length: 32 }).notNull(),
+  symbol: varchar("symbol", { length: 32 }),
+  data: json("data"),
+  source: varchar("source", { length: 32 }),
+  confidence: varchar("confidence", { length: 8 }),
+  relatedTradeId: int("relatedTradeId"),
+  relatedStrategyId: int("relatedStrategyId"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type AiKnowledge = typeof aiKnowledge.$inferSelect;
+export type InsertAiKnowledge = typeof aiKnowledge.$inferInsert;
+
+export type AiKnowledgeResult = AiKnowledge;

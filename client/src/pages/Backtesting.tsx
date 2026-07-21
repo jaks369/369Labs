@@ -53,7 +53,7 @@ export default function Backtesting() {
 
   const runBacktestHandler = async () => {
     const rule = (selectedStrategyId
-      ? strategiesQuery.data?.find(s => s.id === selectedStrategyId)?.config?.rule
+      ? (strategiesQuery.data?.find(s => s.id === selectedStrategyId)?.config as any)?.rule
       : signalRule) as StrategyRule | undefined;
     if (!rule) { toast(selectedStrategyId ? "Selected strategy has no deployable rule. Use visual IF/THEN mode." : "No strategy or signal selected.", "error"); return; }
 
@@ -66,7 +66,7 @@ export default function Backtesting() {
       const endEpoch = Math.floor(new Date(endDate).getTime() / 1000);
 
       const ticks = await derivWS.fetchTickHistory(symbol, startEpoch, endEpoch);
-      if (ticks.length < 20) { throw new Error(`Only ${ticks.length} ticks returned — need at least 20. Try a wider date range.`); }
+      if (ticks.length < 20) { throw new Error(`Only ${ticks.length} ticks returned â€” need at least 20. Try a wider date range.`); }
 
       const backtestResult = await runBacktest(ticks, rule, stake);
       setResult(backtestResult);
@@ -85,7 +85,7 @@ export default function Backtesting() {
 
   const runSweep = async () => {
     const rule = (selectedStrategyId
-      ? strategiesQuery.data?.find(s => s.id === selectedStrategyId)?.config?.rule
+      ? (strategiesQuery.data?.find(s => s.id === selectedStrategyId)?.config as any)?.rule
       : signalRule) as StrategyRule | undefined;
     if (!rule) { toast("Select a strategy or signal first.", "error"); return; }
     setSweepRunning(true);
@@ -95,7 +95,7 @@ export default function Backtesting() {
       const startEpoch = Math.floor(new Date(startDate).getTime() / 1000);
       const endEpoch = Math.floor(new Date(endDate).getTime() / 1000);
       const ticks = await derivWS.fetchTickHistory(symbol, startEpoch, endEpoch);
-      if (ticks.length < 20) throw new Error(`Only ${ticks.length} ticks returned — need at least 20.`);
+      if (ticks.length < 20) throw new Error(`Only ${ticks.length} ticks returned â€” need at least 20.`);
       const values = SWEEP_RANGES[sweepParam];
       const grid: { value: number; winRate: number; trades: number; pnl: number }[] = [];
       for (const v of values) {
@@ -125,11 +125,11 @@ export default function Backtesting() {
 
   const heatColor = (wr: number) => {
     // 40% red -> 60% amber -> 75%+ green
-    if (wr >= 75) return "bg-[#22C55E]/70 text-white";
-    if (wr >= 60) return "bg-[#22C55E]/30 text-[#22C55E]";
-    if (wr >= 50) return "bg-[#F59E0B]/30 text-[#FBBF24]";
-    if (wr >= 40) return "bg-[#EF4444]/30 text-[#EF4444]";
-    return "bg-[#EF4444]/60 text-white";
+    if (wr >= 75) return "bg-[#28A745]/70 text-white";
+    if (wr >= 60) return "bg-[#28A745]/30 text-[#28A745]";
+    if (wr >= 50) return "bg-[#E8A20E]/30 text-[#F5B80B]";
+    if (wr >= 40) return "bg-[#DC3545]/30 text-[#DC3545]";
+    return "bg-[#DC3545]/60 text-white";
   };
 
   return (
@@ -156,16 +156,16 @@ export default function Backtesting() {
             <div>
               <label className="text-xs text-[#64748B] font-bold uppercase tracking-wider">Strategy</label>
               {loadedSignal && (
-              <div className="mb-4 p-3 rounded-lg bg-[#22D3EE]/10 border border-[#22D3EE]/30 flex items-start gap-2">
-                <CandlestickChart className="w-4 h-4 text-[#22D3EE] mt-0.5" />
+              <div className="mb-4 p-3 rounded-lg bg-[#22BFC8]/10 border border-[#22BFC8]/30 flex items-start gap-2">
+                <CandlestickChart className="w-4 h-4 text-[#22BFC8] mt-0.5" />
                 <div className="text-xs text-[#94A3B8]">
-                  <b className="text-[#22D3EE]">Backtesting AI signal:</b> {loadedSignal.title} (win rate {loadedSignal.winRate}%, {loadedSignal.sampleSize} samples). Rule loaded automatically.
+                  <b className="text-[#22BFC8]">Backtesting AI signal:</b> {loadedSignal.title} (win rate {loadedSignal.winRate}%, {loadedSignal.sampleSize} samples). Rule loaded automatically.
                 </div>
               </div>
             )}
             <select value={selectedStrategyId || ""} onChange={e => setSelectedStrategyId(Number(e.target.value))} className="w-full mt-1 bg-[#151B23] border border-[#252B35] rounded-lg px-3 py-2 text-white text-sm">
                 <option value="">Select a strategy...</option>
-                {(strategiesQuery.data || []).filter(s => s.config?.rule).map(s => (
+                {(strategiesQuery.data || []).filter(s => (s.config as any)?.rule).map(s => (
                   <option key={s.id} value={s.id}>{s.name}</option>
                 ))}
               </select>
@@ -189,23 +189,23 @@ export default function Backtesting() {
               <input type="number" value={stake} onChange={e => setStake(Number(e.target.value))} min={0.35} step={0.5} className="w-full mt-1 bg-[#151B23] border border-[#252B35] rounded-lg px-3 py-2 text-white text-sm" />
             </div>
 
-            <Button onClick={runBacktestHandler} disabled={running || !selectedStrategyId} className="w-full bg-[#F59E0B] hover:bg-[#F59E0B] text-white">
+            <Button onClick={runBacktestHandler} disabled={running || !selectedStrategyId} className="w-full bg-[#E8A20E] hover:bg-[#E8A20E] text-white">
               {running ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Fetching ticks...</> : <><Play className="w-4 h-4 mr-2" /> Run Backtest</>}
             </Button>
           </div>
 
           <div className="lg:col-span-2 space-y-6">
             {error && (
-              <div className="bg-[#EF4444]/10 border border-[#EF4444]/30 rounded-xl p-4 flex items-start gap-3">
-                <AlertCircle className="w-5 h-5 text-[#EF4444] shrink-0 mt-0.5" />
-                <p className="text-sm text-[#EF4444]">{error}</p>
+              <div className="bg-[#DC3545]/10 border border-[#DC3545]/30 rounded-xl p-4 flex items-start gap-3">
+                <AlertCircle className="w-5 h-5 text-[#DC3545] shrink-0 mt-0.5" />
+                <p className="text-sm text-[#DC3545]">{error}</p>
               </div>
             )}
 
             {running && (
               <div className="bg-[#151B23] border border-[#252B35] rounded-xl p-8 flex items-center justify-center">
                 <div className="text-center">
-                  <Loader2 className="w-10 h-10 animate-spin text-[#F59E0B] mx-auto mb-4" />
+                  <Loader2 className="w-10 h-10 animate-spin text-[#E8A20E] mx-auto mb-4" />
                   <p className="text-[#94A3B8]">Fetching historical ticks from Deriv and running simulation...</p>
                 </div>
               </div>
@@ -220,17 +220,17 @@ export default function Backtesting() {
                   </div>
                   <div className="bg-[#151B23] border border-[#252B35] rounded-xl p-4">
                     <p className="text-[10px] font-bold text-[#64748B] uppercase tracking-wider">Win Rate</p>
-                    <p className={`text-2xl font-bold mt-1 ${result.winRate >= 50 ? "text-[#22C55E]" : "text-[#EF4444]"}`}>{result.winRate.toFixed(1)}%</p>
+                    <p className={`text-2xl font-bold mt-1 ${result.winRate >= 50 ? "text-[#28A745]" : "text-[#DC3545]"}`}>{result.winRate.toFixed(1)}%</p>
                   </div>
                   <div className="bg-[#151B23] border border-[#252B35] rounded-xl p-4">
                     <p className="text-[10px] font-bold text-[#64748B] uppercase tracking-wider">Total P&L</p>
-                    <p className={`text-2xl font-bold mt-1 ${result.totalPnl >= 0 ? "text-[#22C55E]" : "text-[#EF4444]"}`}>
+                    <p className={`text-2xl font-bold mt-1 ${result.totalPnl >= 0 ? "text-[#28A745]" : "text-[#DC3545]"}`}>
                       {result.totalPnl >= 0 ? "+" : ""}${result.totalPnl.toFixed(2)}
                     </p>
                   </div>
                   <div className="bg-[#151B23] border border-[#252B35] rounded-xl p-4">
                     <p className="text-[10px] font-bold text-[#64748B] uppercase tracking-wider">Max Drawdown</p>
-                    <p className="text-2xl font-bold text-[#EF4444] mt-1">-${result.maxDrawdown.toFixed(2)}</p>
+                    <p className="text-2xl font-bold text-[#DC3545] mt-1">-${result.maxDrawdown.toFixed(2)}</p>
                   </div>
                 </div>
 
@@ -261,9 +261,9 @@ export default function Backtesting() {
                             <td className="py-3 text-[#94A3B8]">${t.exitPrice.toFixed(2)}</td>
                             <td className="py-3 text-[#94A3B8]">{t.contractType}</td>
                             <td className="py-3">
-                              {t.result === "win" ? <CheckCircle2 className="w-4 h-4 text-[#22C55E]" /> : <XCircle className="w-4 h-4 text-[#EF4444]" />}
+                              {t.result === "win" ? <CheckCircle2 className="w-4 h-4 text-[#28A745]" /> : <XCircle className="w-4 h-4 text-[#DC3545]" />}
                             </td>
-                            <td className={`py-3 text-right font-bold ${t.pnl >= 0 ? "text-[#22C55E]" : "text-[#EF4444]"}`}>
+                            <td className={`py-3 text-right font-bold ${t.pnl >= 0 ? "text-[#28A745]" : "text-[#DC3545]"}`}>
                               {t.pnl >= 0 ? "+" : ""}${t.pnl.toFixed(2)}
                             </td>
                           </tr>
@@ -286,7 +286,7 @@ export default function Backtesting() {
                           className="flex-1 rounded-t"
                           style={{
                             height: `${Math.max(h, 2)}%`,
-                            backgroundColor: val >= 0 ? "#22C55E" : "#EF4444",
+                            backgroundColor: val >= 0 ? "#28A745" : "#DC3545",
                             opacity: 0.7,
                           }}
                           title={`$${val.toFixed(2)}`}
@@ -305,11 +305,11 @@ export default function Backtesting() {
                       <option value="count">Count / frequency (1-10)</option>
                       <option value="stake">Stake ($)</option>
                     </select>
-                    <Button onClick={runSweep} disabled={sweepRunning} className="bg-[#F59E0B] hover:bg-[#F59E0B] text-white">
+                    <Button onClick={runSweep} disabled={sweepRunning} className="bg-[#E8A20E] hover:bg-[#E8A20E] text-white">
                       {sweepRunning ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Sweeping...</> : <><Search className="w-4 h-4 mr-2" /> Run Sweep</>}
                     </Button>
                   </div>
-                  {sweepError && <p className="text-sm text-[#EF4444] mb-3">{sweepError}</p>}
+                  {sweepError && <p className="text-sm text-[#DC3545] mb-3">{sweepError}</p>}
                   {sweepGrid && (
                     <div className="overflow-x-auto">
                       <table className="w-full text-left text-xs">
@@ -327,7 +327,7 @@ export default function Backtesting() {
                               <td className="py-2 font-bold text-white">{c.value}</td>
                               <td className={`py-2 px-2 rounded font-bold ${heatColor(c.winRate)}`}>{c.winRate.toFixed(1)}%</td>
                               <td className="py-2 text-[#94A3B8]">{c.trades}</td>
-                              <td className={`py-2 text-right font-bold ${c.pnl >= 0 ? "text-[#22C55E]" : "text-[#EF4444]"}`}>{c.pnl >= 0 ? "+" : ""}${c.pnl.toFixed(2)}</td>
+                              <td className={`py-2 text-right font-bold ${c.pnl >= 0 ? "text-[#28A745]" : "text-[#DC3545]"}`}>{c.pnl >= 0 ? "+" : ""}${c.pnl.toFixed(2)}</td>
                             </tr>
                           ))}
                         </tbody>

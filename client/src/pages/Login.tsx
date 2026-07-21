@@ -44,29 +44,29 @@ export default function Login() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#0B0F14] px-4">
-      <div className="w-full max-w-sm border border-[#F59E0B]/40 bg-[#151B23] rounded p-6 relative">
-        <div className="absolute -top-3 left-4 bg-[#0B0F14] px-2 text-sm font-bold text-[#F59E0B]">
+    <div className="min-h-screen flex items-center justify-center bg-[#0A0E14] px-4">
+      <div className="w-full max-w-sm border border-[#E8A20E]/40 bg-[#151B23] rounded p-6 relative">
+        <div className="absolute -top-3 left-4 bg-[#0A0E14] px-2 text-sm font-bold text-[#E8A20E]">
           {mode === "login" ? "LOG IN" : "SIGN UP"}
         </div>
 
         <form onSubmit={handleSubmit} className="mt-4 space-y-4">
           {mode === "signup" && (
             <div>
-              <label className="text-[10px] text-[#F59E0B]/70 uppercase tracking-wider block mb-1">
+              <label className="text-[10px] text-[#E8A20E]/70 uppercase tracking-wider block mb-1">
                 Name
               </label>
               <Input
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                className="border-[#F59E0B]/40 text-[#F59E0B]"
+                className="border-[#E8A20E]/40 text-[#E8A20E]"
                 placeholder="Your name"
               />
             </div>
           )}
 
           <div>
-            <label className="text-[10px] text-[#F59E0B]/70 uppercase tracking-wider block mb-1">
+            <label className="text-[10px] text-[#E8A20E]/70 uppercase tracking-wider block mb-1">
               Email
             </label>
             <Input
@@ -74,13 +74,13 @@ export default function Login() {
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="border-[#F59E0B]/40 text-[#F59E0B]"
+              className="border-[#E8A20E]/40 text-[#E8A20E]"
               placeholder="you@example.com"
             />
           </div>
 
           <div>
-            <label className="text-[10px] text-[#F59E0B]/70 uppercase tracking-wider block mb-1">
+            <label className="text-[10px] text-[#E8A20E]/70 uppercase tracking-wider block mb-1">
               Password
             </label>
             <Input
@@ -89,13 +89,13 @@ export default function Login() {
               minLength={8}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="border-[#F59E0B]/40 text-[#F59E0B]"
+              className="border-[#E8A20E]/40 text-[#E8A20E]"
               placeholder="At least 8 characters"
             />
           </div>
 
           {error && (
-            <p className="text-xs text-[#EF4444] border border-[#EF4444]/40 bg-[#EF4444]/10 rounded px-3 py-2">
+            <p className="text-xs text-[#DC3545] border border-[#DC3545]/40 bg-[#DC3545]/10 rounded px-3 py-2">
               {error}
             </p>
           )}
@@ -103,11 +103,11 @@ export default function Login() {
           <Button
             type="submit"
             disabled={pending}
-            className="w-full bg-[#F59E0B] text-[#0B0F14] hover:bg-[#F59E0B]/80"
+            className="w-full bg-[#E8A20E] text-[#0A0E14] hover:bg-[#E8A20E]/80"
           >
-            {pending ? "Please wait…" : mode === "login" ? "Log in" : "Create account"}
+            {pending ? "Please waitâ€¦" : mode === "login" ? "Log in" : "Create account"}
           </Button>
-        <p className="text-xs text-[#64748B] mt-4 text-center"><Link to="/forgot-password" className="text-[#F59E0B] hover:underline">Forgot password?</Link></p></form>
+        <p className="text-xs text-[#64748B] mt-4 text-center"><Link to="/forgot-password" className="text-[#E8A20E] hover:underline">Forgot password?</Link></p></form>
 
         <button
           type="button"
@@ -115,7 +115,7 @@ export default function Login() {
             setMode(mode === "login" ? "signup" : "login");
             setError(null);
           }}
-          className="mt-4 text-xs text-[#FBBF24] hover:underline w-full text-center"
+          className="mt-4 text-xs text-[#F5B80B] hover:underline w-full text-center"
         >
           {mode === "login"
             ? "Need an account? Sign up"

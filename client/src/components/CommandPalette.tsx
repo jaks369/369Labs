@@ -132,7 +132,7 @@ export default function CommandPalette() {
                 onClick={() => exec(c)}
                 onMouseEnter={() => setActive(i)}
                 className={`w-full flex items-center gap-3 px-4 py-2.5 text-left text-sm ${
-                  i === active ? "bg-[#F59E0B]/15 text-white" : "text-[#94A3B8] hover:bg-white/5"
+                  i === active ? "bg-[#E8A20E]/15 text-white" : "text-[#94A3B8] hover:bg-white/5"
                 }`}
               >
                 <Icon className="w-4 h-4 text-[#94A3B8]" />

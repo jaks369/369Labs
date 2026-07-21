@@ -10,7 +10,7 @@ interface SparklineProps {
 
 export default function Sparkline({
   data,
-  color = "#F59E0B",
+  color = "#E8A20E",
   height = 40,
   width = "100%",
   trend,
@@ -19,7 +19,7 @@ export default function Sparkline({
     return (
       <div
         style={{ width, height }}
-        className="flex items-center justify-center text-[#F59E0B]/40 text-xs"
+        className="flex items-center justify-center text-[#E8A20E]/40 text-xs"
       >
         No data
       </div>
@@ -32,14 +32,14 @@ export default function Sparkline({
     const firstValue = data[0].value;
     const lastValue = data[data.length - 1].value;
     if (lastValue > firstValue) {
-      lineColor = "#22C55E"; // Green for up
+      lineColor = "#28A745"; // Green for up
     } else if (lastValue < firstValue) {
-      lineColor = "#EF4444"; // Red for down
+      lineColor = "#DC3545"; // Red for down
     }
   } else if (trend === "up") {
-    lineColor = "#22C55E";
+    lineColor = "#28A745";
   } else if (trend === "down") {
-    lineColor = "#EF4444";
+    lineColor = "#DC3545";
   }
 
   return (

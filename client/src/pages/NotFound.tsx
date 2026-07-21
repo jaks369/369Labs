@@ -17,7 +17,7 @@ export default function NotFound() {
           <div className="flex justify-center mb-6">
             <div className="relative">
               <div className="absolute inset-0 bg-[#2A1414] rounded-full animate-pulse" />
-              <AlertCircle className="relative h-16 w-16 text-[#EF4444]" />
+              <AlertCircle className="relative h-16 w-16 text-[#DC3545]" />
             </div>
           </div>
 
@@ -39,7 +39,7 @@ export default function NotFound() {
           >
             <Button
               onClick={handleGoHome}
-              className="bg-[#F59E0B] hover:bg-[#F59E0B] text-white px-6 py-2.5 rounded-lg transition-all duration-200 shadow-md hover:shadow-lg"
+              className="bg-[#E8A20E] hover:bg-[#E8A20E] text-white px-6 py-2.5 rounded-lg transition-all duration-200 shadow-md hover:shadow-lg"
             >
               <Home className="w-4 h-4 mr-2" />
               Go Home
