@@ -1,5 +1,7 @@
 import { TRPCError } from "@trpc/server";
 import { ENV } from "./env";
+import { sendEmail, buildNotificationEmail } from "./email";
+import * as db from "../db";
 
 export type NotificationPayload = {
   title: string;
@@ -110,5 +112,23 @@ export async function notifyOwner(
   } catch (error) {
     console.warn("[Notification] Error calling notification service:", error);
     return false;
+  }
+}
+
+type NotificationEvent = "tradeExecuted" | "takeProfitHit" | "stopLossHit" | "botError";
+
+export async function notifyUser(userId: number, event: NotificationEvent, title: string, body: string, details?: string): Promise<void> {
+  try {
+    const settings = await db.getNotificationSettingsByUserId(userId);
+    if (!settings || !settings.emailEnabled || !settings[event]) return;
+    const user = await db.getUserById(userId);
+    if (!user || !user.email) return;
+    await sendEmail({
+      to: user.email,
+      subject: `[369Labs] ${title}`,
+      html: buildNotificationEmail(title, body, details),
+    });
+  } catch (e) {
+    console.error("[notifyUser] failed:", e);
   }
 }

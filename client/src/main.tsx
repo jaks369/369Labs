@@ -7,6 +7,9 @@ import superjson from "superjson";
 import App from "./App";
 import { getLoginUrl } from "./const";
 import "./index.css";
+import { initMonitoring } from "./lib/monitoring";
+
+initMonitoring();
 
 const queryClient = new QueryClient();
 

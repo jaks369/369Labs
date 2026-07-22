@@ -25,30 +25,44 @@ export default function TelegramSettings() {
 
   if (!isAuthenticated) { navigate("/login"); return null; }
 
+  const [saveError, setSaveError] = useState("");
+
   const handleSave = async () => {
-    await saveMutation.mutateAsync({ botToken, chatId: chatId ?? "" });
-    setSaved(true);
-    setTimeout(() => setSaved(false), 3000);
+    setSaveError("");
+    try {
+      await saveMutation.mutateAsync({ botToken, chatId: chatId ?? "" });
+      setSaved(true);
+      setTimeout(() => setSaved(false), 3000);
+    } catch (err) {
+      setSaveError(err instanceof Error ? err.message : "Failed to save settings");
+    }
   };
 
   return (
-    <div className="min-h-screen bg-[#151B23] p-6">
+    <div className="min-h-screen bg-[var(--card)] p-6">
       <div className="max-w-3xl mx-auto space-y-8">
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold text-white">Telegram Integration</h1>
-            <p className="text-[#94A3B8] text-sm mt-1">Receive trade alerts and bot notifications on Telegram</p>
+            <p className="text-[var(--text-secondary)] text-sm mt-1">Receive trade alerts and bot notifications on Telegram</p>
           </div>
-          <MessageCircle className="w-6 h-6 text-[#E8A20E]" />
+          <MessageCircle className="w-6 h-6 text-[var(--amber)]" />
         </div>
 
         {settingsQuery.isLoading ? (
-          <div className="flex items-center justify-center h-64"><Loader2 className="w-8 h-8 animate-spin text-[#E8A20E]" /></div>
+          <div className="flex items-center justify-center h-64"><Loader2 className="w-8 h-8 animate-spin text-[var(--amber)]" /></div>
         ) : (
-          <div className="bg-[#151B23] border border-[#252B35] rounded-xl p-6 space-y-6">
-            <div className="p-4 bg-[#E8A20E]/10 border border-[#E8A20E]/20 rounded-xl flex items-start gap-3">
-              <AlertCircle className="w-5 h-5 text-[#E8A20E] shrink-0 mt-0.5" />
-              <div className="text-xs text-[#E8A20E]">
+          <>
+            {settingsQuery.isError && (
+              <div className="bg-[var(--red-soft)] border border-[var(--red)]/20 rounded-xl p-4 flex items-center gap-3">
+                <AlertCircle className="w-5 h-5 text-[var(--red)] shrink-0" />
+                <p className="text-xs text-[var(--red)]">Failed to load Telegram settings. Please refresh.</p>
+              </div>
+            )}
+            <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-6 space-y-6">
+            <div className="p-4 bg-[var(--amber-soft)] border border-[var(--amber)]/20 rounded-xl flex items-start gap-3">
+              <AlertCircle className="w-5 h-5 text-[var(--amber)] shrink-0 mt-0.5" />
+              <div className="text-xs text-[var(--amber)]">
                 <p className="font-bold mb-1">How to set up:</p>
                 <ol className="list-decimal ml-4 space-y-1">
                   <li>Create a bot on Telegram via <strong>@BotFather</strong> and copy the token</li>
@@ -60,34 +74,36 @@ export default function TelegramSettings() {
             </div>
 
             <div>
-              <label className="text-xs text-[#64748B] font-bold uppercase tracking-wider">Bot Token</label>
+              <label className="text-xs text-[var(--text-muted)] font-bold uppercase tracking-wider">Bot Token</label>
               <Input
                 value={botToken}
                 onChange={e => setBotToken(e.target.value)}
                 placeholder="1234567890:ABCdefGHIjklMNOpqrsTUVwxyz"
-                className="mt-1 bg-[#151B23] border-[#252B35] text-white"
+                className="mt-1 bg-[var(--card)] border-[var(--border)] text-white"
                 type="password"
               />
             </div>
 
             <div>
-              <label className="text-xs text-[#64748B] font-bold uppercase tracking-wider">Chat ID</label>
+              <label className="text-xs text-[var(--text-muted)] font-bold uppercase tracking-wider">Chat ID</label>
               <Input
                 value={chatId}
                 onChange={e => setChatId(e.target.value)}
                 placeholder="-1234567890"
-                className="mt-1 bg-[#151B23] border-[#252B35] text-white"
+                className="mt-1 bg-[var(--card)] border-[var(--border)] text-white"
               />
             </div>
 
             <div className="flex items-center gap-4">
-              <Button onClick={handleSave} disabled={saveMutation.isPending || !botToken} className="bg-[#E8A20E] hover:bg-[#E8A20E] text-white">
+              <Button onClick={handleSave} disabled={saveMutation.isPending || !botToken} className="bg-[var(--amber)] hover:bg-[var(--amber)] text-white">
                 {saveMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Send className="w-4 h-4 mr-2" />}
                 Save & Connect
               </Button>
-              {saved && <span className="flex items-center gap-1 text-[#28A745] text-sm font-bold"><CheckCircle2 className="w-4 h-4" /> Connected</span>}
+              {saveError && <span className="flex items-center gap-1 text-[var(--red)] text-sm font-bold"><AlertCircle className="w-4 h-4" /> {saveError}</span>}
+              {saved && <span className="flex items-center gap-1 text-[var(--green)] text-sm font-bold"><CheckCircle2 className="w-4 h-4" /> Connected</span>}
             </div>
           </div>
+          </>
         )}
       </div>
     </div>

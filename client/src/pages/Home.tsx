@@ -10,9 +10,9 @@ export default function Home() {
   const [, navigate] = useLocation();
 
   return (
-    <div className="min-h-screen bg-[#151B23] text-[#E8ECF1] selection:bg-[#E8A20E]/30">
+    <div className="min-h-screen bg-[var(--card)] text-[var(--text-primary)] selection:bg-[var(--amber)]/30">
       <div className="fixed inset-0 pointer-events-none">
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-[600px] bg-[#E8A20E]/10 blur-[120px] rounded-full opacity-50" />
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-[600px] bg-[var(--amber-soft)] blur-[120px] rounded-full opacity-50" />
         <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 mix-blend-overlay" />
         <div className="absolute inset-0" style={{ backgroundImage: 'radial-gradient(circle at 2px 2px, rgba(255,255,255,0.05) 1px, transparent 0)', backgroundSize: '40px 40px' }} />
       </div>
@@ -21,12 +21,12 @@ export default function Home() {
         <div className="max-w-7xl mx-auto px-6 h-20 flex justify-between items-center">
           <div className="flex items-center gap-10">
             <div className="flex items-center gap-2 group cursor-pointer" onClick={() => navigate("/")}>
-              <div className="w-8 h-8 bg-[#E8A20E] rounded-lg flex items-center justify-center shadow-lg shadow-[#E8A20E]/20 group-hover:scale-110 transition-transform">
+              <div className="w-8 h-8 bg-[var(--amber)] rounded-lg flex items-center justify-center shadow-lg shadow-[var(--amber)]/20 group-hover:scale-110 transition-transform">
                 <Activity className="w-5 h-5 text-white" />
               </div>
               <span className="text-xl font-bold tracking-tight text-white">369Labs</span>
             </div>
-            <div className="hidden md:flex items-center gap-8 text-sm font-medium text-[#94A3B8]">
+            <div className="hidden md:flex items-center gap-8 text-sm font-medium text-[var(--text-secondary)]">
               <button onClick={() => navigate("/dashboard")} className="hover:text-white transition-colors">Dashboard</button>
               <button onClick={() => navigate("/strategy-builder")} className="hover:text-white transition-colors">Strategy Builder</button>
               <button onClick={() => navigate("/marketplace")} className="hover:text-white transition-colors">Marketplace</button>
@@ -35,7 +35,7 @@ export default function Home() {
           </div>
           <div className="flex items-center gap-4">
             <button onClick={() => navigate("/login")} className="text-sm font-medium hover:text-white transition-colors px-4">Login</button>
-            <Button onClick={() => navigate("/login")} className="btn-primary flex items-center gap-2">
+            <Button onClick={() => navigate("/login")} className="btn btn-primary flex items-center gap-2">
               Get Started <ChevronRight className="w-4 h-4" />
             </Button>
           </div>
@@ -44,46 +44,46 @@ export default function Home() {
 
       <main className="relative z-10">
         <section className="max-w-7xl mx-auto px-6 pt-32 pb-20 text-center">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#E8A20E]/10 border border-[#E8A20E]/20 text-[#F5B80B] text-xs font-bold tracking-wider mb-8 animate-fade-in">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[var(--amber-soft)] border border-[var(--amber-border)] text-[var(--amber-hover)] text-xs font-bold tracking-wider mb-8 animate-fade-in">
             <span className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#F5B80B] opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-[#E8A20E]"></span>
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[var(--amber-hover)] opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-[var(--amber)]"></span>
             </span>
             V1.0 NOW LIVE
           </div>
           <h1 className="text-6xl md:text-8xl font-extrabold text-white mb-8 tracking-tighter leading-[1.1]">
             Build. Backtest.<br />
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#E8A20E] to-[#28A745]">Automate.</span>
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-[var(--amber)] to-[var(--green)]">Automate.</span>
           </h1>
-          <p className="text-xl text-[#94A3B8] mb-12 max-w-2xl mx-auto leading-relaxed">
+          <p className="text-xl text-[var(--text-secondary)] mb-12 max-w-2xl mx-auto leading-relaxed">
             Professional trading automation powered by AI. Design sophisticated strategies, 
             test against historical data, and deploy to the cloud in minutes.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-            <button onClick={() => navigate("/login")} className="btn-primary text-lg px-10 py-4 w-full sm:w-auto">
+            <button onClick={() => navigate("/login")} className="btn btn-primary text-lg px-10 py-4 w-full sm:w-auto">
               Get Started
             </button>
-            <button onClick={() => navigate("/dashboard")} className="btn-outline text-lg px-10 py-4 w-full sm:w-auto">
+            <button onClick={() => navigate("/dashboard")} className="btn btn-outline text-lg px-10 py-4 w-full sm:w-auto">
               Live Demo
             </button>
           </div>
 
           <div className="mt-24 relative max-w-5xl mx-auto">
-            <div className="absolute -inset-1 bg-gradient-to-r from-[#E8A20E] to-[#28A745] rounded-2xl blur opacity-20 group-hover:opacity-40 transition duration-1000"></div>
-            <div className="relative bg-[#151B23] border border-white/10 rounded-2xl overflow-hidden shadow-2xl">
-              <div className="h-8 bg-[#151B23]/50 border-b border-white/5 flex items-center px-4 gap-1.5">
-                <div className="w-2.5 h-2.5 rounded-full bg-[#DC3545]/50" />
-                <div className="w-2.5 h-2.5 rounded-full bg-[#E8A20E]/50" />
-                <div className="w-2.5 h-2.5 rounded-full bg-[#28A745]/50" />
+            <div className="absolute -inset-1 bg-gradient-to-r from-[var(--amber)] to-[var(--green)] rounded-2xl blur opacity-20 group-hover:opacity-40 transition duration-1000"></div>
+            <div className="relative bg-[var(--card)] border border-white/10 rounded-2xl overflow-hidden shadow-2xl">
+              <div className="h-8 bg-[var(--card)]/50 border-b border-white/5 flex items-center px-4 gap-1.5">
+                <div className="w-2.5 h-2.5 rounded-full bg-[var(--red)]/50" />
+                <div className="w-2.5 h-2.5 rounded-full bg-[var(--amber)]/50" />
+                <div className="w-2.5 h-2.5 rounded-full bg-[var(--green)]/50" />
               </div>
-              <div className="aspect-video bg-[#151B23] p-8 flex items-center justify-center">
-                 <div className="w-full h-full border border-[#E8A20E]/20 rounded-lg relative overflow-hidden bg-[#0A0E14]">
+              <div className="aspect-video bg-[var(--card)] p-8 flex items-center justify-center">
+                 <div className="w-full h-full border border-[var(--amber-border)] rounded-lg relative overflow-hidden bg-[var(--bg)]">
                     <div className="absolute inset-0 opacity-30" style={{ backgroundImage: 'linear-gradient(rgba(37, 99, 235, 0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(37, 99, 235, 0.1) 1px, transparent 1px)', backgroundSize: '20px 20px' }} />
-                    <div className="absolute bottom-0 left-0 right-0 h-1/2 bg-gradient-to-t from-[#E8A20E]/10 to-transparent" />
-                    <div className="absolute top-1/4 left-0 right-0 h-px bg-[#28A745]/30" />
-                    <div className="absolute top-1/2 left-0 right-0 h-px bg-[#DC3545]/30" />
+                    <div className="absolute bottom-0 left-0 right-0 h-1/2 bg-gradient-to-t from-[var(--amber)]/10 to-transparent" />
+                    <div className="absolute top-1/4 left-0 right-0 h-px bg-[var(--green)]/30" />
+                    <div className="absolute top-1/2 left-0 right-0 h-px bg-[var(--red)]/30" />
                     <div className="flex items-center justify-center h-full">
-                       <Activity className="w-16 h-16 text-[#E8A20E] animate-pulse" />
+                       <Activity className="w-16 h-16 text-[var(--amber)] animate-pulse" />
                     </div>
                  </div>
               </div>
@@ -94,35 +94,35 @@ export default function Home() {
         <section className="max-w-7xl mx-auto px-6 py-32">
           <div className="text-center mb-20">
             <h2 className="text-4xl font-bold mb-4">ENGINEERED FOR PERFORMANCE</h2>
-            <p className="text-[#94A3B8]">Everything you need to scale your trading operations.</p>
+            <p className="text-[var(--text-secondary)]">Everything you need to scale your trading operations.</p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <div onClick={() => navigate("/ai-assistant")} className="glass-card group hover:border-[#22BFC8]/50 transition-colors cursor-pointer">
-              <div className="w-12 h-12 bg-[#22BFC8]/10 rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
-                <Brain className="w-6 h-6 text-[#22BFC8]" />
+            <div onClick={() => navigate("/ai-assistant")} className="card-hover cursor-pointer group">
+              <div className="w-12 h-12 rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform bg-[var(--cyan-soft)]">
+                <Brain className="w-6 h-6 text-[var(--cyan)]" />
               </div>
               <h3 className="text-xl font-bold mb-3 text-white">369AI Assistant</h3>
-              <p className="text-[#94A3B8] leading-relaxed">
+              <p className="text-[var(--text-secondary)] leading-relaxed">
                 Describe your strategy in plain English and let our AI engine generate the logic, 
                 risk parameters, and execution blocks automatically.
               </p>
             </div>
-            <div onClick={() => navigate("/analytics")} className="glass-card group hover:border-[#7B61E8]/50 transition-colors cursor-pointer">
-              <div className="w-12 h-12 bg-[#7B61E8]/10 rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
-                <BarChart3 className="w-6 h-6 text-[#7B61E8]" />
+            <div onClick={() => navigate("/analytics")} className="card-hover cursor-pointer group">
+              <div className="w-12 h-12 rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform bg-[var(--amber-soft)]">
+                <BarChart3 className="w-6 h-6 text-[var(--amber)]" />
               </div>
               <h3 className="text-xl font-bold mb-3 text-white">Advanced Analytics</h3>
-              <p className="text-[#94A3B8] leading-relaxed">
+              <p className="text-[var(--text-secondary)] leading-relaxed">
                 Monitor ROI, Drawdown, and Profit Factor in real-time. Gain deep insights into 
                 your bot's performance with professional-grade metrics.
               </p>
             </div>
-            <div onClick={() => navigate("/cloud-bots")} className="glass-card group hover:border-[#E8A20E]/50 transition-colors cursor-pointer">
-              <div className="w-12 h-12 bg-[#E8A20E]/10 rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
-                <Globe className="w-6 h-6 text-[#E8A20E]" />
+            <div onClick={() => navigate("/cloud-bots")} className="card-hover cursor-pointer group">
+              <div className="w-12 h-12 rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform bg-[var(--amber-soft)]">
+                <Globe className="w-6 h-6 text-[var(--amber)]" />
               </div>
               <h3 className="text-xl font-bold mb-3 text-white">Cloud Execution</h3>
-              <p className="text-[#94A3B8] leading-relaxed">
+              <p className="text-[var(--text-secondary)] leading-relaxed">
                 Deploy your bots to our secure cloud infrastructure. Your strategies run 24/7 
                 without needing your computer to stay online.
               </p>
@@ -131,26 +131,26 @@ export default function Home() {
         </section>
 
         <section className="max-w-7xl mx-auto px-6 py-32">
-          <div className="bg-gradient-to-br from-[#E8A20E] to-[#E8A20E] rounded-3xl p-12 md:p-20 text-center relative overflow-hidden">
+          <div className="bg-[var(--amber)] rounded-[calc(var(--radius)*2)] p-12 md:p-20 text-center relative overflow-hidden">
             <div className="absolute top-0 left-0 w-full h-full opacity-10" style={{ backgroundImage: 'radial-gradient(circle at 2px 2px, white 1px, transparent 0)', backgroundSize: '24px 24px' }} />
-            <h2 className="text-4xl md:text-5xl font-bold text-white mb-6 relative z-10">READY TO AUTOMATE YOUR SUCCESS?</h2>
-            <p className="text-[#1A212B] text-lg mb-10 max-w-2xl mx-auto relative z-10">
+            <h2 className="text-4xl md:text-5xl font-bold text-[#0D1016] mb-6 relative z-10">READY TO AUTOMATE YOUR SUCCESS?</h2>
+            <p className="text-[#0D1016]/80 text-lg mb-10 max-w-2xl mx-auto relative z-10">
               Join the next generation of algorithmic traders. Start building your first strategy today.
             </p>
-            <button onClick={() => navigate("/login")} className="inline-flex items-center gap-2 px-8 py-4 bg-white text-[#E8A20E] font-bold rounded-xl hover:bg-[#1A212B] transition-colors relative z-10">
+            <button onClick={() => navigate("/login")} className="btn btn-primary inline-flex items-center gap-2 px-8 py-4 text-lg relative z-10 bg-white text-[#0D1016] hover:bg-[var(--text-primary)] shadow-lg">
               Launch Dashboard <ChevronRight className="w-5 h-5" />
             </button>
           </div>
         </section>
 
-        <footer className="border-t border-white/5 py-12 px-6">
+        <footer className="border-t border-[var(--border)] py-12 px-6">
           <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-8">
             <div className="flex items-center gap-2">
-              <Activity className="w-6 h-6 text-[#E8A20E]" />
+              <Activity className="w-6 h-6 text-[var(--amber)]" />
               <span className="text-lg font-bold text-white">369Labs</span>
             </div>
-            <div className="flex gap-8 text-sm text-[#64748B]">
-              <span className="hover:text-white">&copy; 2026 369Labs. All rights reserved.</span>
+            <div className="flex gap-8 text-sm text-[var(--text-muted)]">
+              <span className="hover:text-white transition-colors">&copy; 2026 369Labs. All rights reserved.</span>
             </div>
           </div>
         </footer>

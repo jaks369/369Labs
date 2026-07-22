@@ -50,10 +50,10 @@ export default function AIChatWindow() {
 
   return (
     <div className="surface-elevated flex flex-col h-[600px]">
-      <div className="flex items-center gap-2 border-b border-[#172030] px-4 py-3">
-        <Sparkles className="w-4 h-4 text-[#22BFC8]" />
+      <div className="flex items-center gap-2 border-b border-[var(--border)] px-4 py-3">
+        <Sparkles className="w-4 h-4 text-[var(--cyan)]" />
         <h3 className="text-xs font-bold text-white">369AI Chat</h3>
-        <span className="text-[9px] text-[#5A6878] ml-auto">Conversational Copilot</span>
+        <span className="text-[9px] text-[var(--text-muted)] ml-auto">Conversational Copilot</span>
       </div>
 
       <AIQuickQuestions
@@ -65,8 +65,8 @@ export default function AIChatWindow() {
       <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-3">
         {messages.length === 0 && !loading && (
           <div className="flex flex-col items-center justify-center h-full text-center py-8">
-            <MessageSquare className="w-8 h-8 text-[#172030] mb-2" />
-            <p className="text-[10px] text-[#5A6878] max-w-xs">
+            <MessageSquare className="w-8 h-8 text-[var(--border)] mb-2" />
+            <p className="text-[10px] text-[var(--text-muted)] max-w-xs">
               Ask me anything about your trading ΓÇö trades, strategies, market conditions, AI performance, or your current session.
             </p>
           </div>
@@ -76,14 +76,14 @@ export default function AIChatWindow() {
         ))}
         {loading && (
           <div className="flex items-start gap-3">
-            <div className="w-7 h-7 rounded-full bg-[#22BFC8]/20 border border-[#22BFC8]/30 flex items-center justify-center shrink-0">
-              <Sparkles className="w-3.5 h-3.5 text-[#22BFC8]" />
+            <div className="w-7 h-7 rounded-full bg-[var(--cyan-soft)] border-[var(--cyan)]/30 flex items-center justify-center shrink-0">
+              <Sparkles className="w-3.5 h-3.5 text-[var(--cyan)]" />
             </div>
-            <div className="bg-[#1A2433] border border-[#172030] rounded-xl rounded-tl-sm px-3.5 py-2.5">
+            <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl rounded-tl-sm px-3.5 py-2.5">
               <div className="flex gap-1">
-                <span className="w-1.5 h-1.5 bg-[#22BFC8] rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
-                <span className="w-1.5 h-1.5 bg-[#22BFC8] rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
-                <span className="w-1.5 h-1.5 bg-[#22BFC8] rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
+                <span className="w-1.5 h-1.5 bg-[var(--cyan)] rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
+                <span className="w-1.5 h-1.5 bg-[var(--cyan)] rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
+                <span className="w-1.5 h-1.5 bg-[var(--cyan)] rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
               </div>
             </div>
           </div>

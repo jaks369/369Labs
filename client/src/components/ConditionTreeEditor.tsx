@@ -26,11 +26,11 @@ function newLeaf(): LeafCondition {
 
 function LeafEditor({ leaf, onChange, onRemove }: { leaf: LeafCondition; onChange: (l: LeafCondition) => void; onRemove?: () => void }) {
   return (
-    <div className="flex flex-wrap items-center gap-2 bg-[#0A0E14] border border-[#252B35] rounded p-2">
+    <div className="flex flex-wrap items-center gap-2 bg-[var(--bg)] border border-[var(--border)] rounded p-2">
       <select
         value={leaf.indicator}
         onChange={(e) => onChange({ ...leaf, indicator: e.target.value as LeafCondition["indicator"] })}
-        className="bg-[#151B23] border border-[#252B35] rounded px-2 py-1 text-xs text-white"
+        className="bg-[var(--card)] border border-[var(--border)] rounded px-2 py-1 text-xs text-white"
       >
         {INDICATORS.map((o) => (<option key={o.value} value={o.value}>{o.label}</option>))}
       </select>
@@ -39,50 +39,50 @@ function LeafEditor({ leaf, onChange, onRemove }: { leaf: LeafCondition; onChang
         <select
           value={leaf.comparison}
           onChange={(e) => onChange({ ...leaf, comparison: e.target.value as LeafCondition["comparison"] })}
-          className="bg-[#151B23] border border-[#252B35] rounded px-2 py-1 text-xs text-white"
+          className="bg-[var(--card)] border border-[var(--border)] rounded px-2 py-1 text-xs text-white"
         >
           {COMPARISONS.filter((c) => c.value !== "appears" && c.value !== "appears_consecutively").map((o) => (<option key={o.value} value={o.value}>{o.label}</option>))}
         </select>
       ) : null}
 
       {leaf.indicator !== "consecutive_rise" && leaf.indicator !== "consecutive_fall" && leaf.indicator !== "loss_streak" ? (
-        <span className="text-xs text-[#94A3B8]">count</span>
+        <span className="text-xs text-[var(--text-secondary)]">count</span>
       ) : null}
       {leaf.indicator !== "consecutive_rise" && leaf.indicator !== "consecutive_fall" && leaf.indicator !== "loss_streak" ? (
         <input
           type="number" min={1} max={50}
           value={leaf.count ?? 1}
           onChange={(e) => onChange({ ...leaf, count: parseInt(e.target.value) || 1 })}
-          className="w-16 bg-[#151B23] border border-[#252B35] rounded px-2 py-1 text-xs text-white"
+          className="w-16 bg-[var(--card)] border border-[var(--border)] rounded px-2 py-1 text-xs text-white"
         />
       ) : null}
 
       {leaf.indicator === "digit_over" || leaf.indicator === "digit_under" || leaf.indicator === "last_digit" || leaf.indicator === "parity" ? (
         <>
-          <span className="text-xs text-[#94A3B8]">barrier</span>
+          <span className="text-xs text-[var(--text-secondary)]">barrier</span>
           <input
             type="number" min={0} max={9}
             value={leaf.barrier ?? 5}
             onChange={(e) => onChange({ ...leaf, barrier: parseInt(e.target.value) || 0 })}
-            className="w-16 bg-[#151B23] border border-[#252B35] rounded px-2 py-1 text-xs text-white"
+            className="w-16 bg-[var(--card)] border border-[var(--border)] rounded px-2 py-1 text-xs text-white"
           />
         </>
       ) : null}
 
       {leaf.indicator === "loss_streak" ? (
         <>
-          <span className="text-xs text-[#94A3B8]">streak &gt;=</span>
+          <span className="text-xs text-[var(--text-secondary)]">streak &gt;=</span>
           <input
             type="number" min={1} max={20}
             value={leaf.barrier ?? 1}
             onChange={(e) => onChange({ ...leaf, barrier: parseInt(e.target.value) || 1 })}
-            className="w-16 bg-[#151B23] border border-[#252B35] rounded px-2 py-1 text-xs text-white"
+            className="w-16 bg-[var(--card)] border border-[var(--border)] rounded px-2 py-1 text-xs text-white"
           />
         </>
       ) : null}
 
       {onRemove && (
-        <button onClick={onRemove} className="ml-auto text-xs text-[#DC3545] hover:text-[#DC3545]">Remove</button>
+        <button onClick={onRemove} className="ml-auto text-xs text-[var(--red)] hover:text-[var(--red)]">Remove</button>
       )}
     </div>
   );
@@ -109,19 +109,19 @@ export default function ConditionTreeEditor({ value, onChange }: { value: Condit
   };
 
   return (
-    <div className="border border-[#F5B80B]/40 rounded p-3 bg-[#151B23]">
+    <div className="border border-[var(--amber-hover)]/40 rounded p-3 bg-[var(--card)]">
       {isGroup && (
         <div className="flex items-center gap-2 mb-2">
-          <span className="text-xs font-bold text-[#F5B80B] uppercase">
+          <span className="text-xs font-bold text-[var(--amber-hover)] uppercase">
             {("all" in value) ? "ALL of:" : ("any" in value) ? "ANY of:" : "NOT:"}
           </span>
           <div className="flex gap-1 ml-auto">
-            <button onClick={() => addChild(newLeaf())} className="text-xs px-2 py-1 rounded bg-[#F5B80B]/20 text-[#F5B80B] hover:bg-[#F5B80B]/30">+ Condition</button>
+            <button onClick={() => addChild(newLeaf())} className="text-xs px-2 py-1 rounded bg-[var(--amber-soft)] text-[var(--amber-hover)] hover:bg-[var(--amber-soft)]">+ Condition</button>
             {!("not" in value) && (
               <>
-                <button onClick={() => onChange({ all: "all" in value ? [...value.all] : "any" in value ? value.any : [value as LeafCondition] })} className="text-xs px-2 py-1 rounded bg-[#E8A20E]/20 text-[#E8A20E] hover:bg-[#E8A20E]/30">AND group</button>
-                <button onClick={() => onChange({ any: "any" in value ? [...value.any] : "all" in value ? value.all : [value as LeafCondition] })} className="text-xs px-2 py-1 rounded bg-[#E8A20E]/20 text-[#E8A20E] hover:bg-[#E8A20E]/30">OR group</button>
-                <button onClick={() => onChange({ not: value as ConditionNode })} className="text-xs px-2 py-1 rounded bg-[#E8A20E]/20 text-[#E8A20E] hover:bg-[#E8A20E]/30">NOT</button>
+                <button onClick={() => onChange({ all: "all" in value ? [...value.all] : "any" in value ? value.any : [value as LeafCondition] })} className="text-xs px-2 py-1 rounded bg-[var(--amber-soft)] text-[var(--amber)] hover:bg-[var(--amber-soft)]">AND group</button>
+                <button onClick={() => onChange({ any: "any" in value ? [...value.any] : "all" in value ? value.all : [value as LeafCondition] })} className="text-xs px-2 py-1 rounded bg-[var(--amber-soft)] text-[var(--amber)] hover:bg-[var(--amber-soft)]">OR group</button>
+                <button onClick={() => onChange({ not: value as ConditionNode })} className="text-xs px-2 py-1 rounded bg-[var(--amber-soft)] text-[var(--amber)] hover:bg-[var(--amber-soft)]">NOT</button>
               </>
             )}
           </div>
@@ -144,7 +144,7 @@ export default function ConditionTreeEditor({ value, onChange }: { value: Condit
       </div>
 
       {isGroup && "all" in value && value.all.length === 0 && (
-        <p className="text-[10px] text-[#64748B] mt-1">Add at least one condition, or switch back to simple mode.</p>
+        <p className="text-[10px] text-[var(--text-muted)] mt-1">Add at least one condition, or switch back to simple mode.</p>
       )}
     </div>
   );

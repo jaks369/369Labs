@@ -198,8 +198,8 @@ export default function RuleBuilder({ rule, onChange }: RuleBuilderProps) {
 
   return (
     <div className="space-y-4">      {/* Natural-language input */}
-      <div className="relative border border-[#22BFC8]/50 bg-[#151B23] p-4 rounded">
-        <div className="absolute -top-3 left-4 bg-[#0A0E14] px-2 text-sm font-bold text-[#22BFC8]">
+      <div className="relative border border-[var(--cyan)]/50 bg-[var(--card)] p-4 rounded">
+        <div className="absolute -top-3 left-4 bg-[var(--bg)] px-2 text-sm font-bold text-[var(--cyan)]">
           DESCRIBE IN ENGLISH
         </div>
         <div className="mt-2 flex gap-2">
@@ -208,31 +208,31 @@ export default function RuleBuilder({ rule, onChange }: RuleBuilderProps) {
             onChange={(e) => setNlText(e.target.value)}
             onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); applyNl(); } }}
             placeholder={'e.g. "when an even digit appears, buy rise" or "after 3 of digit 5 in a row, buy fall"'}
-            className="flex-1 bg-[#0A0E14] border border-[#22BFC8]/30 rounded px-3 py-2 text-sm text-white placeholder:text-[#64748B] outline-none focus:border-[#22BFC8]"
+            className="flex-1 bg-[var(--bg)] border border-[var(--cyan)]/30 rounded px-3 py-2 text-sm text-white placeholder:text-[var(--text-muted)] outline-none focus:border-[var(--cyan)]"
           />
-          <button onClick={applyNl} className="px-4 py-2 rounded bg-[#22BFC8] text-black text-sm font-bold hover:bg-[#22BFC8]">Build</button>
+          <button onClick={applyNl} className="px-4 py-2 rounded bg-[var(--cyan)] text-black text-sm font-bold hover:bg-[var(--cyan)]">Build</button>
         </div>
         {nlMsg && (
-          <div className={`mt-2 text-xs ${nlMsg.kind === "ok" ? "text-[#28A745]" : "text-[#DC3545]"}`}>{nlMsg.text}</div>
+          <div className={`mt-2 text-xs ${nlMsg.kind === "ok" ? "text-[var(--green)]" : "text-[var(--red)]"}`}>{nlMsg.text}</div>
         )}
-        <p className="mt-2 text-[10px] text-[#64748B]">Type a condition in plain English and press Build (or Enter). The dropdowns below still work for fine-tuning.</p>
+        <p className="mt-2 text-[10px] text-[var(--text-muted)]">Type a condition in plain English and press Build (or Enter). The dropdowns below still work for fine-tuning.</p>
       </div>
 
 
       {/* Symbol selector */}
-      <div className="relative border border-[#F5B80B]/50 bg-[#151B23] p-4 rounded">
-        <div className="absolute -top-3 left-4 bg-[#0A0E14] px-2 text-sm font-bold text-[#F5B80B]">
+      <div className="relative border border-[var(--amber-hover)]/50 bg-[var(--card)] p-4 rounded">
+        <div className="absolute -top-3 left-4 bg-[var(--bg)] px-2 text-sm font-bold text-[var(--amber-hover)]">
           SYMBOL
         </div>
         <div className="mt-2">
-          <label className="text-[10px] text-[#F5B80B]/70 uppercase tracking-wider block mb-1">
+          <label className="text-[10px] text-[var(--amber-hover)]/70 uppercase tracking-wider block mb-1">
             Instrument
           </label>
           <Select
             value={rule.symbol ?? "R_100"}
             onValueChange={(v) => onChange({ ...rule, symbol: v })}
           >
-            <SelectTrigger className="border-[#F5B80B]/40 text-[#F5B80B]">
+            <SelectTrigger className="border-[var(--amber-hover)]/40 text-[var(--amber-hover)]">
               <SelectValue placeholder="Select symbol" />
             </SelectTrigger>
             <SelectContent>
@@ -247,13 +247,13 @@ export default function RuleBuilder({ rule, onChange }: RuleBuilderProps) {
       </div>
 
       {/* IF Block */}
-      <div className="relative border border-[#E8A20E]/50 bg-[#151B23] p-4 rounded">
-        <div className="absolute -top-3 left-4 bg-[#0A0E14] px-2 text-sm font-bold text-[#E8A20E]">
+      <div className="relative border border-[var(--amber)]/50 bg-[var(--card)] p-4 rounded">
+        <div className="absolute -top-3 left-4 bg-[var(--bg)] px-2 text-sm font-bold text-[var(--amber)]">
           IF
         </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mt-2">
           <div>
-            <label className="text-[10px] text-[#E8A20E]/70 uppercase tracking-wider block mb-1">
+            <label className="text-[10px] text-[var(--amber)]/70 uppercase tracking-wider block mb-1">
               Indicator
             </label>
             <Select
@@ -262,7 +262,7 @@ export default function RuleBuilder({ rule, onChange }: RuleBuilderProps) {
                 onChange({ ...rule, condition: { ...rule.condition, indicator: v } })
               }
             >
-              <SelectTrigger className="border-[#E8A20E]/40 text-[#E8A20E]">
+              <SelectTrigger className="border-[var(--amber)]/40 text-[var(--amber)]">
                 <SelectValue placeholder="Select indicator" />
               </SelectTrigger>
               <SelectContent>
@@ -275,7 +275,7 @@ export default function RuleBuilder({ rule, onChange }: RuleBuilderProps) {
             </Select>
           </div>
           <div>
-            <label className="text-[10px] text-[#E8A20E]/70 uppercase tracking-wider block mb-1">
+            <label className="text-[10px] text-[var(--amber)]/70 uppercase tracking-wider block mb-1">
               Comparison
             </label>
             <Select
@@ -284,7 +284,7 @@ export default function RuleBuilder({ rule, onChange }: RuleBuilderProps) {
                 onChange({ ...rule, condition: { ...rule.condition, comparison: v } })
               }
             >
-              <SelectTrigger className="border-[#E8A20E]/40 text-[#E8A20E]">
+              <SelectTrigger className="border-[var(--amber)]/40 text-[var(--amber)]">
                 <SelectValue placeholder="Select comparison" />
               </SelectTrigger>
               <SelectContent>
@@ -297,7 +297,7 @@ export default function RuleBuilder({ rule, onChange }: RuleBuilderProps) {
             </Select>
           </div>
           <div>
-            <label className="text-[10px] text-[#E8A20E]/70 uppercase tracking-wider block mb-1">
+            <label className="text-[10px] text-[var(--amber)]/70 uppercase tracking-wider block mb-1">
               Times
             </label>
             <Input
@@ -311,13 +311,13 @@ export default function RuleBuilder({ rule, onChange }: RuleBuilderProps) {
                   condition: { ...rule.condition, count: parseInt(e.target.value) || 1 },
                 })
               }
-              className="border-[#E8A20E]/40 text-[#E8A20E]"
+              className="border-[var(--amber)]/40 text-[var(--amber)]"
             />
           </div>
         </div>
         {(rule.condition.indicator === "digit_over" || rule.condition.indicator === "digit_under") && (
           <div className="mt-3 max-w-[200px]">
-            <label className="text-[10px] text-[#E8A20E]/70 uppercase tracking-wider block mb-1">
+            <label className="text-[10px] text-[var(--amber)]/70 uppercase tracking-wider block mb-1">
               Barrier Digit (0-9)
             </label>
             <Input
@@ -334,7 +334,7 @@ export default function RuleBuilder({ rule, onChange }: RuleBuilderProps) {
                   },
                 })
               }
-              className="border-[#E8A20E]/40 text-[#E8A20E]"
+              className="border-[var(--amber)]/40 text-[var(--amber)]"
             />
           </div>
         )}
@@ -352,7 +352,7 @@ export default function RuleBuilder({ rule, onChange }: RuleBuilderProps) {
             }
             setShowTree(!showTree);
           }}
-          className="text-xs px-3 py-1 rounded border border-[#F5B80B]/50 text-[#F5B80B] hover:bg-[#F5B80B]/15"
+          className="text-xs px-3 py-1 rounded border border-[var(--amber-hover)]/50 text-[var(--amber-hover)] hover:bg-[var(--amber-hover)]/15"
         >
           {showTree ? "← Back to simple condition" : "+ Combine conditions (AND / OR / NOT)"}
         </button>
@@ -362,7 +362,7 @@ export default function RuleBuilder({ rule, onChange }: RuleBuilderProps) {
               value={rule.conditions ?? legacyConditionToNode(rule.condition as LeafCondition)}
               onChange={(node) => onChange({ ...rule, conditions: node })}
             />
-            <p className="mt-2 text-[10px] text-[#64748B]">
+            <p className="mt-2 text-[10px] text-[var(--text-muted)]">
               Composable logic overrides the simple condition above when saved. The engine evaluates the whole tree.
             </p>
           </div>
@@ -371,23 +371,23 @@ export default function RuleBuilder({ rule, onChange }: RuleBuilderProps) {
 
       {/* Connector Arrow */}
       <div className="flex justify-center">
-        <div className="text-[#F5B80B] text-xl font-bold">▼</div>
+        <div className="text-[var(--amber-hover)] text-xl font-bold">▼</div>
       </div>
 
       {/* THEN Block */}
-      <div className="relative border border-[#F5B80B]/50 bg-[#151B23] p-4 rounded">
-        <div className="absolute -top-3 left-4 bg-[#0A0E14] px-2 text-sm font-bold text-[#F5B80B]">
+      <div className="relative border border-[var(--amber-hover)]/50 bg-[var(--card)] p-4 rounded">
+        <div className="absolute -top-3 left-4 bg-[var(--bg)] px-2 text-sm font-bold text-[var(--amber-hover)]">
           THEN
         </div>
         <div className="mt-2">
-          <label className="text-[10px] text-[#F5B80B]/70 uppercase tracking-wider block mb-1">
+          <label className="text-[10px] text-[var(--amber-hover)]/70 uppercase tracking-wider block mb-1">
             Trade Action
           </label>
           <Select
             value={rule.action.tradeType}
             onValueChange={(v) => onChange({ ...rule, action: { tradeType: v } })}
           >
-            <SelectTrigger className="border-[#F5B80B]/40 text-[#F5B80B]">
+            <SelectTrigger className="border-[var(--amber-hover)]/40 text-[var(--amber-hover)]">
               <SelectValue placeholder="Select action" />
             </SelectTrigger>
             <SelectContent>
@@ -402,13 +402,13 @@ export default function RuleBuilder({ rule, onChange }: RuleBuilderProps) {
       </div>
 
       {/* Trade Parameters */}
-      <div className="relative border border-[#28A745]/40 bg-[#151B23] p-4 rounded">
-        <div className="absolute -top-3 left-4 bg-[#0A0E14] px-2 text-sm font-bold text-[#28A745]">
+      <div className="relative border border-[var(--green)]/40 bg-[var(--card)] p-4 rounded">
+        <div className="absolute -top-3 left-4 bg-[var(--bg)] px-2 text-sm font-bold text-[var(--green)]">
           PARAMETERS
         </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mt-2">
           <div>
-            <label className="text-[10px] text-[#28A745]/70 uppercase tracking-wider block mb-1">
+            <label className="text-[10px] text-[var(--green)]/70 uppercase tracking-wider block mb-1">
               Stake ($)
             </label>
             <Input
@@ -429,19 +429,19 @@ export default function RuleBuilder({ rule, onChange }: RuleBuilderProps) {
                 const error = validateStake(rule.params.stake);
                 setStakeError(error);
               }}
-              className="border-[#28A745]/40 text-[#28A745]"
+              className="border-[var(--green)]/40 text-[var(--green)]"
             />
             {stakeError && (
-              <div className="text-[#DC3545] text-xs mt-1">
+              <div className="text-[var(--red)] text-xs mt-1">
                 {stakeError}
               </div>
             )}
-            <p className="text-[10px] text-[#64748B] mt-1 leading-tight">
+            <p className="text-[10px] text-[var(--text-muted)] mt-1 leading-tight">
               ⚠ Trading involves risk. Never stake more than you can afford to lose. New users are advised to start at the $0.35 minimum and scale only after verified live results.
             </p>
           </div>
           <div>
-            <label className="text-[10px] text-[#DC3545]/70 uppercase tracking-wider block mb-1">
+            <label className="text-[10px] text-[var(--red)]/70 uppercase tracking-wider block mb-1">
               Stop Loss ($)
             </label>
             <Input
@@ -455,11 +455,11 @@ export default function RuleBuilder({ rule, onChange }: RuleBuilderProps) {
                   params: { ...rule.params, stopLoss: parseFloat(e.target.value) || 0 },
                 })
               }
-              className="border-[#DC3545]/40 text-[#DC3545]"
+              className="border-[var(--red)]/40 text-[var(--red)]"
             />
           </div>
           <div>
-            <label className="text-[10px] text-[#28A745]/70 uppercase tracking-wider block mb-1">
+            <label className="text-[10px] text-[var(--green)]/70 uppercase tracking-wider block mb-1">
               Take Profit ($)
             </label>
             <Input
@@ -473,14 +473,14 @@ export default function RuleBuilder({ rule, onChange }: RuleBuilderProps) {
                   params: { ...rule.params, takeProfit: parseFloat(e.target.value) || 0 },
                 })
               }
-              className="border-[#28A745]/40 text-[#28A745]"
+              className="border-[var(--green)]/40 text-[var(--green)]"
             />
           </div>
         </div>
       </div>
 
       {/* Rule Summary */}
-      <div className="text-center text-xs text-[#E8A20E]/60 italic border-t border-[#E8A20E]/20 pt-3">
+      <div className="text-center text-xs text-[var(--amber)]/60 italic border-t border-[var(--amber)]/20 pt-3">
         {summarizeRule(rule)}
       </div>
     </div>

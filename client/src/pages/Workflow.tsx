@@ -78,41 +78,41 @@ export default function Workflow() {
   if (!isAuthenticated) { navigate("/login"); return null; }
 
   return (
-    <div className="min-h-screen bg-[#151B23] p-6">
+    <div className="min-h-screen bg-[var(--card)] p-6">
       <div className="max-w-4xl mx-auto space-y-6">
         <div>
           <h1 className="text-3xl font-bold text-white flex items-center gap-3">
-            <WorkflowIcon className="w-7 h-7 text-[#22BFC8]" /> Workflow Automation
+            <WorkflowIcon className="w-7 h-7 text-[var(--cyan)]" /> Workflow Automation
           </h1>
-          <p className="text-[#94A3B8] text-sm mt-1">Chain agent steps into repeatable automation. Runs the existing scan â†’ backtest â†’ risk â†’ notify pipeline.</p>
+          <p className="text-[var(--text-secondary)] text-sm mt-1">Chain agent steps into repeatable automation. Runs the existing scan â†’ backtest â†’ risk â†’ notify pipeline.</p>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {PRESETS.map((w) => (
-            <div key={w.id} className="bg-[#151B23] border border-[#252B35] rounded-xl p-6">
+            <div key={w.id} className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-6">
               <h2 className="text-lg font-bold text-white mb-4">{w.name}</h2>
               <div className="space-y-2 mb-4">
                 {w.steps.map((s, i) => (
                   <div key={i} className="flex items-center gap-3">
                     <span className="w-6 h-6 rounded-full bg-white/5 flex items-center justify-center shrink-0">
-                      <s.icon className="w-3.5 h-3.5 text-[#94A3B8]" />
+                      <s.icon className="w-3.5 h-3.5 text-[var(--text-secondary)]" />
                     </span>
-                    <span className="text-sm text-[#94A3B8]">{s.label}</span>
-                    {i < w.steps.length - 1 && <GitBranch className="w-3 h-3 text-[#252B35] ml-auto" />}
+                    <span className="text-sm text-[var(--text-secondary)]">{s.label}</span>
+                    {i < w.steps.length - 1 && <GitBranch className="w-3 h-3 text-[var(--border)] ml-auto" />}
                   </div>
                 ))}
               </div>
               <div className="flex items-center gap-2 mb-3">
-                <label className="text-xs text-[#64748B] shrink-0">Symbol:</label>
+                <label className="text-xs text-[var(--text-muted)] shrink-0">Symbol:</label>
                 <div className="relative flex-1">
-                  <button onClick={() => setShowSymbolMenu(!showSymbolMenu)} className="w-full bg-[#1E252D] border border-[#252B35] text-[#E8A20E] px-3 py-2 rounded-lg text-sm font-medium flex items-center justify-between hover:border-[#E8A20E]/50">
+                  <button onClick={() => setShowSymbolMenu(!showSymbolMenu)} className="w-full bg-[var(--card)] border border-[var(--border)] text-[var(--amber)] px-3 py-2 rounded-lg text-sm font-medium flex items-center justify-between hover:border-[var(--amber)]/50">
                     {symbol}
                     <ChevronDown className={`w-4 h-4 transition-transform ${showSymbolMenu ? "rotate-180" : ""}`} />
                   </button>
                   {showSymbolMenu && (
-                    <div className="absolute bottom-full left-0 right-0 mb-1 bg-[#151B23] border border-[#252B35] rounded-lg shadow-lg z-10 max-h-60 overflow-y-auto">
+                    <div className="absolute bottom-full left-0 right-0 mb-1 bg-[var(--card)] border border-[var(--border)] rounded-lg shadow-lg z-10 max-h-60 overflow-y-auto">
                       {SYMBOLS.map((s) => (
-                        <button key={s} onClick={() => { setSymbol(s); setShowSymbolMenu(false); }} className={`w-full px-3 py-2 text-left text-sm ${symbol === s ? "bg-[#E8A20E]/20 text-[#E8A20E]" : "text-[#94A3B8] hover:text-white hover:bg-white/5"}`}>
+                        <button key={s} onClick={() => { setSymbol(s); setShowSymbolMenu(false); }} className={`w-full px-3 py-2 text-left text-sm ${symbol === s ? "bg-[var(--amber-soft)] text-[var(--amber)]" : "text-[var(--text-secondary)] hover:text-white hover:bg-white/5"}`}>
                           {s}
                         </button>
                       ))}
@@ -123,7 +123,7 @@ export default function Workflow() {
               <button
                 onClick={() => runWorkflow(w, symbol)}
                 disabled={running === w.id}
-                className="w-full bg-[#22BFC8] hover:bg-[#22BFC8] text-white text-sm font-bold py-2.5 rounded-lg flex items-center justify-center gap-2"
+                className="w-full bg-[var(--cyan)] hover:bg-[var(--cyan)] text-white text-sm font-bold py-2.5 rounded-lg flex items-center justify-center gap-2"
               >
                 {running === w.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />}
                 {running === w.id ? "Runningâ€¦" : "Run Workflow"}
@@ -133,11 +133,11 @@ export default function Workflow() {
         </div>
 
         {log.length > 0 && (
-          <div className="bg-[#151B23] border border-[#252B35] rounded-xl p-6">
-            <h2 className="text-sm font-bold text-white mb-3 flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-[#28A745]" /> Run Log</h2>
+          <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-6">
+            <h2 className="text-sm font-bold text-white mb-3 flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-[var(--green)]" /> Run Log</h2>
             <div className="space-y-1 font-mono text-xs">
               {log.map((l, i) => (
-                <div key={i} className={l.startsWith("âœ“") ? "text-[#28A745]" : l.startsWith("â–¶") ? "text-[#22BFC8]" : "text-[#94A3B8]"}>{l}</div>
+                <div key={i} className={l.startsWith("âœ“") ? "text-[var(--green)]" : l.startsWith("â–¶") ? "text-[var(--cyan)]" : "text-[var(--text-secondary)]"}>{l}</div>
               ))}
             </div>
           </div>

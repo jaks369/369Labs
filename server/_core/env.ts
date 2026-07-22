@@ -6,4 +6,11 @@ export const ENV = {
   forgeApiUrl: process.env.OPENAI_API_BASE_URL || process.env.AI_API_BASE_URL || "https://api.openai.com/v1",
   forgeApiKey: process.env.AI_API_KEY || process.env.OPENAI_API_KEY || "",
   ENCRYPTION_KEY: process.env.ENCRYPTION_KEY ?? "",
+  resendApiKey: process.env.RESEND_API_KEY ?? "",
+  emailFrom: process.env.EMAIL_FROM ?? "noreply@369labs.com",
+  appUrl: process.env.APP_URL ?? "http://localhost:3000",
+  googleClientId: process.env.GOOGLE_CLIENT_ID ?? "",
+  googleClientSecret: process.env.GOOGLE_CLIENT_SECRET ?? "",
+  githubClientId: process.env.GITHUB_CLIENT_ID ?? "",
+  githubClientSecret: process.env.GITHUB_CLIENT_SECRET ?? "",
 };

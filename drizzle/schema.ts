@@ -19,10 +19,40 @@ export const users = mysqlTable("users", {
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
   lastSignedIn: timestamp("lastSignedIn").defaultNow().notNull(),
+  emailVerified: boolean("emailVerified").default(false).notNull(),
+  twoFASecret: text("twoFASecret"),
+  twoFactorEnabled: boolean("twoFactorEnabled").default(false).notNull(),
 });
 
 export type User = typeof users.$inferSelect;
 export type InsertUser = typeof users.$inferInsert;
+
+// Sessions (for session management & revocation)
+export const sessions = mysqlTable("sessions", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  sessionId: varchar("sessionId", { length: 64 }).notNull().unique(),
+  userAgent: text("userAgent"),
+  ip: varchar("ip", { length: 45 }),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  lastActiveAt: timestamp("lastActiveAt").defaultNow().notNull(),
+  revokedAt: timestamp("revokedAt"),
+});
+
+export type Session = typeof sessions.$inferSelect;
+export type InsertSession = typeof sessions.$inferInsert;
+
+// IP Whitelist (admin-managed)
+export const ipWhitelist = mysqlTable("ipWhitelist", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  ip: varchar("ip", { length: 45 }).notNull(),
+  label: text("label"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type IpWhitelistEntry = typeof ipWhitelist.$inferSelect;
+export type InsertIpWhitelistEntry = typeof ipWhitelist.$inferInsert;
 
 // Deriv API Tokens
 export const derivTokens = mysqlTable("derivTokens", {
@@ -112,6 +142,7 @@ export type InsertTelegramSettings = typeof telegramSettings.$inferInsert;
 export const notificationSettings = mysqlTable("notificationSettings", {
   id: int("id").autoincrement().primaryKey(),
   userId: int("userId").notNull().unique(),
+  emailEnabled: boolean("emailEnabled").default(true).notNull(),
   tradeExecuted: boolean("tradeExecuted").default(true).notNull(),
   takeProfitHit: boolean("takeProfitHit").default(true).notNull(),
   stopLossHit: boolean("stopLossHit").default(true).notNull(),
@@ -241,6 +272,33 @@ export const passwordResetTokens = mysqlTable("passwordResetTokens", {
 
 export type PasswordResetToken = typeof passwordResetTokens.$inferSelect;
 export type InsertPasswordResetToken = typeof passwordResetTokens.$inferInsert;
+
+// Email verification tokens (used to verify email after signup)
+export const verificationTokens = mysqlTable("verificationTokens", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  token: varchar("token", { length: 96 }).notNull(),
+  expiresAt: timestamp("expiresAt").notNull(),
+  usedAt: timestamp("usedAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type VerificationToken = typeof verificationTokens.$inferSelect;
+export type InsertVerificationToken = typeof verificationTokens.$inferInsert;
+
+// OAuth accounts (Google, GitHub, etc.)
+export const oauthAccounts = mysqlTable("oauthAccounts", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  provider: varchar("provider", { length: 32 }).notNull(),
+  providerId: varchar("providerId", { length: 255 }).notNull(),
+  email: varchar("email", { length: 320 }),
+  name: text("name"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type OAuthAccount = typeof oauthAccounts.$inferSelect;
+export type InsertOAuthAccount = typeof oauthAccounts.$inferInsert;
 
 // Persisted 369AI chat history per user+chat
 export const chatMessages = mysqlTable("chatMessages", {

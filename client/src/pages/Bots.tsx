@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
 import {
   Bot,
   Play,
@@ -11,6 +12,7 @@ import {
   AlertTriangle,
   Zap,
   Plus,
+  Wallet,
 } from "lucide-react";
 import { useLocation } from "wouter";
 import { toast } from "@/components/Toast";
@@ -20,6 +22,9 @@ import { derivWS } from "@/services/derivWebSocket";
 import { StrategyRule } from "@/components/RuleBuilder";
 import { StrategyBuilderContent } from "@/pages/StrategyBuilder";
 import { pushTimeline } from "@/components/AITimeline";
+import { paperEngine } from "@/services/PaperEngine";
+
+const PAPER_MODE_KEY = "369labs_paper_mode";
 
 interface RunningBot {
   runId: number;
@@ -51,6 +56,8 @@ export default function Bots() {
   const [runningBots, setRunningBots] = useState<RunningBot[]>([]);
   const [deployingId, setDeployingId] = useState<number | null>(null);
   const [creating, setCreating] = useState(false);
+  const [paperMode, setPaperMode] = useState(() => localStorage.getItem(PAPER_MODE_KEY) === "true");
+  const [paperBal, setPaperBal] = useState(() => paperEngine.getBalance());
 
   const strategiesQuery = trpc.strategies.list.useQuery();
   const derivTokenQuery = trpc.deriv.getToken.useQuery();
@@ -95,8 +102,19 @@ export default function Bots() {
     };
   }, []);
 
+  useEffect(() => {
+    return paperEngine.onBalance(setPaperBal);
+  }, []);
+
   const updateBot = (runId: number, patch: Partial<RunningBot>) => {
     setRunningBots((prev) => prev.map((b) => (b.runId === runId ? { ...b, ...patch } : b)));
+  };
+
+  const togglePaperMode = () => {
+    const next = !paperMode;
+    setPaperMode(next);
+    localStorage.setItem(PAPER_MODE_KEY, String(next));
+    toast(next ? "Paper trading enabled" : "Live trading mode", "success");
   };
 
   const handleDeploy = async (strategy: { id: number; name: string; config: any }) => {
@@ -105,19 +123,20 @@ export default function Bots() {
       toast("This strategy was built in freeform notes mode and can't be deployed yet â€” rebuild it using the visual IF/THEN rule builder.", "error");
       return;
     }
-    if (!derivTokenQuery.data?.token) {
-      toast("Add your Deriv API token in Settings before deploying a bot.", "error");
+    if (!paperMode && !derivTokenQuery.data?.token) {
+      toast("Add your Deriv API token in Settings before deploying a bot, or enable Paper Trading.", "error");
       navigate("/settings");
       return;
     }
 
     setDeployingId(strategy.id);
     try {
-      // Check and refresh token auth before deployment
-      derivWS.setApiToken(derivTokenQuery.data.token);
-      if (!derivWS.isAuthorized() || !derivWS.isConnected()) {
-        toast("Authentication failed. Please check your API token and try again.", "error");
-        return;
+      if (!paperMode) {
+        derivWS.setApiToken(derivTokenQuery.data?.token ?? "");
+        if (!derivWS.isAuthorized() || !derivWS.isConnected()) {
+          toast("Authentication failed. Please check your API token and try again.", "error");
+          return;
+        }
       }
 
       const botRun = await startRunMutation.mutateAsync({ strategyId: strategy.id });
@@ -151,7 +170,7 @@ export default function Bots() {
           alertTg(`${strategy.name} [${trade.symbol}] trade ${trade.result.toUpperCase()} · stake $${trade.stake} · P&L ${parseFloat(trade.pnl) >= 0 ? "+" : ""}${trade.pnl}`);
         },
         onLog: (message) => updateBot(botRun.id, { lastLog: message }),
-      });
+      }, paperMode);
 
       const newBot: RunningBot = {
         runId: botRun.id,
@@ -222,7 +241,7 @@ export default function Bots() {
 
   if (creating) {
     return (
-      <div className="p-6 lg:p-10">
+    <div className="page-container">
         <StrategyBuilderContent
           embedded
           onClose={() => setCreating(false)}
@@ -234,75 +253,96 @@ export default function Bots() {
 
   return (
     <div className="p-6 lg:p-10">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-10">
-        <div>
-          <h1 className="text-3xl font-bold text-white mb-2">Automated Bots</h1>
-          <p className="text-[#64748B] text-sm font-medium">Manage and monitor your 24/7 trading instances.</p>
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-10">
+          <div>
+            <h1 className="text-3xl font-bold text-white mb-2">Automated Bots</h1>
+            <p className="text-[var(--text-muted)] text-sm font-medium">Manage and monitor your 24/7 trading instances.</p>
+          </div>
+          <div className="flex flex-wrap items-center gap-4">
+            <div className="flex items-center gap-2 text-sm">
+              <Wallet className={`w-4 h-4 ${paperMode ? "text-[var(--amber-hover)]" : "text-[var(--text-muted)]"}`} />
+              <span className={`font-semibold ${paperMode ? "text-[var(--amber-hover)]" : "text-[var(--text-muted)]"}`}>
+                Paper
+              </span>
+              <Switch checked={paperMode} onCheckedChange={togglePaperMode} className="data-[state=checked]:bg-[var(--amber-hover)]" />
+            </div>
+            <Button onClick={() => setCreating(true)} className="btn btn-primary flex items-center gap-2">
+              <Plus className="w-4 h-4" /> Create New Bot
+            </Button>
+          </div>
         </div>
-        <Button onClick={() => setCreating(true)} className="btn-primary flex items-center gap-2">
-          <Plus className="w-4 h-4" /> Create New Bot
-        </Button>
-      </div>
 
-      {!derivTokenQuery.data?.token && (
-        <div className="mb-6 p-4 rounded-lg border border-[#E8A20E]/30 bg-[#E8A20E]/10 flex items-center gap-3">
-          <AlertCircle className="w-4 h-4 text-[#E8A20E] shrink-0" />
-          <p className="text-xs text-[#E8A20E]">
-            No Deriv API token on file â€” bots can't place real trades until you add one in{" "}
-            <button className="underline font-bold" onClick={() => navigate("/settings")}>
-              Settings
-            </button>
-            .
-          </p>
-        </div>
-      )}
+        {paperMode && (
+          <div className="mb-6 p-4 rounded-lg border border-[var(--amber)]/30 bg-[var(--amber-soft)] flex items-center gap-3">
+            <Wallet className="w-4 h-4 text-[var(--amber-hover)] shrink-0" />
+            <p className="text-xs text-[var(--amber-hover)]">
+              Paper trading active — bots will use simulated trades. Paper balance: <strong>${paperBal.toFixed(2)}</strong>.{" "}
+              <button className="underline font-bold" onClick={() => navigate("/settings")}>
+                Manage in Settings
+              </button>
+            </p>
+          </div>
+        )}
+
+        {!paperMode && !derivTokenQuery.data?.token && (
+          <div className="mb-6 p-4 rounded-lg border border-[var(--amber-border)] bg-[var(--amber-soft)] flex items-center gap-3">
+            <AlertCircle className="w-4 h-4 text-[var(--amber)] shrink-0" />
+            <p className="text-xs text-[var(--amber)]">
+              No Deriv API token on file — enable Paper Trading above or add a token in{" "}
+              <button className="underline font-bold" onClick={() => navigate("/settings")}>
+                Settings
+              </button>
+              .
+            </p>
+          </div>
+        )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Active Bots List */}
         <div className="lg:col-span-2 space-y-6">
-          <div className="bloomberg-panel">
-            <div className="p-4 border-b border-[#252B35] flex items-center justify-between bg-black/20">
-              <h2 className="text-[10px] font-bold text-[#64748B] uppercase tracking-widest">Running Instances</h2>
+          <div className="panel">
+            <div className="p-4 border-b border-[var(--border)] flex items-center justify-between bg-black/20">
+              <h2 className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-widest">Running Instances</h2>
               <div className="flex items-center gap-2">
-                <span className="text-[10px] font-bold text-[#28A745]">{runningBots.length} Active</span>
+                <span className="text-[10px] font-bold text-[var(--green)]">{runningBots.length} Active</span>
               </div>
             </div>
 
             <div className="p-0">
               {runningBots.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-20 text-center">
-                  <div className="w-12 h-12 bg-[#151B23] rounded-full flex items-center justify-center mb-4 border border-[#252B35]">
-                    <Bot className="w-6 h-6 text-[#64748B]" />
+                  <div className="w-12 h-12 bg-[var(--card)] rounded-full flex items-center justify-center mb-4 border border-[var(--border)]">
+                    <Bot className="w-6 h-6 text-[var(--text-muted)]" />
                   </div>
-                  <p className="text-[#64748B] text-sm mb-6">No bots are currently running.</p>
-                  <Button variant="outline" className="btn-outline text-xs" onClick={() => navigate("/strategy-builder")}>
+                  <p className="text-[var(--text-muted)] text-sm mb-6">No bots are currently running.</p>
+                  <Button variant="outline" className="btn btn-outline text-xs" onClick={() => navigate("/strategy-builder")}>
                     Deploy your first strategy
                   </Button>
                 </div>
               ) : (
-                <div className="divide-y divide-[#252B35]">
+                <div className="divide-y divide-[var(--border)]">
                   {runningBots.map((bot) => (
                     <div key={bot.runId} className="p-6 flex items-center justify-between hover:bg-white/5 transition-colors">
                       <div className="flex items-center gap-4">
                         <div className={`w-10 h-10 rounded-lg flex items-center justify-center border ${
                           bot.status === "error"
-                            ? "bg-[#DC3545]/10 border-[#DC3545]/20"
-                            : "bg-[#E8A20E]/10 border-[#E8A20E]/20"
+                            ? "bg-[var(--red-soft)] border-[var(--red)]/20"
+                            : "bg-[var(--amber-soft)] border-[var(--amber-border)]"
                         }`}>
-                          <Activity className={`w-5 h-5 ${bot.status === "error" ? "text-[#DC3545]" : "text-[#E8A20E] animate-pulse"}`} />
+                          <Activity className={`w-5 h-5 ${bot.status === "error" ? "text-[var(--red)]" : "text-[var(--amber)] animate-pulse"}`} />
                         </div>
                         <div>
                           <h3 className="text-sm font-bold text-white">{bot.name}</h3>
-                          <p className="text-[10px] text-[#64748B] uppercase font-bold tracking-wider">
+                          <p className="text-[10px] text-[var(--text-muted)] uppercase font-bold tracking-wider">
                             {bot.symbol} â€¢ {bot.trades} trades â€¢ {bot.status}
                           </p>
-                          {bot.lastLog && <p className="text-[10px] text-[#64748B] mt-1">{bot.lastLog}</p>}
+                          {bot.lastLog && <p className="text-[10px] text-[var(--text-muted)] mt-1">{bot.lastLog}</p>}
                         </div>
                       </div>
                       <div className="flex items-center gap-8">
                         <div className="text-right">
-                          <p className="text-[10px] font-bold text-[#64748B] uppercase mb-1">Profit/Loss</p>
-                          <p className={`text-sm font-bold ${bot.pnl >= 0 ? "text-[#28A745]" : "text-[#DC3545]"}`}>
+                          <p className="text-[10px] font-bold text-[var(--text-muted)] uppercase mb-1">Profit/Loss</p>
+                          <p className={`text-sm font-bold ${bot.pnl >= 0 ? "text-[var(--green)]" : "text-[var(--red)]"}`}>
                             {bot.pnl >= 0 ? "+" : ""}${bot.pnl.toFixed(2)}
                           </p>
                         </div>
@@ -314,11 +354,11 @@ export default function Bots() {
                           const mismatch = drift <= -15 || liveWinRate < bot.backtestWinRate * 0.7;
                           if (!mismatch) return null;
                           return (
-                            <div className="max-w-[180px] text-left bg-[#DC3545]/10 border border-[#DC3545]/30 rounded px-2 py-1">
-                              <div className="flex items-center gap-1 text-[10px] font-bold text-[#DC3545] uppercase">
+                            <div className="max-w-[180px] text-left bg-[var(--red-soft)] border border-[var(--red)]/30 rounded px-2 py-1">
+                              <div className="flex items-center gap-1 text-[10px] font-bold text-[var(--red)] uppercase">
                                 <AlertTriangle className="w-3 h-3" /> Regime mismatch
                               </div>
-                              <p className="text-[10px] text-[#DC3545]/80 leading-tight mt-0.5">
+                              <p className="text-[10px] text-[var(--red)]/80 leading-tight mt-0.5">
                                 Live {liveWinRate.toFixed(0)}% vs backtest {bot.backtestWinRate.toFixed(0)}%
                               </p>
                             </div>
@@ -327,7 +367,7 @@ export default function Bots() {
                         <Button
                           size="sm"
                           variant="destructive"
-                          className="bg-[#DC3545]/10 text-[#DC3545] border-[#DC3545]/20 hover:bg-[#DC3545] hover:text-white"
+                          className="bg-[var(--red-soft)] text-[var(--red)] border-[var(--red)]/20 hover:bg-[var(--red)] hover:text-white"
                           onClick={() => handleStop(bot)}
                         >
                           <Square className="w-3 h-3 mr-2 fill-current" /> Stop
@@ -343,27 +383,33 @@ export default function Bots() {
 
         {/* Sidebar - Quick Stats & Available Strategies */}
         <div className="space-y-8">
-          <div className="bloomberg-panel p-6">
-            <h3 className="text-[10px] font-bold text-[#64748B] uppercase tracking-widest mb-6">System Health</h3>
+          <div className="panel p-6">
+            <h3 className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-widest mb-6">System Health</h3>
             <div className="space-y-4">
               <div className="flex justify-between items-center">
-                <span className="text-xs text-[#94A3B8]">Active Bots</span>
-                <span className="text-[10px] font-bold text-[#94A3B8] uppercase">{runningBots.length}</span>
+                <span className="text-xs text-[var(--text-secondary)]">Active Bots</span>
+                <span className="text-[10px] font-bold text-[var(--text-secondary)] uppercase">{runningBots.length}</span>
               </div>
             </div>
           </div>
 
-          <div className="bloomberg-panel p-6">
-            <h3 className="text-[10px] font-bold text-[#64748B] uppercase tracking-widest mb-6">Ready to Deploy</h3>
+          <div className="panel p-6">
+            <h3 className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-widest mb-6">Ready to Deploy</h3>
             <div className="space-y-3">
-              {strategiesQuery.data?.map((s: any) => (
-                <div key={s.id} className="p-4 rounded-xl bg-[#151B23] border border-[#252B35] hover:border-[#E8A20E]/50 transition-all group">
+              {strategiesQuery.isLoading ? (
+                <div className="flex items-center justify-center py-8">
+                  <Activity className="w-5 h-5 animate-spin text-[var(--amber)]" />
+                </div>
+              ) : strategiesQuery.isError ? (
+                <p className="text-xs text-[var(--red)] italic text-center py-4">Failed to load strategies. Please try again.</p>
+              ) : strategiesQuery.data?.map((s: any) => (
+                <div key={s.id} className="p-4 rounded-xl bg-[var(--card)] border border-[var(--border)] hover:border-[var(--amber)]/50 transition-all group">
                   <div className="flex justify-between items-start mb-3">
                     <h4 className="text-xs font-bold text-white">{s.name}</h4>
-                    <Zap className="w-3 h-3 text-[#E8A20E]" />
+                    <Zap className="w-3 h-3 text-[var(--amber)]" />
                   </div>
                   <Button
-                    className="w-full h-8 text-[10px] font-bold bg-[#E8A20E]/10 text-[#E8A20E] hover:bg-[#E8A20E] hover:text-white border border-[#E8A20E]/20"
+                    className="w-full h-8 text-[10px] font-bold bg-[var(--amber-soft)] text-[var(--amber)] hover:bg-[var(--amber)] hover:text-white border border-[var(--amber-border)]"
                     disabled={deployingId === s.id || runningBots.some((b) => b.strategyId === s.id)}
                     onClick={() => handleDeploy(s)}
                   >
@@ -373,7 +419,7 @@ export default function Bots() {
                 </div>
               ))}
               {(!strategiesQuery.data || strategiesQuery.data.length === 0) && (
-                <p className="text-xs text-[#64748B] italic text-center py-4">No strategies found.</p>
+                <p className="text-xs text-[var(--text-muted)] italic text-center py-4">No strategies found.</p>
               )}
             </div>
           </div>

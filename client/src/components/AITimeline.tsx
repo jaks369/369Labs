@@ -14,10 +14,10 @@ const ICONS = {
   risk: AlertTriangle,
 };
 const COLORS = {
-  ai: "text-[#22BFC8]",
-  bot: "text-[#22BFC8]",
-  market: "text-[#28A745]",
-  risk: "text-[#DC3545]",
+  ai: "text-[var(--cyan)]",
+  bot: "text-[var(--cyan)]",
+  market: "text-[var(--green)]",
+  risk: "text-[var(--red)]",
 };
 
 export function pushTimeline(entry: Omit<TimelineEntry, "ts">) {
@@ -44,11 +44,11 @@ export default function AITimeline({ compact = false }: { compact?: boolean }) {
   return (
     <div className="text-left">
       <div className="flex items-center gap-1.5 mb-1.5">
-        <Activity className="w-3 h-3 text-[#22BFC8]" />
-        <span className="text-[9px] font-semibold uppercase tracking-[0.08em] text-[#5A6878]">AI Timeline</span>
+        <Activity className="w-3 h-3 text-[var(--cyan)]" />
+        <span className="text-[9px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">AI Timeline</span>
       </div>
       {entries.length === 0 ? (
-        <p className="text-[10px] text-[#5A6878] leading-relaxed">
+        <p className="text-[10px] text-[var(--text-muted)] leading-relaxed">
           Live agent activity will appear here ΓÇö scans, strategy builds, risk checks, trades.
         </p>
       ) : (
@@ -58,8 +58,8 @@ export default function AITimeline({ compact = false }: { compact?: boolean }) {
             return (
               <li key={i} className="flex items-start gap-1.5">
                 <Icon className={`w-3 h-3 mt-0.5 shrink-0 ${COLORS[e.icon]}`} />
-                <span className="text-[10px] text-[#8896A8] leading-tight flex-1">{e.text}</span>
-                <span className="text-[9px] text-[#5A6878] tabular-nums shrink-0">{fmt(e.ts)}</span>
+                <span className="text-[10px] text-[var(--text-secondary)] leading-tight flex-1">{e.text}</span>
+                <span className="text-[9px] text-[var(--text-muted)] tabular-nums shrink-0">{fmt(e.ts)}</span>
               </li>
             );
           })}

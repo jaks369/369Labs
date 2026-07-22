@@ -68,49 +68,49 @@ export default function Replay() {
   };
 
   return (
-    <div className="min-h-screen bg-[#151B23] p-6">
+    <div className="min-h-screen bg-[var(--card)] p-6">
       <div className="max-w-5xl mx-auto space-y-6">
         <div className="flex items-center justify-between flex-wrap gap-4">
           <div>
             <h1 className="text-3xl font-bold text-white flex items-center gap-3">
-              <RotateCcw className="w-7 h-7 text-[#F5B80B]" /> Replay Mode
+              <RotateCcw className="w-7 h-7 text-[var(--amber-hover)]" /> Replay Mode
             </h1>
-            <p className="text-[#94A3B8] text-sm mt-1">Replay historical ticks. Trade manually and let 369AI score your decision.</p>
+            <p className="text-[var(--text-secondary)] text-sm mt-1">Replay historical ticks. Trade manually and let 369AI score your decision.</p>
           </div>
-          <select value={symbol} onChange={(e) => setSymbol(e.target.value)} className="bg-[#151B23] border border-[#252B35] rounded-lg px-3 py-2 text-white text-sm">
+          <select value={symbol} onChange={(e) => setSymbol(e.target.value)} className="bg-[var(--card)] border border-[var(--border)] rounded-lg px-3 py-2 text-white text-sm">
             {SYMBOLS.map((s) => <option key={s} value={s}>{s}</option>)}
           </select>
         </div>
 
-        {error && <div className="bg-[#DC3545]/10 border border-[#DC3545]/30 rounded-xl p-4 text-sm text-[#DC3545]">{error}</div>}
-        {loading && <div className="flex items-center justify-center h-64"><Loader2 className="w-8 h-8 animate-spin text-[#E8A20E]" /></div>}
+        {error && <div className="bg-[var(--red-soft)] border border-[var(--red)]/30 rounded-xl p-4 text-sm text-[var(--red)]">{error}</div>}
+        {loading && <div className="flex items-center justify-center h-64"><Loader2 className="w-8 h-8 animate-spin text-[var(--amber)]" /></div>}
 
         {!loading && ticks.length > 0 && (
           <>
-            <div className="bg-[#151B23] border border-[#252B35] rounded-xl p-6">
+            <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-6">
               <div className="flex items-end justify-between mb-4">
                 <div>
-                  <p className="text-xs text-[#64748B] uppercase">Replaying</p>
+                  <p className="text-xs text-[var(--text-muted)] uppercase">Replaying</p>
                   <p className="text-3xl font-bold text-white">{cur?.price?.toFixed(4)}</p>
-                  <p className="text-xs text-[#64748B]">{cur ? new Date(cur.epoch * 1000).toLocaleString() : ""} Â· tick {idx + 1}/{ticks.length}</p>
+                  <p className="text-xs text-[var(--text-muted)]">{cur ? new Date(cur.epoch * 1000).toLocaleString() : ""} Â· tick {idx + 1}/{ticks.length}</p>
                 </div>
                 <div className="text-right">
-                  <p className="text-xs text-[#64748B] uppercase">Last digit</p>
-                  <p className="text-4xl font-bold text-[#E8A20E]">{cur?.lastDigit}</p>
+                  <p className="text-xs text-[var(--text-muted)] uppercase">Last digit</p>
+                  <p className="text-4xl font-bold text-[var(--amber)]">{cur?.lastDigit}</p>
                 </div>
               </div>
 
               <Sparkline data={windowTicks.map((t) => ({ value: t.price }))} />
 
               <div className="flex items-center gap-3 mt-4">
-                <button onClick={() => { setIdx(0); setPlaying(false); }} className="p-2 rounded-lg bg-white/5 text-[#94A3B8] hover:bg-white/10"><RotateCcw className="w-4 h-4" /></button>
-                <button onClick={() => setPlaying((p) => !p)} className="p-2 rounded-lg bg-[#E8A20E] text-white hover:bg-[#E8A20E]">
+                <button onClick={() => { setIdx(0); setPlaying(false); }} className="p-2 rounded-lg bg-white/5 text-[var(--text-secondary)] hover:bg-white/10"><RotateCcw className="w-4 h-4" /></button>
+                <button onClick={() => setPlaying((p) => !p)} className="p-2 rounded-lg bg-[var(--amber)] text-white hover:bg-[var(--amber)]">
                   {playing ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
                 </button>
                 <input type="range" min={0} max={ticks.length - 1} value={idx} onChange={(e) => { setPlaying(false); setIdx(Number(e.target.value)); }} className="flex-1" />
                 <div className="flex items-center gap-1">
-                  <FastForward className="w-4 h-4 text-[#64748B]" />
-                  <select value={speed} onChange={(e) => setSpeed(Number(e.target.value))} className="bg-[#151B23] border border-[#252B35] rounded px-2 py-1 text-xs text-white">
+                  <FastForward className="w-4 h-4 text-[var(--text-muted)]" />
+                  <select value={speed} onChange={(e) => setSpeed(Number(e.target.value))} className="bg-[var(--card)] border border-[var(--border)] rounded px-2 py-1 text-xs text-white">
                     {[1, 2, 4, 8, 16].map((s) => <option key={s} value={s}>{s}x</option>)}
                   </select>
                 </div>
@@ -118,27 +118,27 @@ export default function Replay() {
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <div className="bg-[#151B23] border border-[#252B35] rounded-xl p-6">
+              <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-6">
                 <h2 className="text-sm font-bold text-white mb-4">Manual Trade</h2>
                 <div className="flex gap-3">
-                  <button onClick={() => takeTrade("rise")} className={`flex-1 py-3 rounded-lg flex items-center justify-center gap-2 font-bold ${trade?.type === "rise" ? "bg-[#28A745] text-white" : "bg-[#28A745]/10 text-[#28A745] border border-[#28A745]/30"}`}>
+                  <button onClick={() => takeTrade("rise")} className={`flex-1 py-3 rounded-lg flex items-center justify-center gap-2 font-bold ${trade?.type === "rise" ? "bg-[var(--green)] text-white" : "bg-[var(--green-soft)] text-[var(--green)] border border-[var(--green)]/30"}`}>
                     <TrendingUp className="w-4 h-4" /> {trade ? "Close" : "Buy Rise"}
                   </button>
-                  <button onClick={() => takeTrade("fall")} className={`flex-1 py-3 rounded-lg flex items-center justify-center gap-2 font-bold ${trade?.type === "fall" ? "bg-[#DC3545] text-white" : "bg-[#DC3545]/10 text-[#DC3545] border border-[#DC3545]/30"}`}>
+                  <button onClick={() => takeTrade("fall")} className={`flex-1 py-3 rounded-lg flex items-center justify-center gap-2 font-bold ${trade?.type === "fall" ? "bg-[var(--red)] text-white" : "bg-[var(--red-soft)] text-[var(--red)] border border-[var(--red)]/30"}`}>
                     <TrendingDown className="w-4 h-4" /> {trade ? "Close" : "Buy Fall"}
                   </button>
                 </div>
-                {trade && <p className="text-xs text-[#94A3B8] mt-3">Open {trade.type} at {trade.entryPrice.toFixed(4)}. Press again to close and score.</p>}
+                {trade && <p className="text-xs text-[var(--text-secondary)] mt-3">Open {trade.type} at {trade.entryPrice.toFixed(4)}. Press again to close and score.</p>}
               </div>
 
-              <div className="bg-[#151B23] border border-[#252B35] rounded-xl p-6">
+              <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-6">
                 <h2 className="text-sm font-bold text-white mb-4">Your Decisions</h2>
-                {results.length === 0 ? <p className="text-sm text-[#64748B]">No trades yet â€” replay and take a position.</p> : (
+                {results.length === 0 ? <p className="text-sm text-[var(--text-muted)]">No trades yet â€” replay and take a position.</p> : (
                   <div className="space-y-1.5 max-h-64 overflow-y-auto font-mono text-xs">
                     {results.map((r, i) => (
                       <div key={i} className="flex justify-between p-2 bg-black/20 rounded-lg">
-                        <span className="text-[#94A3B8]">{r.type} <span className="text-[#64748B]">@ {r.at}</span></span>
-                        <span className={r.pnl >= 0 ? "text-[#28A745]" : "text-[#DC3545]"}>{r.pnl >= 0 ? "+" : ""}{r.pnl.toFixed(2)}</span>
+                        <span className="text-[var(--text-secondary)]">{r.type} <span className="text-[var(--text-muted)]">@ {r.at}</span></span>
+                        <span className={r.pnl >= 0 ? "text-[var(--green)]" : "text-[var(--red)]"}>{r.pnl >= 0 ? "+" : ""}{r.pnl.toFixed(2)}</span>
                       </div>
                     ))}
                   </div>

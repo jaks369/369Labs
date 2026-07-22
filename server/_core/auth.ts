@@ -14,7 +14,7 @@ const SCRYPT_KEYLEN = 64;
 
 export function sanitizeUser(u: any): any {
   if (!u) return u;
-  const { passwordHash, ...rest } = u;
+  const { passwordHash, twoFASecret, ...rest } = u;
   return rest;
 }
 /** Hash a plaintext password for storage. Format: "salt:derivedKeyHex". */
@@ -34,7 +34,7 @@ export async function verifyPassword(password: string, stored: string): Promise<
   return timingSafeEqual(storedBuffer, derivedKey);
 }
 
-type SessionPayload = { userId: number };
+type SessionPayload = { userId: number; sessionId: string };
 
 function getSessionSecret() {
   if (!ENV.cookieSecret) {
@@ -43,14 +43,15 @@ function getSessionSecret() {
   return new TextEncoder().encode(ENV.cookieSecret);
 }
 
-/** Sign a session JWT for a given user id. */
+/** Sign a session JWT for a given user id and session id. */
 export async function createSessionToken(
   userId: number,
+  sessionId: string,
   expiresInMs: number = ONE_YEAR_MS
 ): Promise<string> {
   const issuedAt = Date.now();
   const expirationSeconds = Math.floor((issuedAt + expiresInMs) / 1000);
-  return new SignJWT({ userId })
+  return new SignJWT({ userId, sessionId })
     .setProtectedHeader({ alg: "HS256", typ: "JWT" })
     .setExpirationTime(expirationSeconds)
     .sign(getSessionSecret());
@@ -75,8 +76,8 @@ function parseCookies(cookieHeader: string | undefined) {
   return new Map(Object.entries(parsed));
 }
 
-/** Authenticate an incoming request via session cookie (or Bearer header fallback). */
-export async function authenticateRequest(req: Request): Promise<User> {
+/** Authenticate an incoming request via session cookie (or Bearer header fallback). Returns user and sessionId. */
+export async function authenticateRequest(req: Request): Promise<{ user: User; sessionId: string | null }> {
   const cookies = parseCookies(req.headers.cookie);
   let sessionToken = cookies.get(COOKIE_NAME);
 
@@ -87,17 +88,39 @@ export async function authenticateRequest(req: Request): Promise<User> {
     }
   }
 
-  const session = await verifySessionToken(sessionToken);
-  if (!session) {
+  const payload = await verifySessionToken(sessionToken);
+  if (!payload) {
     throw ForbiddenError("Invalid session cookie");
   }
 
-  const user = await db.getUserById(session.userId);
+  // Check if session was revoked
+  if (payload.sessionId) {
+    const session = await db.getSessionBySessionId(payload.sessionId);
+    if (!session || session.revokedAt) {
+      throw ForbiddenError("Session revoked");
+    }
+    // Touch lastActiveAt periodically (once per minute per session)
+    const now = Date.now();
+    const lastActive = new Date(session.lastActiveAt).getTime();
+    if (now - lastActive > 60000) {
+      db.touchSessionLastActive(payload.sessionId).catch(() => {});
+    }
+  }
+
+  const user = await db.getUserById(payload.userId);
   if (!user) {
     throw ForbiddenError("User not found");
   }
 
-  return sanitizeUser(user);
+  // IP whitelist check
+  const whitelist = await db.getIpWhitelist(payload.userId);
+  if (whitelist.length > 0) {
+    const clientIp = req.headers["x-forwarded-for"]?.toString().split(",")[0]?.trim() || req.socket?.remoteAddress || "";
+    const matched = whitelist.some(e => clientIp.startsWith(e.ip));
+    if (!matched) {
+      throw ForbiddenError("Access denied: IP not whitelisted");
+    }
+  }
 
-  return sanitizeUser(user);
+  return { user: sanitizeUser(user), sessionId: payload.sessionId || null };
 }

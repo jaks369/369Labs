@@ -12,6 +12,7 @@ import {
   ChevronDown,
   Wallet,
   Sparkles,
+  RotateCcw,
 } from "lucide-react";
 import { useLocation } from "wouter";
 import TickChart from "@/components/TickChart";
@@ -20,6 +21,7 @@ import { derivWS, DerivSymbol } from "@/services/derivWebSocket";
 import { useDerivStatus } from "@/hooks/useDerivStatus";
 import DerivTokenModal from "@/components/DerivTokenModal";
 import ContractTypeSelector, { ContractSelection } from "@/components/ContractTypeSelector";
+import { paperEngine } from "@/services/PaperEngine";
 
 const IT_SYMBOLS = ["R_10","R_25","R_50","R_75","R_100","1HZ10V","1HZ25V","1HZ50V","1HZ75V","1HZ100V"];
 
@@ -42,6 +44,7 @@ export default function Dashboard() {
   const [pnl, setPnl] = useState(0);
   const [balance, setBalance] = useState(0);
   const [balanceInfo, setBalanceInfo] = useState<{ currency: string; accountType: string } | null>(null);
+  const [paperBal, setPaperBal] = useState(() => paperEngine.getBalance());
   const [botRunning, setBotRunning] = useState(false);
   const [selectedSymbol, setSelectedSymbol] = useState("R_50");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
@@ -185,6 +188,10 @@ export default function Dashboard() {
     return () => clearInterval(authTimer);
   }, [tokenQuery.data]);
 
+  useEffect(() => {
+    return paperEngine.onBalance(setPaperBal);
+  }, []);
+
   // Three distinct token states: none saved | saved but invalid/unauthorized | connected.
   const tokenStatus: "none" | "invalid" | "connected" =
     !tokenSaved ? "none" : tokenError || !derivWS.isAuthorized() ? "invalid" : "connected";
@@ -218,79 +225,92 @@ export default function Dashboard() {
   if (!isAuthenticated || !user) {
     return (
       <div className="flex items-center justify-center h-full">
-        <Loader2 className="w-8 h-8 animate-spin text-[#E8A20E]" />
+        <Loader2 className="w-8 h-8 animate-spin text-[var(--amber)]" />
       </div>
     );
   }
 
   return (
-    <div className="p-6 lg:p-10">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+    <div className="page-container">
+      {/* Header */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
         <div>
-          <h1 className="text-3xl font-bold text-white mb-1">Market Overview</h1>
-          <p className="text-[#64748B] text-sm font-medium">Volatility Indices &middot; Live Trading</p>
+          <h1 className="text-2xl font-semibold text-white mb-1">Market Overview</h1>
+          <p className="text-[var(--text-muted)] text-sm font-medium">Volatility Indices &middot; Live Trading</p>
         </div>
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-[#151B23] border border-[#252B35]">
-            <Wallet className="w-4 h-4 text-[#28A745]" />
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="flex items-center gap-2 px-3 py-2 rounded-lg panel-secondary">
+            <Wallet className="w-4 h-4 text-[var(--green)]" />
             <span className="text-sm font-bold text-white">
               {balance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} {balanceInfo?.currency || "USD"}
             </span>
             {balanceInfo?.accountType ? (
-              <span className={`text-[10px] font-bold uppercase px-1.5 py-0.5 rounded ${balanceInfo.accountType === "demo" ? "bg-[#E8A20E]/20 text-[#E8A20E]" : "bg-[#DC3545]/20 text-[#DC3545]"}`}>
+              <span className={`badge ${balanceInfo.accountType === "demo" ? "badge-amber" : "badge-red"}`}>
                 {balanceInfo.accountType}
               </span>
             ) : tokenStatus === "invalid" ? (
-              <span className="text-[10px] font-bold uppercase px-1.5 py-0.5 rounded bg-[#DC3545]/20 text-[#DC3545]" title={tokenError || "Token saved but not authorized by Deriv"}>
-                token invalid
-              </span>
+              <span className="badge badge-red" title={tokenError || "Token saved but not authorized by Deriv"}>token invalid</span>
             ) : tokenStatus === "none" ? (
-              <span className="text-[10px] font-bold uppercase px-1.5 py-0.5 rounded bg-[#64748B]/20 text-[#94A3B8]">
-                no token
-              </span>
+              <span className="badge badge-gray">no token</span>
             ) : (
-              <span className="text-[10px] font-bold uppercase px-1.5 py-0.5 rounded bg-[#28A745]/20 text-[#28A745]">
-                connected
-              </span>
+              <span className="badge badge-green">connected</span>
             )}
-
           </div>
-          <Button onClick={() => setShowTokenModal(true)} className="btn-primary gap-2">
-            <Zap className="w-4 h-4" /> Connect Deriv
+          <button
+            onClick={() => navigate("/settings")}
+            className="flex items-center gap-2 px-3 py-2 rounded-lg panel-secondary hover:bg-[var(--amber-soft)] transition-colors"
+            title="Paper Trading Balance"
+          >
+            <Wallet className="w-4 h-4 text-[var(--amber-hover)]" />
+            <span className="text-sm font-bold text-white">
+              ${paperBal.toFixed(2)}
+            </span>
+            <span className="badge badge-amber">paper</span>
+          </button>
+          <Button onClick={() => setShowTokenModal(true)} className="btn btn-primary gap-2 w-full sm:w-auto">
+            <Zap className="w-4 h-4 shrink-0" /> <span className="sm:inline">Connect Deriv</span>
           </Button>
-          <Button onClick={() => setShowSymbolPicker(s => !s)} className="btn-outline gap-2">
-            <Activity className="w-4 h-4" /> {selectedDisplay}
-            <ChevronDown className={`w-4 h-4 transition-transform ${showSymbolPicker ? "rotate-180" : ""}`} />
+          <Button onClick={() => setShowSymbolPicker(s => !s)} className="btn btn-outline gap-2 w-full sm:w-auto">
+            <Activity className="w-4 h-4 shrink-0" /> <span className="truncate max-w-[120px] sm:max-w-none">{selectedDisplay}</span>
+            <ChevronDown className={`w-4 h-4 shrink-0 transition-transform ${showSymbolPicker ? "rotate-180" : ""}`} />
           </Button>
         </div>
       </div>
 
+      {/* Token error banner */}
       {tokenError && (
-        <div className="flex items-center justify-between gap-3 bg-[#E8A20E]/10 border border-[#E8A20E]/40 text-[#E8A20E] text-sm rounded-lg px-4 py-2 mb-4">
+        <div className="flex items-center justify-between gap-3 bg-[var(--amber-soft)] border border-[var(--amber-border)] text-[var(--amber)] text-sm rounded-[var(--radius)] px-4 py-2 mb-6">
           <span>Deriv token issue: {tokenError}. Update it to trade.</span>
-          <Button onClick={() => setShowTokenModal(true)} className="btn-outline text-[#E8A20E] border-[#E8A20E]/40 text-xs px-3 py-1">UPDATE TOKEN</Button>
+          <Button onClick={() => setShowTokenModal(true)} className="btn btn-outline text-[var(--amber)] border-[var(--amber-border)] text-xs px-3 py-1">UPDATE TOKEN</Button>
         </div>
       )}
 
+      {/* Main grid */}
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
+        {/* Left column - Chart & History */}
         <div className="xl:col-span-2 space-y-8">
-          <div className="bloomberg-panel p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="font-bold text-white uppercase text-xs tracking-widest">
-                Live Chart &mdash; {selectedDisplay}
-              </h2>
-            </div>
 
+          {/* Chart container */}
+          <div className="chart-container">
+            <div className="chart-header">
+              <h2 className="card-title text-sm">Live Chart &mdash; {selectedDisplay}</h2>
+              <div className="chart-toolbar">
+                <button className="chart-toolbar-btn active">1m</button>
+                <button className="chart-toolbar-btn">5m</button>
+                <button className="chart-toolbar-btn">15m</button>
+                <button className="chart-toolbar-btn">1h</button>
+              </div>
+            </div>
             {showSymbolPicker ? (
-              <div className="max-h-[420px] overflow-y-auto space-y-5 pr-1">
+              <div className="max-h-[300px] md:max-h-[420px] overflow-y-auto space-y-5 p-4">
                 <div>
-                  <h3 className="text-[10px] font-bold text-[#64748B] uppercase tracking-widest mb-2">Volatility 1s Indices</h3>
-                  <div className="grid grid-cols-2 gap-2">
+                  <h3 className="section-title mb-2">Volatility 1s Indices</h3>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                     {vol1sSymbols.map(s => (
                       <button
                         key={s.symbol}
                         onClick={() => { setSelectedSymbol(s.symbol); setShowSymbolPicker(false); }}
-                        className={`text-left px-3 py-2 rounded-lg text-xs font-semibold transition-colors ${selectedSymbol === s.symbol ? "bg-[#E8A20E]/20 text-[#F5B80B] border border-[#E8A20E]/40" : "bg-white/5 text-[#94A3B8] hover:bg-white/10 border border-transparent"}`}
+                        className={`text-left px-3 py-2 rounded-lg text-xs font-semibold transition-all ${selectedSymbol === s.symbol ? "bg-[var(--amber-soft)] text-[var(--amber-hover)] border border-[var(--amber-border)]" : "bg-white/5 text-[var(--text-secondary)] hover:bg-white/10 border border-transparent"}`}
                       >
                         {s.displayName || s.symbol}
                       </button>
@@ -298,13 +318,13 @@ export default function Dashboard() {
                   </div>
                 </div>
                 <div>
-                  <h3 className="text-[10px] font-bold text-[#64748B] uppercase tracking-widest mb-2">Volatility Indices</h3>
-                  <div className="grid grid-cols-2 gap-2">
+                  <h3 className="section-title mb-2">Volatility Indices</h3>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                     {volRegularSymbols.map(s => (
                       <button
                         key={s.symbol}
                         onClick={() => { setSelectedSymbol(s.symbol); setShowSymbolPicker(false); }}
-                        className={`text-left px-3 py-2 rounded-lg text-xs font-semibold transition-colors ${selectedSymbol === s.symbol ? "bg-[#E8A20E]/20 text-[#F5B80B] border border-[#E8A20E]/40" : "bg-white/5 text-[#94A3B8] hover:bg-white/10 border border-transparent"}`}
+                        className={`text-left px-3 py-2 rounded-lg text-xs font-semibold transition-all ${selectedSymbol === s.symbol ? "bg-[var(--amber-soft)] text-[var(--amber-hover)] border border-[var(--amber-border)]" : "bg-white/5 text-[var(--text-secondary)] hover:bg-white/10 border border-transparent"}`}
                       >
                         {s.displayName || s.symbol}
                       </button>
@@ -313,21 +333,21 @@ export default function Dashboard() {
                 </div>
               </div>
             ) : (
-              <div className="p-4 chart-plot h-[420px]">
+              <div className="chart-plot h-[300px] md:h-[420px]">
                 <TickChart symbol={selectedSymbol} maxDataPoints={50} decimalPlaces={decimalPlaces} />
               </div>
             )}
           </div>
 
-          <div className="bloomberg-panel">
-            <div className="p-4 border-b border-[#252B35] flex items-center justify-between">
-              <h2 className="font-bold text-white uppercase text-xs tracking-widest">History</h2>
-              <div className="flex gap-1 p-1 bg-[#151B23] rounded-lg border border-[#252B35]">
-                <button onClick={() => setHistoryTab("trades")} className={`px-3 py-1 rounded text-[10px] font-bold uppercase transition-colors ${historyTab === "trades" ? "bg-[#E8A20E]/20 text-[#F5B80B]" : "text-[#64748B] hover:text-white"}`}>Trades</button>
-                <button onClick={() => setHistoryTab("prices")} className={`px-3 py-1 rounded text-[10px] font-bold uppercase transition-colors ${historyTab === "prices" ? "bg-[#E8A20E]/20 text-[#F5B80B]" : "text-[#64748B] hover:text-white"}`}>Price History</button>
+          {/* History panel */}
+          <div className="panel">
+            <div className="panel-header">
+              <h2 className="card-title text-sm">History</h2>
+              <div className="tabs">
+                <button onClick={() => setHistoryTab("trades")} className={`tab ${historyTab === "trades" ? "active" : ""}`}>Trades</button>
+                <button onClick={() => setHistoryTab("prices")} className={`tab ${historyTab === "prices" ? "active" : ""}`}>Price History</button>
               </div>
             </div>
-
             {historyTab === "trades" ? (
               <div>
                 {(() => {
@@ -338,59 +358,50 @@ export default function Dashboard() {
                   const net = grossProfit + grossLoss;
                   const winRate = symTrades.length ? Math.round((wins / symTrades.length) * 100) : 0;
                   return (
-                    <div className="p-4 grid grid-cols-4 gap-3 border-b border-[#252B35]">
-                      <div className="rounded-lg bg-[#151B23] border border-[#252B35] p-3">
-                        <div className="text-[10px] uppercase tracking-widest text-[#64748B] font-bold">Trades</div>
-                        <div className="text-lg font-bold text-white mt-1">{symTrades.length}</div>
+                    <div className="p-4 grid grid-cols-2 md:grid-cols-4 gap-3 border-b border-[var(--border)]">
+                      <div className="kpi-card">
+                        <div className="kpi-label">Trades</div>
+                        <div className="kpi-value text-lg">{symTrades.length}</div>
                       </div>
-                      <div className="rounded-lg bg-[#151B23] border border-[#252B35] p-3">
-                        <div className="text-[10px] uppercase tracking-widest text-[#64748B] font-bold">Win Rate</div>
-                        <div className="text-lg font-bold text-white mt-1">{winRate}%</div>
+                      <div className="kpi-card">
+                        <div className="kpi-label">Win Rate</div>
+                        <div className="kpi-value text-lg">{winRate}%</div>
                       </div>
-                      <div className="rounded-lg bg-[#151B23] border border-[#252B35] p-3">
-                        <div className="text-[10px] uppercase tracking-widest text-[#64748B] font-bold">Gross Profit</div>
-                        <div className="text-lg font-bold text-[#28A745] mt-1">+{grossProfit.toFixed(2)}</div>
+                      <div className="kpi-card kpi-card-green">
+                        <div className="kpi-label">Gross Profit</div>
+                        <div className="kpi-value text-lg text-[var(--green)]">+{grossProfit.toFixed(2)}</div>
                       </div>
-                      <div className="rounded-lg bg-[#151B23] border border-[#252B35] p-3">
-                        <div className="text-[10px] uppercase tracking-widest text-[#64748B] font-bold">Net P&L</div>
-                        <div className={`text-lg font-bold mt-1 ${net >= 0 ? "text-[#28A745]" : "text-[#DC3545]"}`}>{net >= 0 ? "+" : ""}{net.toFixed(2)}</div>
+                      <div className="kpi-card">
+                        <div className="kpi-label">Net P&L</div>
+                        <div className={`kpi-value text-lg ${net >= 0 ? "text-[var(--green)]" : "text-[var(--red)]"}`}>{net >= 0 ? "+" : ""}{net.toFixed(2)}</div>
                       </div>
                     </div>
                   );
                 })()}
-                <div className="overflow-x-auto">
+                <div className="table-container border-0 rounded-none">
                   {(() => {
                     const symTrades = (tradesQuery.data || []).filter((t: any) => (t.symbol || "") === selectedSymbol);
                     if (symTrades.length === 0) {
-                      return <div className="p-10 text-center text-[#64748B] italic text-sm">No trades for {selectedSymbol} yet. Deploy a bot or place a quick trade.</div>;
+                      return <div className="empty-state"><p className="empty-state-desc">No trades for {selectedSymbol} yet.</p></div>;
                     }
                     return (
-                      <table className="w-full text-left text-xs">
+                      <table className="table">
                         <thead>
-                          <tr className="text-[#64748B] border-b border-[#252B35]">
-                            <th className="p-3 font-bold">#</th>
-                            <th className="p-3 font-bold">TYPE</th>
-                            <th className="p-3 font-bold">STAKE</th>
-                            <th className="p-3 font-bold">ENTRY</th>
-                            <th className="p-3 font-bold">RESULT</th>
-                            <th className="p-3 font-bold text-right">P&L</th>
-                          </tr>
+                          <tr><th>#</th><th>TYPE</th><th>STAKE</th><th>ENTRY</th><th>RESULT</th><th className="text-right">P&L</th></tr>
                         </thead>
-                        <tbody className="divide-y divide-[#252B35]">
+                        <tbody>
                           {symTrades.slice(0, 10).map((trade: any, i: number) => (
-                            <tr key={trade.id} className="hover:bg-white/5 transition-colors">
-                              <td className="p-3 text-[#64748B] font-mono">{i + 1}</td>
-                              <td className="p-3"><span className="px-2 py-0.5 rounded bg-white/5 text-[#94A3B8] font-semibold">{trade.contractType || "-"}</span></td>
-                              <td className="p-3 text-[#94A3B8]">${trade.stake}</td>
-                              <td className="p-3 text-[#94A3B8] font-mono">{trade.entryPrice}</td>
-                              <td className="p-3">
-                                <span className={`px-2 py-0.5 rounded-sm font-bold text-[10px] ${
-                                  trade.result === "win" ? "bg-[#28A745]/10 text-[#28A745]" : "bg-[#DC3545]/10 text-[#DC3545]"
-                                }`}>
+                            <tr key={trade.id}>
+                              <td className="text-[var(--text-muted)] font-mono">{i + 1}</td>
+                              <td><span className="tag">{trade.contractType || "-"}</span></td>
+                              <td>${trade.stake}</td>
+                              <td className="font-mono">{trade.entryPrice}</td>
+                              <td>
+                                <span className={`badge ${trade.result === "win" ? "badge-green" : "badge-red"}`}>
                                   {trade.result.toUpperCase()}
                                 </span>
                               </td>
-                              <td className={`p-3 text-right font-bold font-mono ${parseFloat(trade.profitLoss?.toString() || "0") >= 0 ? "text-[#28A745]" : "text-[#DC3545]"}`}>
+                              <td className={`text-right font-bold font-mono ${parseFloat(trade.profitLoss?.toString() || "0") >= 0 ? "text-[var(--green)]" : "text-[var(--red)]"}`}>
                                 {parseFloat(trade.profitLoss?.toString() || "0") >= 0 ? "+" : ""}{trade.profitLoss}
                               </td>
                             </tr>
@@ -404,106 +415,98 @@ export default function Dashboard() {
             ) : (
               <div className="p-4">
                 {priceQuery.isLoading ? (
-                  <div className="p-10 text-center text-[#64748B] italic text-sm">Loading price history...</div>
+                  <div className="flex items-center justify-center p-10"><Loader2 className="w-6 h-6 animate-spin text-[var(--amber)]" /></div>
                 ) : priceQuery.data?.ticks?.length ? (
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-left text-xs">
+                  <div className="table-container border-0 rounded-none">
+                    <table className="table">
                       <thead>
-                        <tr className="text-[#64748B] border-b border-[#252B35]">
-                          <th className="p-3 font-bold">#</th>
-                          <th className="p-3 font-bold">TIME</th>
-                          <th className="p-3 font-bold text-right">PRICE</th>
-                          <th className="p-3 font-bold text-right">LAST DIGIT</th>
-                        </tr>
+                        <tr><th>#</th><th>TIME</th><th className="text-right">PRICE</th><th className="text-right">LAST DIGIT</th></tr>
                       </thead>
-                      <tbody className="divide-y divide-[#252B35]">
-                        {displayTicks.map((t: any, i: number) => {
-                          const priceStr = String(t.price);
-                          const lastDigit = t.lastDigit;
-                          return (
-                            <tr key={i} className="hover:bg-white/5 transition-colors">
-                              <td className="p-3 text-[#64748B] font-mono">{i + 1}</td>
-                              <td className="p-3 text-[#94A3B8]">{new Date((t.epoch || 0) * 1000).toLocaleTimeString()}</td>
-                              <td className="p-3 text-right text-white font-mono">{Number(t.price).toFixed(decimalPlaces)}</td>
-                              <td className="p-3 text-right text-[#94A3B8] font-mono">{lastDigit}</td>
-                            </tr>
-                          );
-                        })}
+                      <tbody>
+                        {displayTicks.map((t: any, i: number) => (
+                          <tr key={i}>
+                            <td className="text-[var(--text-muted)] font-mono">{i + 1}</td>
+                            <td>{new Date((t.epoch || 0) * 1000).toLocaleTimeString()}</td>
+                            <td className="text-right text-white font-mono">{Number(t.price).toFixed(decimalPlaces)}</td>
+                            <td className="text-right font-mono">{t.lastDigit}</td>
+                          </tr>
+                        ))}
                       </tbody>
                     </table>
                   </div>
                 ) : (
-                  <div className="p-10 text-center text-[#64748B] italic text-sm">No price history for {selectedSymbol} yet. It populates as ticks arrive.</div>
+                  <div className="empty-state"><p className="empty-state-desc">No price history for {selectedSymbol} yet.</p></div>
                 )}
               </div>
             )}
           </div>
         </div>
 
+        {/* Right column - Trade Studio & AI Insight */}
         <div className="space-y-8">
+
+          {/* Trade Studio */}
           <div className="trade-studio p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-xs font-bold text-[#64748B] uppercase tracking-widest">Trade Studio</h3>
-              <div className="flex items-center gap-2">
-                <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded ${accountType === "real" ? "bg-[#DC3545]/20 text-[#DC3545]" : accountType === "demo" ? "bg-[#E8A20E]/20 text-[#E8A20E]" : tokenStatus === "invalid" ? "bg-[#DC3545]/20 text-[#DC3545]" : "bg-[#64748B]/20 text-[#94A3B8]"}`}>
-                  {accountType === "real" ? "REAL" : accountType === "demo" ? "DEMO" : tokenStatus === "invalid" ? "INVALID" : "NO TOKEN"}
-                </span>
-              </div>
+            <div className="flex items-center justify-between mb-5">
+              <h3 className="section-title text-[11px]">Trade Studio</h3>
+              <span className={`badge ${accountType === "real" ? "badge-red" : accountType === "demo" ? "badge-amber" : tokenStatus === "invalid" ? "badge-red" : "badge-gray"}`}>
+                {accountType === "real" ? "REAL" : accountType === "demo" ? "DEMO" : tokenStatus === "invalid" ? "INVALID" : "NO TOKEN"}
+              </span>
             </div>
-            <div className="space-y-3">
-              <div>
-                <label className="text-[10px] font-bold text-[#64748B] uppercase tracking-widest">Symbol</label>
-                <div className="mt-1 px-3 py-2 rounded-lg bg-[#151B23] border border-[#252B35] text-sm text-white">{selectedSymbol}</div>
+            <div className="space-y-4">
+              <div className="input-group">
+                <label className="input-label">Symbol</label>
+                <div className="input bg-[var(--surface-secondary)] cursor-default">{selectedSymbol}</div>
               </div>
               <ContractTypeSelector selection={contract} onChange={setContract} />
-              <div>
-                <label className="text-[10px] font-bold text-[#64748B] uppercase tracking-widest">Stake ($)</label>
+              <div className="input-group">
+                <label className="input-label">Stake ($)</label>
                 <input
                   type="number"
                   min={0.35}
                   step="0.01"
                   value={stake}
                   onChange={(e) => setStake(Math.max(0, parseFloat(e.target.value) || 0))}
-                  className="mt-1 w-full bg-[#151B23] border border-[#252B35] rounded-lg px-3 py-2 text-sm text-white focus:border-[#E8A20E] focus:outline-none"
+                  className="input"
                 />
               </div>
-              <Button onClick={handleQuickTrade} disabled={tradeBusy} className="w-full btn-primary flex items-center justify-center gap-2">
+              <Button onClick={handleQuickTrade} disabled={tradeBusy} className="btn btn-primary w-full flex items-center justify-center gap-2 py-2.5">
                 {tradeBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : (contract.direction === "fall" ? <TrendingDown className="w-4 h-4" /> : <TrendingUp className="w-4 h-4" />)}
                 {tradeBusy ? "Placing..." : "Buy"}
               </Button>
               {tradeMsg && (
-                <p className={`text-xs ${tradeMsg.kind === "ok" ? "text-[#28A745]" : "text-[#DC3545]"}`}>{tradeMsg.text}</p>
+                <p className={`text-xs ${tradeMsg.kind === "ok" ? "text-[var(--green)]" : "text-[var(--red)]"}`}>{tradeMsg.text}</p>
               )}
               {!derivWS.isAuthorized() && (
-                <p className="text-[10px] text-[#64748B]">Connect a Deriv token in Settings to enable trading.</p>
+                <p className="text-xs text-[var(--text-muted)]">Connect a Deriv token in Settings to enable trading.</p>
               )}
             </div>
-            <div className="mt-6 pt-6 border-t border-[#252B35]">
+            <div className="mt-6 pt-6 border-t border-[var(--border)]">
               <DigitStats symbol={selectedSymbol} decimalPlaces={decimalPlaces} />
             </div>
           </div>
 
-
-          <div className="bloomberg-panel p-6 bg-[#22BFC8]/5 border-[#22BFC8]/20">
+          {/* AI Insight */}
+          <div className="ai-panel p-6">
             <div className="flex items-center gap-2 mb-4">
-              <Sparkles className="w-4 h-4 text-[#22BFC8]" />
-              <h3 className="text-xs font-bold text-[#22BFC8] uppercase tracking-widest">369AI Insight</h3>
+              <Sparkles className="w-4 h-4 text-[var(--cyan)]" />
+              <h3 className="section-title text-[11px]">369AI Insight</h3>
             </div>
             {(() => {
               const sigs = (signalsQuery.data as any[]) || [];
               const latest = sigs[0];
               if (!latest) {
-                return <p className="text-xs text-[#64748B] leading-relaxed">No signals yet. Ask 369AI to watch a market, or wait for the always-on scanner to surface a pattern.</p>;
+                return <div className="empty-state py-6"><p className="empty-state-desc">No signals yet. Ask 369AI to watch a market, or wait for the always-on scanner to surface a pattern.</p></div>;
               }
               return (
                 <div>
-                  <p className="text-xs text-[#94A3B8] leading-relaxed">{latest.description}</p>
-                  <div className="flex items-center gap-3 mt-3 text-[10px]">
-                    <span className="px-2 py-0.5 rounded bg-[#22BFC8]/10 border border-[#22BFC8]/30 text-[#22BFC8] font-bold uppercase">{latest.symbol}</span>
-                    <span className="text-[#64748B]">win rate <b className="text-[#28A745]">{latest.winRate}%</b></span>
-                    <span className="text-[#64748B]">{new Date((latest.discoveredAt || 0) * 1000).toLocaleString()}</span>
+                  <p className="text-sm text-[var(--text-secondary)] leading-relaxed">{latest.description}</p>
+                  <div className="flex items-center gap-3 mt-3 text-xs">
+                    <span className="ai-badge">{latest.symbol}</span>
+                    <span className="text-[var(--text-muted)]">win rate <b className="text-[var(--green)]">{latest.winRate}%</b></span>
+                    <span className="text-[var(--text-muted)]">{new Date((latest.discoveredAt || 0) * 1000).toLocaleString()}</span>
                   </div>
-                  <button onClick={() => navigate("/marketplace")} className="mt-3 text-[11px] text-[#22BFC8] hover:underline flex items-center gap-1">
+                  <button onClick={() => navigate("/marketplace")} className="mt-3 text-xs text-[var(--cyan)] hover:text-[var(--cyan)]/80 transition-colors flex items-center gap-1">
                     View all signals <ArrowRight className="w-3 h-3" />
                   </button>
                 </div>

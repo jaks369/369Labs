@@ -1,6 +1,7 @@
 import { derivWS, Tick, ContractUpdate, DerivContractType } from "./derivWebSocket";
 import { StrategyRule } from "@/components/RuleBuilder";
 import { evaluateNode, ConditionNode, EvalContext, legacyConditionToNode, lastDigitOf } from "./conditionEval";
+import { paperEngine } from "./PaperEngine";
 
 export type BotStatus = "idle" | "running" | "error" | "stopped";
 
@@ -53,6 +54,7 @@ export class BotEngine {
   private trades: BotTrade[] = [];
   private hasOpenTrade = false;
   private stopRequested = false;
+  private paperMode = false;
   // Resolved when the currently-open trade settles, so callers can wait for
   // a clean stop instead of tearing down state mid-trade.
   private stopWaiters: Array<() => void> = [];
@@ -73,11 +75,12 @@ export class BotEngine {
     onTick?: (tick: Tick) => void;
     onTrade?: (trade: BotTrade) => void;
     onLog?: (message: string) => void;
-  }) {
+  }, paperMode = false) {
     this.onStatusChange = callbacks.onStatusChange;
     this.onTick = callbacks.onTick;
     this.onTrade = callbacks.onTrade;
     this.onLog = callbacks.onLog;
+    this.paperMode = paperMode;
   }
 
   public start(config: BotConfig) {
@@ -278,7 +281,27 @@ export class BotEngine {
     };
 
     try {
-      if (derivWS.isConnected() && derivWS.isAuthorized()) {
+      if (this.paperMode) {
+        this.log(`Paper trade: simulating ${contractType} for $${stake}`);
+        this.trades.push(pendingTrade);
+        this.onTrade?.(pendingTrade);
+        const result = await paperEngine.executeTrade(currentTick, this.config.strategy.action, stake);
+        pendingTrade.pnl = result.pnl.toFixed(2);
+        pendingTrade.result = result.result;
+        pendingTrade.contractType = contractType;
+        this.totalPnl += result.pnl;
+        this.hasOpenTrade = false;
+        this.onTrade?.(pendingTrade);
+        this.log(`Paper trade settled: ${result.result} ($${result.pnl.toFixed(2)})`);
+        const { stopLoss, takeProfit } = this.config.strategy.params;
+        if (stopLoss > 0 && this.totalPnl <= -Math.abs(stopLoss)) {
+          this.log(`Stop loss of $${stopLoss} hit (P&L $${this.totalPnl.toFixed(2)}). Stopping bot.`);
+          this.stop();
+        } else if (takeProfit > 0 && this.totalPnl >= Math.abs(takeProfit)) {
+          this.log(`Take profit of $${takeProfit} hit (P&L $${this.totalPnl.toFixed(2)}). Stopping bot.`);
+          this.stop();
+        }
+      } else if (derivWS.isConnected() && derivWS.isAuthorized()) {
         // Real money path: proposal -> buy -> subscribe for the settled result.
         const purchase = await derivWS.purchaseContract({
           symbol: this.config.symbol,
@@ -294,10 +317,8 @@ export class BotEngine {
 
         derivWS.subscribeToContract(purchase.contractId, (update) => this.handleContractUpdate(pendingTrade, update));
       } else {
-        // No live/authorized connection — engine is in demo/offline mode.
-        // We do NOT fabricate a win/loss here; the bot simply can't trade for real right now.
         this.hasOpenTrade = false;
-        this.handleError(new Error("Not connected to a live, authorized Deriv session — cannot place a real trade. Add a Deriv API token in Settings."));
+        this.handleError(new Error("Not connected to a live, authorized Deriv session — cannot place a real trade. Add a Deriv API token in Settings or enable Paper Trading."));
         return;
       }
     } catch (error) {

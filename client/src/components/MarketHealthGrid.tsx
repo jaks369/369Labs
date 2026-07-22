@@ -18,32 +18,32 @@ interface MarketHealthGridProps {
 }
 
 function scoreColor(score: number): string {
-  if (score >= 70) return "text-[#28A745]";
-  if (score >= 45) return "text-[#E8A20E]";
-  return "text-[#DC3545]";
+  if (score >= 70) return "text-[var(--green)]";
+  if (score >= 45) return "text-[var(--amber)]";
+  return "text-[var(--red)]";
 }
 
 function scoreBg(score: number): string {
-  if (score >= 70) return "bg-[#28A745]/10 border-[#28A745]/20";
-  if (score >= 45) return "bg-[#E8A20E]/10 border-[#E8A20E]/20";
-  return "bg-[#DC3545]/10 border-[#DC3545]/20";
+  if (score >= 70) return "bg-[var(--green-soft)] border-[var(--green)]/20";
+  if (score >= 45) return "bg-[var(--amber-soft)] border-[var(--amber)]/20";
+  return "bg-[var(--red-soft)] border-[var(--red)]/20";
 }
 
 function volColor(v: string): string {
   switch (v) {
-    case "Low": return "text-[#28A745]";
-    case "Medium": return "text-[#E8A20E]";
-    case "High": return "text-[#DC3545]";
-    default: return "text-[#5A6878]";
+    case "Low": return "text-[var(--green)]";
+    case "Medium": return "text-[var(--amber)]";
+    case "High": return "text-[var(--red)]";
+    default: return "text-[var(--text-muted)]";
   }
 }
 
 function volBg(v: string): string {
   switch (v) {
-    case "Low": return "bg-[#28A745]/10";
-    case "Medium": return "bg-[#E8A20E]/10";
-    case "High": return "bg-[#DC3545]/10";
-    default: return "bg-[#172030]";
+    case "Low": return "bg-[var(--green-soft)]";
+    case "Medium": return "bg-[var(--amber-soft)]";
+    case "High": return "bg-[var(--red-soft)]";
+    default: return "bg-[var(--border)]";
   }
 }
 
@@ -52,15 +52,15 @@ export default function MarketHealthGrid({ data, loading }: MarketHealthGridProp
     return (
       <div className="surface-elevated p-5">
         <div className="flex items-center gap-2 mb-4">
-          <Activity className="w-4 h-4 text-[#22BFC8]" />
+          <Activity className="w-4 h-4 text-[var(--cyan)]" />
           <h3 className="section-title text-[11px]">Market Health</h3>
         </div>
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
           {[...Array(5)].map((_, i) => (
-            <div key={i} className="bg-[#0A0E14] rounded-lg p-3 animate-pulse">
-              <div className="h-3 w-16 bg-[#1E2A38] rounded mb-2" />
-              <div className="h-7 w-12 bg-[#1E2A38] rounded mb-2" />
-              <div className="h-2 w-full bg-[#1E2A38] rounded" />
+            <div key={i} className="bg-[var(--bg)] rounded-lg p-3 animate-pulse">
+              <div className="h-3 w-16 bg-[var(--border)] rounded mb-2" />
+              <div className="h-7 w-12 bg-[var(--border)] rounded mb-2" />
+              <div className="h-2 w-full bg-[var(--border)] rounded" />
             </div>
           ))}
         </div>
@@ -72,10 +72,10 @@ export default function MarketHealthGrid({ data, loading }: MarketHealthGridProp
     return (
       <div className="surface-elevated p-5">
         <div className="flex items-center gap-2 mb-4">
-          <Activity className="w-4 h-4 text-[#22BFC8]" />
+          <Activity className="w-4 h-4 text-[var(--cyan)]" />
           <h3 className="section-title text-[11px]">Market Health</h3>
         </div>
-        <p className="text-[10px] text-[#5A6878] italic text-center py-6">No market health data available yet. The orchestrator will begin polling shortly.</p>
+        <p className="text-[10px] text-[var(--text-muted)] italic text-center py-6">No market health data available yet. The orchestrator will begin polling shortly.</p>
       </div>
     );
   }
@@ -85,9 +85,9 @@ export default function MarketHealthGrid({ data, loading }: MarketHealthGridProp
   return (
     <div className="surface-elevated p-5">
       <div className="flex items-center gap-2 mb-4">
-        <Activity className="w-4 h-4 text-[#22BFC8]" />
+        <Activity className="w-4 h-4 text-[var(--cyan)]" />
         <h3 className="section-title text-[11px]">Market Health</h3>
-        <span className="text-[9px] text-[#5A6878] ml-auto">{data.length} symbols</span>
+        <span className="text-[9px] text-[var(--text-muted)] ml-auto">{data.length} symbols</span>
       </div>
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
         {sorted.map((h) => (
@@ -99,10 +99,10 @@ export default function MarketHealthGrid({ data, loading }: MarketHealthGridProp
               </span>
             </div>
             <div className={`text-xl font-bold font-mono ${scoreColor(h.score)}`}>{h.score}</div>
-            <div className="text-[8px] text-[#5A6878] mb-2">{h.displayName}</div>
-            <div className="flex items-center gap-2 text-[8px] text-[#5A6878]">
+            <div className="text-[8px] text-[var(--text-muted)] mb-2">{h.displayName}</div>
+            <div className="flex items-center gap-2 text-[8px] text-[var(--text-muted)]">
               <span className="flex items-center gap-0.5">
-                {h.trend > 5 ? <TrendingUp className="w-2.5 h-2.5 text-[#28A745]" /> : h.trend < -5 ? <TrendingDown className="w-2.5 h-2.5 text-[#DC3545]" /> : <Minus className="w-2.5 h-2.5 text-[#5A6878]" />}
+                {h.trend > 5 ? <TrendingUp className="w-2.5 h-2.5 text-[var(--green)]" /> : h.trend < -5 ? <TrendingDown className="w-2.5 h-2.5 text-[var(--red)]" /> : <Minus className="w-2.5 h-2.5 text-[var(--text-muted)]" />}
                 {h.trend}%
               </span>
               <span className="flex items-center gap-0.5">

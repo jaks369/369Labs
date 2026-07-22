@@ -27,21 +27,21 @@ function insightIcon(type: string) {
 
 function insightColor(type: string): string {
   switch (type) {
-    case "volatility_change": return "text-[#E8A20E]";
-    case "momentum_change": return "text-[#28A745]";
-    case "digit_bias": return "text-[#7B61E8]";
-    case "consolidation": return "text-[#22BFC8]";
-    default: return "text-[#5A6878]";
+    case "volatility_change": return "text-[var(--amber)]";
+    case "momentum_change": return "text-[var(--green)]";
+    case "digit_bias": return "text-[var(--cyan)]";
+    case "consolidation": return "text-[var(--cyan)]";
+    default: return "text-[var(--text-muted)]";
   }
 }
 
 function insightBg(type: string): string {
   switch (type) {
-    case "volatility_change": return "bg-[#E8A20E]/5 border-[#E8A20E]/20";
-    case "momentum_change": return "bg-[#28A745]/5 border-[#28A745]/20";
-    case "digit_bias": return "bg-[#7B61E8]/5 border-[#7B61E8]/20";
-    case "consolidation": return "bg-[#22BFC8]/5 border-[#22BFC8]/20";
-    default: return "bg-[#1A2433] border-[#172030]";
+    case "volatility_change": return "bg-[var(--amber-soft)] border-[var(--amber)]/20";
+    case "momentum_change": return "bg-[var(--green-soft)] border-[var(--green)]/20";
+    case "digit_bias": return "bg-[var(--cyan-soft)] border-[var(--cyan)]/20";
+    case "consolidation": return "bg-[var(--cyan-soft)] border-[var(--cyan)]/20";
+    default: return "bg-[var(--card)] border-[var(--border)]";
   }
 }
 
@@ -54,15 +54,15 @@ export default function MarketInsightCards({ data, loading }: MarketInsightCards
     return (
       <div className="surface-elevated p-5">
         <div className="flex items-center gap-2 mb-4">
-          <Lightbulb className="w-4 h-4 text-[#22BFC8]" />
+          <Lightbulb className="w-4 h-4 text-[var(--cyan)]" />
           <h3 className="section-title text-[11px]">AI Insights</h3>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           {[...Array(4)].map((_, i) => (
-            <div key={i} className="bg-[#0A0E14] rounded-lg p-3 animate-pulse">
-              <div className="h-3 w-24 bg-[#1E2A38] rounded mb-2" />
-              <div className="h-4 w-40 bg-[#1E2A38] rounded mb-2" />
-              <div className="h-2 w-full bg-[#1E2A38] rounded" />
+            <div key={i} className="bg-[var(--bg)] rounded-lg p-3 animate-pulse">
+              <div className="h-3 w-24 bg-[var(--border)] rounded mb-2" />
+              <div className="h-4 w-40 bg-[var(--border)] rounded mb-2" />
+              <div className="h-2 w-full bg-[var(--border)] rounded" />
             </div>
           ))}
         </div>
@@ -74,10 +74,10 @@ export default function MarketInsightCards({ data, loading }: MarketInsightCards
     return (
       <div className="surface-elevated p-5">
         <div className="flex items-center gap-2 mb-4">
-          <Lightbulb className="w-4 h-4 text-[#22BFC8]" />
+          <Lightbulb className="w-4 h-4 text-[var(--cyan)]" />
           <h3 className="section-title text-[11px]">AI Insights</h3>
         </div>
-        <p className="text-[10px] text-[#5A6878] italic text-center py-6">No AI insights generated yet. Insights appear as the orchestrator detects volatility changes, momentum shifts, digit biases, or consolidations.</p>
+        <p className="text-[10px] text-[var(--text-muted)] italic text-center py-6">No AI insights generated yet. Insights appear as the orchestrator detects volatility changes, momentum shifts, digit biases, or consolidations.</p>
       </div>
     );
   }
@@ -87,9 +87,9 @@ export default function MarketInsightCards({ data, loading }: MarketInsightCards
   return (
     <div className="surface-elevated p-5">
       <div className="flex items-center gap-2 mb-4">
-        <Lightbulb className="w-4 h-4 text-[#22BFC8]" />
+        <Lightbulb className="w-4 h-4 text-[var(--cyan)]" />
         <h3 className="section-title text-[11px]">AI Insights</h3>
-        <span className="text-[9px] text-[#5A6878] ml-auto">{data.length} active</span>
+        <span className="text-[9px] text-[var(--text-muted)] ml-auto">{data.length} active</span>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
         {sorted.map((insight) => (
@@ -99,17 +99,17 @@ export default function MarketInsightCards({ data, loading }: MarketInsightCards
                 {insightIcon(insight.type)}
                 <span className="text-[8px] font-bold uppercase tracking-wider">{insight.type.replace(/_/g, " ")}</span>
               </div>
-              <span className="text-[8px] text-[#5A6878]">{formatTime(insight.timestamp)}</span>
+              <span className="text-[8px] text-[var(--text-muted)]">{formatTime(insight.timestamp)}</span>
             </div>
             <div className="flex items-center justify-between mb-1.5">
               <span className="text-[10px] font-bold text-white">{insight.market}</span>
-              <span className="text-[8px] font-mono text-[#8896A8]">{insight.confidence}%</span>
+              <span className="text-[8px] font-mono text-[var(--text-secondary)]">{insight.confidence}%</span>
             </div>
-            <p className="text-[9px] text-[#8896A8] leading-relaxed mb-1.5">{insight.message}</p>
+            <p className="text-[9px] text-[var(--text-secondary)] leading-relaxed mb-1.5">{insight.message}</p>
             {insight.reasoning.length > 0 && (
               <div className="space-y-0.5">
                 {insight.reasoning.slice(0, 2).map((r, j) => (
-                  <p key={j} className="text-[8px] text-[#5A6878]">ΓÇó {r}</p>
+                  <p key={j} className="text-[8px] text-[var(--text-muted)]">ΓÇó {r}</p>
                 ))}
               </div>
             )}

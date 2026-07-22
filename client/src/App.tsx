@@ -25,6 +25,7 @@ import TradeHistory from "./pages/TradeHistory";
 import Login from "./pages/Login";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
+import VerifyEmail from "./pages/VerifyEmail";
 import Logs from "./pages/Logs";
 import Journal from "./pages/Journal";
 import Replay from "./pages/Replay";
@@ -36,6 +37,8 @@ import AIExplainability from "./pages/AIExplainability";
 import TradingCopilotPage from "./pages/TradingCopilot";
 import AIChatPage from "./pages/AIChat";
 import MarketIntelligencePage from "./pages/MarketIntelligence";
+import OAuthCallback from "./pages/OAuthCallback";
+import Admin from "./pages/Admin";
 
 function AppLayout({ children }: { children: React.ReactNode }) {
   return <DashboardLayout>{children}</DashboardLayout>;
@@ -48,6 +51,8 @@ function Router() {
       <Route path={"/login"} component={Login} />
       <Route path={"/forgot-password"} component={ForgotPassword} />
       <Route path={"/reset"} component={ResetPassword} />
+      <Route path={"/verify-email"} component={VerifyEmail} />
+      <Route path={"/oauth/callback"} component={OAuthCallback} />
       <Route path={"/dashboard"}>
         <AppLayout><Dashboard /></AppLayout>
       </Route>
@@ -68,6 +73,9 @@ function Router() {
       </Route>
       <Route path={"/settings"}>
         <AppLayout><Settings /></AppLayout>
+      </Route>
+      <Route path={"/admin"}>
+        <AppLayout><Admin /></AppLayout>
       </Route>
       <Route path={"/marketplace"}>
         <AppLayout><Marketplace /></AppLayout>
@@ -142,7 +150,7 @@ function App() {
   });
   return (
     <ErrorBoundary>
-      <ThemeProvider defaultTheme="dark">
+      <ThemeProvider defaultTheme="dark" switchable>
         <TooltipProvider>
           <Toaster />
           <Router />

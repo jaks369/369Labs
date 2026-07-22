@@ -1,11 +1,13 @@
 import { COOKIE_NAME, SESSION_MS } from "@shared/const";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
-import { publicProcedure, router, protectedProcedure } from "./_core/trpc";
+import { publicProcedure, router, protectedProcedure, adminProcedure } from "./_core/trpc";
 import { z } from "zod";
 import * as db from "./db";
 import { TRPCError } from "@trpc/server";
 import { hashPassword, verifyPassword, createSessionToken, sanitizeUser } from "./_core/auth";
+import { ENV } from "./_core/env";
+import { sendEmail, buildResetEmail, buildVerificationEmail } from "./_core/email";
 import { getTickHistory, getActiveSymbols, getDigitStats, getTrend, suggestStrategy, TOOL_DEFS, buildActionIntent, normalizeSymbol, detectWatchIntent } from "./aitools";
 import type { PatternType } from "./signalScanner";
 import { createHmac, timingSafeEqual, randomBytes } from "crypto";
@@ -496,12 +498,26 @@ export const appRouter = router({
           passwordHash,
           name: input.name ?? null,
         });
+        db.saveAuditLog({ userId: user.id, action: "auth.signup", detail: { email: input.email } }).catch(() => {});
 
-        const sessionToken = await createSessionToken(user.id);
+        const sessionId = randomBytes(16).toString("hex");
+        await db.createSession({ userId: user.id, sessionId, userAgent: ctx.req.headers["user-agent"] || null, ip: ctx.req.ip || null });
+        const sessionToken = await createSessionToken(user.id, sessionId);
         const cookieOptions = getSessionCookieOptions(ctx.req);
         ctx.res.cookie(COOKIE_NAME, sessionToken, { ...cookieOptions, maxAge: SESSION_MS });
 
-        return sanitizeUser(user);
+        // Send verification email (non-blocking)
+        const verifyToken = randomBytes(32).toString("hex");
+        const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
+        await db.createVerificationToken(user.id, verifyToken, expiresAt);
+        const verifyUrl = `${ENV.appUrl}/verify-email?token=${verifyToken}`;
+        sendEmail({
+          to: input.email,
+          subject: "Verify your 369Labs email",
+          html: buildVerificationEmail(verifyUrl),
+        }).catch(() => {});
+
+        return { ...sanitizeUser(user), emailSent: !!ENV.resendApiKey };
       }),
 
     login: publicProcedure
@@ -520,21 +536,54 @@ export const appRouter = router({
           throw new TRPCError({ code: "UNAUTHORIZED", message: "Invalid email or password" });
         }
 
-        await db.touchUserLastSignedIn(user.id);
+        if (user.twoFactorEnabled) {
+          return { needs2FA: true, email: user.email } as const;
+        }
 
-        const sessionToken = await createSessionToken(user.id);
+        await db.touchUserLastSignedIn(user.id);
+        db.saveAuditLog({ userId: user.id, action: "auth.login", detail: { ip: ctx.req.ip || null } }).catch(() => {});
+
+        const sessionId = randomBytes(16).toString("hex");
+        await db.createSession({ userId: user.id, sessionId, userAgent: ctx.req.headers["user-agent"] || null, ip: ctx.req.ip || null });
+        const sessionToken = await createSessionToken(user.id, sessionId);
         const cookieOptions = getSessionCookieOptions(ctx.req);
         ctx.res.cookie(COOKIE_NAME, sessionToken, { ...cookieOptions, maxAge: SESSION_MS });
 
         return sanitizeUser(user);
       }),
 
-    logout: publicProcedure.mutation(({ ctx }) => {
+    verify2FALogin: publicProcedure
+      .input(z.object({ email: z.string().email(), token: z.string().length(6) }))
+      .mutation(async ({ ctx, input }) => {
+        const user = await db.getUserByEmail(input.email);
+        if (!user || !user.twoFactorEnabled || !user.twoFASecret) {
+          throw new TRPCError({ code: "BAD_REQUEST", message: "2FA not enabled" });
+        }
+        const epoch = Math.floor(Date.now() / 30000);
+        let valid = false;
+        for (let i = -1; i <= 1; i++) {
+          const expected = generateTOTP(user.twoFASecret, epoch + i);
+          if (timingSafeEqual(Buffer.from(expected), Buffer.from(input.token))) { valid = true; break; }
+        }
+        if (!valid) {
+          throw new TRPCError({ code: "UNAUTHORIZED", message: "Invalid 2FA code" });
+        }
+        await db.touchUserLastSignedIn(user.id);
+        const sessionId = randomBytes(16).toString("hex");
+        await db.createSession({ userId: user.id, sessionId, userAgent: ctx.req.headers["user-agent"] || null, ip: ctx.req.ip || null });
+        const sessionToken = await createSessionToken(user.id, sessionId);
+        const cookieOptions = getSessionCookieOptions(ctx.req);
+        ctx.res.cookie(COOKIE_NAME, sessionToken, { ...cookieOptions, maxAge: SESSION_MS });
+        return sanitizeUser(user);
+      }),
+
+    logout: publicProcedure.mutation(async ({ ctx }) => {
       const cookieOptions = getSessionCookieOptions(ctx.req);
       ctx.res.clearCookie(COOKIE_NAME, { ...cookieOptions, maxAge: -1 });
-      return {
-        success: true,
-      } as const;
+      if (ctx.sessionId) {
+        db.revokeSession(ctx.sessionId, ctx.user?.id ?? 0).catch(() => {});
+      }
+      return { success: true } as const;
     }),
 
     // Forgot / Reset Password
@@ -544,22 +593,73 @@ export const appRouter = router({
         try {
           const user = await db.getUserByEmail(input.email);
           // Always return a generic success to prevent email enumeration.
-          if (!user) return { success: true, emailConfigured: false };
+          if (!user) return { success: true, emailSent: false };
           const resetToken = randomBytes(32).toString("hex");
           const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
           await db.createPasswordResetToken(user.id, resetToken, expiresAt);
           const isDev = process.env.NODE_ENV !== "production";
-          // In dev, return the reset link so it's end-to-end testable.
-          // In production, the link would be sent via email instead.
-          const result: any = { success: true, emailConfigured: false };
-          if (isDev) {
+          const result: any = { success: true, emailSent: false };
+          if (isDev && !ENV.resendApiKey) {
+            // Dev mode with no email configured — return the link directly
             result.resetUrl = `${ctx.req.protocol}://${ctx.req.get("host")}/reset?token=${resetToken}`;
+          } else {
+            // Try to send via Resend
+            const resetUrl = `${ENV.appUrl}/reset?token=${resetToken}`;
+            const sent = await sendEmail({
+              to: input.email,
+              subject: "Reset your 369Labs password",
+              html: buildResetEmail(resetUrl),
+            });
+            result.emailSent = sent;
           }
           return result;
         } catch (error) {
           throw new TRPCError({
             code: "INTERNAL_SERVER_ERROR",
             message: "Failed to process reset request",
+          });
+        }
+      }),
+
+    verifyEmail: publicProcedure
+      .input(z.object({ token: z.string().min(32) }))
+      .mutation(async ({ ctx, input }) => {
+        try {
+          const record = await db.getValidVerificationToken(input.token);
+          if (!record) throw new TRPCError({ code: "BAD_REQUEST", message: "Invalid or expired verification token" });
+          await db.updateUserEmailVerified(record.userId);
+          await db.markVerificationTokenUsed(input.token);
+          return { success: true };
+        } catch (error) {
+          if (error instanceof TRPCError) throw error;
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: "Failed to verify email",
+          });
+        }
+      }),
+
+    resendVerification: publicProcedure
+      .input(z.object({ email: z.string().email() }))
+      .mutation(async ({ ctx, input }) => {
+        try {
+          const user = await db.getUserByEmail(input.email);
+          if (!user) return { success: true, emailSent: false };
+          if (user.emailVerified) return { success: true, emailSent: false, alreadyVerified: true };
+          const verifyToken = randomBytes(32).toString("hex");
+          const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
+          await db.createVerificationToken(user.id, verifyToken, expiresAt);
+          const verifyUrl = `${ENV.appUrl}/verify-email?token=${verifyToken}`;
+          const sent = await sendEmail({
+            to: input.email,
+            subject: "Verify your 369Labs email",
+            html: buildVerificationEmail(verifyUrl),
+          });
+          return { success: true, emailSent: sent };
+        } catch (error) {
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: "Failed to resend verification",
           });
         }
       }),
@@ -629,6 +729,29 @@ export const appRouter = router({
         }
       }),
 
+    changePassword: protectedProcedure
+      .input(z.object({
+        currentPassword: z.string().min(1),
+        newPassword: z.string().min(8, "New password must be at least 8 characters"),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        try {
+          const user = await db.getUserById(ctx.user.id);
+          if (!user) throw new TRPCError({ code: "UNAUTHORIZED", message: "User not found" });
+          const valid = await verifyPassword(input.currentPassword, user.passwordHash);
+          if (!valid) throw new TRPCError({ code: "UNAUTHORIZED", message: "Current password is incorrect" });
+          const passwordHash = await hashPassword(input.newPassword);
+          await db.updateUserPassword(user.id, passwordHash);
+          return { success: true };
+        } catch (error) {
+          if (error instanceof TRPCError) throw error;
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: "Failed to change password",
+          });
+        }
+      }),
+
     disable2FA: protectedProcedure
       .input(z.object({ password: z.string().min(1) }))
       .mutation(async ({ ctx, input }) => {
@@ -646,6 +769,61 @@ export const appRouter = router({
             message: "Failed to disable 2FA",
           });
         }
+      }),
+
+    changeEmail: protectedProcedure
+      .input(z.object({ newEmail: z.string().email(), password: z.string().min(1) }))
+      .mutation(async ({ ctx, input }) => {
+        const user = await db.getUserById(ctx.user.id);
+        if (!user) throw new TRPCError({ code: "UNAUTHORIZED", message: "User not found" });
+        const valid = await verifyPassword(input.password, user.passwordHash);
+        if (!valid) throw new TRPCError({ code: "UNAUTHORIZED", message: "Invalid password" });
+        const existing = await db.getUserByEmail(input.newEmail);
+        if (existing) throw new TRPCError({ code: "CONFLICT", message: "Email already in use" });
+        await db.updateUserEmail(ctx.user.id, input.newEmail);
+        await db.updateUserEmailVerified(ctx.user.id, false);
+        const verifyToken = randomBytes(32).toString("hex");
+        const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
+        await db.createVerificationToken(ctx.user.id, verifyToken, expiresAt);
+        const verifyUrl = `${ENV.appUrl}/verify-email?token=${verifyToken}`;
+        const sent = await sendEmail({
+          to: input.newEmail,
+          subject: "Verify your new 369Labs email",
+          html: buildVerificationEmail(verifyUrl),
+        });
+        return { success: true, emailSent: sent };
+      }),
+
+    deleteAccount: protectedProcedure
+      .input(z.object({ password: z.string().min(1), confirmation: z.literal("DELETE") }))
+      .mutation(async ({ ctx, input }) => {
+        const user = await db.getUserById(ctx.user.id);
+        if (!user) throw new TRPCError({ code: "UNAUTHORIZED", message: "User not found" });
+        const valid = await verifyPassword(input.password, user.passwordHash);
+        if (!valid) throw new TRPCError({ code: "UNAUTHORIZED", message: "Invalid password" });
+        await db.deleteUser(ctx.user.id);
+        const cookieOptions = getSessionCookieOptions(ctx.req);
+        ctx.res.clearCookie(COOKIE_NAME, { ...cookieOptions, maxAge: -1 });
+        return { success: true };
+      }),
+
+    listSessions: protectedProcedure.query(async ({ ctx }) => {
+      const sessions = await db.getUserSessions(ctx.user.id);
+      return sessions.filter(s => !s.revokedAt).map(s => ({
+        id: s.sessionId,
+        userAgent: s.userAgent,
+        ip: s.ip,
+        createdAt: Number(new Date(s.createdAt).getTime()),
+        lastActiveAt: Number(new Date(s.lastActiveAt).getTime()),
+        isCurrent: s.sessionId === ctx.sessionId,
+      }));
+    }),
+
+    revokeSession: protectedProcedure
+      .input(z.object({ sessionId: z.string().min(1) }))
+      .mutation(async ({ ctx, input }) => {
+        await db.revokeSession(input.sessionId, ctx.user.id);
+        return { success: true };
       }),
 
   }),
@@ -1186,6 +1364,7 @@ save: protectedProcedure
   notifications: router({
     saveSettings: protectedProcedure
       .input(z.object({
+        emailEnabled: z.boolean().default(true),
         tradeExecuted: z.boolean().default(true),
         takeProfitHit: z.boolean().default(true),
         stopLossHit: z.boolean().default(true),
@@ -1197,6 +1376,7 @@ save: protectedProcedure
             userId: ctx.user.id,
             ...input,
           });
+          db.saveAuditLog({ userId: ctx.user.id, action: "settings.notifications" }).catch(() => {});
           return settings;
         } catch (error) {
           throw new TRPCError({
@@ -1209,7 +1389,7 @@ save: protectedProcedure
     getSettings: protectedProcedure.query(async ({ ctx }) => {
       try {
         const settings = await db.getNotificationSettingsByUserId(ctx.user.id);
-        return settings || { id: 0, userId: ctx.user.id, tradeExecuted: true, takeProfitHit: true, stopLossHit: true, botError: true, createdAt: new Date(), updatedAt: new Date() };
+        return settings || { id: 0, userId: ctx.user.id, emailEnabled: true, tradeExecuted: true, takeProfitHit: true, stopLossHit: true, botError: true, createdAt: new Date(), updatedAt: new Date() };
       } catch (error) {
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
@@ -1630,17 +1810,17 @@ watch: protectedProcedure
       }),
   }),
   coding: router({
-    list: protectedProcedure.query(async () => {
+    list: adminProcedure.query(async () => {
       const { listFiles } = await import("./fileOps");
       return { files: listFiles() };
     }),
-    read: protectedProcedure
+    read: adminProcedure
       .input(z.object({ path: z.string() }))
       .query(async ({ input }) => {
         const { readFile } = await import("./fileOps");
         return { content: readFile(input.path) };
       }),
-    write: protectedProcedure
+    write: adminProcedure
       .input(z.object({ path: z.string(), content: z.string() }))
       .mutation(async ({ ctx, input }) => {
         const { writeFile } = await import("./fileOps");
@@ -1656,7 +1836,7 @@ watch: protectedProcedure
     my: protectedProcedure.query(async ({ ctx }) => {
       return { plugins: await db.getInstalledPlugins(ctx.user.id) };
     }),
-    install: protectedProcedure
+    install: adminProcedure
       .input(z.object({ pluginId: z.number(), enabled: z.boolean().default(true) }))
       .mutation(async ({ ctx, input }) => {
         await db.installPlugin(ctx.user.id, input.pluginId, input.enabled);
@@ -1805,6 +1985,47 @@ watch: protectedProcedure
       const { aiOrchestrator } = await import("./ai/AIOrchestrator");
       return aiOrchestrator.getState().predictions.slice(-10);
     }),
+  }),
+  admin: router({
+    listUsers: adminProcedure.query(async () => {
+      const all = await db.listAllUsers();
+      return { users: all.map(u => ({ id: u.id, email: u.email, name: u.name, role: u.role, createdAt: Number(new Date(u.createdAt).getTime()), emailVerified: u.emailVerified })) };
+    }),
+    promoteToAdmin: adminProcedure
+      .input(z.object({ userId: z.number() }))
+      .mutation(async ({ input }) => {
+        await db.updateUserRole(input.userId, "admin");
+        return { ok: true };
+      }),
+    demoteToUser: adminProcedure
+      .input(z.object({ userId: z.number() }))
+      .mutation(async ({ input }) => {
+        await db.updateUserRole(input.userId, "user");
+        return { ok: true };
+      }),
+    deleteUser: adminProcedure
+      .input(z.object({ userId: z.number() }))
+      .mutation(async ({ input }) => {
+        await db.deleteUser(input.userId);
+        return { ok: true };
+      }),
+    listIpWhitelist: adminProcedure
+      .input(z.object({ userId: z.number() }))
+      .query(async ({ input }) => {
+        return { entries: await db.getIpWhitelist(input.userId) };
+      }),
+    addIpWhitelist: adminProcedure
+      .input(z.object({ userId: z.number(), ip: z.string().min(1), label: z.string().optional() }))
+      .mutation(async ({ input }) => {
+        await db.addIpWhitelistEntry({ userId: input.userId, ip: input.ip, label: input.label || null });
+        return { ok: true };
+      }),
+    removeIpWhitelist: adminProcedure
+      .input(z.object({ id: z.number(), userId: z.number() }))
+      .mutation(async ({ input }) => {
+        await db.removeIpWhitelistEntry(input.id, input.userId);
+        return { ok: true };
+      }),
   }),
 });
 

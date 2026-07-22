@@ -47,6 +47,7 @@ import {
   Wallet,
   BarChart3,
   Search,
+  Shield,
 } from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
@@ -133,11 +134,11 @@ export default function DashboardLayout({
 
   if (!user) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-[#0A0E14]">
-        <div className="flex flex-col items-center gap-6 p-8 max-w-md w-full glass-card">
+      <div className="flex items-center justify-center min-h-screen bg-[var(--bg)]">
+        <div className="flex flex-col items-center gap-6 p-8 max-w-md w-full card">
           <div className="flex flex-col items-center gap-4">
-            <div className="w-10 h-10 bg-[#E8A20E] rounded-lg flex items-center justify-center">
-              <Activity className="w-6 h-6 text-[#0A0E14]" />
+            <div className="w-10 h-10 bg-[var(--amber)] rounded-lg flex items-center justify-center">
+              <Activity className="w-6 h-6 text-[var(--bg)]" />
             </div>
             <h1 className="text-xl font-bold tracking-tight text-center text-[#E8ECF1]">
               369Labs Access
@@ -151,7 +152,7 @@ export default function DashboardLayout({
               window.location.href = getLoginUrl();
             }}
             size="lg"
-            className="w-full btn-primary"
+            className="btn btn-primary w-full"
           >
             Sign in
           </Button>
@@ -233,17 +234,17 @@ function DashboardLayoutContent({
   }, [isResizing, setSidebarWidth]);
 
   return (
-    <div className="flex min-h-screen bg-[#0A0E14]">
+    <div className="flex min-h-screen bg-[var(--bg)]">
       <div className="relative" ref={sidebarRef}>
         <Sidebar
           collapsible="icon"
-          className="border-r border-[#1E2A38] bg-[#0A0E14]"
+          className="border-r border-[#1E2A38] bg-[var(--bg)]"
           disableTransition={isResizing}
         >
           <SidebarHeader className="h-14 justify-center border-b border-[#1E2A38]">
             <button onClick={() => setLocation("/dashboard")} className="flex items-center gap-2.5 px-3 transition-all w-full text-left cursor-pointer group">
-              <div className="w-7 h-7 bg-[#E8A20E] rounded-md flex items-center justify-center shrink-0">
-                <Activity className="w-4 h-4 text-[#0A0E14]" />
+              <div className="w-7 h-7 bg-[var(--amber)] rounded-md flex items-center justify-center shrink-0">
+                <Activity className="w-4 h-4 text-[var(--bg)]" />
               </div>
               {!isCollapsed && (
                 <div className="flex flex-col">
@@ -258,7 +259,7 @@ function DashboardLayoutContent({
 
           <SidebarContent className="py-2">
             {navGroups.map((group) => {
-              const sectionColor = group.title === "Workspace" ? "text-[#22BFC8]" : group.title === "Build" ? "text-[#E8A20E]" : group.title === "Operate" ? "text-[#22BFC8]" : "text-[#5A6878]";
+              const sectionColor = group.title === "Workspace" ? "text-[var(--cyan)]" : group.title === "Build" ? "text-[var(--amber)]" : group.title === "Operate" ? "text-[var(--cyan)]" : "text-[#5A6878]";
               const dotColor = group.title === "Workspace" ? "accent-dot-cyan" : group.title === "Build" ? "accent-dot-amber" : group.title === "Operate" ? "accent-dot-cyan" : "accent-dot-green";
               return (
               <div key={group.title} className="mb-1.5">
@@ -286,7 +287,7 @@ function DashboardLayoutContent({
                           }`}
                         >
                           <item.icon
-                            className={`h-4 w-4 ${isActive ? "text-[#E8A20E]" : ""}`}
+                            className={`h-4 w-4 ${isActive ? "text-[var(--amber)]" : ""}`}
                           />
                           <span className="text-[13px]">{item.label}</span>
                         </SidebarMenuButton>
@@ -297,6 +298,29 @@ function DashboardLayoutContent({
               </div>
             );
           })}
+          {user?.role === "admin" && (
+            <div className="mb-1.5">
+              {!isCollapsed && (
+                <div className="flex items-center gap-1.5 px-3 mb-1">
+                  <span className="accent-dot accent-dot-amber" />
+                  <p className="text-[9px] font-semibold uppercase tracking-[0.08em] text-[var(--amber)]">Admin</p>
+                </div>
+              )}
+              <SidebarMenu className="px-1.5 gap-px">
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    isActive={location === "/admin"}
+                    onClick={() => setLocation("/admin")}
+                    tooltip="Admin Dashboard"
+                    className="h-8 px-2.5 rounded-md transition-all duration-150 sidebar-item"
+                  >
+                    <Shield className="h-4 w-4" />
+                    <span className="text-[13px]">Admin Dashboard</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              </SidebarMenu>
+            </div>
+          )}
           </SidebarContent>
 
           <SidebarFooter className="p-2 border-t border-[#1E2A38] space-y-1.5">
@@ -304,7 +328,7 @@ function DashboardLayoutContent({
               onClick={() => openCommandPalette()}
               className="w-full flex items-center gap-2 rounded-md border border-[#1E2A38] bg-[#111820] px-2.5 py-1.5 text-[11px] text-[#8896A8] hover:text-[#E8ECF1] hover:border-[#2A3A4A] transition-all duration-150 group cursor-pointer"
             >
-              <Command className="w-3.5 h-3.5 text-[#5A6878] group-hover:text-[#E8A20E] transition-colors" />
+              <Command className="w-3.5 h-3.5 text-[#5A6878] group-hover:text-[var(--amber)] transition-colors" />
               <span className="flex-1 text-left">Quick Command</span>
               <kbd className="text-[9px] text-[#5A6878] border border-[#1E2A38] rounded px-1 py-0.5">ΓîÿK</kbd>
             </button>
@@ -313,16 +337,16 @@ function DashboardLayoutContent({
               onClick={() => (voice.listening ? voice.stop() : voice.start())}
               className={`w-full flex items-center gap-2 rounded-md border px-2.5 py-1.5 text-[11px] transition-all duration-150 cursor-pointer ${
                 voice.listening
-                  ? "border-[#DC3545]/40 bg-[#DC3545]/8 text-[#DC3545]"
+                  ? "border-[var(--red)]/40 bg-[var(--red)]/8 text-[var(--red)]"
                   : "border-[#1E2A38] bg-[#111820] text-[#8896A8] hover:text-[#E8ECF1] hover:border-[#2A3A4A] transition-all"
               }`}
             >
-              {voice.listening ? <Square className="w-3.5 h-3.5" /> : <Mic className="w-3.5 h-3.5 text-[#5A6878] group-hover:text-[#E8A20E] transition-colors" />}
+              {voice.listening ? <Square className="w-3.5 h-3.5" /> : <Mic className="w-3.5 h-3.5 text-[#5A6878] group-hover:text-[var(--amber)] transition-colors" />}
               <span className="flex-1 text-left">{voice.listening ? "ListeningΓÇª" : "Voice Commands"}</span>
-              {voice.listening && <span className="w-1.5 h-1.5 rounded-full bg-[#DC3545] animate-pulse-dot" />}
+              {voice.listening && <span className="w-1.5 h-1.5 rounded-full bg-[var(--red)] animate-pulse-dot" />}
             </button>
             {voice.listening && voice.transcript && (
-              <p className="text-[10px] text-[#E8A20E] px-1 truncate">"{voice.transcript}"</p>
+              <p className="text-[10px] text-[var(--amber)] px-1 truncate">"{voice.transcript}"</p>
             )}
 
             {!isCollapsed && (
@@ -333,9 +357,9 @@ function DashboardLayoutContent({
 
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <button className="flex items-center gap-2.5 rounded-md px-2 py-1.5 hover:bg-white/[0.03] transition-all duration-150 w-full text-left group-data-[collapsible=icon]:justify-center focus:outline-none cursor-pointer focus-visible:ring-2 focus-visible:ring-[#E8A20E] focus-visible:outline-none">
+                <button className="flex items-center gap-2.5 rounded-md px-2 py-1.5 hover:bg-white/[0.03] transition-all duration-150 w-full text-left group-data-[collapsible=icon]:justify-center focus:outline-none cursor-pointer focus-visible:ring-2 focus-visible:ring-[var(--amber)] focus-visible:outline-none">
                   <Avatar className="h-6 w-6 border border-[#1E2A38] shrink-0">
-                    <AvatarFallback className="bg-[#E8A20E] text-[#0A0E14] text-[9px] font-bold">
+                    <AvatarFallback className="bg-[var(--amber)] text-[var(--bg)] text-[9px] font-bold">
                       {user?.name?.charAt(0).toUpperCase()}
                     </AvatarFallback>
                   </Avatar>
@@ -354,7 +378,7 @@ function DashboardLayoutContent({
               <DropdownMenuContent align="end" className="w-52 bg-[#111820] border-[#1E2A38] text-[#E8ECF1] shadow-lg">
                 <DropdownMenuItem
                   onClick={async () => { await logout(); setLocation("/"); }}
-                  className="cursor-pointer text-[#DC3545] focus:text-[#DC3545] focus:bg-[#DC3545]/10"
+                  className="cursor-pointer text-[var(--red)] focus:text-[var(--red)] focus:bg-[var(--red)]/10"
                 >
                   <LogOut className="mr-2 h-4 w-4" />
                   <span>Sign out</span>
@@ -365,9 +389,9 @@ function DashboardLayoutContent({
         </Sidebar>
       </div>
 
-      <SidebarInset className="bg-[#0A0E14] flex flex-col">
+      <SidebarInset className="bg-[var(--bg)] flex flex-col">
         {isMobile && (
-          <div className="flex border-b border-[#1E2A38] h-12 items-center justify-between bg-[#0A0E14] px-4 sticky top-0 z-40">
+          <div className="flex border-b border-[#1E2A38] h-12 items-center justify-between bg-[var(--bg)] px-4 sticky top-0 z-40">
             <div className="flex items-center gap-2.5">
               <SidebarTrigger className="text-[#8896A8]" />
               <span className="font-semibold text-[#E8ECF1] text-[13px]">
@@ -378,7 +402,7 @@ function DashboardLayoutContent({
         )}
         <main className="flex-1 overflow-y-auto">
           {!riskDismissed && (
-            <div className="flex items-center gap-3 bg-[#0A0E14] border-b border-[#1E2A38] px-4 py-1.5 text-[10px] leading-snug text-[#5A6878]">
+            <div className="flex items-center gap-3 bg-[var(--bg)] border-b border-[#1E2A38] px-4 py-1.5 text-[10px] leading-snug text-[#5A6878]">
               <span className="font-semibold uppercase tracking-wider text-[#5A6878]/60 shrink-0 text-[9px]">Risk</span>
               <span className="flex-1">
                 Trading involves substantial risk. 369Labs is an analysis tool, not financial advice.

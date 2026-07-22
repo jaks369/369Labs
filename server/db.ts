@@ -1,12 +1,25 @@
 import { eq, and, desc, gt, sql } from "drizzle-orm";
 import * as mysql from "mysql2/promise";
 import { drizzle } from "drizzle-orm/mysql2";
-import { 
-  InsertUser, 
-  User,
+import {
   users,
-  derivTokens, 
-  strategies, 
+  User,
+  InsertUser,
+  derivTokens,
+  strategies,
+  chatMessages,
+  botRuns,
+  signals,
+  aiKnowledge,
+  jobs,
+  userMemory,
+  pluginInstalls,
+  passwordResetTokens,
+  verificationTokens,
+  auditLogs,
+  telegramSettings,
+  notificationSettings,
+  oauthAccounts,
   trades, 
   botRuns, 
   telegramSettings, 
@@ -33,6 +46,16 @@ import {
   users,
   passwordResetTokens,
   PasswordResetToken,
+  verificationTokens,
+  VerificationToken,
+  oauthAccounts,
+  OAuthAccount,
+  sessions,
+  Session,
+  InsertSession,
+  ipWhitelist,
+  IpWhitelistEntry,
+  InsertIpWhitelistEntry,
   chatMessages,
   aiKnowledge,
   AiKnowledge,
@@ -80,6 +103,96 @@ export async function getDb() {
   return _db;
 }
 
+export async function listAllUsers(): Promise<User[]> {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(users);
+}
+
+export async function updateUserRole(userId: number, role: "user" | "admin"): Promise<void> {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.update(users).set({ role }).where(eq(users.id, userId));
+}
+
+export async function deleteUser(userId: number): Promise<void> {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  // Cascade delete all user-related records
+  await db.delete(chatMessages).where(eq(chatMessages.userId, userId));
+  await db.delete(auditLogs).where(eq(auditLogs.userId, userId));
+  await db.delete(aiKnowledge).where(eq(aiKnowledge.userId, userId));
+  await db.delete(botRuns).where(eq(botRuns.userId, userId));
+  await db.delete(trades).where(eq(trades.userId, userId));
+  await db.delete(signals).where(eq(signals.userId, userId));
+  await db.delete(strategies).where(eq(strategies.userId, userId));
+  await db.delete(jobs).where(eq(jobs.userId, userId));
+  await db.delete(userMemory).where(eq(userMemory.userId, userId));
+  await db.delete(notificationSettings).where(eq(notificationSettings.userId, userId));
+  await db.delete(telegramSettings).where(eq(telegramSettings.userId, userId));
+  await db.delete(derivTokens).where(eq(derivTokens.userId, userId));
+  await db.delete(oauthAccounts).where(eq(oauthAccounts.userId, userId));
+  await db.delete(passwordResetTokens).where(eq(passwordResetTokens.userId, userId));
+  await db.delete(verificationTokens).where(eq(verificationTokens.userId, userId));
+  await db.delete(pluginInstalls).where(eq(pluginInstalls.userId, userId));
+  await db.delete(sessions).where(eq(sessions.userId, userId));
+  await db.delete(ipWhitelist).where(eq(ipWhitelist.userId, userId));
+  await db.delete(users).where(eq(users.id, userId));
+}
+
+// Sessions
+export async function createSession(data: InsertSession): Promise<Session> {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const result = await db.insert(sessions).values(data);
+  const id = result[0].insertId;
+  return (await db.select().from(sessions).where(eq(sessions.id, id as number)).limit(1))[0];
+}
+
+export async function getSessionBySessionId(sessionId: string): Promise<Session | undefined> {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.select().from(sessions).where(eq(sessions.sessionId, sessionId)).limit(1);
+  return result[0];
+}
+
+export async function revokeSession(sessionId: string, userId: number): Promise<void> {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.update(sessions).set({ revokedAt: new Date() }).where(and(eq(sessions.sessionId, sessionId), eq(sessions.userId, userId)));
+}
+
+export async function getUserSessions(userId: number): Promise<Session[]> {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(sessions).where(eq(sessions.userId, userId));
+}
+
+export async function touchSessionLastActive(sessionId: string): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(sessions).set({ lastActiveAt: new Date() }).where(eq(sessions.sessionId, sessionId));
+}
+
+// IP Whitelist
+export async function getIpWhitelist(userId: number): Promise<IpWhitelistEntry[]> {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(ipWhitelist).where(eq(ipWhitelist.userId, userId));
+}
+
+export async function addIpWhitelistEntry(data: InsertIpWhitelistEntry): Promise<void> {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.insert(ipWhitelist).values(data);
+}
+
+export async function removeIpWhitelistEntry(id: number, userId: number): Promise<void> {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.delete(ipWhitelist).where(and(eq(ipWhitelist.id, id), eq(ipWhitelist.userId, userId)));
+}
+
 export async function createUser(user: {
   email: string;
   passwordHash: string;
@@ -120,6 +233,24 @@ export async function getUserById(id: number): Promise<User | undefined> {
   return result.length > 0 ? result[0] : undefined;
 }
 
+export async function setUser2FASecret(userId: number, secret: string): Promise<void> {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.update(users).set({ twoFASecret: secret }).where(eq(users.id, userId));
+}
+
+export async function enable2FA(userId: number): Promise<void> {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.update(users).set({ twoFactorEnabled: true }).where(eq(users.id, userId));
+}
+
+export async function disable2FA(userId: number): Promise<void> {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.update(users).set({ twoFASecret: null, twoFactorEnabled: false }).where(eq(users.id, userId));
+}
+
 export async function touchUserLastSignedIn(id: number): Promise<void> {
   const db = await getDb();
   if (!db) return;
@@ -155,6 +286,69 @@ export async function markPasswordResetTokenUsed(token: string): Promise<void> {
   const db = await getDb();
   if (!db) return;
   await db.update(passwordResetTokens).set({ usedAt: new Date() }).where(eq(passwordResetTokens.token, token));
+}
+
+// Email verification tokens
+export async function createVerificationToken(userId: number, token: string, expiresAt: Date): Promise<void> {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.update(verificationTokens).set({ usedAt: new Date() }).where(eq(verificationTokens.userId, userId));
+  await db.insert(verificationTokens).values({ userId, token, expiresAt });
+}
+
+export async function getValidVerificationToken(token: string): Promise<VerificationToken | undefined> {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db
+    .select()
+    .from(verificationTokens)
+    .where(and(eq(verificationTokens.token, token), sql`${verificationTokens.usedAt} IS NULL`, gt(verificationTokens.expiresAt, new Date())))
+    .limit(1);
+  return result.length > 0 ? result[0] : undefined;
+}
+
+export async function markVerificationTokenUsed(token: string): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(verificationTokens).set({ usedAt: new Date() }).where(eq(verificationTokens.token, token));
+}
+
+export async function updateUserEmailVerified(userId: number, verified?: boolean): Promise<void> {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.update(users).set({ emailVerified: verified ?? true }).where(eq(users.id, userId));
+}
+
+export async function updateUserEmail(userId: number, email: string): Promise<void> {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.update(users).set({ email }).where(eq(users.id, userId));
+}
+
+// OAuth accounts
+export async function getOAuthAccount(provider: string, providerId: string): Promise<OAuthAccount | undefined> {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.select().from(oauthAccounts).where(and(eq(oauthAccounts.provider, provider), eq(oauthAccounts.providerId, providerId))).limit(1);
+  return result[0];
+}
+
+export async function createOAuthAccount(data: InsertOAuthAccount): Promise<void> {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.insert(oauthAccounts).values(data);
+}
+
+export async function getUserByResetToken(token: string): Promise<User | undefined> {
+  const db = await getDb();
+  if (!db) return undefined;
+  const record = await db
+    .select()
+    .from(passwordResetTokens)
+    .where(and(eq(passwordResetTokens.token, token), sql`${passwordResetTokens.usedAt} IS NULL`, gt(passwordResetTokens.expiresAt, new Date())))
+    .limit(1);
+  if (record.length === 0) return undefined;
+  return getUserById(record[0].userId);
 }
 
 export async function getChatHistory(userId: number, chatId: string, limit = 50): Promise<{ role: string; content: string; steps?: any }[]> {

@@ -26,21 +26,21 @@ export default function ResetPassword() {
   };
 
   return (
-    <div className='min-h-screen flex items-center justify-center bg-[#0A0E14] p-4'>
+    <div className='min-h-screen flex items-center justify-center bg-[var(--bg)] p-4'>
       <div className='w-full max-w-md'>
         <h1 className='text-2xl font-bold text-white mb-6 text-center'>Set New Password</h1>
         <form onSubmit={submit} className='space-y-4'>
           <div>
-            <label className='block text-sm font-medium text-[#94A3B8] mb-1'>New Password</label>
-            <Input type='password' value={password} onChange={(e) => setPassword(e.target.value)} placeholder='At least 8 characters' required className='bg-[#151B23] border-[#252B35]' />
+            <label className='block text-sm font-medium text-[var(--text-secondary)] mb-1'>New Password</label>
+            <Input type='password' value={password} onChange={(e) => setPassword(e.target.value)} placeholder='At least 8 characters' required className='bg-[var(--card)] border-[var(--border)]' />
           </div>
-          <Button type='submit' disabled={m.isPending || !token} className='w-full btn-primary'>
+          <Button type='submit' disabled={m.isPending || !token} className='btn btn-primary w-full'>
             {m.isPending ? 'Updating...' : 'UPDATE PASSWORD'}
           </Button>
-          {!token && <p className='text-sm text-center text-[#DC3545]'>Missing or invalid reset token.</p>}
-          {msg && <p className={`text-sm text-center ${done ? 'text-[#28A745]' : 'text-[#DC3545]'}`}>{msg}</p>}
+          {!token && <p className='text-sm text-center text-[var(--red)]'>Missing or invalid reset token.</p>}
+          {msg && <p className={`text-sm text-center ${done ? 'text-[var(--green)]' : 'text-[var(--red)]'}`}>{msg}</p>}
           {done && (
-            <p className='text-center'><button onClick={() => navigate('/login')} className='text-[#E8A20E] hover:underline text-sm'>Back to login</button></p>
+            <p className='text-center'><button onClick={() => navigate('/login')} className='text-[var(--amber)] hover:underline text-sm'>Back to login</button></p>
           )}
         </form>
       </div>

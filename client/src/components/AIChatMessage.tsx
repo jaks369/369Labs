@@ -17,12 +17,12 @@ export default function AIChatMessage({ role, content, response, timestamp }: AI
   if (role === "user") {
     return (
       <div className="flex items-start gap-3 justify-end">
-        <div className="bg-[#E8A20E]/10 border border-[#E8A20E]/20 rounded-xl rounded-br-sm px-3.5 py-2.5 max-w-[80%]">
+        <div className="bg-[var(--amber-soft)] border border-[var(--amber-border)] rounded-xl rounded-br-sm px-3.5 py-2.5 max-w-[80%]">
           <p className="text-xs text-white leading-relaxed">{content}</p>
-          <span className="text-[9px] text-[#5A6878] mt-1 block text-right">{time}</span>
+          <span className="text-[9px] text-[var(--text-muted)] mt-1 block text-right">{time}</span>
         </div>
-        <div className="w-7 h-7 rounded-full bg-[#E8A20E]/20 border border-[#E8A20E]/30 flex items-center justify-center shrink-0 mt-0.5">
-          <User className="w-3.5 h-3.5 text-[#E8A20E]" />
+        <div className="w-7 h-7 rounded-full bg-[var(--amber-soft)] border border-[var(--amber-border)] flex items-center justify-center shrink-0 mt-0.5">
+          <User className="w-3.5 h-3.5 text-[var(--amber)]" />
         </div>
       </div>
     );
@@ -30,19 +30,19 @@ export default function AIChatMessage({ role, content, response, timestamp }: AI
 
   return (
     <div className="flex items-start gap-3">
-      <div className="w-7 h-7 rounded-full bg-[#22BFC8]/20 border border-[#22BFC8]/30 flex items-center justify-center shrink-0 mt-0.5">
-        <Sparkles className="w-3.5 h-3.5 text-[#22BFC8]" />
+      <div className="w-7 h-7 rounded-full bg-[var(--cyan-soft)] border border-[var(--cyan-border)] flex items-center justify-center shrink-0 mt-0.5">
+        <Sparkles className="w-3.5 h-3.5 text-[var(--cyan)]" />
       </div>
       <div className="space-y-1.5 max-w-[80%]">
-        <div className="bg-[#1A2433] border border-[#172030] rounded-xl rounded-tl-sm px-3.5 py-2.5">
-          <p className="text-xs text-[#8896A8] leading-relaxed whitespace-pre-wrap">{content}</p>
-          <span className="text-[9px] text-[#5A6878] mt-1 block">{time}</span>
+        <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl rounded-tl-sm px-3.5 py-2.5">
+          <p className="text-xs text-[var(--text-secondary)] leading-relaxed whitespace-pre-wrap">{content}</p>
+          <span className="text-[9px] text-[var(--text-muted)] mt-1 block">{time}</span>
         </div>
         {response && (
           <div>
             <button
               onClick={() => setShowEvidence(!showEvidence)}
-              className="flex items-center gap-1 text-[9px] text-[#5A6878] hover:text-[#22BFC8] transition-colors"
+              className="flex items-center gap-1 text-[9px] text-[var(--text-muted)] hover:text-[var(--cyan)] transition-colors"
             >
               {showEvidence ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
               Evidence & Confidence

@@ -37,7 +37,7 @@ export default function AIChatInput({ onSend, loading, disabled }: AIChatInputPr
   }, [input]);
 
   return (
-    <div className="flex items-end gap-2 border-t border-[#172030] bg-[#0D1219] p-3">
+    <div className="flex items-end gap-2 border-t border-[var(--border)] bg-[var(--bg)] p-3">
       <textarea
         ref={inputRef}
         value={input}
@@ -46,17 +46,17 @@ export default function AIChatInput({ onSend, loading, disabled }: AIChatInputPr
         placeholder="Ask about your trades, strategies, market..."
         rows={1}
         disabled={loading || disabled}
-        className="flex-1 bg-[#111820] border border-[#172030] rounded-lg px-3 py-2 text-xs text-white placeholder-[#5A6878] outline-none resize-none focus:border-[#E8A20E]/40 transition-colors disabled:opacity-50"
+        className="flex-1 bg-[var(--card)] border border-[var(--border)] rounded-lg px-3 py-2 text-xs text-white placeholder-[var(--text-muted)] outline-none resize-none focus:border-[var(--amber)]/40 transition-colors disabled:opacity-50"
       />
       <button
         onClick={handleSend}
         disabled={!input.trim() || loading || disabled}
-        className="w-8 h-8 rounded-lg bg-[#E8A20E] hover:bg-[#C8910A] disabled:bg-[#172030] disabled:cursor-not-allowed flex items-center justify-center transition-colors shrink-0"
+        className="w-8 h-8 rounded-lg bg-[var(--amber)] hover:bg-[var(--amber-hover)] disabled:bg-[var(--border)] disabled:cursor-not-allowed flex items-center justify-center transition-colors shrink-0"
       >
         {loading ? (
           <Loader2 className="w-4 h-4 text-white animate-spin" />
         ) : (
-          <Send className="w-4 h-4 text-[#0A0E14]" />
+          <Send className="w-4 h-4 text-[var(--bg)]" />
         )}
       </button>
     </div>

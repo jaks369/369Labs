@@ -10,6 +10,7 @@ import { users } from "../../drizzle/schema";
 import { startTickCollector } from "../tickCollector";
 import { runWatch } from "../signalScanner";
 import { ENV } from "./env";
+import { oauthRouter } from "./oauth";
 
 process.on("unhandledRejection", (reason) => {
   console.error("[Startup] Unhandled promise rejection:", reason);
@@ -51,25 +52,34 @@ export async function createApp() {
   app.use(express.json({ limit: "50mb" }));
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
   registerStorageProxy(app);
+  app.use("/api/auth", oauthRouter);
 
-  // Lightweight in-memory rate limiter (per-IP). Stricter caps on auth/token paths.
+  // Lightweight in-memory rate limiter (per-IP + per-key). Stricter caps on auth/trading/AI paths.
   const rateBuckets: Record<string, { count: number; reset: number }> = {};
   const RATE = (limit: number, windowMs: number) => (req: any, res: any, next: any) => {
     const ip = req.headers["x-forwarded-for"]?.toString().split(",")[0]?.trim() || req.socket?.remoteAddress || "unknown";
+    const apiKey = req.headers.authorization?.startsWith("Bearer ") ? req.headers.authorization.slice(7).slice(0, 16) : "";
+    const key = apiKey ? `key:${apiKey}` : `ip:${ip}`;
     const now = Date.now();
-    const b = rateBuckets[ip] || { count: 0, reset: now + windowMs };
+    const b = rateBuckets[key] || { count: 0, reset: now + windowMs };
     if (now > b.reset) { b.count = 0; b.reset = now + windowMs; }
     b.count++;
-    rateBuckets[ip] = b;
+    rateBuckets[key] = b;
     if (b.count > limit) { res.status(429).json({ error: "Too many requests, slow down." }); return; }
     next();
   };
   app.use("/api/trpc", (req: any, res: any, next: any) => {
     const url: string = req.url || "";
-    if (url.includes("signup") || url.includes("login") || url.includes("saveToken") || url.includes("removeToken")) {
-      return RATE(10, 60_000)(req, res, next); // 10 auth/token writes per minute per IP
+    if (url.includes("signup") || url.includes("login") || url.includes("saveToken") || url.includes("removeToken") || url.includes("deleteAccount")) {
+      return RATE(10, 60_000)(req, res, next); // 10 auth/token writes per minute
     }
-    return RATE(120, 60_000)(req, res, next); // 120 general requests per minute per IP
+    if (url.includes("startRun") || url.includes("stopRun") || url.includes("closePosition") || url.includes("save") && (url.includes("trades") || url.includes("strategies"))) {
+      return RATE(30, 60_000)(req, res, next); // 30 trading writes per minute
+    }
+    if (url.includes("ai.") || url.includes("aiMarket") || url.includes("aiChat") || url.includes("aiPerformance") || url.includes("aiExplainability") || url.includes("aiCopilot") || url.includes("tradingCopilot")) {
+      return RATE(60, 60_000)(req, res, next); // 60 AI requests per minute
+    }
+    return RATE(120, 60_000)(req, res, next); // 120 general requests per minute
   });
 
   app.use(
@@ -100,6 +110,13 @@ export async function createApp() {
       try { await ensurePluginsTable(); } catch (e) { console.error("[startup] ensurePluginsTable failed", e); }
     })();
   }
+
+  // Global error handler
+  app.use((err: any, _req: any, res: any, _next: any) => {
+    console.error("[ErrorHandler]", err?.message || err);
+    const status = err?.status || err?.statusCode || 500;
+    res.status(status).json({ error: err?.message || "Internal server error" });
+  });
 
   return app;
 }

@@ -16,34 +16,32 @@ export default function ForgotPassword() {
     try {
       const res: any = await m.mutateAsync({ email });
       setMsg('If the email exists, a reset link was sent.');
-      // Email delivery is not configured on this deployment, so surface the
-      // dev reset link directly so the flow remains testable end-to-end.
       if (res?.resetUrl) setResetUrl(res.resetUrl);
     } catch { setMsg('Error sending reset email'); }
   };
 
   return (
-    <div className='min-h-screen flex items-center justify-center bg-[#0A0E14] p-4'>
+    <div className='min-h-screen flex items-center justify-center bg-[var(--bg)] p-4'>
       <div className='w-full max-w-md'>
         <h1 className='text-2xl font-bold text-white mb-6 text-center'>Reset Password</h1>
         <form onSubmit={submit} className='space-y-4'>
           <div>
-            <label className='block text-sm font-medium text-[#94A3B8] mb-1'>Email</label>
-            <Input type='email' value={email} onChange={(e) => setEmail(e.target.value)} placeholder='you@example.com' required className='bg-[#151B23] border-[#252B35]' />
+            <label className='block text-sm font-medium text-[var(--text-secondary)] mb-1'>Email</label>
+            <Input type='email' value={email} onChange={(e) => setEmail(e.target.value)} placeholder='you@example.com' required className='bg-[var(--card)] border-[var(--border)]' />
           </div>
-          <Button type='submit' disabled={m.isPending} className='w-full btn-primary'>
+          <Button type='submit' disabled={m.isPending} className='btn btn-primary w-full'>
             {m.isPending ? 'Sending...' : 'SEND RESET LINK'}
           </Button>
-          {msg && <p className='text-sm text-center text-[#28A745]'>{msg}</p>}
+          {msg && <p className='text-sm text-center text-[var(--green)]'>{msg}</p>}
           {resetUrl && (
-            <div className='text-sm text-center text-[#94A3B8] p-3 rounded-lg border border-[#252B35] bg-[#151B23]'>
-              <p className='mb-1'>Email isn't configured yet, so use this dev link:</p>
-              <a href={resetUrl} className='text-[#E8A20E] hover:underline break-all'>{resetUrl}</a>
+            <div className='text-sm text-center text-[var(--text-secondary)] p-3 rounded-lg border border-[var(--border)] bg-[var(--card)]'>
+              <p className='mb-1'>Dev mode — use this link to reset:</p>
+              <a href={resetUrl} className='text-[var(--amber)] hover:underline break-all'>{resetUrl}</a>
             </div>
           )}
         </form>
-        <p className='mt-6 text-center text-sm text-[#64748B]'>
-          <Link to='/login' className='text-[#E8A20E] hover:underline'>Back to login</Link>
+        <p className='mt-6 text-center text-sm text-[var(--text-muted)]'>
+          <Link to='/login' className='text-[var(--amber)] hover:underline'>Back to login</Link>
         </p>
       </div>
     </div>

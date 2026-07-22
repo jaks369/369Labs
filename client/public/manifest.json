@@ -1,0 +1,17 @@
+{
+  "name": "369Labs - Automated Trading Bot Platform",
+  "short_name": "369Labs",
+  "description": "AI-powered automated trading bot platform for Deriv",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0A0E14",
+  "theme_color": "#F5B80B",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

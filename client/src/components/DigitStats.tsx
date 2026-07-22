@@ -83,60 +83,60 @@ export default function DigitStats({ symbol, decimalPlaces = derivWS.decimalPlac
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-2 gap-3">
-        <div className="bg-[#151B23]/50 p-3 rounded border border-[#151B23]">
-          <div className="flex justify-between text-[10px] font-bold text-[#64748B] mb-2 uppercase">
+        <div className="bg-[var(--card)]/50 p-3 rounded border border-[var(--card)]">
+          <div className="flex justify-between text-[10px] font-bold text-[var(--text-muted)] mb-2 uppercase">
             <span>Even</span>
-            <span className="text-[#28A745]">{stats.even.toFixed(1)}%</span>
+            <span className="text-[var(--green)]">{stats.even.toFixed(1)}%</span>
           </div>
-          <div className="h-1.5 w-full bg-[#151B23] rounded-full overflow-hidden">
-            <div className="h-full bg-[#28A745] transition-all duration-300" style={{ width: `${stats.even}%` }} />
+          <div className="h-1.5 w-full bg-[var(--card)] rounded-full overflow-hidden">
+            <div className="h-full bg-[var(--green)] transition-all duration-300" style={{ width: `${stats.even}%` }} />
           </div>
         </div>
-        <div className="bg-[#151B23]/50 p-3 rounded border border-[#151B23]">
-          <div className="flex justify-between text-[10px] font-bold text-[#64748B] mb-2 uppercase">
+        <div className="bg-[var(--card)]/50 p-3 rounded border border-[var(--card)]">
+          <div className="flex justify-between text-[10px] font-bold text-[var(--text-muted)] mb-2 uppercase">
             <span>Odd</span>
-            <span className="text-[#E8A20E]">{stats.odd.toFixed(1)}%</span>
+            <span className="text-[var(--amber)]">{stats.odd.toFixed(1)}%</span>
           </div>
-          <div className="h-1.5 w-full bg-[#151B23] rounded-full overflow-hidden">
-            <div className="h-full bg-[#E8A20E] transition-all duration-300" style={{ width: `${stats.odd}%` }} />
+          <div className="h-1.5 w-full bg-[var(--card)] rounded-full overflow-hidden">
+            <div className="h-full bg-[var(--amber)] transition-all duration-300" style={{ width: `${stats.odd}%` }} />
           </div>
         </div>
-        <div className="bg-[#151B23]/50 p-3 rounded border border-[#151B23]">
-          <div className="flex justify-between text-[10px] font-bold text-[#64748B] mb-2 uppercase">
+        <div className="bg-[var(--card)]/50 p-3 rounded border border-[var(--card)]">
+          <div className="flex justify-between text-[10px] font-bold text-[var(--text-muted)] mb-2 uppercase">
             <span>Over {th !== null ? th : "—"}</span>
-            <span className="text-[#E8A20E]">{overPct.toFixed(1)}%</span>
+            <span className="text-[var(--amber)]">{overPct.toFixed(1)}%</span>
           </div>
-          <div className="h-1.5 w-full bg-[#151B23] rounded-full overflow-hidden">
-            <div className="h-full bg-[#E8A20E] transition-all duration-300" style={{ width: `${overPct}%` }} />
+          <div className="h-1.5 w-full bg-[var(--card)] rounded-full overflow-hidden">
+            <div className="h-full bg-[var(--amber)] transition-all duration-300" style={{ width: `${overPct}%` }} />
           </div>
         </div>
-        <div className="bg-[#151B23]/50 p-3 rounded border border-[#151B23]">
-          <div className="flex justify-between text-[10px] font-bold text-[#64748B] mb-2 uppercase">
+        <div className="bg-[var(--card)]/50 p-3 rounded border border-[var(--card)]">
+          <div className="flex justify-between text-[10px] font-bold text-[var(--text-muted)] mb-2 uppercase">
             <span>Under {th !== null ? th : "—"}</span>
-            <span className="text-[#E8A20E]">{underPct.toFixed(1)}%</span>
+            <span className="text-[var(--amber)]">{underPct.toFixed(1)}%</span>
           </div>
-          <div className="h-1.5 w-full bg-[#151B23] rounded-full overflow-hidden">
-            <div className="h-full bg-[#E8A20E] transition-all duration-300" style={{ width: `${underPct}%` }} />
+          <div className="h-1.5 w-full bg-[var(--card)] rounded-full overflow-hidden">
+            <div className="h-full bg-[var(--amber)] transition-all duration-300" style={{ width: `${underPct}%` }} />
           </div>
         </div>
       </div>
 
       {th === null && (
-        <p className="text-[10px] text-[#64748B] mb-2">Click a digit above to set the Over/Under barrier.</p>
+        <p className="text-[10px] text-[var(--text-muted)] mb-2">Click a digit above to set the Over/Under barrier.</p>
       )}
-      <div className="bg-[#151B23]/50 p-4 rounded border border-[#151B23]">
-        <h4 className="text-[10px] font-bold text-[#64748B] uppercase tracking-widest mb-4">Digit Frequency (Last {maxTicks} Ticks)</h4>
+      <div className="bg-[var(--card)]/50 p-4 rounded border border-[var(--card)]">
+        <h4 className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-widest mb-4">Digit Frequency (Last {maxTicks} Ticks)</h4>
         <div className="flex items-end justify-between h-28 gap-0.5 overflow-x-auto">
           {stats.counts.map((percent, i) => (
-            <div key={i} onClick={() => { setSelectedDigit(i); }} className={`flex-1 flex flex-col items-center gap-2 cursor-pointer ${selectedDigit === i ? "ring-1 ring-[#E8A20E] rounded" : ""}`}>
-              <span className={`text-[7px] font-bold ${hasData && i === maxIdx ? "text-[#28A745]" : hasData && i === minIdx ? "text-[#DC3545]" : "text-[#94A3B8]"}`}>{percent.toFixed(1)}%</span>
+            <div key={i} onClick={() => { setSelectedDigit(i); }} className={`flex-1 flex flex-col items-center gap-2 cursor-pointer ${selectedDigit === i ? "ring-1 ring-[var(--amber)] rounded" : ""}`}>
+              <span className={`text-[7px] font-bold ${hasData && i === maxIdx ? "text-[var(--green)]" : hasData && i === minIdx ? "text-[var(--red)]" : "text-[var(--text-secondary)]"}`}>{percent.toFixed(1)}%</span>
               <div className="w-full rounded-t-sm relative group cursor-pointer" style={{ height: `${(percent / maxPercent) * 100}%`, background: hasData && i === maxIdx ? "rgba(16,185,129,0.25)" : hasData && i === minIdx ? "rgba(239,68,68,0.25)" : "rgba(37,99,235,0.2)" }}>
-                <div className={`absolute inset-0 rounded-t-sm transition-opacity ${i === currentDigit ? "opacity-100" : "opacity-60 group-hover:opacity-100"}`} style={{ height: `${percent}%`, background: i === currentDigit ? "#E8A20E" : hasData && i === maxIdx ? "#28A745" : hasData && i === minIdx ? "#DC3545" : "#E8A20E" }} />
+                <div className={`absolute inset-0 rounded-t-sm transition-opacity ${i === currentDigit ? "opacity-100" : "opacity-60 group-hover:opacity-100"}`} style={{ height: `${percent}%`, background: i === currentDigit ? "var(--amber)" : hasData && i === maxIdx ? "var(--green)" : hasData && i === minIdx ? "var(--red)" : "var(--amber)" }} />
                 {i === currentDigit && (
-                  <div className="absolute -top-3 left-1/2 -translate-x-1/2 text-[#E8A20E] text-[10px] leading-none">▼</div>
+                  <div className="absolute -top-3 left-1/2 -translate-x-1/2 text-[var(--amber)] text-[10px] leading-none">▼</div>
                 )}
               </div>
-              <span className={`text-[9px] font-bold ${i === currentDigit ? "text-[#E8A20E]" : "text-[#94A3B8]"}`}>{i}</span>
+              <span className={`text-[9px] font-bold ${i === currentDigit ? "text-[var(--amber)]" : "text-[var(--text-secondary)]"}`}>{i}</span>
             </div>
           ))}
         </div>

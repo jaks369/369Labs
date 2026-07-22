@@ -18,24 +18,24 @@ export default function Journal() {
   };
 
   return (
-    <div className="min-h-screen bg-[#151B23] p-6">
+    <div className="min-h-screen bg-[var(--card)] p-6">
       <div className="max-w-3xl mx-auto space-y-6">
         <div>
           <h1 className="text-3xl font-bold text-white flex items-center gap-3">
-            <BookOpen className="w-7 h-7 text-[#E8A20E]" /> Trading Journal
+            <BookOpen className="w-7 h-7 text-[var(--amber)]" /> Trading Journal
           </h1>
-          <p className="text-[#94A3B8] text-sm mt-1">369AI explains WHY your trades won or lost â€” educational, data-driven.</p>
+          <p className="text-[var(--text-secondary)] text-sm mt-1">369AI explains WHY your trades won or lost â€” educational, data-driven.</p>
         </div>
 
-        <div className="bg-[#151B23] border border-[#252B35] rounded-xl p-6 space-y-4">
+        <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-6 space-y-4">
           <div>
-            <label className="text-xs text-[#64748B] font-bold uppercase tracking-wider">Focus on a strategy (optional)</label>
+            <label className="text-xs text-[var(--text-muted)] font-bold uppercase tracking-wider">Focus on a strategy (optional)</label>
             <select
               value={strategyId ?? ""}
               onChange={(e) => setStrategyId(e.target.value ? Number(e.target.value) : undefined)}
-              className="w-full mt-1 bg-[#151B23] border border-[#252B35] rounded-lg px-3 py-2 text-white text-sm"
+              className="w-full mt-1 bg-[var(--card)] border border-[var(--border)] rounded-lg px-3 py-2 text-white text-sm"
             >
-              <option value="">All strategies</option>
+              <option value="">{strategiesQuery.isLoading ? "Loading..." : strategiesQuery.isError ? "Failed to load" : "All strategies"}</option>
               {(strategiesQuery.data || []).filter((s: any) => s.config?.rule).map((s: any) => (
                 <option key={s.id} value={s.id}>{s.name}</option>
               ))}
@@ -44,7 +44,7 @@ export default function Journal() {
           <button
             onClick={runJournal}
             disabled={journalMutation.isPending}
-            className="w-full bg-[#E8A20E] hover:bg-[#E8A20E] text-black text-sm font-bold py-2.5 rounded-lg flex items-center justify-center gap-2"
+            className="w-full bg-[var(--amber)] hover:bg-[var(--amber)] text-black text-sm font-bold py-2.5 rounded-lg flex items-center justify-center gap-2"
           >
             {journalMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
             {journalMutation.isPending ? "Analyzing tradesâ€¦" : "Generate AI Journal"}
@@ -52,14 +52,14 @@ export default function Journal() {
         </div>
 
         {journalMutation.data?.analysis && (
-          <div className="bg-[#151B23] border border-[#252B35] rounded-xl p-6">
-            <div className="prose prose-invert max-w-none text-sm text-[#94A3B8] leading-relaxed whitespace-pre-wrap">
+          <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-6">
+            <div className="prose prose-invert max-w-none text-sm text-[var(--text-secondary)] leading-relaxed whitespace-pre-wrap">
               {journalMutation.data.analysis}
             </div>
           </div>
         )}
         {journalMutation.isError && (
-          <div className="bg-[#DC3545]/10 border border-[#DC3545]/30 rounded-xl p-4 text-sm text-[#DC3545]">
+          <div className="bg-[var(--red-soft)] border border-[var(--red)]/30 rounded-xl p-4 text-sm text-[var(--red)]">
             Could not generate journal. Make sure you have trades and AI is configured.
           </div>
         )}

@@ -9,9 +9,9 @@ import { pushTimeline } from "@/components/AITimeline";
 interface Message { role: "user" | "ai"; content: string; steps?: any[]; }
 interface PendingAction { action: string; params: any; }
 
-const ACCENT = "text-[#22BFC8]";
-const ACCENT_BG = "bg-[#22BFC8]/10";
-const ACCENT_BORDER = "border-[#22BFC8]/30";
+const ACCENT = "text-[var(--cyan)]";
+const ACCENT_BG = "bg-[var(--cyan-soft)]";
+const ACCENT_BORDER = "border-[var(--cyan-border)]";
 
 export default function AIAssistant() {
   const { user, isAuthenticated } = useAuth();
@@ -137,8 +137,8 @@ export default function AIAssistant() {
   if (!isAuthenticated) { navigate("/login"); return null; }
 
   return (
-    <div className="flex flex-col h-[calc(100vh-64px)] lg:h-screen bg-[#151B23]">
-      <div className="p-6 border-b border-[#252B35] flex items-center justify-between bg-[#151B23]/50 backdrop-blur-xl">
+    <div className="flex flex-col h-dvh bg-[var(--card)]">
+      <div className="p-4 md:p-6 border-b border-[var(--border)] flex items-center justify-between bg-[var(--card)]/50 backdrop-blur-xl">
         <div className="flex items-center gap-3">
           <div className={`w-10 h-10 ${ACCENT_BG} rounded-xl flex items-center justify-center ${ACCENT_BORDER}`}>
             <CandlestickChart className={`w-6 h-6 ${ACCENT}`} />
@@ -151,39 +151,39 @@ export default function AIAssistant() {
           </div>
         </div>
         <div className="hidden md:flex items-center gap-2">
-          <div className="px-3 py-1 rounded-full bg-[#28A745]/10 border border-[#28A745]/20 text-[10px] font-bold text-[#28A745] uppercase tracking-wider">System Online</div>
+          <div className="px-3 py-1 rounded-full bg-[var(--green-soft)] border border-[var(--green)]/20 text-[10px] font-bold text-[var(--green)] uppercase tracking-wider">System Online</div>
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-6 space-y-6">
+      <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-6">
         <div className="max-w-4xl mx-auto space-y-6">
           {messages.map((msg, i) => (
             <div key={i} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
-              <div className={`flex gap-4 max-w-[80%] ${msg.role === "user" ? "flex-row-reverse" : ""}`}>
-                <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 border ${msg.role === "ai" ? `${ACCENT_BG} ${ACCENT_BORDER}` : "bg-[#151B23] border-[#252B35]"}`}>
+              <div className={`flex gap-4 max-w-[90%] md:max-w-[80%] ${msg.role === "user" ? "flex-row-reverse" : ""}`}>
+                <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 border ${msg.role === "ai" ? `${ACCENT_BG} ${ACCENT_BORDER}` : "bg-[var(--card)] border-[var(--border)]"}`}>
                   {msg.role === "ai" ? <CandlestickChart className={`w-4 h-4 ${ACCENT}`} /> : <div className="text-[10px] font-bold text-white">{user?.name?.charAt(0)}</div>}
                 </div>
-                <div className={`p-4 rounded-2xl text-sm leading-relaxed whitespace-pre-line ${msg.role === "ai" ? "bg-[#151B23] border border-[#252B35] text-[#94A3B8] border-l-2 border-l-amber-400/60" : "bg-[#22BFC8] text-black font-medium"}`}>
-                  {msg.content.slice(0, reveal[i] ?? msg.content.length)}{reveal[i] !== undefined && reveal[i] < msg.content.length ? <span className="inline-block w-1.5 h-3 bg-[#22BFC8] ml-0.5 align-middle animate-pulse" /> : null}
+                <div className={`p-4 rounded-2xl text-sm leading-relaxed whitespace-pre-line ${msg.role === "ai" ? "bg-[var(--card)] border border-[var(--border)] text-[var(--text-secondary)] border-l-2 border-l-amber-400/60" : "bg-[var(--cyan)] text-black font-medium"}`}>
+                  {msg.content.slice(0, reveal[i] ?? msg.content.length)}{reveal[i] !== undefined && reveal[i] < msg.content.length ? <span className="inline-block w-1.5 h-3 bg-[var(--cyan)] ml-0.5 align-middle animate-pulse" /> : null}
                   {msg.role === "ai" && msg.content.includes('"Retry"') && input ? (
                     <div className="mt-3">
-                      <button onClick={() => handleSend(input)} disabled={isTyping} className="px-3 py-1.5 rounded bg-[#22BFC8] text-black text-xs font-bold hover:bg-[#22BFC8] transition-colors disabled:opacity-50">
+                      <button onClick={() => handleSend(input)} disabled={isTyping} className="px-3 py-1.5 rounded bg-[var(--cyan)] text-black text-xs font-bold hover:bg-[var(--cyan)] transition-colors disabled:opacity-50">
                         {isTyping ? <><Loader2 className="w-3 h-3 animate-spin inline mr-1" />Retrying...</> : "Retry"}
                       </button>
                     </div>
                   ) : null}
                   {msg.steps && msg.steps.length > 0 && (
-                    <div className="mt-3 border-t border-[#252B35] pt-2">
-                      <button onClick={() => setExpanded(e => ({ ...e, [i]: !e[i] }))} className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-[#64748B] hover:text-[#22BFC8]">
+                    <div className="mt-3 border-t border-[var(--border)] pt-2">
+                      <button onClick={() => setExpanded(e => ({ ...e, [i]: !e[i] }))} className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-[var(--text-muted)] hover:text-[var(--cyan)]">
                         {expanded[i] ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />} <Wrench className="w-3 h-3" /> {msg.steps.length} tool step{msg.steps.length > 1 ? "s" : ""}
                       </button>
                       {expanded[i] && (
                         <div className="mt-2 space-y-1 text-[11px] font-mono">
                           {msg.steps.map((s: any, j: number) => (
-                            <div key={j} className="rounded bg-black/40 p-2 border border-[#252B35]">
-                              <span className="text-[#28A745]">{">"} {s.tool}</span>
-                              <span className="text-[#64748B]">({JSON.stringify(s.args)})</span>
-                              <span className="text-[#22BFC8]"> {"=>"} {s.result?.__action ? "ACTION" : "ok"}</span>
+                            <div key={j} className="rounded bg-black/40 p-2 border border-[var(--border)]">
+                              <span className="text-[var(--green)]">{">"} {s.tool}</span>
+                              <span className="text-[var(--text-muted)]">({JSON.stringify(s.args)})</span>
+                              <span className="text-[var(--cyan)]"> {"=>"} {s.result?.__action ? "ACTION" : "ok"}</span>
                             </div>
                           ))}
                         </div>
@@ -196,11 +196,11 @@ export default function AIAssistant() {
           ))}
           {isTyping && (
             <div className="flex justify-start">
-              <div className="flex gap-4 max-w-[80%]">
+              <div className="flex gap-4 max-w-[90%] md:max-w-[80%]">
                 <div className={`w-8 h-8 rounded-lg ${ACCENT_BG} ${ACCENT_BORDER} flex items-center justify-center`}>
                   <CandlestickChart className={`w-4 h-4 ${ACCENT} animate-pulse`} />
                 </div>
-                <div className="p-4 rounded-2xl bg-[#151B23] border border-[#252B35] flex items-center gap-2 text-xs text-[#22BFC8] font-mono">
+                <div className="p-4 rounded-2xl bg-[var(--card)] border border-[var(--border)] flex items-center gap-2 text-xs text-[var(--cyan)] font-mono">
                   <Loader2 className="w-3 h-3 animate-spin" /> 369AI is {typingLabel.toLowerCase()}...
                 </div>
               </div>
@@ -210,25 +210,25 @@ export default function AIAssistant() {
       </div>
 
       {pending && (
-        <div className="p-4 border-t border-[#22BFC8]/30 bg-[#22BFC8]/5">
+        <div className="p-4 border-t border-[var(--cyan-border)] bg-[var(--cyan)]/5">
           <div className="max-w-4xl mx-auto flex items-center justify-between gap-4">
-            <div className="text-xs text-[#22BFC8] font-mono">
+            <div className="text-xs text-[var(--cyan)] font-mono">
               <span className="font-bold uppercase">{pending.action}</span> {JSON.stringify(pending.params)}
             </div>
             <div className="flex gap-2">
-              <button onClick={() => setPending(null)} className="px-3 py-1.5 rounded bg-[#151B23] text-[#94A3B8] text-xs hover:bg-[#252B35]">Cancel</button>
-              <button onClick={executeAction} className="px-3 py-1.5 rounded bg-[#22BFC8] text-black text-xs font-bold hover:bg-[#22BFC8]">Confirm</button>
+              <button onClick={() => setPending(null)} className="px-3 py-1.5 rounded bg-[var(--card)] text-[var(--text-secondary)] text-xs hover:bg-[var(--border)]">Cancel</button>
+              <button onClick={executeAction} className="px-3 py-1.5 rounded bg-[var(--cyan)] text-black text-xs font-bold hover:bg-[var(--cyan)]">Confirm</button>
             </div>
           </div>
         </div>
       )}
 
-      <div className="p-6 border-t border-[#252B35] bg-[#151B23]">
+      <div className="p-4 md:p-6 border-t border-[var(--border)] bg-[var(--card)]">
         <div className="max-w-4xl mx-auto space-y-4">
           {messages.length < 3 && (
             <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
               {suggestions.map(s => (
-                <button key={s} onClick={() => setInput(s)} className="whitespace-nowrap px-4 py-2 rounded-full bg-[#151B23] border border-[#151B23] text-xs text-[#94A3B8] hover:border-[#22BFC8] hover:text-[#22BFC8] transition-all">{s}</button>
+                <button key={s} onClick={() => setInput(s)} className="whitespace-nowrap px-4 py-2 rounded-full bg-[var(--card)] border border-[var(--card)] text-xs text-[var(--text-secondary)] hover:border-[var(--cyan)] hover:text-[var(--cyan)] transition-all">{s}</button>
               ))}
             </div>
           )}
@@ -238,17 +238,17 @@ export default function AIAssistant() {
               onChange={e => setInput(e.target.value)}
               onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
               placeholder="Ask 369AI to analyze, suggest, or act..."
-              className="w-full bg-[#151B23] border-[#252B35] rounded-xl pl-4 pr-12 py-4 text-sm focus:border-[#22BFC8] focus:ring-1 focus:ring-[#22BFC8] transition-all resize-none h-14"
+              className="w-full bg-[var(--card)] border-[var(--border)] rounded-xl pl-4 pr-12 py-4 text-sm focus:border-[var(--cyan)] focus:ring-1 focus:ring-[var(--cyan)] transition-all resize-none h-14"
             />
-            <button onClick={() => handleSend()} disabled={!input.trim() || isTyping} className="absolute right-3 top-1/2 -translate-y-1/2 p-2 bg-[#22BFC8] text-black rounded-lg hover:bg-[#22BFC8] disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
+            <button onClick={() => handleSend()} disabled={!input.trim() || isTyping} className="absolute right-3 top-1/2 -translate-y-1/2 p-2 bg-[var(--cyan)] text-black rounded-lg hover:bg-[var(--cyan)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
               <Send className="w-4 h-4" />
             </button>
           </div>
-          <div className="flex items-center justify-center gap-3 text-[10px] font-bold uppercase tracking-widest">
-            <button onClick={() => handleSend("Give me a live market analysis: pick an active volatility symbol, read its recent ticks, and tell me the current trend, hottest/odd last digits, and any repeatable pattern forming right now.")} className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#151B23] border border-[#151B23] text-[#94A3B8] hover:border-[#22BFC8] hover:text-[#22BFC8] transition-all">
+          <div className="flex flex-wrap items-center justify-center gap-3 text-[10px] font-bold uppercase tracking-widest">
+            <button onClick={() => handleSend("Give me a live market analysis: pick an active volatility symbol, read its recent ticks, and tell me the current trend, hottest/odd last digits, and any repeatable pattern forming right now.")} className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[var(--card)] border border-[var(--card)] text-[var(--text-secondary)] hover:border-[var(--cyan)] hover:text-[var(--cyan)] transition-all">
               <LineChart className="w-3 h-3" /> Market Analysis
             </button>
-            <button onClick={() => handleSend("What is my risk on the current bots and open positions? Recommend stake sizing, stop-loss and take-profit rules based on the volatility symbols I am trading.")} className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#151B23] border border-[#151B23] text-[#94A3B8] hover:border-[#22BFC8] hover:text-[#22BFC8] transition-all">
+            <button onClick={() => handleSend("What is my risk on the current bots and open positions? Recommend stake sizing, stop-loss and take-profit rules based on the volatility symbols I am trading.")} className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[var(--card)] border border-[var(--card)] text-[var(--text-secondary)] hover:border-[var(--cyan)] hover:text-[var(--cyan)] transition-all">
               <ShieldCheck className="w-3 h-3" /> Risk Management
             </button>
           </div>
