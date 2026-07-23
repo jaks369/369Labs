@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
-import { Shield, Activity, Clock, HardDrive, Database, Cpu, Loader2, ScrollText, BarChart3, TrendingUp, TrendingDown } from "lucide-react";
+import { Shield, Activity, Clock, HardDrive, Database, Cpu, Loader2, ScrollText, BarChart3, TrendingUp, TrendingDown, Settings2, Users } from "lucide-react";
 
 export default function Admin() {
   const { user } = useAuth();
@@ -9,10 +9,12 @@ export default function Admin() {
   const listQuery = trpc.admin.listUsers.useQuery();
   const auditLogsQuery = trpc.admin.auditLogs.useQuery({ limit: 100 });
   const healthQuery = trpc.admin.systemHealth.useQuery();
+  const statsQuery = trpc.admin.usageStats.useQuery(undefined, { enabled: false });
+  const configQuery = trpc.admin.getConfig.useQuery(undefined, { enabled: false });
   const promoteMutation = trpc.admin.promoteToAdmin.useMutation({ onSuccess: () => listQuery.refetch() });
   const demoteMutation = trpc.admin.demoteToUser.useMutation({ onSuccess: () => listQuery.refetch() });
   const deleteMutation = trpc.admin.deleteUser.useMutation({ onSuccess: () => listQuery.refetch() });
-  const [tab, setTab] = useState<"users" | "audit" | "health" | "perf">("users");
+  const [tab, setTab] = useState<"users" | "audit" | "health" | "perf" | "config" | "stats">("users");
 
   if (!user || user.role !== "admin") {
     return <div className="flex items-center justify-center min-h-[60vh] text-[var(--text-muted)]">Access denied. Admin privileges required.</div>;
@@ -37,9 +39,9 @@ export default function Admin() {
       </div>
 
       <div className="flex gap-2 border-b border-[var(--border)] pb-3">
-        {(["users", "audit", "health", "perf"] as const).map(t => (
+        {(["users", "audit", "health", "perf", "config", "stats"] as const).map(t => (
           <button key={t} onClick={() => setTab(t)} className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${tab === t ? "bg-[var(--amber)] text-black" : "text-[var(--text-secondary)] hover:text-white"}`}>
-            {t === "users" ? "Users" : t === "audit" ? "Audit Logs" : t === "health" ? "System Health" : "Performance Audit"}
+            {t === "users" ? "Users" : t === "audit" ? "Audit Logs" : t === "health" ? "System Health" : t === "perf" ? "Performance" : t === "config" ? "Config" : "Usage Stats"}
           </button>
         ))}
       </div>
@@ -161,6 +163,64 @@ export default function Admin() {
               </div>
             </>
           ) : null}
+        </div>
+      )}
+
+      {tab === "config" && (
+        <div className="space-y-4">
+          <div className="flex items-center gap-2 mb-4">
+            <Settings2 className="w-4 h-4 text-[var(--amber)]" />
+            <span className="text-xs font-bold text-[var(--text-muted)] uppercase tracking-wider">Platform Configuration</span>
+          </div>
+          <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5 space-y-4">
+            <div>
+              <label className="text-xs text-[var(--text-muted)] font-bold block mb-1">Default Max Stake ($)</label>
+              <input type="number" defaultValue={100} className="w-full bg-[var(--card)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-white" />
+            </div>
+            <div>
+              <label className="text-xs text-[var(--text-muted)] font-bold block mb-1">Max Active Bots per User</label>
+              <input type="number" defaultValue={10} className="w-full bg-[var(--card)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-white" />
+            </div>
+            <div>
+              <label className="text-xs text-[var(--text-muted)] font-bold block mb-1">Maintenance Mode</label>
+              <div className="flex gap-2 mt-1">
+                <button className="px-3 py-1.5 rounded text-xs font-bold bg-[var(--card)] text-[var(--text-muted)] border border-[var(--border)]">Disabled</button>
+                <button className="px-3 py-1.5 rounded text-xs font-bold bg-[var(--red-soft)] text-[var(--red)] border border-[var(--red)]/30">Enabled</button>
+              </div>
+            </div>
+            <div>
+              <label className="text-xs text-[var(--text-muted)] font-bold block mb-1">Allowed Origins (CORS)</label>
+              <input defaultValue="https://369labs.com" className="w-full bg-[var(--card)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-white" />
+            </div>
+            <button className="px-4 py-2 rounded-lg bg-[var(--amber)] text-black text-xs font-bold">Save Config</button>
+          </div>
+        </div>
+      )}
+
+      {tab === "stats" && (
+        <div className="space-y-4">
+          <div className="flex items-center gap-2 mb-4">
+            <Users className="w-4 h-4 text-[var(--cyan)]" />
+            <span className="text-xs font-bold text-[var(--text-muted)] uppercase tracking-wider">Usage Statistics</span>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
+              <p className="text-[10px] text-[var(--text-muted)] uppercase font-bold">Total Users</p>
+              <p className="text-3xl font-bold text-white mt-1">{listQuery.data?.users.length || 0}</p>
+            </div>
+            <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
+              <p className="text-[10px] text-[var(--text-muted)] uppercase font-bold">Active Sessions</p>
+              <p className="text-3xl font-bold text-white mt-1">—</p>
+            </div>
+            <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
+              <p className="text-[10px] text-[var(--text-muted)] uppercase font-bold">API Requests (24h)</p>
+              <p className="text-3xl font-bold text-white mt-1">—</p>
+            </div>
+          </div>
+          <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
+            <h3 className="text-sm font-bold text-white mb-3">Top Users by Activity</h3>
+            <p className="text-xs text-[var(--text-muted)]">Usage analytics will appear once data collection is enabled.</p>
+          </div>
         </div>
       )}
 

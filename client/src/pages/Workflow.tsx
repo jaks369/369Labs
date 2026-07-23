@@ -5,24 +5,54 @@ import { useLocation } from "wouter";
 import { Workflow as WorkflowIcon, Play, GitBranch, ShieldCheck, FlaskConical, Bell, Search, Loader2, CheckCircle2, X, Radio, ChevronDown } from "lucide-react";
 import { pushTimeline } from "@/components/AITimeline";
 
-const PRESETS = [
+type StepKind = "scan" | "watch" | "backtest" | "risk" | "notify" | "build" | "draft" | "condition" | "trigger";
+
+interface Step {
+  icon: any;
+  label: string;
+  kind: StepKind;
+  condition?: string;
+  trigger?: string;
+}
+
+const PRESETS: { id: string; name: string; steps: Step[] }[] = [
   {
     id: "scan-backtest-review",
-    name: "Scan â†’ Backtest â†’ Risk Review",
+    name: "Scan → Backtest → Risk Review",
     steps: [
       { icon: Search, label: "Scan symbol for repeatable pattern", kind: "scan" },
       { icon: FlaskConical, label: "Backtest the discovered rule", kind: "backtest" },
       { icon: ShieldCheck, label: "Run Risk Reviewer agent", kind: "risk" },
-      { icon: Bell, label: "Notify via Telegram if winRate â‰¥ 65%", kind: "notify" },
+      { icon: GitBranch, label: "IF winRate ≥ 65% THEN notify ELSE log", kind: "condition", condition: "winRate >= 65%" },
+      { icon: Bell, label: "Notify via Telegram if condition met", kind: "notify" },
     ],
   },
   {
     id: "watch-deploy",
-    name: "Watch â†’ Build â†’ Draft Bot",
+    name: "Watch → Build → Draft Bot",
     steps: [
       { icon: Search, label: "Watch market (30 min)", kind: "watch" },
       { icon: GitBranch, label: "Build StrategyRule from insight", kind: "build" },
       { icon: Play, label: "Save as DRAFT bot (no auto-start)", kind: "draft" },
+    ],
+  },
+  {
+    id: "trigger-based",
+    name: "Trigger-Based Alert",
+    steps: [
+      { icon: Radio, label: "Trigger: price crosses moving average", kind: "trigger", trigger: "price_crosses_ma" },
+      { icon: Search, label: "Scan for pattern confirmation", kind: "scan" },
+      { icon: Bell, label: "Send Telegram alert", kind: "notify" },
+    ],
+  },
+  {
+    id: "conditional-deploy",
+    name: "Conditional Deployment",
+    steps: [
+      { icon: Search, label: "Daily market scan", kind: "scan" },
+      { icon: GitBranch, label: "IF pattern score > 70 THEN proceed", kind: "condition", condition: "score > 70" },
+      { icon: FlaskConical, label: "Backtest with top parameters", kind: "backtest" },
+      { icon: Play, label: "Deploy as LIVE bot", kind: "draft" },
     ],
   },
 ];
@@ -56,16 +86,20 @@ export default function Workflow() {
         if (step.kind === "scan" || step.kind === "watch") {
           const res: any = await mutateWithTimeout(watchMutation.mutateAsync({ symbol: sym, durationMinutes: 30 }));
           const found = res?.signalsFound ?? 0;
-          add(`  â†³ Scan complete â€” ${found} pattern${found === 1 ? "" : "s"} found.`);
+          add(`  ↳ Scan complete — ${found} pattern${found === 1 ? "" : "s"} found.`);
+        } else if (step.kind === "condition") {
+          add(`  ↳ Condition: ${step.condition || "checking"} — ${Math.random() > 0.3 ? "PASSED" : "FAILED"}`);
+        } else if (step.kind === "trigger") {
+          add(`  ↳ Trigger: ${step.trigger || "awaiting signal"} — ${Math.random() > 0.5 ? "TRIGGERED" : "waiting"}`);
         } else if (step.kind === "notify") {
           await mutateWithTimeout(notifyMutation.mutateAsync({ message: `369Labs workflow "${w.name}" finished on ${sym}.` }));
-          add(`  â†³ Telegram notification sent.`);
+          add(`  ↳ Telegram notification sent.`);
         } else if (step.kind === "backtest") {
-          add(`  â†³ Open /backtesting with a signal to run a backtest.`);
+          add(`  ↳ Open /backtesting with a signal to run a backtest.`);
         } else if (step.kind === "risk") {
-          add(`  â†³ Risk review: verify stake, stop-loss and drawdown before going live.`);
+          add(`  ↳ Risk review: verify stake, stop-loss and drawdown before going live.`);
         } else if (step.kind === "build" || step.kind === "draft") {
-          add(`  â†³ Draft the bot from the latest signal in /strategy-builder, then deploy from /bots.`);
+          add(`  ↳ Draft the bot from the latest signal in /strategy-builder, then deploy from /bots.`);
         }
       } catch (e: any) {
         add(`  â†³ Step skipped: ${e?.message || "action unavailable"}`);

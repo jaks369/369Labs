@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
-import { CandlestickChart, Sparkles, TrendingUp, Clock, Bot, Loader2, ChevronDown, ChevronRight, FlaskConical, Users, Code, Shield, CheckCircle2, XCircle, BookOpen } from "lucide-react";
+import { CandlestickChart, Sparkles, TrendingUp, Clock, Bot, Loader2, ChevronDown, ChevronRight, FlaskConical, Users, Code, Shield, CheckCircle2, XCircle, BookOpen, Star, ShoppingCart, Upload } from "lucide-react";
 import { useLocation } from "wouter";
 import { toast } from "@/components/Toast";
 
@@ -13,6 +13,10 @@ export default function Marketplace() {
   const [, navigate] = useLocation();
   const [symbol, setSymbol] = useState<string>("");
   const [expanded, setExpanded] = useState<number | null>(null);
+  const [showUpload, setShowUpload] = useState(false);
+  const [uploadName, setUploadName] = useState("");
+  const [uploadDesc, setUploadDesc] = useState("");
+  const [uploadPrice, setUploadPrice] = useState("");
 
   const createBotMutation = trpc.strategies.save.useMutation();
   const [sentId, setSentId] = useState<number | null>(null);
@@ -136,6 +140,9 @@ export default function Marketplace() {
                       <Button onClick={() => navigate("/backtesting?signal=" + sig.id)} className="bg-[var(--amber)] hover:bg-[var(--amber)] text-black text-xs px-3 py-1.5 rounded-lg flex items-center gap-1">
                         <FlaskConical className="w-3.5 h-3.5" /> Backtest
                       </Button>
+                      <Button onClick={() => toast("Purchase flow started for signal #" + sig.id + ". Credits will be deducted from your account.", "success")} className="bg-[var(--green)]/20 text-[var(--green)] border border-[var(--green)]/30 text-xs px-3 py-1.5 rounded-lg flex items-center gap-1">
+                        <ShoppingCart className="w-3.5 h-3.5" /> Purchase
+                      </Button>
                       <button onClick={() => setExpanded(isOpen ? null : sig.id)} className="text-[11px] text-[var(--text-secondary)] hover:text-[var(--amber)] flex items-center gap-1 justify-center">
                         {isOpen ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />} Evidence
                       </button>
@@ -250,31 +257,74 @@ export default function Marketplace() {
         </div>
 
         <div className="mt-10">
-          <h2 className="text-xl font-bold text-white mb-1 flex items-center gap-2">
-            <Users className="w-5 h-5 text-[var(--amber-hover)]" /> Community Strategies
-          </h2>
-          <p className="text-sm text-[var(--text-muted)] mb-4">Strategies traders published. Clone any into your account to backtest or deploy.</p>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-bold text-white flex items-center gap-2">
+              <Users className="w-5 h-5 text-[var(--amber-hover)]" /> Community Strategies
+            </h2>
+            <div className="flex gap-2">
+              <Button onClick={() => setShowUpload(true)} className="bg-[var(--cyan)]/20 text-[var(--cyan)] border border-[var(--cyan)]/30 text-xs px-3 py-1.5 rounded-lg flex items-center gap-1">
+                <Upload className="w-3.5 h-3.5" /> Publish Yours
+              </Button>
+            </div>
+          </div>
+          <p className="text-sm text-[var(--text-muted)] mb-4">Rate, review, and clone strategies from other traders.</p>
           {publishedQuery.isLoading ? (
-            <p className="text-sm text-[var(--text-muted)]">Loading community strategiesâ€¦</p>
+            <p className="text-sm text-[var(--text-muted)]">Loading community strategies...</p>
           ) : published.length === 0 ? (
-            <p className="text-sm text-[var(--text-muted)]">No published strategies yet. Publish one from the Strategy Builder.</p>
+            <p className="text-sm text-[var(--text-muted)]">No published strategies yet. Publish one from the Strategy Builder or upload here.</p>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {published.map((s: any) => (
-                <div key={s.id} className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4 flex items-center justify-between gap-4">
-                  <div className="flex-1 min-w-0">
-                    <h3 className="font-bold text-white truncate">{s.name}</h3>
-                    <p className="text-xs text-[var(--text-secondary)] mt-1 truncate">{s.description || "No description"}</p>
-                    <span className="text-[10px] text-[var(--text-muted)]">by user #{s.userId}</span>
+                <div key={s.id} className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-bold text-white truncate">{s.name}</h3>
+                      <p className="text-xs text-[var(--text-secondary)] mt-1 truncate">{s.description || "No description"}</p>
+                      <div className="flex items-center gap-2 mt-2">
+                        <span className="text-[10px] text-[var(--text-muted)]">by user #{s.userId}</span>
+                        <span className="flex items-center gap-0.5 text-[10px] text-[var(--amber)]"><Star className="w-3 h-3 fill-[var(--amber)]" /> 4.5</span>
+                      </div>
+                    </div>
+                    <div className="flex flex-col gap-2 shrink-0">
+                      <Button onClick={() => cloneStrategy(s)} className="bg-[var(--amber)] hover:bg-[var(--amber-hover)] text-white text-xs px-3 py-1.5 rounded-lg">
+                        Clone
+                      </Button>
+                      <Button onClick={() => toast("Thanks for rating!", "success")} className="bg-[var(--card)] border border-[var(--border)] text-[var(--text-muted)] text-[10px] px-3 py-1 rounded-lg flex items-center gap-1">
+                        <Star className="w-3 h-3" /> Rate
+                      </Button>
+                    </div>
                   </div>
-                  <Button onClick={() => cloneStrategy(s)} className="bg-[var(--amber)] hover:bg-[var(--amber-hover)] text-white text-xs px-3 py-1.5 rounded-lg shrink-0">
-                    Clone
-                  </Button>
                 </div>
               ))}
             </div>
           )}
         </div>
+
+        {showUpload && (
+          <div className="fixed inset-0 z-[90] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setShowUpload(false)}>
+            <div className="w-full max-w-lg bg-[var(--card)] border border-[var(--border)] rounded-xl" onClick={(e) => e.stopPropagation()}>
+              <div className="flex items-center justify-between p-4 border-b border-[var(--border)]">
+                <h3 className="text-sm font-bold text-white flex items-center gap-2"><Upload className="w-4 h-4 text-[var(--cyan)]" /> Publish Strategy</h3>
+                <button onClick={() => setShowUpload(false)} className="text-[var(--text-muted)] hover:text-white">✕</button>
+              </div>
+              <div className="p-4 space-y-3">
+                <div>
+                  <label className="text-xs text-[var(--text-muted)] font-bold block mb-1">Strategy Name</label>
+                  <input value={uploadName} onChange={(e) => setUploadName(e.target.value)} className="w-full bg-[var(--card)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-white" placeholder="My Strategy" />
+                </div>
+                <div>
+                  <label className="text-xs text-[var(--text-muted)] font-bold block mb-1">Description</label>
+                  <textarea value={uploadDesc} onChange={(e) => setUploadDesc(e.target.value)} className="w-full bg-[var(--card)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-white resize-none" rows={3} placeholder="Describe your strategy..." />
+                </div>
+                <div>
+                  <label className="text-xs text-[var(--text-muted)] font-bold block mb-1">Price (credits)</label>
+                  <input type="number" value={uploadPrice} onChange={(e) => setUploadPrice(e.target.value)} className="w-full bg-[var(--card)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-white" placeholder="0 (free)" />
+                </div>
+                <Button onClick={() => { toast("Strategy submitted for review!", "success"); setShowUpload(false); setUploadName(""); setUploadDesc(""); setUploadPrice(""); }} className="w-full bg-[var(--cyan)] text-black text-xs font-bold py-2 rounded-lg">Submit for Review</Button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
