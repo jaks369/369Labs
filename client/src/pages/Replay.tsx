@@ -121,14 +121,6 @@ export default function Replay() {
     }
   }, [cur, trailing.active, trade]);
 
-  const scoreTrade = (closeType: "rise" | "fall") => {
-    if (!trade || !cur) return;
-    const win = (closeType === "rise" && cur.price > trade.entryPrice) || (closeType === "fall" && cur.price < trade.entryPrice);
-    const pnl = win ? 0.95 : -1;
-    setResults((r) => [{ type: `${trade.type} â†’ close ${closeType}`, pnl, at: new Date(cur.epoch * 1000).toLocaleTimeString() }, ...r].slice(0, 20));
-    setTrade(null);
-  };
-
   return (
     <div className="min-h-screen bg-[var(--card)] p-6">
       <div className="max-w-5xl mx-auto space-y-6">
