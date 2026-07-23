@@ -171,12 +171,7 @@ export default function Login() {
           </Button>
           <p className="text-xs text-[var(--text-muted)] mt-4 text-center"><Link to="/forgot-password" className="text-[var(--amber)] hover:underline">Forgot password?</Link></p>
 
-          <div className="relative my-4">
-            <div className="absolute inset-0 flex items-center"><span className="w-full border-t border-[var(--border)]" /></div>
-            <div className="relative flex justify-center text-xs"><span className="bg-[var(--card)] px-2 text-[var(--text-muted)]">or continue with</span></div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 gap-3 mt-4">
             <a
               href="/api/auth/google"
               className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg border border-[var(--border)] hover:bg-white/5 transition-colors text-sm text-white font-medium"
