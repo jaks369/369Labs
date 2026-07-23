@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
-import { Shield, Activity, Clock, HardDrive, Database, Cpu, Loader2, ScrollText, BarChart3, TrendingUp, TrendingDown, Settings2, Users } from "lucide-react";
+import { Shield, Activity, Clock, HardDrive, Database, Cpu, Loader2, ScrollText, BarChart3, TrendingUp, TrendingDown, Settings2, Users, Flag } from "lucide-react";
 
 export default function Admin() {
   const { user } = useAuth();
@@ -14,7 +14,7 @@ export default function Admin() {
   const promoteMutation = trpc.admin.promoteToAdmin.useMutation({ onSuccess: () => listQuery.refetch() });
   const demoteMutation = trpc.admin.demoteToUser.useMutation({ onSuccess: () => listQuery.refetch() });
   const deleteMutation = trpc.admin.deleteUser.useMutation({ onSuccess: () => listQuery.refetch() });
-  const [tab, setTab] = useState<"users" | "audit" | "health" | "perf" | "config" | "stats">("users");
+  const [tab, setTab] = useState<"users" | "audit" | "health" | "perf" | "config" | "stats" | "features">("users");
 
   if (!user || user.role !== "admin") {
     return <div className="flex items-center justify-center min-h-[60vh] text-[var(--text-muted)]">Access denied. Admin privileges required.</div>;
@@ -39,9 +39,9 @@ export default function Admin() {
       </div>
 
       <div className="flex gap-2 border-b border-[var(--border)] pb-3">
-        {(["users", "audit", "health", "perf", "config", "stats"] as const).map(t => (
+          {(["users", "audit", "health", "perf", "config", "stats", "features"] as const).map(t => (
           <button key={t} onClick={() => setTab(t)} className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${tab === t ? "bg-[var(--amber)] text-black" : "text-[var(--text-secondary)] hover:text-white"}`}>
-            {t === "users" ? "Users" : t === "audit" ? "Audit Logs" : t === "health" ? "System Health" : t === "perf" ? "Performance" : t === "config" ? "Config" : "Usage Stats"}
+            {t === "users" ? "Users" : t === "audit" ? "Audit Logs" : t === "health" ? "System Health" : t === "perf" ? "Performance" : t === "config" ? "Config" : t === "stats" ? "Usage Stats" : "Feature Flags"}
           </button>
         ))}
       </div>
@@ -220,6 +220,41 @@ export default function Admin() {
           <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
             <h3 className="text-sm font-bold text-white mb-3">Top Users by Activity</h3>
             <p className="text-xs text-[var(--text-muted)]">Usage analytics will appear once data collection is enabled.</p>
+          </div>
+        </div>
+      )}
+
+      {tab === "features" && (
+        <div className="space-y-4">
+          <div className="flex items-center gap-2 mb-4">
+            <Flag className="w-4 h-4 text-[var(--amber)]" />
+            <span className="text-xs font-bold text-[var(--text-muted)] uppercase tracking-wider">Feature Flags</span>
+          </div>
+          <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl divide-y divide-[var(--border)]/50">
+            {[
+              { key: "aiAssistant", label: "AI Assistant", enabled: true },
+              { key: "cloudBots", label: "Cloud Bots", enabled: true },
+              { key: "backtesting", label: "Backtesting", enabled: true },
+              { key: "paperTrading", label: "Paper Trading", enabled: true },
+              { key: "watchlist", label: "Watchlist", enabled: true },
+              { key: "autoReports", label: "Auto Reports", enabled: true },
+              { key: "strategyComparison", label: "Strategy Comparison", enabled: true },
+              { key: "telegram", label: "Telegram Integration", enabled: true },
+              { key: "webhooks", label: "Webhooks", enabled: true },
+              { key: "team", label: "Team Management", enabled: false },
+              { key: "maintenanceMode", label: "Maintenance Mode", enabled: false },
+            ].map(f => (
+              <div key={f.key} className="flex items-center justify-between p-4">
+                <div>
+                  <span className="text-sm text-white font-bold">{f.label}</span>
+                  <p className="text-[10px] text-[var(--text-muted)]">/{f.key}</p>
+                </div>
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input type="checkbox" defaultChecked={f.enabled} className="sr-only peer" />
+                  <div className="w-9 h-5 bg-[var(--border)] rounded-full peer peer-checked:bg-[var(--amber)] peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-black after:rounded-full after:h-4 after:w-4 after:transition-all" />
+                </label>
+              </div>
+            ))}
           </div>
         </div>
       )}

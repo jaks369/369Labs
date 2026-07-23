@@ -19,7 +19,7 @@ import ConditionTreeEditor from "@/components/ConditionTreeEditor";
 // ---- Natural-language -> StrategyRule parser (client-side, no API call) ----
 const NL_SYMBOLS = [
   "R_10", "R_25", "R_50", "R_75", "R_100",
-  "1HZ10V", "1HZ15V", "1HZ25V", "1HZ30V", "1HZ50V", "1HZ75V", "1HZ90V", "1HZ100V",
+  "1HZ10V", "1HZ15V", "1HZ30V", "1HZ50V", "1HZ90V", "1HZ100V",
 ];
 function nlNormalizeSymbol(input: string): string {
   if (!input) return "";
@@ -137,9 +137,7 @@ const SYMBOLS = [
   { value: "R_75", label: "Volatility 75 Index" },
   { value: "R_100", label: "Volatility 100 Index" },
   { value: "1HZ10V", label: "Volatility 10 (1s) Index" },
-  { value: "1HZ25V", label: "Volatility 25 (1s) Index" },
   { value: "1HZ50V", label: "Volatility 50 (1s) Index" },
-  { value: "1HZ75V", label: "Volatility 75 (1s) Index" },
   { value: "1HZ100V", label: "Volatility 100 (1s) Index" },
 ];
 

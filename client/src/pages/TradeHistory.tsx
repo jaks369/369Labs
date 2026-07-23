@@ -109,7 +109,7 @@ export default function TradeHistory() {
             <div className="flex items-center gap-3 mb-4">
               <label className="text-xs text-[var(--amber)]/60">SYMBOL</label>
               <select value={priceSymbol} onChange={(e) => setPriceSymbol(e.target.value)} className="bg-[var(--card)] border border-[var(--amber-border)] rounded px-3 py-2 text-sm text-[var(--amber)]">
-                {["R_10","R_25","R_50","R_75","R_100","R_150","R_200","R_501","R_1000","R_10_1","R_25_1","R_50_1","R_75_1","R_100_1"].map((s) => (
+                {["R_10","R_25","R_50","R_75","R_100","1HZ10V","1HZ50V","1HZ100V"].map((s) => (
                   <option key={s} value={s}>{s}</option>
                 ))}
               </select>

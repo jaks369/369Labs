@@ -54,6 +54,10 @@ import {
   Book,
   Users,
   Crown,
+  Star,
+  FileText,
+  GitCommit,
+  Megaphone,
 } from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
@@ -104,6 +108,9 @@ const navGroups: NavGroup[] = [
         { icon: Home, label: "Home", path: "/?home=1" },
         { icon: Coins, label: "Paper Trading", path: "/paper-trading" },
         { icon: Book, label: "Order Book", path: "/order-book" },
+        { icon: Star, label: "Watchlist", path: "/watchlist" },
+        { icon: BarChart3, label: "Strategy Comparison", path: "/strategy-comparison" },
+        { icon: FileText, label: "Auto Reports", path: "/auto-reports" },
       ],
     },
   {
@@ -116,6 +123,9 @@ const navGroups: NavGroup[] = [
       { icon: Settings, label: "Settings", path: "/settings" },
       { icon: Users, label: "Team", path: "/team" },
       { icon: Crown, label: "Subscription", path: "/subscription" },
+      { icon: BookOpen, label: "User Guide", path: "/user-guide" },
+      { icon: GitCommit, label: "Changelog", path: "/changelog" },
+      { icon: Megaphone, label: "Release Notes", path: "/release-notes" },
     ],
   },
 ];
