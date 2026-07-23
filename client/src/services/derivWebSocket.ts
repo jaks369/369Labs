@@ -10,7 +10,7 @@ export interface Tick {
 }
 export interface TickStreamListener {
   onTick: (tick: Tick) => void;
-  onError?: (error: Error) => void;
+  onError?: (error: Error, symbol?: string) => void;
   onConnect?: () => void;
   onDisconnect?: () => void;
 }
@@ -67,6 +67,7 @@ class DerivWebSocketService {
   private pendingRequests: Map<number, { resolve: (v: any) => void; reject: (e: Error) => void }> = new Map();
   private contractListeners: Map<number, (c: ContractUpdate) => void> = new Map();
   private subSymbolById: Map<number, string> = new Map();
+  private subErrors: Map<string, string> = new Map();
   private intentionallyDisconnected = false;
   private lastBalance: any = null;
   private lastAccountType: string = "";
@@ -84,6 +85,7 @@ class DerivWebSocketService {
       this.ws.onopen = () => {
         console.log("[Deriv WS] Connected");
         this.reconnectAttempts = 0;
+        this.subErrors.clear();
         this.notifyConnect();
         if (this.apiToken) this.authorize();
         this.fetchActiveSymbols();
@@ -175,9 +177,18 @@ class DerivWebSocketService {
     if (data.error) {
       const msg = data.error.message || JSON.stringify(data.error);
       console.error("[Deriv WS] API Error:", msg);
-      // Token/authorization errors should not break the public market-data chart.
       const isTokenError = /token|authoriz|session/i.test(msg);
-      if (!isTokenError) this.notifyError(new Error(msg));
+      if (isTokenError) return;
+      // Check if this error is from a known subscription and dispatch per-symbol
+      const reqId = data.req_id;
+      const sym = reqId ? this.subSymbolById.get(reqId) : null;
+      if (sym) {
+        this.subErrors.set(sym, msg);
+        this.subscribedSymbols.delete(sym);
+        this.listeners.forEach(l => { try { l.onError?.(new Error(msg), sym); } catch {} });
+      } else {
+        this.notifyError(new Error(msg));
+      }
     }
   }
 
@@ -268,9 +279,11 @@ class DerivWebSocketService {
   private doSubscribe(symbol: string) {
     if (this.subscribedSymbols.has(symbol)) return;
     this.subscribedSymbols.add(symbol);
+    this.subErrors.delete(symbol);
     const reqId = this.msgId++;
+    this.subSymbolById.set(reqId, symbol);
     try { this.ws!.send(JSON.stringify({ ticks: symbol, subscribe: 1, req_id: reqId })); }
-    catch (error) { console.error("[Deriv WS] Failed to subscribe:", error); this.subscribedSymbols.delete(symbol); }
+    catch (error) { console.error("[Deriv WS] Failed to subscribe:", error); this.subscribedSymbols.delete(symbol); this.subSymbolById.delete(reqId); }
   }
 
   public unsubscribe(subscriptionId: number): void {
@@ -293,6 +306,7 @@ class DerivWebSocketService {
     this.listeners.forEach(l => { try { l.onTick(tick); } catch {} });
   }
   private notifyError(error: Error): void { this.listeners.forEach(l => { try { l.onError?.(error); } catch {} }); }
+  getSubError(symbol: string): string | undefined { return this.subErrors.get(symbol); }
   private notifyConnect(): void { this.listeners.forEach(l => { try { l.onConnect?.(); } catch {} }); }
   private notifyDisconnect(): void { this.listeners.forEach(l => { try { l.onDisconnect?.(); } catch {} }); }
   public isConnected(): boolean { return this.ws !== null && this.ws.readyState === WebSocket.OPEN; }

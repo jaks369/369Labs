@@ -235,12 +235,16 @@ export default function Dashboard() {
   const [symbols, setSymbols] = useState<DerivSymbol[]>([]);
   const [widgets, setWidgets] = useState<string[]>(["trades", "signals", "chart", "history", "alerts"]);
   const [showWidgetConfig, setShowWidgetConfig] = useState(false);
+  const [symInitDone, setSymInitDone] = useState(false);
   useEffect(() => {
     const unsub = derivWS.onSymbols((syms) => {
       setSymbols(syms);
-      if (syms.length > 0 && !syms.find(s => s.symbol === selectedSymbol)) {
-        const vi = syms.filter(s => IT_SYMBOLS.includes(s.symbol));
-        if (vi.length > 0) setSelectedSymbol(vi[0].symbol);
+      if (syms.length > 0) {
+        if (!syms.find(s => s.symbol === selectedSymbol)) {
+          const vi = syms.filter(s => IT_SYMBOLS.includes(s.symbol));
+          if (vi.length > 0) setSelectedSymbol(vi[0].symbol);
+        }
+        setSymInitDone(true);
       }
     });
     return () => {};
@@ -393,7 +397,13 @@ export default function Dashboard() {
               </div>
             ) : (
               <div className="chart-plot h-[300px] md:h-[420px]">
-                <TickChart symbol={selectedSymbol} maxDataPoints={50} decimalPlaces={decimalPlaces} />
+                {symInitDone || symbols.length > 0 ? (
+                  <TickChart symbol={selectedSymbol} maxDataPoints={50} decimalPlaces={decimalPlaces} />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center">
+                    <p className="text-[var(--text-muted)] text-sm">Loading market data...</p>
+                  </div>
+                )}
               </div>
             )}
           </div>

@@ -8,7 +8,7 @@ const t = initTRPC.context<TrpcContext>().create({
 });
 
 export const router = t.router;
-export const publicProcedure = t.procedure;
+export const publicProcedure = t.procedure.use(csrfCheck);
 
 const csrfCheck = t.middleware(async opts => {
   const { ctx, next } = opts;

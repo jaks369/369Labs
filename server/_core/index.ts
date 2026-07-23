@@ -58,11 +58,13 @@ export async function createApp() {
     res.setHeader("X-Frame-Options", "DENY");
     res.setHeader("X-XSS-Protection", "0");
     res.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
+    res.setHeader("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
+    res.setHeader("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
     res.setHeader("Content-Security-Policy",
       "default-src 'self'; " +
       "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.deriv.com https://*.tradingview.com https://apis.google.com; " +
       "style-src 'self' 'unsafe-inline'; " +
-      "img-src 'self' data: https:; " +
+      "img-src 'self' data: https: blob:; " +
       "connect-src 'self' https: wss:; " +
       "font-src 'self' data:; " +
       "frame-src https://*.deriv.com https://*.tradingview.com https://accounts.google.com; " +

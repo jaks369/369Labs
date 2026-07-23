@@ -2311,20 +2311,23 @@ watch: protectedProcedure
     }),
     promoteToAdmin: adminProcedure
       .input(z.object({ userId: z.number() }))
-      .mutation(async ({ input }) => {
+      .mutation(async ({ input, ctx }) => {
         await db.updateUserRole(input.userId, "admin");
+        db.saveAuditLog({ userId: ctx.user.id, action: "admin.promote", target: String(input.userId) }).catch(() => {});
         return { ok: true };
       }),
     demoteToUser: adminProcedure
       .input(z.object({ userId: z.number() }))
-      .mutation(async ({ input }) => {
+      .mutation(async ({ input, ctx }) => {
         await db.updateUserRole(input.userId, "user");
+        db.saveAuditLog({ userId: ctx.user.id, action: "admin.demote", target: String(input.userId) }).catch(() => {});
         return { ok: true };
       }),
     deleteUser: adminProcedure
       .input(z.object({ userId: z.number() }))
-      .mutation(async ({ input }) => {
+      .mutation(async ({ input, ctx }) => {
         await db.deleteUser(input.userId);
+        db.saveAuditLog({ userId: ctx.user.id, action: "admin.deleteUser", target: String(input.userId) }).catch(() => {});
         return { ok: true };
       }),
     listIpWhitelist: adminProcedure
@@ -2334,14 +2337,16 @@ watch: protectedProcedure
       }),
     addIpWhitelist: adminProcedure
       .input(z.object({ userId: z.number(), ip: z.string().min(1), label: z.string().optional() }))
-      .mutation(async ({ input }) => {
+      .mutation(async ({ input, ctx }) => {
         await db.addIpWhitelistEntry({ userId: input.userId, ip: input.ip, label: input.label || null });
+        db.saveAuditLog({ userId: ctx.user.id, action: "admin.addIpWhitelist", target: input.ip, detail: { targetUserId: input.userId } }).catch(() => {});
         return { ok: true };
       }),
     removeIpWhitelist: adminProcedure
       .input(z.object({ id: z.number(), userId: z.number() }))
-      .mutation(async ({ input }) => {
+      .mutation(async ({ input, ctx }) => {
         await db.removeIpWhitelistEntry(input.id, input.userId);
+        db.saveAuditLog({ userId: ctx.user.id, action: "admin.removeIpWhitelist", target: String(input.id), detail: { targetUserId: input.userId } }).catch(() => {});
         return { ok: true };
       }),
     auditLogs: adminProcedure
@@ -2367,6 +2372,80 @@ watch: protectedProcedure
         platform: process.platform,
       };
     }),
+    aiJournalEntry: protectedProcedure
+      .input(z.object({ title: z.string(), content: z.string(), strategy: z.string().optional() }))
+      .mutation(async ({ input, ctx }) => {
+        const mem = await db.getUserMemory(ctx.user.id);
+        await db.saveAiKnowledge({ userId: ctx.user.id, type: "journal", title: input.title, content: input.content, metadata: { strategy: input.strategy || null } });
+        db.saveAuditLog({ userId: ctx.user.id, action: "ai.journalEntry", detail: { title: input.title } }).catch(() => {});
+        return { ok: true };
+      }),
+    aiAlert: protectedProcedure
+      .input(z.object({ title: z.string(), message: z.string(), severity: z.enum(["info", "warning", "critical"]).default("info") }))
+      .mutation(async ({ input, ctx }) => {
+        const { v4 } = await import("nanoid");
+        const notification = { id: v4(), userId: ctx.user.id, title: input.title, message: input.message, type: "ai_alert", severity: input.severity, read: false, createdAt: new Date().toISOString() };
+        await db.saveAiKnowledge({ userId: ctx.user.id, type: "alert", title: input.title, content: input.message, metadata: { severity: input.severity } });
+        db.saveAuditLog({ userId: ctx.user.id, action: "ai.alert", detail: { title: input.title, severity: input.severity } }).catch(() => {});
+        return { ok: true, notification };
+      }),
+    aiScheduledAnalysis: protectedProcedure
+      .input(z.object({ symbol: z.string(), interval: z.enum(["1h", "4h", "1d", "1w"]), prompt: z.string().optional() }))
+      .mutation(async ({ input, ctx }) => {
+        await db.saveAiKnowledge({ userId: ctx.user.id, type: "schedule", title: `Scheduled Analysis: ${input.symbol}`, content: input.prompt || `Analyze ${input.symbol} every ${input.interval}`, metadata: { symbol: input.symbol, interval: input.interval } });
+        db.saveAuditLog({ userId: ctx.user.id, action: "ai.scheduleAnalysis", detail: { symbol: input.symbol, interval: input.interval } }).catch(() => {});
+        return { ok: true };
+      }),
+    aiJournalList: protectedProcedure
+      .input(z.object({ limit: z.number().default(50) }))
+      .query(async ({ input, ctx }) => {
+        const all = await db.searchAiKnowledge(ctx.user.id, "", "journal");
+        return { entries: (all || []).slice(0, input.limit) };
+      }),
+    aiAlertList: protectedProcedure
+      .query(async ({ ctx }) => {
+        const all = await db.searchAiKnowledge(ctx.user.id, "", "alert");
+        return { alerts: all || [] };
+      }),
+    aiScheduleList: protectedProcedure
+      .query(async ({ ctx }) => {
+        const all = await db.searchAiKnowledge(ctx.user.id, "", "schedule");
+        return { schedules: all || [] };
+      }),
+    journalUploadImage: protectedProcedure
+      .input(z.object({ noteId: z.number().optional(), imageData: z.string() }))
+      .mutation(async ({ input, ctx }) => {
+        const imgId = Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+        await db.saveAiKnowledge({ userId: ctx.user.id, type: "journal_image", title: `Image ${imgId}`, content: "image:" + imgId, metadata: { imageData: input.imageData.slice(0, 5000), noteId: input.noteId || null } });
+        return { ok: true, imageId: imgId };
+      }),
+    backtestCompare: protectedProcedure
+      .input(z.object({ strategyIds: z.array(z.number()).min(2).max(4) }))
+      .mutation(async ({ input }) => {
+        const results = [];
+        for (const id of input.strategyIds) {
+          const strat = await db.getStrategy(id);
+          if (!strat) continue;
+          const rule = strat.config?.rule;
+          if (!rule) continue;
+          const ticks = await db.getRecentTicks(rule.symbol || "R_50", 500);
+          if (ticks.length < 50) continue;
+          const res = await runBacktest(ticks, rule, Number(rule.params?.stake) || 1);
+          results.push({ strategyId: id, name: strat.name, ...res });
+        }
+        return { comparisons: results };
+      }),
+    getContractSpecs: publicProcedure
+      .input(z.object({ symbol: z.string() }))
+      .query(async ({ input }) => {
+        try {
+          const { derivWS } = await import("./deriv/derivConnection");
+          const spec = await derivWS.getContractSpecs?.(input.symbol);
+          return { spec: spec || null };
+        } catch {
+          return { spec: null };
+        }
+      }),
   }),
 });
 

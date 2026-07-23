@@ -94,10 +94,14 @@ export default function TickChart({ symbol, maxDataPoints = 100, decimalPlaces =
         });
         setError(null);
       },
-      onError: (err: Error) => setError(err.message),
+      onError: (err: Error, sym?: string) => {
+        if (!sym || sym === symbol) setError(err.message);
+      },
         };
 
     const id = derivWS.subscribe(symbol);
+    const cachedErr = derivWS.getSubError(symbol);
+    if (cachedErr) setError(cachedErr);
     derivWS.addListener(listener);
 
     return () => {
@@ -154,8 +158,9 @@ export default function TickChart({ symbol, maxDataPoints = 100, decimalPlaces =
       </div>
 
       {error ? (
-        <div className="w-full h-64 flex items-center justify-center bg-[var(--bg)] rounded border border-[var(--red)]/30">
-          <p className="text-[var(--red)] text-sm">Connection Error: {error}</p>
+        <div className="w-full h-64 flex flex-col items-center justify-center gap-3 bg-[var(--bg)] rounded border border-[var(--red)]/30 p-6">
+          <p className="text-[var(--red)] text-sm text-center">Connection Error: {error}</p>
+          <p className="text-[var(--text-muted)] text-xs text-center max-w-md">The symbol <span className="font-mono text-[var(--amber)]">{symbol}</span> may not be available on your Deriv account or may have been renamed. Try selecting a different symbol from the picker.</p>
         </div>
       ) : data.length > 1 ? (
         <svg ref={svgRef} viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="none" className="w-full h-[280px]">
