@@ -68,6 +68,7 @@ class DerivWebSocketService {
   private contractListeners: Map<number, (c: ContractUpdate) => void> = new Map();
   private subSymbolById: Map<number, string> = new Map();
   private subErrors: Map<string, string> = new Map();
+  private retryTimers: Map<string, ReturnType<typeof setTimeout>> = new Map();
   private intentionallyDisconnected = false;
   private lastBalance: any = null;
   private lastAccountType: string = "";
@@ -99,6 +100,8 @@ class DerivWebSocketService {
         console.log("[Deriv WS] Disconnected");
         this.authorized = false;
         this.subscribedSymbols.clear();
+        this.retryTimers.forEach(t => clearTimeout(t));
+        this.retryTimers.clear();
         this.notifyDisconnect();
         if (!this.intentionallyDisconnected) this.attemptReconnect();
       };
@@ -179,12 +182,18 @@ class DerivWebSocketService {
       console.error("[Deriv WS] API Error:", msg);
       const isTokenError = /token|authoriz|session/i.test(msg);
       if (isTokenError) return;
-      // Check if this error is from a known subscription and dispatch per-symbol
       const reqId = data.req_id;
       const sym = reqId ? this.subSymbolById.get(reqId) : null;
       if (sym) {
         this.subErrors.set(sym, msg);
         this.subscribedSymbols.delete(sym);
+        if (!this.retryTimers.has(sym)) {
+          this.retryTimers.set(sym, setTimeout(() => {
+            this.retryTimers.delete(sym);
+            this.subErrors.delete(sym);
+            if (this.authorized && this.ws?.readyState === WebSocket.OPEN) this.doSubscribe(sym);
+          }, 5000));
+        }
         this.listeners.forEach(l => { try { l.onError?.(new Error(msg), sym); } catch {} });
       } else {
         this.notifyError(new Error(msg));
@@ -271,7 +280,7 @@ class DerivWebSocketService {
     if (this.subscribedSymbols.has(symbol)) return subId;
     this.subSymbolById.set(subId, symbol);
     if (!this.ws || this.ws.readyState !== WebSocket.OPEN) { this.pendingSubscriptionSymbols.push(symbol); return subId; }
-    if (!this.authorized && this.apiToken) { this.pendingSubscriptionSymbols.push(symbol); return subId; }
+    if (!this.authorized) { this.pendingSubscriptionSymbols.push(symbol); return subId; }
     this.doSubscribe(symbol);
     return subId;
   }

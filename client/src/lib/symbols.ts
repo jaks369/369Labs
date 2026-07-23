@@ -19,7 +19,13 @@ export function normalizeSymbol(input: string): string {
 export function getValidSymbols(): string[] {
   const active = derivWS.activeSymbols;
   if (active && active.length > 0) {
-    return filterValidSymbols(active.map(s => s.symbol));
+    const volSymbols = active.filter(s =>
+      s.market === "volatility" || s.submarket?.includes("volatility") || s.symbol.startsWith("R_") || s.symbol.startsWith("1HZ")
+    );
+    if (volSymbols.length > 0) {
+      return filterValidSymbols(volSymbols.map(s => s.symbol)).sort();
+    }
+    return filterValidSymbols(active.map(s => s.symbol)).sort();
   }
   return STANDARD_SYMBOLS;
 }
