@@ -3,7 +3,7 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { getLoginUrl } from "@/const";
 import { useLocation } from "wouter";
-import { Brain, Globe, BarChart3, ChevronRight, Activity, Star, Users, Shield, MessageCircle, HelpCircle } from "lucide-react";
+import { Brain, Globe, BarChart3, ChevronRight, Activity, Star, Users, Shield, MessageCircle, HelpCircle, CheckCircle2 } from "lucide-react";
 
 export default function Home() {
   const { isAuthenticated } = useAuth();
