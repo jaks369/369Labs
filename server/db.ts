@@ -784,6 +784,29 @@ export async function setUserMemory(userId: number, memory: Record<string, any>)
   }
 }
 
+export async function ensureSessionsTable(): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+  try {
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS sessions (
+        id int NOT NULL AUTO_INCREMENT,
+        userId int NOT NULL,
+        sessionId varchar(64) NOT NULL,
+        userAgent text,
+        ip varchar(45),
+        createdAt timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        lastActiveAt timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        revokedAt timestamp NULL,
+        PRIMARY KEY (id),
+        UNIQUE KEY sessions_sessionId (sessionId)
+      )
+    `);
+  } catch (e: any) {
+    console.error("[ensureSessionsTable] failed", e?.message || e);
+  }
+}
+
 export async function ensureUsersColumns(): Promise<void> {
   const db = await getDb();
   if (!db) return;
