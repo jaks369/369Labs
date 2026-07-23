@@ -4,17 +4,18 @@ import { useLocation } from "wouter";
 import { Star, TrendingUp, TrendingDown, Plus, X, Loader2 } from "lucide-react";
 import { derivWS } from "@/services/derivWebSocket";
 import { toast } from "@/components/Toast";
+import { ALL_VOLATILITY_SYMBOLS, STANDARD_SYMBOLS } from "@/lib/symbols";
 
 const WATCHLIST_KEY = "369labs_watchlist";
-const VALID_SYMBOLS = ["R_10", "R_25", "R_50", "R_75", "R_100", "1HZ10V", "1HZ50V", "1HZ100V", "BOOM300", "BOOM500", "CRASH300", "CRASH500"];
+const VALID_SYMBOLS = ALL_VOLATILITY_SYMBOLS;
 
 export default function Watchlist() {
   const { isAuthenticated } = useAuth();
   const [, navigate] = useLocation();
-  const [symbols, setSymbols] = useState<string[]>(() => { try { return JSON.parse(localStorage.getItem(WATCHLIST_KEY) || '["R_50","R_100"]'); } catch { return ["R_50", "R_100"]; } });
+  const [symbols, setSymbols] = useState<string[]>(() => { try { return JSON.parse(localStorage.getItem(WATCHLIST_KEY) || JSON.stringify([STANDARD_SYMBOLS[3], STANDARD_SYMBOLS[4]])); } catch { return [STANDARD_SYMBOLS[3], STANDARD_SYMBOLS[4]]; } });
   const [prices, setPrices] = useState<Record<string, { price: number; change: number }>>({});
   const [adding, setAdding] = useState(false);
-  const [newSym, setNewSym] = useState("R_50");
+  const [newSym, setNewSym] = useState(STANDARD_SYMBOLS[0]);
 
   useEffect(() => { localStorage.setItem(WATCHLIST_KEY, JSON.stringify(symbols)); }, [symbols]);
 

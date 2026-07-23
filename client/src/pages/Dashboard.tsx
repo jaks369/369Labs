@@ -32,19 +32,11 @@ import { useDerivStatus } from "@/hooks/useDerivStatus";
 import DerivTokenModal from "@/components/DerivTokenModal";
 import ContractTypeSelector, { ContractSelection } from "@/components/ContractTypeSelector";
 import { paperEngine } from "@/services/PaperEngine";
+import { STANDARD_SYMBOLS, VOLATILITY_SYMBOLS } from "@/lib/symbols";
 
-const IT_SYMBOLS = ["R_10","R_25","R_50","R_75","R_100","1HZ10V","1HZ50V","1HZ100V"];
+const IT_SYMBOLS = STANDARD_SYMBOLS;
 
-const VOLATILITY_FALLBACK: DerivSymbol[] = [
-  { symbol: "R_10", displayName: "Volatility 10 Index", market: "volatility", submarket: "volatility", decimalPlaces: 3 },
-  { symbol: "R_25", displayName: "Volatility 25 Index", market: "volatility", submarket: "volatility", decimalPlaces: 3 },
-  { symbol: "R_50", displayName: "Volatility 50 Index", market: "volatility", submarket: "volatility", decimalPlaces: 4 },
-  { symbol: "R_75", displayName: "Volatility 75 Index", market: "volatility", submarket: "volatility", decimalPlaces: 4 },
-  { symbol: "R_100", displayName: "Volatility 100 Index", market: "volatility", submarket: "volatility", decimalPlaces: 2 },
-  { symbol: "1HZ10V", displayName: "Volatility 10 (1s) Index", market: "volatility", submarket: "volatility", decimalPlaces: 2 },
-  { symbol: "1HZ50V", displayName: "Volatility 50 (1s) Index", market: "volatility", submarket: "volatility", decimalPlaces: 2 },
-  { symbol: "1HZ100V", displayName: "Volatility 100 (1s) Index", market: "volatility", submarket: "volatility", decimalPlaces: 2 },
-];
+const VOLATILITY_FALLBACK: DerivSymbol[] = VOLATILITY_SYMBOLS.filter(s => s.market === "volatility").map(s => ({ ...s, decimalPlaces: 2 }));
 
 export default function Dashboard() {
   const { user, isAuthenticated } = useAuth();
@@ -54,7 +46,7 @@ export default function Dashboard() {
   const [balanceInfo, setBalanceInfo] = useState<{ currency: string; accountType: string } | null>(null);
   const [paperBal, setPaperBal] = useState(() => paperEngine.getBalance());
   const [botRunning, setBotRunning] = useState(false);
-  const [selectedSymbol, setSelectedSymbol] = useState("R_50");
+  const [selectedSymbol, setSelectedSymbol] = useState(STANDARD_SYMBOLS[0]);
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [showSymbolPicker, setShowSymbolPicker] = useState(false);
   const [symbolSearch, setSymbolSearch] = useState("");

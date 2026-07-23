@@ -11,6 +11,7 @@ import { startTickCollector } from "../tickCollector";
 import { runWatch } from "../signalScanner";
 import { ENV } from "./env";
 import { oauthRouter } from "./oauth";
+import { getStandardVolatilitySymbols } from "@shared/symbols";
 
 process.on("unhandledRejection", (reason) => {
   console.error("[Startup] Unhandled promise rejection:", reason);
@@ -147,7 +148,7 @@ export async function createApp() {
 // Always-on AI scanner: periodically scans the main volatility symbols for all users
 // and records any repeatable pattern as a signal (the Marketplace feed). Runs every 10 min.
 function startAlwaysOnScanner() {
-  const SYMBOLS = ["R_10", "R_25", "R_50", "R_75", "R_100", "1HZ10V", "1HZ50V", "1HZ100V"];
+  const SYMBOLS = getStandardVolatilitySymbols();
   const INTERVAL_MS = 10 * 60 * 1000;
   const tick = async () => {
     try {

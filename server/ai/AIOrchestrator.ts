@@ -6,8 +6,9 @@ import { riskIntelligence } from "./RiskIntelligence";
 import { aiMemory } from "./AIMemory";
 import * as db from "../db";
 import { AIInsight, MarketHealth, AIPrediction, LiveFeedEntry, AIState, RiskAdvisory } from "./types";
+import { getAllVolatilitySymbols } from "@shared/symbols";
 
-const VOLATILITY_SYMBOLS = ["R_10", "R_25", "R_50", "R_75", "R_100", "1HZ10V", "1HZ25V", "1HZ50V", "1HZ75V", "1HZ100V"];
+const VOLATILITY_SYMBOLS = getAllVolatilitySymbols();
 const POLL_INTERVAL = 15000;
 
 function generateFeedId(): string {

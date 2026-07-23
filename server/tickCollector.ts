@@ -1,8 +1,9 @@
 import { WebSocket } from "ws";
 import { saveTickHistory } from "./db";
+import { getAllVolatilitySymbols } from "@shared/symbols";
 
 const DERIV_APP_ID = Number(process.env.VITE_DERIV_APP_ID) || 1089;
-const VOLATILITY_PREFIXES = ["R_10", "R_25", "R_50", "R_75", "R_100", "1HZ10V", "1HZ15V", "1HZ25V", "1HZ30V", "1HZ50V", "1HZ75V", "1HZ90V", "1HZ100V"];
+const VOLATILITY_PREFIXES = getAllVolatilitySymbols();
 
 let ws: WebSocket | null = null;
 let started = false;

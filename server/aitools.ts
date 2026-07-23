@@ -1,28 +1,13 @@
 import { z } from 'zod';
+import { normalizeSymbol as normalizeShared, getAllVolatilitySymbols } from '@shared/symbols';
 
 const DERIV_APP_ID = Number(process.env.VITE_DERIV_APP_ID) || 1089;
 let derivConnection: any = null;
 
-const VALID_SYMBOLS = [
-  'R_10', 'R_25', 'R_50', 'R_75', 'R_100',
-  '1HZ10V', '1HZ15V', '1HZ25V', '1HZ30V', '1HZ50V', '1HZ75V', '1HZ90V', '1HZ100V',
-];
+export const VALID_SYMBOLS = getAllVolatilitySymbols();
 
-// Normalize common user inputs like "r10", "R10", "R 10", "1HZ10" -> proper Deriv symbol.
 export function normalizeSymbol(input: string): string {
-  if (!input) return input;
-  let s = input.trim().toUpperCase().replace(/\s+/g, '');
-  const rMatch = s.match(/^R(\d+)$/);
-  if (rMatch) {
-    const candidate = 'R_' + rMatch[1];
-    if (VALID_SYMBOLS.includes(candidate)) return candidate;
-  }
-  const hzMatch = s.match(/^1HZ(\d+)$/);
-  if (hzMatch) {
-    const candidate = '1HZ' + hzMatch[1] + 'V';
-    if (VALID_SYMBOLS.includes(candidate)) return candidate;
-  }
-  return s;
+  return normalizeShared(input);
 }
 
 async function ensureDerivWS() {

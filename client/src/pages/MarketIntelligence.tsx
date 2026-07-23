@@ -8,8 +8,9 @@ import MarketPredictionCards from "@/components/MarketPredictionCards";
 import MarketInsightCards from "@/components/MarketInsightCards";
 import MarketRiskPanel from "@/components/MarketRiskPanel";
 import { derivWS } from "@/services/derivWebSocket";
+import { ALL_VOLATILITY_SYMBOLS, STANDARD_SYMBOLS } from "@/lib/symbols";
 
-const SCREENER_SYMBOLS = ["R_10", "R_25", "R_50", "R_75", "R_100", "1HZ10V", "1HZ50V", "1HZ100V", "BOOM300", "BOOM500", "CRASH300", "CRASH500"];
+const SCREENER_SYMBOLS = [...ALL_VOLATILITY_SYMBOLS, "BOOM300", "BOOM500", "CRASH300", "CRASH500"];
 
 export default function MarketIntelligencePage() {
   const { isAuthenticated } = useAuth();
@@ -91,7 +92,7 @@ export default function MarketIntelligencePage() {
             <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-6">
               <h2 className="text-sm font-bold text-white mb-4 flex items-center gap-2"><Activity className="w-4 h-4 text-[var(--amber)]" /> Symbol Correlations</h2>
               <div className="space-y-2">
-                {[["R_50", "R_100", "0.92"], ["R_10", "R_25", "0.87"], ["1HZ10V", "1HZ50V", "0.78"], ["BOOM300", "CRASH300", "-0.65"], ["R_75", "R_100", "0.95"]].map(([a, b, corr]) => (
+                {[[STANDARD_SYMBOLS[2], STANDARD_SYMBOLS[4], "0.92"], [STANDARD_SYMBOLS[0], STANDARD_SYMBOLS[1], "0.87"], [ALL_VOLATILITY_SYMBOLS[5], ALL_VOLATILITY_SYMBOLS[7], "0.78"], ["BOOM300", "CRASH300", "-0.65"], [STANDARD_SYMBOLS[3], STANDARD_SYMBOLS[4], "0.95"]].map(([a, b, corr]) => (
                   <div key={`${a}-${b}`} className="flex justify-between text-xs p-2 bg-black/20 rounded-lg">
                     <span className="text-[var(--text-secondary)]">{a} / {b}</span>
                     <span className={Number(corr) > 0 ? "text-[var(--green)]" : "text-[var(--red)]"}>{corr}</span>
@@ -102,7 +103,7 @@ export default function MarketIntelligencePage() {
             <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-6">
               <h2 className="text-sm font-bold text-white mb-4 flex items-center gap-2"><BarChart3 className="w-4 h-4 text-[var(--amber)]" /> Volatility Monitor</h2>
               <div className="space-y-2">
-                {[["R_10", "Low", "text-[var(--green)]"], ["R_25", "Low", "text-[var(--green)]"], ["R_50", "Medium", "text-[var(--amber)]"], ["R_75", "High", "text-[var(--red)]"], ["R_100", "Very High", "text-[var(--red)]"]].map(([sym, level, cls]) => (
+                {[[STANDARD_SYMBOLS[0], "Low", "text-[var(--green)]"], [STANDARD_SYMBOLS[1], "Low", "text-[var(--green)]"], [STANDARD_SYMBOLS[2], "Medium", "text-[var(--amber)]"], [STANDARD_SYMBOLS[3], "High", "text-[var(--red)]"], [STANDARD_SYMBOLS[4], "Very High", "text-[var(--red)]"]].map(([sym, level, cls]) => (
                   <div key={sym} className="flex justify-between text-xs p-2 bg-black/20 rounded-lg">
                     <span className="text-[var(--text-secondary)]">{sym}</span>
                     <span className={cls}>{level}</span>

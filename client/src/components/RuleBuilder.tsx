@@ -15,12 +15,10 @@ import { useState } from "react";
 import { legacyConditionToNode, ConditionNode, LeafCondition } from "@/services/conditionEval";
 import { trpc } from "@/lib/trpc";
 import ConditionTreeEditor from "@/components/ConditionTreeEditor";
+import { ALL_VOLATILITY_SYMBOLS, getSymbolOptions } from "@/lib/symbols";
 
 // ---- Natural-language -> StrategyRule parser (client-side, no API call) ----
-const NL_SYMBOLS = [
-  "R_10", "R_25", "R_50", "R_75", "R_100",
-  "1HZ10V", "1HZ15V", "1HZ30V", "1HZ50V", "1HZ90V", "1HZ100V",
-];
+const NL_SYMBOLS = ALL_VOLATILITY_SYMBOLS;
 function nlNormalizeSymbol(input: string): string {
   if (!input) return "";
   let s = input.trim().toUpperCase().replace(/\s+/g, "");
@@ -130,16 +128,7 @@ const INDICATORS = [
   { value: "loss_streak", label: "Loss streak >= N" },
 ];
 
-const SYMBOLS = [
-  { value: "R_10", label: "Volatility 10 Index" },
-  { value: "R_25", label: "Volatility 25 Index" },
-  { value: "R_50", label: "Volatility 50 Index" },
-  { value: "R_75", label: "Volatility 75 Index" },
-  { value: "R_100", label: "Volatility 100 Index" },
-  { value: "1HZ10V", label: "Volatility 10 (1s) Index" },
-  { value: "1HZ50V", label: "Volatility 50 (1s) Index" },
-  { value: "1HZ100V", label: "Volatility 100 (1s) Index" },
-];
+const SYMBOLS = getSymbolOptions();
 
 const COMPARISONS = [
   { value: "appears", label: "appears" },

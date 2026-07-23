@@ -4,6 +4,7 @@ import { trpc } from "@/lib/trpc";
 import { useLocation } from "wouter";
 import { Workflow as WorkflowIcon, Play, GitBranch, ShieldCheck, FlaskConical, Bell, Search, Loader2, CheckCircle2, X, Radio, ChevronDown } from "lucide-react";
 import { pushTimeline } from "@/components/AITimeline";
+import { ALL_VOLATILITY_SYMBOLS } from "@/lib/symbols";
 
 type StepKind = "scan" | "watch" | "backtest" | "risk" | "notify" | "build" | "draft" | "condition" | "trigger";
 
@@ -67,7 +68,7 @@ export default function Workflow() {
   const watchMutation = trpc.signals.watch.useMutation();
   const notifyMutation = trpc.telegram.send.useMutation();
 
-  const SYMBOLS = ["R_10", "R_25", "R_50", "R_75", "R_100", "1HZ10V", "1HZ15V", "1HZ30V", "1HZ50V", "1HZ90V", "1HZ100V"];
+  const SYMBOLS = ALL_VOLATILITY_SYMBOLS;
 
   const mutateWithTimeout = <T,>(promise: Promise<T>, ms = 60000): Promise<T> =>
     Promise.race([

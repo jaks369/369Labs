@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { useLocation } from "wouter";
 import { Book, TrendingUp, TrendingDown, Loader2 } from "lucide-react";
+import { STANDARD_SYMBOLS } from "@/lib/symbols";
 
 const mockBids = Array.from({ length: 12 }, (_, i) => ({
   price: (50 + Math.random() * 5).toFixed(4),
@@ -24,7 +25,7 @@ export default function OrderBook() {
 
   if (!isAuthenticated) { navigate("/login"); return null; }
 
-  const SYMBOLS = ["R_10", "R_25", "R_50", "R_75", "R_100", "1HZ10V", "1HZ50V", "1HZ100V"];
+  const SYMBOLS = STANDARD_SYMBOLS;
 
   return (
     <div className="min-h-screen bg-[var(--card)] p-6">

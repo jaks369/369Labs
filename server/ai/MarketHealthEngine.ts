@@ -1,11 +1,10 @@
 import * as db from "../db";
 import { MarketHealth } from "./types";
+import { VOLATILITY_SYMBOLS } from "@shared/symbols";
 
-const SYMBOL_NAMES: Record<string, string> = {
-  R_10: "Volatility 10", R_25: "Volatility 25", R_50: "Volatility 50",
-  R_75: "Volatility 75", R_100: "Volatility 100",
-  "1HZ10V": "10HZ", "1HZ25V": "25HZ", "1HZ50V": "50HZ", "1HZ75V": "75HZ", "1HZ100V": "100HZ",
-};
+const SYMBOL_NAMES: Record<string, string> = Object.fromEntries(
+  VOLATILITY_SYMBOLS.map(s => [s.symbol, s.displayName.replace(" Index", "")])
+);
 
 function mean(arr: number[]): number {
   return arr.reduce((a, b) => a + b, 0) / (arr.length || 1);

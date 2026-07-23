@@ -10,8 +10,9 @@ import { derivWS } from "@/services/derivWebSocket";
 import { runBacktest, BacktestResult } from "@/services/BacktestEngine";
 import Sparkline from "@/components/Sparkline";
 import { StrategyRule } from "@/components/RuleBuilder";
+import { ALL_VOLATILITY_SYMBOLS } from "@/lib/symbols";
 
-const IT_SYMBOLS = ["R_10","R_25","R_50","R_75","R_100","1HZ10V","1HZ50V","1HZ100V","BOOM300","BOOM500","BOOM1000","CRASH300","CRASH500","CRASH1000"];
+const IT_SYMBOLS = [...ALL_VOLATILITY_SYMBOLS, "BOOM300", "BOOM500", "BOOM1000", "CRASH300", "CRASH500", "CRASH1000"];
 
 export default function Backtesting() {
   const { isAuthenticated } = useAuth();

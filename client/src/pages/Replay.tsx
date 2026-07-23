@@ -4,6 +4,7 @@ import { derivWS } from "@/services/derivWebSocket";
 import { useLocation } from "wouter";
 import { Play, Pause, RotateCcw, FastForward, TrendingUp, TrendingDown, Loader2, GanttChartSquare, ArrowRightLeft, Bell } from "lucide-react";
 import Sparkline from "@/components/Sparkline";
+import { STANDARD_SYMBOLS } from "@/lib/symbols";
 
 type Tick = { epoch: number; price: number; lastDigit: number };
 type CondOrder = { id: string; type: "stop" | "limit" | "oco_buy" | "oco_sell"; price: number; triggered: boolean };
@@ -26,7 +27,7 @@ export default function Replay() {
   const [showOrders, setShowOrders] = useState(false);
   const timer = useRef<number | null>(null);
 
-  const SYMBOLS = ["R_10", "R_25", "R_50", "R_75", "R_100", "1HZ10V", "1HZ50V", "1HZ100V"];
+  const SYMBOLS = STANDARD_SYMBOLS;
 
   const load = useCallback(async () => {
     setLoading(true); setError(null); setTicks([]); setIdx(0); setPlaying(false);
