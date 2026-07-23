@@ -77,7 +77,10 @@ class DerivWebSocketService {
   private symbolListeners: Set<(symbols: DerivSymbol[]) => void> = new Set();
   private tokenListeners: Set<(msg: string) => void> = new Set();
 
-  constructor() { this.setupWebSocket(); }
+  constructor() {
+    try { this.apiToken = localStorage.getItem("deriv_token"); } catch {}
+    this.setupWebSocket();
+  }
 
   private setupWebSocket() {
     try {
@@ -88,8 +91,11 @@ class DerivWebSocketService {
         this.reconnectAttempts = 0;
         this.subErrors.clear();
         this.notifyConnect();
-        if (this.apiToken) this.authorize();
-        this.fetchActiveSymbols();
+        if (this.apiToken) {
+          this.authorize();
+        } else {
+          this.fetchActiveSymbols();
+        }
       };
       this.ws.onmessage = (event) => {
         try { this.handleMessage(JSON.parse(event.data)); }
@@ -140,13 +146,18 @@ class DerivWebSocketService {
       if (c.is_sold) this.contractListeners.delete(c.contract_id);
     }
     if (data.msg_type === "authorize") {
+      if (data.error) {
+        console.error("[Deriv WS] Authorization failed:", data.error.message);
+        this.authorized = false;
+        this.notifyTokenError(data.error.message || "Authorization failed");
+        return;
+      }
       console.log("[Deriv WS] Authorized successfully");
       this.authorized = true;
       this.notifyConnect();
       this.fetchBalance();
       this.fetchActiveSymbols();
       this.processPendingSubscriptions();
-     
     }
     if (data.msg_type === "balance") {
       this.lastBalance = data.balance;
@@ -188,13 +199,11 @@ class DerivWebSocketService {
       if (sym) {
         this.subErrors.set(sym, msg);
         this.subscribedSymbols.delete(sym);
-        if (!this.retryTimers.has(sym)) {
-          const delay = msg.toLowerCase().includes("invalid") ? 30000 : 5000;
-          this.retryTimers.set(sym, setTimeout(() => {
-            this.retryTimers.delete(sym);
-            this.subErrors.delete(sym);
-            if (this.ws?.readyState === WebSocket.OPEN) this.doSubscribe(sym);
-          }, delay));
+        if (!this.pendingSubscriptionSymbols.includes(sym)) {
+          this.pendingSubscriptionSymbols.push(sym);
+        }
+        if (this.authorized) {
+          setTimeout(() => this.processPendingSubscriptions(), 1000);
         }
         this.listeners.forEach(l => { try { l.onError?.(new Error(msg), sym); } catch {} });
       } else {
@@ -212,7 +221,15 @@ class DerivWebSocketService {
   private processPendingSubscriptions() {
     const pending = [...this.pendingSubscriptionSymbols];
     this.pendingSubscriptionSymbols = [];
-    for (const symbol of pending) { if (!this.subscribedSymbols.has(symbol)) this.doSubscribe(symbol); }
+    for (const symbol of pending) {
+      if (!this.subscribedSymbols.has(symbol)) {
+        if (this.authorized || !this.apiToken) {
+          this.doSubscribe(symbol);
+        } else {
+          this.pendingSubscriptionSymbols.push(symbol);
+        }
+      }
+    }
   }
 
   public fetchBalance() {
@@ -282,7 +299,7 @@ class DerivWebSocketService {
     if (this.subscribedSymbols.has(symbol)) return subId;
     this.subSymbolById.set(subId, symbol);
     if (!this.ws || this.ws.readyState !== WebSocket.OPEN) { this.pendingSubscriptionSymbols.push(symbol); return subId; }
-    if (this.apiToken && !this.authorized) { this.pendingSubscriptionSymbols.push(symbol); return subId; }
+    if (!this.authorized) { this.pendingSubscriptionSymbols.push(symbol); return subId; }
     this.doSubscribe(symbol);
     return subId;
   }
@@ -343,6 +360,7 @@ class DerivWebSocketService {
   public setApiToken(token: string): void {
     if (this.apiToken !== token) this.authorized = false;
     this.apiToken = token;
+    try { if (token) localStorage.setItem("deriv_token", token); else localStorage.removeItem("deriv_token"); } catch {}
     if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
       this.setupWebSocket();
       return;

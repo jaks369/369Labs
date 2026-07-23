@@ -235,13 +235,7 @@ export default function Dashboard() {
   useEffect(() => {
     const unsub = derivWS.onSymbols((syms) => {
       setSymbols(syms);
-      if (syms.length > 0) {
-        if (!syms.find(s => s.symbol === selectedSymbol)) {
-          const vi = syms.filter(s => IT_SYMBOLS.includes(s.symbol));
-          if (vi.length > 0) setSelectedSymbol(vi[0].symbol);
-        }
-        setSymInitDone(true);
-      }
+      if (syms.length > 0) setSymInitDone(true);
     });
     return () => {};
   }, []);
