@@ -693,6 +693,7 @@ export const appRouter = router({
           const base32Secret = hexToBase32(rawSecret);
           const otpauth = `otpauth://totp/369Labs:${encodeURIComponent(ctx.user.email)}?secret=${base32Secret}&issuer=369Labs`;
           await db.setUser2FASecret(ctx.user.id, rawSecret);
+          db.saveAuditLog({ userId: ctx.user.id, action: "auth.setup2FA" }).catch(() => {});
           return { secret: base32Secret, otpauth };
         } catch (error) {
           throw new TRPCError({
@@ -742,6 +743,7 @@ export const appRouter = router({
           if (!valid) throw new TRPCError({ code: "UNAUTHORIZED", message: "Current password is incorrect" });
           const passwordHash = await hashPassword(input.newPassword);
           await db.updateUserPassword(user.id, passwordHash);
+          db.saveAuditLog({ userId: ctx.user.id, action: "auth.changePassword" }).catch(() => {});
           return { success: true };
         } catch (error) {
           if (error instanceof TRPCError) throw error;
@@ -761,6 +763,7 @@ export const appRouter = router({
           const valid = await verifyPassword(input.password, user.passwordHash);
           if (!valid) throw new TRPCError({ code: "UNAUTHORIZED", message: "Invalid password" });
           await db.disable2FA(ctx.user.id);
+          db.saveAuditLog({ userId: ctx.user.id, action: "auth.disable2FA" }).catch(() => {});
           return { success: true };
         } catch (error) {
           if (error instanceof TRPCError) throw error;
@@ -801,13 +804,28 @@ export const appRouter = router({
         if (!user) throw new TRPCError({ code: "UNAUTHORIZED", message: "User not found" });
         const valid = await verifyPassword(input.password, user.passwordHash);
         if (!valid) throw new TRPCError({ code: "UNAUTHORIZED", message: "Invalid password" });
+        db.saveAuditLog({ userId: ctx.user.id, action: "auth.deleteAccount" }).catch(() => {});
         await db.deleteUser(ctx.user.id);
         const cookieOptions = getSessionCookieOptions(ctx.req);
         ctx.res.clearCookie(COOKIE_NAME, { ...cookieOptions, maxAge: -1 });
         return { success: true };
       }),
 
-    listSessions: protectedProcedure.query(async ({ ctx }) => {
+    updateProfile: protectedProcedure
+      .input(z.object({
+        name: z.string().max(100).optional(),
+        avatarUrl: z.string().max(500).optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        try {
+          await db.updateUserProfile(ctx.user.id, input);
+          return { success: true };
+        } catch (error) {
+          throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Failed to update profile" });
+        }
+      }),
+
+    listSessions: protectedProcedure(async ({ ctx }) => {
       const sessions = await db.getUserSessions(ctx.user.id);
       return sessions.filter(s => !s.revokedAt).map(s => ({
         id: s.sessionId,
@@ -825,8 +843,7 @@ export const appRouter = router({
         await db.revokeSession(input.sessionId, ctx.user.id);
         return { success: true };
       }),
-
-  }),
+      }),
 
   // Deriv API Token Management
   deriv: router({
@@ -957,18 +974,19 @@ export const appRouter = router({
       }))
       .mutation(async ({ ctx, input }) => {
         try {
-          const strategy = await db.saveStrategy({
-            userId: ctx.user.id,
-            name: input.name,
-            description: input.description,
-            config: input.config,
-            isActive: true,
-            published: input.published ?? false,
-          });
-          import("./ai/StrategyIntelligence").then(async ({ strategyIntelligence }) => {
-            await strategyIntelligence.review(strategy, ctx.user.id).catch(() => {});
-          }).catch(() => {});
-          return strategy;
+        const strategy = await db.saveStrategy({
+          userId: ctx.user.id,
+          name: input.name,
+          description: input.description,
+          config: input.config,
+          isActive: true,
+          published: input.published ?? false,
+        });
+        db.saveAuditLog({ userId: ctx.user.id, action: "strategy.create", target: String(strategy.id), detail: { name: input.name } }).catch(() => {});
+        import("./ai/StrategyIntelligence").then(async ({ strategyIntelligence }) => {
+          await strategyIntelligence.review(strategy, ctx.user.id).catch(() => {});
+        }).catch(() => {});
+        return strategy;
         } catch (error) {
           throw new TRPCError({
             code: "INTERNAL_SERVER_ERROR",
@@ -1059,6 +1077,7 @@ export const appRouter = router({
           if (!strategy) {
             throw new TRPCError({ code: "NOT_FOUND", message: "Strategy not found" });
           }
+          db.saveAuditLog({ userId: ctx.user.id, action: "strategy.publish", target: String(input.id), detail: { published: input.published } }).catch(() => {});
           return strategy;
         } catch (error) {
           if (error instanceof TRPCError) throw error;
@@ -1077,6 +1096,7 @@ export const appRouter = router({
           if (!copy) {
             throw new TRPCError({ code: "NOT_FOUND", message: "Strategy not found" });
           }
+          db.saveAuditLog({ userId: ctx.user.id, action: "strategy.duplicate", target: String(input.id), detail: { copyId: copy.id } }).catch(() => {});
           return copy;
         } catch (error) {
           if (error instanceof TRPCError) throw error;
@@ -1116,6 +1136,56 @@ export const appRouter = router({
           if (error instanceof TRPCError) throw error;
           throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Failed to update strategy" });
         }
+      }),
+
+    templates: protectedProcedure.query(async () => {
+      return [
+        {
+          name: "RSI Mean Reversion",
+          description: "Buy when RSI is oversold (≤30), sell when overbought (≥70). Uses 14-period RSI on 1-minute candles.",
+          config: { rule: { symbol: "R_100", condition: { indicator: "rsi", comparison: "crosses_above", value: 30, period: 14 }, action: { tradeType: "CALL" }, params: { stake: 1, duration: 5, durationUnit: "m" } } },
+        },
+        {
+          name: "MA Crossover",
+          description: "Buy when 9-period MA crosses above 21-period MA. Standard trend-following on 5-minute candles.",
+          config: { rule: { symbol: "R_100", condition: { indicator: "ma_crossover", fast: 9, slow: 21 }, action: { tradeType: "CALL" }, params: { stake: 1, duration: 5, durationUnit: "m" } } },
+        },
+        {
+          name: "Bollinger Squeeze",
+          description: "Trade when Bollinger Bands contract (squeeze) then expand. 20-period, 2 standard deviations.",
+          config: { rule: { symbol: "R_100", condition: { indicator: "bollinger", comparison: "squeeze", period: 20, stdDev: 2 }, action: { tradeType: "CALL" }, params: { stake: 1, duration: 5, durationUnit: "m" } } },
+        },
+        {
+          name: "Digit Parity",
+          description: "Trade based on last-digit parity. Simple statistical edge on even/odd digit distribution.",
+          config: { rule: { symbol: "R_100", condition: { indicator: "last_digit", comparison: "parity", parity: "even" }, action: { tradeType: "CALL" }, params: { stake: 1, duration: 3, durationUnit: "m" } } },
+        },
+        {
+          name: "Trend Following",
+          description: "Follow short-term momentum. Uses 3-period EMA slope to determine direction.",
+          config: { rule: { symbol: "R_100", condition: { indicator: "ema", comparison: "rising", period: 3 }, action: { tradeType: "CALL" }, params: { stake: 1, duration: 3, durationUnit: "m" } } },
+        },
+      ];
+    }),
+
+    exportRule: protectedProcedure
+      .input(z.object({ id: z.number() }))
+      .query(async ({ ctx, input }) => {
+        const strategy = await db.getStrategyById(input.id, ctx.user.id);
+        if (!strategy) throw new TRPCError({ code: "NOT_FOUND", message: "Strategy not found" });
+        return { json: JSON.stringify(strategy.config, null, 2), name: strategy.name };
+      }),
+
+    importRule: protectedProcedure
+      .input(z.object({ name: z.string(), config: z.record(z.string(), z.any()) }))
+      .mutation(async ({ ctx, input }) => {
+        const strategy = await db.saveStrategy({
+          userId: ctx.user.id,
+          name: input.name,
+          config: input.config,
+          isActive: true,
+        });
+        return strategy;
       }),
   }),
 
@@ -1180,6 +1250,88 @@ save: protectedProcedure
           });
         }
       }),
+
+    importCsv: protectedProcedure
+      .input(z.object({ csv: z.string().min(1) }))
+      .mutation(async ({ ctx, input }) => {
+        const lines = input.csv.split("\n").map(l => l.trim()).filter(l => l.length > 0);
+        if (lines.length < 2) throw new TRPCError({ code: "BAD_REQUEST", message: "CSV must have a header row and at least one data row" });
+        const header = lines[0].split(",").map(h => h.replace(/^"|"$/g, "").trim().toLowerCase());
+        const required = ["symbol", "result", "stake"];
+        for (const r of required) { if (!header.includes(r)) throw new TRPCError({ code: "BAD_REQUEST", message: `CSV missing required column: ${r}. Found: ${header.join(", ")}` }); }
+        let imported = 0;
+        for (let i = 1; i < lines.length; i++) {
+          const vals = lines[i].split(",").map(v => v.replace(/^"|"$/g, "").trim());
+          const row: Record<string, string> = {};
+          header.forEach((h, idx) => { row[h] = vals[idx] || ""; });
+          try {
+            await db.saveTrade({
+              userId: ctx.user.id,
+              symbol: row.symbol,
+              result: (row.result === "win" || row.result === "loss") ? row.result : "pending",
+              stake: row.stake || "0",
+              profitLoss: row.profitloss || row.profit_loss || "0",
+              entryTime: new Date(row.entrytime || row.entry_time || Date.now()),
+              exitTime: row.exittime || row.exit_time ? new Date(row.exittime || row.exit_time) : undefined,
+              contractType: row.contracttype || row.contract_type || "",
+              contractId: row.contractid || row.contract_id ? parseInt(row.contractid || row.contract_id) : undefined,
+            });
+            imported++;
+          } catch { /* skip invalid rows */ }
+        }
+        await db.saveAuditLog({ userId: ctx.user.id, action: "trades.importCsv", target: `${imported} trades` });
+        return { imported };
+      }),
+  }),
+
+  // Price Alerts
+  alerts: router({
+    list: protectedProcedure.query(async ({ ctx }) => {
+      return db.getPriceAlertsByUserId(ctx.user.id);
+    }),
+
+    create: protectedProcedure
+      .input(z.object({
+        symbol: z.string().min(1),
+        direction: z.enum(["above", "below"]),
+        targetPrice: z.number().positive(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const alert = await db.createPriceAlert({
+          userId: ctx.user.id,
+          symbol: input.symbol,
+          direction: input.direction,
+          targetPrice: String(input.targetPrice),
+        });
+        return alert;
+      }),
+
+    disable: protectedProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ ctx, input }) => {
+        await db.disablePriceAlert(input.id, ctx.user.id);
+        return { success: true };
+      }),
+  }),
+
+  webhooks: router({
+    list: protectedProcedure.query(async ({ ctx }) => {
+      return { webhooks: await db.getWebhooksByUserId(ctx.user.id) };
+    }),
+    create: protectedProcedure
+      .input(z.object({ url: z.string().url(), events: z.array(z.string()).min(1), label: z.string().optional() }))
+      .mutation(async ({ ctx, input }) => {
+        const wh = await db.createWebhook({ userId: ctx.user.id, url: input.url, events: input.events, label: input.label });
+        await db.saveAuditLog({ userId: ctx.user.id, action: "webhook.create", target: input.url });
+        return wh;
+      }),
+    delete: protectedProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ ctx, input }) => {
+        await db.deleteWebhook(input.id, ctx.user.id);
+        await db.saveAuditLog({ userId: ctx.user.id, action: "webhook.delete", target: String(input.id) });
+        return { ok: true };
+      }),
   }),
 
   // Bot Management
@@ -1219,6 +1371,7 @@ save: protectedProcedure
             safety: input.safety || {},
           });
 
+          db.saveAuditLog({ userId: ctx.user.id, action: "bot.start", target: String(botRun.id), detail: { strategyId: input.strategyId, name: strategy.name } }).catch(() => {});
           return botRun;
         } catch (error) {
           if (error instanceof TRPCError) throw error;
@@ -1299,6 +1452,19 @@ save: protectedProcedure
         const count = botRunner.stopAll(ctx.user.id);
         await db.saveAuditLog({ userId: ctx.user.id, action: "bot.stopAll", detail: { stopped: count } });
         return { stopped: count };
+      }),
+
+    saveLog: protectedProcedure
+      .input(z.object({ botRunId: z.number(), message: z.string(), level: z.enum(["info", "warn", "error"]).default("info") }))
+      .mutation(async ({ ctx, input }) => {
+        await db.saveBotLog({ userId: ctx.user.id, botRunId: input.botRunId, message: input.message, level: input.level });
+        return { success: true };
+      }),
+
+    getLogs: protectedProcedure
+      .input(z.object({ botRunId: z.number(), limit: z.number().default(100) }))
+      .query(async ({ ctx, input }) => {
+        return db.getBotLogsByRunId(input.botRunId, ctx.user.id, input.limit);
       }),
   }),
 
@@ -1452,10 +1618,26 @@ save: protectedProcedure
             ],
             temperature: 0.4,
           });
-          return { analysis: res.choices?.[0]?.message?.content || "No analysis returned.", wins, losses, net: +net.toFixed(2), sampleSize: filtered.length };
+          const analysis = res.choices?.[0]?.message?.content || "No analysis returned.";
+          await db.saveAiKnowledge({ userId: ctx.user.id, knowledgeType: "journal", data: { analysis, wins, losses, net: +net.toFixed(2), sampleSize: filtered.length, trades: summary, strategyId: input.strategyId } }).catch(() => {});
+          return { analysis, wins, losses, net: +net.toFixed(2), sampleSize: filtered.length };
         } catch (e: any) {
           return { analysis: "Journal analysis failed: " + (e?.message || "unknown error") };
         }
+      }),
+
+    journalSaveManual: protectedProcedure
+      .input(z.object({ note: z.string().min(1) }))
+      .mutation(async ({ ctx, input }) => {
+        await db.saveAiKnowledge({ userId: ctx.user.id, knowledgeType: "journal", data: { analysis: input.note, manual: true, createdAt: new Date().toISOString() } });
+        await db.saveAuditLog({ userId: ctx.user.id, action: "journal.saveManual", target: "" });
+        return { ok: true };
+      }),
+    journalSearch: protectedProcedure
+      .input(z.object({ query: z.string(), limit: z.number().default(20) }))
+      .query(async ({ ctx, input }) => {
+        if (!input.query.trim()) return db.getAiKnowledge(ctx.user.id, "journal", input.limit);
+        return db.searchAiKnowledge(ctx.user.id, input.query, "journal", input.limit);
       }),
 
     critique: protectedProcedure
@@ -1828,6 +2010,58 @@ watch: protectedProcedure
         await db.saveAuditLog({ userId: ctx.user.id, action: "coding.write", target: input.path });
         return { ok: true };
       }),
+    templates: adminProcedure.query(async () => {
+      return {
+        templates: [
+          { name: "RSI Strategy", content: `// RSI Mean Reversion Strategy\n// Buy when RSI is oversold (<=30), sell when overbought (>=70)\n\nasync function execute(symbol: string, price: number) {\n  const rsi = await indicators.rsi(symbol, 14);\n  if (rsi <= 30) return { action: \"buy\", reason: \"RSI oversold\" };\n  if (rsi >= 70) return { action: \"sell\", reason: \"RSI overbought\" };\n  return { action: \"hold\" };\n}\n` },
+          { name: "MA Crossover", content: `// Moving Average Crossover Strategy\n// Buy when fast MA crosses above slow MA\n\nconst FAST = 9;\nconst SLOW = 21;\n\nasync function execute(symbol: string, price: number) {\n  const fastMA = await indicators.sma(symbol, FAST);\n  const slowMA = await indicators.sma(symbol, SLOW);\n  if (fastMA > slowMA) return { action: \"buy\", reason: \"Bullish crossover\" };\n  if (fastMA < slowMA) return { action: \"sell\", reason: \"Bearish crossover\" };\n  return { action: \"hold\" };\n}\n` },
+          { name: "Bollinger Squeeze", content: `// Bollinger Bands Squeeze Strategy\n// Trade when bands contract then expand\n\nasync function execute(symbol: string, price: number) {\n  const bb = await indicators.bollinger(symbol, 20, 2);\n  const width = (bb.upper - bb.lower) / bb.middle;\n  if (width < 0.05) return { action: \"watch\", reason: \"Squeeze detected\" };\n  if (price > bb.upper) return { action: \"sell\", reason: \"Overbought\" };\n  if (price < bb.lower) return { action: \"buy\", reason: \"Oversold\" };\n  return { action: \"hold\" };\n}\n` },
+          { name: "Trend Following", content: `// Trend Following Strategy\n// Follow short-term momentum using EMA slope\n\nasync function execute(symbol: string, price: number) {\n  const ema3 = await indicators.ema(symbol, 3);\n  const ema5 = await indicators.ema(symbol, 5);\n  if (ema3 > ema5) return { action: \"buy\", reason: \"Uptrend\" };\n  if (ema3 < ema5) return { action: \"sell\", reason: \"Downtrend\" };\n  return { action: \"hold\" };\n}\n` },
+          { name: "Empty Strategy", content: `// Custom Strategy\n// Fill in your logic below\n\nasync function execute(symbol: string, price: number) {\n  // Your strategy logic here\n  return { action: \"hold\" };\n}\n` },
+        ],
+      };
+    }),
+    validate: adminProcedure
+      .input(z.object({ code: z.string() }))
+      .mutation(async ({ input }) => {
+        try {
+          const { execSync } = await import("child_process");
+          const tmpFile = `/tmp/__coding_validate_${Date.now()}.ts`;
+          const { writeFileSync, unlinkSync } = await import("fs");
+          writeFileSync(tmpFile, input.code);
+          try {
+            execSync(`npx tsc --noEmit --lib es2020,dom --target es2020 --moduleResolution node "${tmpFile}"`, { timeout: 10000 });
+            return { valid: true, errors: [] };
+          } catch (e: any) {
+            const lines = (e.stderr || e.stdout || "").toString().split("\n").filter((l: string) => l.includes("error TS"));
+            return { valid: false, errors: lines.length > 0 ? lines : [e.message || "Compilation failed"] };
+          } finally {
+            try { unlinkSync(tmpFile); } catch {}
+          }
+        } catch {
+          return { valid: true, errors: [] };
+        }
+      }),
+    saveVersion: adminProcedure
+      .input(z.object({ path: z.string(), content: z.string(), label: z.string().optional() }))
+      .mutation(async ({ ctx, input }) => {
+        await db.saveAiKnowledge({ userId: ctx.user.id, knowledgeType: "coding_version", data: { path: input.path, content: input.content, label: input.label || "" } });
+        return { ok: true };
+      }),
+    listVersions: adminProcedure
+      .input(z.object({ path: z.string() }))
+      .query(async ({ ctx, input }) => {
+        const versions = await db.getAiKnowledge(ctx.user.id, "coding_version", 50);
+        return { versions: versions.filter((v: any) => v.data?.path === input.path).map((v: any) => ({ id: v.id, label: v.data?.label || "", createdAt: v.createdAt })) };
+      }),
+    restoreVersion: adminProcedure
+      .input(z.object({ versionId: z.number() }))
+      .mutation(async ({ ctx, input }) => {
+        const versions = await db.getAiKnowledge(ctx.user.id, "coding_version", 50);
+        const v = versions.find((v: any) => v.id === input.versionId);
+        if (!v) throw new TRPCError({ code: "NOT_FOUND", message: "Version not found" });
+        return { content: (v.data as any)?.content || "" };
+      }),
   }),
   plugins: router({
     marketplace: protectedProcedure.query(async () => {
@@ -1945,6 +2179,28 @@ watch: protectedProcedure
     }),
   }),
 
+  globalSearch: protectedProcedure
+    .input(z.object({ query: z.string().min(1), limit: z.number().optional() }))
+    .query(async ({ ctx, input }) => {
+      const q = input.query.trim().toLowerCase();
+      const limit = input.limit || 10;
+      const [trades, strategies, botRuns, aiKnowledge] = await Promise.all([
+        db.getTradesByUserId(ctx.user.id, 100),
+        db.getStrategiesByUserId(ctx.user.id),
+        db.getBotRunsByUserId(ctx.user.id),
+        db.searchAllAiKnowledge(ctx.user.id, q, limit).catch(() => [] as any[]),
+      ]);
+      const matchedTrades = trades.filter((t: any) => (t.symbol || "").toLowerCase().includes(q) || (t.contractType || "").toLowerCase().includes(q)).slice(0, limit);
+      const matchedStrategies = strategies.filter((s: any) => (s.name || "").toLowerCase().includes(q)).slice(0, limit);
+      const matchedBotRuns = botRuns.filter((b: any) => (b.strategyName || "").toLowerCase().includes(q) || (b.status || "").toLowerCase().includes(q)).slice(0, limit);
+      return {
+        trades: matchedTrades,
+        strategies: matchedStrategies,
+        botRuns: matchedBotRuns,
+        aiKnowledge: aiKnowledge.slice(0, limit),
+      };
+    }),
+
   aiChat: router({
     sendMessage: protectedProcedure
       .input(z.object({ message: z.string().min(1) }))
@@ -1959,6 +2215,68 @@ watch: protectedProcedure
     quickQuestions: protectedProcedure.query(async () => {
       const { getAIChatEngine } = await import("./ai/AIChatEngine");
       return getAIChatEngine().getQuickQuestions();
+    }),
+    clearConversation: protectedProcedure.mutation(async ({ ctx }) => {
+      const { getAIChatEngine } = await import("./ai/AIChatEngine");
+      getAIChatEngine().clearConversation(ctx.user.id);
+      return { ok: true };
+    }),
+    memory: protectedProcedure
+      .input(z.object({ type: z.string().optional(), limit: z.number().optional(), search: z.string().optional() }).optional())
+      .query(async ({ ctx, input }) => {
+        const t = input?.type || "";
+        const limit = input?.limit || 50;
+        if (input?.search?.trim()) {
+          const results = await db.searchAllAiKnowledge(ctx.user.id, input.search.trim(), limit);
+          return { entries: results };
+        }
+        if (t) {
+          const entries = await db.getAiKnowledge(ctx.user.id, t, limit);
+          return { entries };
+        }
+        const allTypes = ["trade_review", "strategy_review", "accuracy_log", "market_pattern", "ai_insight", "journal", "coding_version"];
+        const results: any[] = [];
+        for (const type of allTypes) {
+          const items = await db.getAiKnowledge(ctx.user.id, type, 5);
+          results.push(...items);
+          if (results.length >= limit) break;
+        }
+        return { entries: results.slice(0, limit) };
+      }),
+    modelConfig: protectedProcedure.query(async ({ ctx }) => {
+      const mem = await db.getUserMemory(ctx.user.id);
+      const config = (mem?.aiModelConfig as any) || {};
+      return {
+        provider: config.provider || process.env.AI_PROVIDER || "openai",
+        model: config.model || process.env.AI_MODEL || "gpt-4o-mini",
+        baseUrl: config.baseUrl || process.env.AI_API_BASE_URL || "",
+      };
+    }),
+    setModelConfig: protectedProcedure
+      .input(z.object({ provider: z.string().optional(), model: z.string().optional(), baseUrl: z.string().optional() }))
+      .mutation(async ({ ctx, input }) => {
+        const mem = (await db.getUserMemory(ctx.user.id)) || {};
+        const config = (mem.aiModelConfig as Record<string, any>) || {};
+        if (input.provider !== undefined) config.provider = input.provider;
+        if (input.model !== undefined) config.model = input.model;
+        if (input.baseUrl !== undefined) config.baseUrl = input.baseUrl;
+        mem.aiModelConfig = config;
+        await db.setUserMemory(ctx.user.id, mem as any);
+        await db.saveAuditLog({ userId: ctx.user.id, action: "aiChat.setModelConfig", target: input.model || "" });
+        return { ok: true };
+      }),
+    knowledgeTypes: protectedProcedure.query(async () => {
+      return {
+        types: [
+          { id: "trade_review", label: "Trade Reviews" },
+          { id: "strategy_review", label: "Strategy Reviews" },
+          { id: "accuracy_log", label: "Accuracy Logs" },
+          { id: "market_pattern", label: "Market Patterns" },
+          { id: "ai_insight", label: "AI Insights" },
+          { id: "journal", label: "Journal Entries" },
+          { id: "coding_version", label: "Coding Versions" },
+        ],
+      };
     }),
   }),
 
@@ -2026,6 +2344,29 @@ watch: protectedProcedure
         await db.removeIpWhitelistEntry(input.id, input.userId);
         return { ok: true };
       }),
+    auditLogs: adminProcedure
+      .input(z.object({ limit: z.number().default(100) }))
+      .query(async ({ input }) => {
+        return { logs: await db.getAllAuditLogs(input.limit) };
+      }),
+    systemHealth: adminProcedure.query(async () => {
+      const { execSync } = await import("child_process");
+      const os = await import("os");
+      const uptime = os.uptime();
+      const totalMem = os.totalmem();
+      const freeMem = os.freemem();
+      const loadAvg = os.loadavg();
+      let dbOk = false;
+      try { dbOk = !!(await import("./db")).getDb; } catch {}
+      return {
+        uptime: Math.floor(uptime),
+        memory: { total: totalMem, free: freeMem, used: totalMem - freeMem },
+        cpu: { loadAvg1: loadAvg[0], loadAvg5: loadAvg[1], loadAvg15: loadAvg[2] },
+        database: dbOk ? "connected" : "error",
+        node: process.version,
+        platform: process.platform,
+      };
+    }),
   }),
 });
 

@@ -2,10 +2,12 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { derivWS } from "@/services/derivWebSocket";
 import { useLocation } from "wouter";
-import { Play, Pause, RotateCcw, FastForward, TrendingUp, TrendingDown, Loader2 } from "lucide-react";
+import { Play, Pause, RotateCcw, FastForward, TrendingUp, TrendingDown, Loader2, GanttChartSquare, ArrowRightLeft, Bell } from "lucide-react";
 import Sparkline from "@/components/Sparkline";
 
 type Tick = { epoch: number; price: number; lastDigit: number };
+type CondOrder = { id: string; type: "stop" | "limit" | "oco_buy" | "oco_sell"; price: number; triggered: boolean };
+type TrailingStop = { active: boolean; distance: number; activationPrice: number | null };
 
 export default function Replay() {
   const { isAuthenticated } = useAuth();
@@ -14,11 +16,14 @@ export default function Replay() {
   const [ticks, setTicks] = useState<Tick[]>([]);
   const [idx, setIdx] = useState(0);
   const [playing, setPlaying] = useState(false);
-  const [speed, setSpeed] = useState(4); // ticks per second
+  const [speed, setSpeed] = useState(4);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [trade, setTrade] = useState<{ type: "rise" | "fall"; entryIdx: number; entryPrice: number } | null>(null);
   const [results, setResults] = useState<{ type: string; pnl: number; at: string }[]>([]);
+  const [condOrders, setCondOrders] = useState<CondOrder[]>([]);
+  const [trailing, setTrailing] = useState<TrailingStop>({ active: false, distance: 10, activationPrice: null });
+  const [showOrders, setShowOrders] = useState(false);
   const timer = useRef<number | null>(null);
 
   const SYMBOLS = ["R_10", "R_25", "R_50", "R_75", "R_100", "1HZ10V", "1HZ50V", "1HZ100V"];
@@ -58,6 +63,63 @@ export default function Replay() {
     if (trade) { scoreTrade(type); return; }
     setTrade({ type, entryIdx: idx, entryPrice: cur.price });
   };
+
+  const scoreTrade = (closeType: "rise" | "fall") => {
+    if (!trade || !cur) return;
+    const win = (closeType === "rise" && cur.price > trade.entryPrice) || (closeType === "fall" && cur.price < trade.entryPrice);
+    const pnl = win ? 0.95 : -1;
+    setResults((r) => [{ type: `${trade.type} → close ${closeType}`, pnl, at: new Date(cur.epoch * 1000).toLocaleTimeString() }, ...r].slice(0, 20));
+    setTrade(null);
+  };
+
+  const addCondOrder = (type: CondOrder["type"]) => {
+    if (!cur) return;
+    const price = type === "stop" ? cur.price * 0.98 : type === "limit" ? cur.price * 1.02 : cur.price;
+    setCondOrders((o) => [...o, { id: Math.random().toString(36).slice(2, 9), type, price: Math.round(price * 10000) / 10000, triggered: false }]);
+  };
+
+  useEffect(() => {
+    if (!cur) return;
+    let updated = false;
+    setCondOrders((prev) =>
+      prev.map((o) => {
+        if (o.triggered) return o;
+        if ((o.type === "stop" || o.type === "oco_sell") && cur.price <= o.price) {
+          updated = true;
+          const pnl = -1;
+          setResults((r) => [{ type: `⚠ Stop triggered @ ${o.price}`, pnl, at: new Date(cur.epoch * 1000).toLocaleTimeString() }, ...r].slice(0, 20));
+          setTrade(null);
+          return { ...o, triggered: true };
+        }
+        if ((o.type === "limit" || o.type === "oco_buy") && cur.price >= o.price) {
+          updated = true;
+          const pnl = 0.95;
+          setResults((r) => [{ type: `✓ Limit triggered @ ${o.price}`, pnl, at: new Date(cur.epoch * 1000).toLocaleTimeString() }, ...r].slice(0, 20));
+          setTrade(null);
+          return { ...o, triggered: true };
+        }
+        return o;
+      })
+    );
+    if (updated) setCondOrders((o) => o.filter((x) => !x.triggered));
+  }, [cur]);
+
+  useEffect(() => {
+    if (!trailing.active || !cur || !trade) return;
+    if (trailing.activationPrice === null) {
+      setTrailing((t) => ({ ...t, activationPrice: cur.price }));
+      return;
+    }
+    const direction = trade.type === "rise" ? 1 : -1;
+    const bestPrice = direction > 0 ? Math.max(trailing.activationPrice, cur.price) : Math.min(trailing.activationPrice, cur.price);
+    const stopPrice = direction > 0 ? bestPrice - trailing.distance / 10000 : bestPrice + trailing.distance / 10000;
+    if ((direction > 0 && cur.price <= stopPrice) || (direction < 0 && cur.price >= stopPrice)) {
+      const pnl = -0.5;
+      setResults((r) => [{ type: `🔄 Trailing stop closed @ ${cur.price.toFixed(4)}`, pnl, at: new Date(cur.epoch * 1000).toLocaleTimeString() }, ...r].slice(0, 20));
+      setTrade(null);
+      setTrailing({ active: false, distance: 10, activationPrice: null });
+    }
+  }, [cur, trailing.active, trade]);
 
   const scoreTrade = (closeType: "rise" | "fall") => {
     if (!trade || !cur) return;
@@ -129,6 +191,51 @@ export default function Replay() {
                   </button>
                 </div>
                 {trade && <p className="text-xs text-[var(--text-secondary)] mt-3">Open {trade.type} at {trade.entryPrice.toFixed(4)}. Press again to close and score.</p>}
+
+                <div className="mt-4 pt-4 border-t border-[var(--border)]">
+                  <button onClick={() => setShowOrders((s) => !s)} className="flex items-center gap-2 text-xs text-[var(--amber)] hover:text-[var(--amber-hover)]">
+                    <GanttChartSquare className="w-3.5 h-3.5" /> {showOrders ? "Hide" : "Show"} Conditional Orders
+                  </button>
+                  {showOrders && (
+                    <div className="mt-3 space-y-3">
+                      <div className="flex gap-2">
+                        <button onClick={() => addCondOrder("stop")} className="flex-1 py-2 rounded-lg text-xs font-bold bg-[var(--red-soft)] text-[var(--red)] border border-[var(--red)]/30 hover:bg-[var(--red)]/20">
+                          Add Stop Loss
+                        </button>
+                        <button onClick={() => addCondOrder("limit")} className="flex-1 py-2 rounded-lg text-xs font-bold bg-[var(--green-soft)] text-[var(--green)] border border-[var(--green)]/30 hover:bg-[var(--green)]/20">
+                          Add Take Profit
+                        </button>
+                        <button onClick={() => addCondOrder("oco_buy")} className="flex-1 py-2 rounded-lg text-xs font-bold bg-[var(--amber)]/20 text-[var(--amber)] border border-[var(--amber)]/30 hover:bg-[var(--amber)]/30">
+                          <ArrowRightLeft className="w-3 h-3 inline mr-1" />OCO
+                        </button>
+                      </div>
+                      {condOrders.length > 0 && (
+                        <div className="space-y-1">
+                          {condOrders.map((o) => (
+                            <div key={o.id} className="flex justify-between text-xs p-2 bg-black/20 rounded-lg">
+                              <span className="text-[var(--text-secondary)]">{o.type.toUpperCase()} @ {o.price.toFixed(4)}</span>
+                              <span className={o.triggered ? "text-[var(--green)]" : "text-[var(--text-muted)]"}>{o.triggered ? "Triggered" : "Active"}</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                <div className="mt-3 pt-3 border-t border-[var(--border)]">
+                  <label className="flex items-center gap-2 text-xs text-[var(--text-secondary)] cursor-pointer">
+                    <input type="checkbox" checked={trailing.active} onChange={(e) => setTrailing((t) => ({ ...t, active: e.target.checked, activationPrice: null }))} className="accent-[var(--cyan)]" />
+                    <Bell className="w-3 h-3 text-[var(--cyan)]" /> Trailing Stop
+                  </label>
+                  {trailing.active && (
+                    <div className="mt-2 flex items-center gap-2">
+                      <span className="text-xs text-[var(--text-muted)]">Distance:</span>
+                      <input type="range" min={1} max={100} value={trailing.distance} onChange={(e) => setTrailing((t) => ({ ...t, distance: Number(e.target.value) }))} className="flex-1" />
+                      <span className="text-xs text-[var(--cyan)] font-bold">{trailing.distance} pts</span>
+                    </div>
+                  )}
+                </div>
               </div>
 
               <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-6">

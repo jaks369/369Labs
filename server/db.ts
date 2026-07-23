@@ -56,6 +56,12 @@ import {
   ipWhitelist,
   IpWhitelistEntry,
   InsertIpWhitelistEntry,
+  priceAlerts,
+  PriceAlert,
+  InsertPriceAlert,
+  botLogs,
+  BotLog,
+  InsertBotLog,
   chatMessages,
   aiKnowledge,
   AiKnowledge,
@@ -325,6 +331,17 @@ export async function updateUserEmail(userId: number, email: string): Promise<vo
   await db.update(users).set({ email }).where(eq(users.id, userId));
 }
 
+export async function updateUserProfile(userId: number, data: { name?: string; avatarUrl?: string }): Promise<void> {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const update: Record<string, any> = {};
+  if (data.name !== undefined) update.name = data.name;
+  if (data.avatarUrl !== undefined) update.avatarUrl = data.avatarUrl || null;
+  if (Object.keys(update).length > 0) {
+    await db.update(users).set(update).where(eq(users.id, userId));
+  }
+}
+
 // OAuth accounts
 export async function getOAuthAccount(provider: string, providerId: string): Promise<OAuthAccount | undefined> {
   const db = await getDb();
@@ -486,12 +503,89 @@ export async function saveAiKnowledge(data: InsertAiKnowledge): Promise<void> {
   await db.insert(aiKnowledge).values(data);
 }
 
+export async function searchAllAiKnowledge(userId: number, query: string, limit: number = 50): Promise<AiKnowledgeResult[]> {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(aiKnowledge)
+    .where(and(
+      eq(aiKnowledge.userId, userId),
+      sql`${aiKnowledge.data} LIKE ${'%' + query + '%'}`
+    ))
+    .orderBy(desc(aiKnowledge.createdAt)).limit(limit);
+}
+
+export async function searchAiKnowledge(userId: number, query: string, knowledgeType: string, limit: number = 50): Promise<AiKnowledgeResult[]> {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(aiKnowledge)
+    .where(and(
+      eq(aiKnowledge.userId, userId),
+      eq(aiKnowledge.knowledgeType, knowledgeType),
+      sql`${aiKnowledge.data} LIKE ${'%' + query + '%'}`
+    ))
+    .orderBy(desc(aiKnowledge.createdAt)).limit(limit);
+}
+
+export async function createPriceAlert(data: InsertPriceAlert): Promise<PriceAlert> {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const result = await db.insert(priceAlerts).values(data);
+  const id = result[0].insertId;
+  return (await db.select().from(priceAlerts).where(eq(priceAlerts.id, id as number)).limit(1))[0];
+}
+
+export async function getPriceAlertsByUserId(userId: number): Promise<PriceAlert[]> {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(priceAlerts).where(eq(priceAlerts.userId, userId)).orderBy(desc(priceAlerts.createdAt));
+}
+
+export async function disablePriceAlert(id: number, userId: number): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(priceAlerts).set({ status: "disabled" }).where(and(eq(priceAlerts.id, id), eq(priceAlerts.userId, userId)));
+}
+
+export async function getActivePriceAlerts(): Promise<PriceAlert[]> {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(priceAlerts).where(eq(priceAlerts.status, "active"));
+}
+
+export async function markPriceAlertTriggered(id: number): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(priceAlerts).set({ status: "triggered", triggeredAt: new Date() }).where(eq(priceAlerts.id, id));
+}
+
+export async function updateStrategy(id: number, userId: number, updates: Partial<Pick<InsertStrategy, "name" | "description" | "config" | "isActive">>): Promise<Strategy | undefined> {
+  const db = await getDb();
+  if (!db) return undefined;
+  await db.update(strategies).set(updates).where(and(eq(strategies.id, id), eq(strategies.userId, userId)));
+  const result = await db.select().from(strategies).where(and(eq(strategies.id, id), eq(strategies.userId, userId))).limit(1);
+  return result[0];
+}
+
 export async function getAiKnowledgeByRelatedTradeId(userId: number, tradeId: number): Promise<AiKnowledgeResult[]> {
   const db = await getDb();
   if (!db) return [];
   return db.select().from(aiKnowledge)
     .where(and(eq(aiKnowledge.userId, userId), eq(aiKnowledge.relatedTradeId, tradeId)))
     .orderBy(desc(aiKnowledge.createdAt)).limit(20);
+}
+
+export async function saveBotLog(data: InsertBotLog): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+  await db.insert(botLogs).values(data);
+}
+
+export async function getBotLogsByRunId(botRunId: number, userId: number, limit: number = 100): Promise<BotLog[]> {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(botLogs)
+    .where(and(eq(botLogs.botRunId, botRunId), eq(botLogs.userId, userId)))
+    .orderBy(desc(botLogs.createdAt)).limit(limit);
 }
 
 export async function saveBotRun(botRun: InsertBotRun): Promise<BotRun> {
@@ -627,6 +721,12 @@ export async function getAuditLogs(userId: number, limit: number = 100): Promise
   const db = await getDb();
   if (!db) return [];
   return db.select().from(auditLogs).where(eq(auditLogs.userId, userId)).orderBy(desc(auditLogs.createdAt)).limit(limit);
+}
+
+export async function getAllAuditLogs(limit: number = 200): Promise<any[]> {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(auditLogs).orderBy(desc(auditLogs.createdAt)).limit(limit);
 }
 
 // Idempotent: create the userMemory table if it doesn't exist yet (TiDB ignores
@@ -819,5 +919,80 @@ export async function installPlugin(userId: number, pluginId: number, enabled: b
     );
   } catch (e: any) {
     console.error("[installPlugin] failed", e?.message || e);
+  }
+}
+
+// --- Webhooks ---
+export async function ensureWebhooksTable(): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+  try {
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS webhooks (
+        id int NOT NULL AUTO_INCREMENT,
+        userId int NOT NULL,
+        url varchar(512) NOT NULL,
+        events json NOT NULL,
+        label varchar(64),
+        active tinyint(1) NOT NULL DEFAULT 1,
+        createdAt timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (id)
+      )
+    `);
+  } catch (e: any) {
+    console.error("[ensureWebhooksTable] failed", e?.message || e);
+  }
+}
+
+export async function getWebhooksByUserId(userId: number): Promise<any[]> {
+  const db = await getDb();
+  if (!db) return [];
+  try {
+    const rows = await db.execute(sql`SELECT * FROM webhooks WHERE userId = ${userId} ORDER BY createdAt DESC`);
+    return (rows as any)[0] ?? [];
+  } catch (e: any) {
+    console.error("[getWebhooksByUserId] failed", e?.message || e);
+    return [];
+  }
+}
+
+export async function createWebhook(data: { userId: number; url: string; events: string[]; label?: string }): Promise<any> {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const eventsStr = JSON.stringify(data.events);
+  try {
+    const result = await db.execute(sql`
+      INSERT INTO webhooks (userId, url, events, label) VALUES (${data.userId}, ${data.url}, ${eventsStr}, ${data.label || null})
+    `);
+    const insertId = (result as any)[0]?.insertId;
+    if (insertId) return { id: insertId, ...data };
+    return { ok: true };
+  } catch (e: any) {
+    console.error("[createWebhook] failed", e?.message || e);
+    throw e;
+  }
+}
+
+export async function deleteWebhook(id: number, userId: number): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+  try {
+    await db.execute(sql`DELETE FROM webhooks WHERE id = ${id} AND userId = ${userId}`);
+  } catch (e: any) {
+    console.error("[deleteWebhook] failed", e?.message || e);
+  }
+}
+
+export async function getActiveWebhooksForEvent(userId: number, event: string): Promise<any[]> {
+  const db = await getDb();
+  if (!db) return [];
+  try {
+    const rows = await db.execute(sql`SELECT * FROM webhooks WHERE userId = ${userId} AND active = 1`);
+    const all = (rows as any)[0] ?? [];
+    return all.filter((w: any) => {
+      try { const evts = typeof w.events === "string" ? JSON.parse(w.events) : w.events; return Array.isArray(evts) && evts.includes(event); } catch { return false; }
+    });
+  } catch {
+    return [];
   }
 }

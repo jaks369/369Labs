@@ -13,6 +13,9 @@ import {
   Zap,
   Plus,
   Wallet,
+  FileText,
+  X,
+  Loader2,
 } from "lucide-react";
 import { useLocation } from "wouter";
 import { toast } from "@/components/Toast";
@@ -58,6 +61,8 @@ export default function Bots() {
   const [creating, setCreating] = useState(false);
   const [paperMode, setPaperMode] = useState(() => localStorage.getItem(PAPER_MODE_KEY) === "true");
   const [paperBal, setPaperBal] = useState(() => paperEngine.getBalance());
+  const [viewLogsFor, setViewLogsFor] = useState<number | null>(null);
+  const [selectedMulti, setSelectedMulti] = useState<number[]>([]);
 
   const strategiesQuery = trpc.strategies.list.useQuery();
   const derivTokenQuery = trpc.deriv.getToken.useQuery();
@@ -65,6 +70,10 @@ export default function Bots() {
   const stopRunMutation = trpc.bot.stopRun.useMutation();
   const saveTradeMutation = trpc.trades.save.useMutation();
   const notifyTelegram = trpc.telegram.send.useMutation();
+  const botLogsQuery = trpc.bot.getLogs.useQuery(
+    { botRunId: viewLogsFor ?? 0, limit: 200 },
+    { enabled: viewLogsFor !== null }
+  );
 
   const alertTg = (msg: string) => { try { notifyTelegram.mutate({ message: msg }); } catch { /* ignore */ } };
 
@@ -80,6 +89,9 @@ export default function Bots() {
     }
     return message;
   };
+
+  const errorBots = runningBots.filter(b => b.status === "error");
+  const idleBots = runningBots.filter(b => b.status === "stopped");
 
   // Keep a live-mutable ref so BotEngine callbacks (closures created at deploy time)
   // always update the latest state array rather than a stale snapshot.
@@ -169,7 +181,10 @@ export default function Bots() {
           }
           alertTg(`${strategy.name} [${trade.symbol}] trade ${trade.result.toUpperCase()} · stake $${trade.stake} · P&L ${parseFloat(trade.pnl) >= 0 ? "+" : ""}${trade.pnl}`);
         },
-        onLog: (message) => updateBot(botRun.id, { lastLog: message }),
+        onLog: (message) => {
+          updateBot(botRun.id, { lastLog: message });
+          try { fetch("/api/trpc/bot.saveLog", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ "0": { botRunId: botRun.id, message, level: "info" } }) }).catch(() => {}); } catch {}
+        },
       }, paperMode);
 
       const newBot: RunningBot = {
@@ -208,6 +223,15 @@ export default function Bots() {
     } finally {
       setDeployingId(null);
     }
+  };
+
+  const handleMultiDeploy = async () => {
+    const toDeploy = (strategiesQuery.data || []).filter((s: any) => selectedMulti.includes(s.id));
+    for (const s of toDeploy) {
+      await handleDeploy(s);
+    }
+    setSelectedMulti([]);
+    toast(`Deployed ${toDeploy.length} bots`, "success");
   };
 
   const handleStop = async (bot: RunningBot) => {
@@ -366,6 +390,14 @@ export default function Bots() {
                         })()}
                         <Button
                           size="sm"
+                          variant="ghost"
+                          className="text-[var(--text-muted)] hover:text-[var(--cyan)] border border-[var(--border)] hover:border-[var(--cyan)]/30"
+                          onClick={() => setViewLogsFor(bot.runId)}
+                        >
+                          <FileText className="w-3 h-3 mr-1" /> Logs
+                        </Button>
+                        <Button
+                          size="sm"
                           variant="destructive"
                           className="bg-[var(--red-soft)] text-[var(--red)] border-[var(--red)]/20 hover:bg-[var(--red)] hover:text-white"
                           onClick={() => handleStop(bot)}
@@ -381,20 +413,81 @@ export default function Bots() {
           </div>
         </div>
 
+        {/* Bot Logs Viewer */}
+        {viewLogsFor !== null && (
+          <div className="fixed inset-0 z-[90] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setViewLogsFor(null)}>
+            <div className="w-full max-w-2xl bg-[var(--card)] border border-[var(--border)] rounded-xl max-h-[80vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+              <div className="flex items-center justify-between p-4 border-b border-[var(--border)]">
+                <h3 className="text-sm font-bold text-white flex items-center gap-2"><FileText className="w-4 h-4" /> Bot Execution Logs</h3>
+                <button onClick={() => setViewLogsFor(null)} className="text-[var(--text-muted)] hover:text-white"><X className="w-4 h-4" /></button>
+              </div>
+              <div className="p-4 space-y-1 max-h-[60vh] overflow-y-auto font-mono text-[11px]">
+                {botLogsQuery.isLoading ? (
+                  <div className="flex items-center justify-center py-8"><Loader2 className="w-5 h-5 animate-spin text-[var(--amber)]" /></div>
+                ) : (botLogsQuery.data || []).length === 0 ? (
+                  <p className="text-sm text-[var(--text-muted)] text-center py-8">No logs for this bot run.</p>
+                ) : (
+                  (botLogsQuery.data || []).map((log: any) => (
+                    <div key={log.id} className={`flex items-start gap-2 py-1 ${log.level === "error" ? "text-[var(--red)]" : log.level === "warn" ? "text-[var(--amber)]" : "text-[var(--text-secondary)]"}`}>
+                      <span className="text-[10px] text-[var(--text-muted)] shrink-0 w-16">{log.createdAt ? new Date(log.createdAt).toLocaleTimeString() : ""}</span>
+                      <span className="text-[10px] font-bold uppercase shrink-0 w-10">[{log.level}]</span>
+                      <span>{log.message}</span>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Sidebar - Quick Stats & Available Strategies */}
         <div className="space-y-8">
           <div className="panel p-6">
             <h3 className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-widest mb-6">System Health</h3>
-            <div className="space-y-4">
+            <div className="space-y-3">
               <div className="flex justify-between items-center">
                 <span className="text-xs text-[var(--text-secondary)]">Active Bots</span>
-                <span className="text-[10px] font-bold text-[var(--text-secondary)] uppercase">{runningBots.length}</span>
+                <span className={`text-[10px] font-bold ${runningBots.length > 0 ? "text-[var(--green)]" : "text-[var(--text-muted)]"}`}>{runningBots.length}</span>
               </div>
+              <div className="flex justify-between items-center">
+                <span className="text-xs text-[var(--text-secondary)]">Idle Bots</span>
+                <span className="text-[10px] font-bold text-[var(--text-secondary)]">{idleBots.length}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-xs text-[var(--text-secondary)]">Errors</span>
+                <span className={`text-[10px] font-bold ${errorBots.length > 0 ? "text-[var(--red)]" : "text-[var(--green)]"}`}>{errorBots.length > 0 ? `${errorBots.length} bot(s)` : "None"}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-xs text-[var(--text-secondary)]">Deriv WS</span>
+                <span className={`text-[10px] font-bold ${derivWS.isAuthorized() ? "text-[var(--green)]" : "text-[var(--red)]"}`}>{derivWS.isAuthorized() ? "Connected" : "Disconnected"}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-xs text-[var(--text-secondary)]">Total Trades</span>
+                <span className="text-[10px] font-bold text-[var(--text-secondary)]">{runningBots.reduce((s, b) => s + (b.trades || 0), 0)}</span>
+              </div>
+              {runningBots.length > 0 && (
+                <div className="flex justify-between items-center">
+                  <span className="text-xs text-[var(--text-secondary)]">Avg. Win Rate</span>
+                  <span className="text-[10px] font-bold text-[var(--text-secondary)]">
+                    {(() => {
+                      const withWR = runningBots.filter(b => b.backtestWinRate != null);
+                      return withWR.length > 0 ? (withWR.reduce((s, b) => s + (b.backtestWinRate || 0), 0) / withWR.length).toFixed(0) + "%" : "—";
+                    })()}
+                  </span>
+                </div>
+              )}
             </div>
           </div>
 
           <div className="panel p-6">
-            <h3 className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-widest mb-6">Ready to Deploy</h3>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-widest">Ready to Deploy</h3>
+              {selectedMulti.length > 1 && (
+                <Button onClick={handleMultiDeploy} className="text-[10px] font-bold bg-[var(--cyan)] text-black px-3 py-1 rounded-lg flex items-center gap-1">
+                  <Play className="w-3 h-3" /> Deploy {selectedMulti.length} Strategies
+                </Button>
+              )}
+            </div>
             <div className="space-y-3">
               {strategiesQuery.isLoading ? (
                 <div className="flex items-center justify-center py-8">
@@ -402,22 +495,30 @@ export default function Bots() {
                 </div>
               ) : strategiesQuery.isError ? (
                 <p className="text-xs text-[var(--red)] italic text-center py-4">Failed to load strategies. Please try again.</p>
-              ) : strategiesQuery.data?.map((s: any) => (
-                <div key={s.id} className="p-4 rounded-xl bg-[var(--card)] border border-[var(--border)] hover:border-[var(--amber)]/50 transition-all group">
+              ) : strategiesQuery.data?.map((s: any) => {
+                const isSelected = selectedMulti.includes(s.id);
+                const isRunning = runningBots.some((b) => b.strategyId === s.id);
+                return (
+                <div key={s.id} className={`p-4 rounded-xl bg-[var(--card)] border transition-all group ${isSelected ? "border-[var(--cyan)]" : "border-[var(--border)] hover:border-[var(--amber)]/50"}`}>
                   <div className="flex justify-between items-start mb-3">
-                    <h4 className="text-xs font-bold text-white">{s.name}</h4>
+                    <div className="flex items-center gap-2">
+                      <input type="checkbox" checked={isSelected} onChange={() => setSelectedMulti((p) => p.includes(s.id) ? p.filter((id) => id !== s.id) : [...p, s.id])} className="accent-[var(--cyan)] w-3.5 h-3.5" />
+                      <h4 className="text-xs font-bold text-white">{s.name}</h4>
+                    </div>
                     <Zap className="w-3 h-3 text-[var(--amber)]" />
                   </div>
-                  <Button
-                    className="w-full h-8 text-[10px] font-bold bg-[var(--amber-soft)] text-[var(--amber)] hover:bg-[var(--amber)] hover:text-white border border-[var(--amber-border)]"
-                    disabled={deployingId === s.id || runningBots.some((b) => b.strategyId === s.id)}
-                    onClick={() => handleDeploy(s)}
-                  >
-                    <Play className="w-3 h-3 mr-2 fill-current" />
-                    {runningBots.some((b) => b.strategyId === s.id) ? "Running" : deployingId === s.id ? "Deploying..." : "Deploy Bot"}
-                  </Button>
+                  <div className="flex gap-2">
+                    <Button
+                      className="flex-1 h-8 text-[10px] font-bold bg-[var(--amber-soft)] text-[var(--amber)] hover:bg-[var(--amber)] hover:text-white border border-[var(--amber-border)]"
+                      disabled={deployingId === s.id || isRunning}
+                      onClick={() => handleDeploy(s)}
+                    >
+                      <Play className="w-3 h-3 mr-2 fill-current" />
+                      {isRunning ? "Running" : deployingId === s.id ? "Deploying..." : "Deploy"}
+                    </Button>
+                  </div>
                 </div>
-              ))}
+              );})}
               {(!strategiesQuery.data || strategiesQuery.data.length === 0) && (
                 <p className="text-xs text-[var(--text-muted)] italic text-center py-4">No strategies found.</p>
               )}

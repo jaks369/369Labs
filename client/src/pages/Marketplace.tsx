@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
-import { CandlestickChart, Sparkles, TrendingUp, Clock, Bot, Loader2, ChevronDown, ChevronRight, FlaskConical, Users } from "lucide-react";
+import { CandlestickChart, Sparkles, TrendingUp, Clock, Bot, Loader2, ChevronDown, ChevronRight, FlaskConical, Users, Code, Shield, CheckCircle2, XCircle, BookOpen } from "lucide-react";
 import { useLocation } from "wouter";
 import { toast } from "@/components/Toast";
 
@@ -171,6 +171,83 @@ export default function Marketplace() {
             })}
           </div>
         )}
+
+        <div className="mt-10">
+          <h2 className="text-xl font-bold text-white mb-1 flex items-center gap-2">
+            <Code className="w-5 h-5 text-[var(--cyan)]" /> Plugin SDK
+          </h2>
+          <p className="text-sm text-[var(--text-muted)] mb-4">Build your own plugins with the 369Labs Plugin SDK.</p>
+          <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5 space-y-3">
+            <div className="flex items-start gap-3">
+              <BookOpen className="w-5 h-5 text-[var(--cyan)] mt-0.5" />
+              <div>
+                <p className="text-sm font-bold text-white">Getting Started</p>
+                <p className="text-xs text-[var(--text-secondary)] mt-1">Plugins are JavaScript modules that export a <code className="text-[var(--amber)]">createPlugin</code> function. They receive a context with trade/bot/alert hooks.</p>
+              </div>
+            </div>
+            <div className="bg-black/30 rounded-lg p-3">
+              <pre className="text-xs font-mono text-[var(--text-secondary)] leading-relaxed">{`export function createPlugin(ctx) {
+  // ctx.onTrade, ctx.onTick, ctx.onAlert, ctx.botId, ctx.logger
+  ctx.onTrade((trade) => {
+    ctx.logger.info("Trade executed:", trade);
+  });
+  return { name: "My Plugin", version: "1.0.0" };
+}`}</pre>
+            </div>
+            <div className="grid grid-cols-2 gap-3 text-xs">
+              <div className="bg-black/20 rounded-lg p-3">
+                <p className="text-white font-bold mb-1">Available Hooks</p>
+                <ul className="text-[var(--text-muted)] space-y-1">
+                  <li><code className="text-[var(--cyan)]">onTrade</code> — trade executed</li>
+                  <li><code className="text-[var(--cyan)]">onTick</code> — price tick</li>
+                  <li><code className="text-[var(--cyan)]">onAlert</code> — alert triggered</li>
+                  <li><code className="text-[var(--cyan)]">onBotStart</code> — bot started</li>
+                  <li><code className="text-[var(--cyan)]">onBotStop</code> — bot stopped</li>
+                </ul>
+              </div>
+              <div className="bg-black/20 rounded-lg p-3">
+                <p className="text-white font-bold mb-1">Permissions</p>
+                <ul className="text-[var(--text-muted)] space-y-1">
+                  <li><code className="text-[var(--amber)]">trades:read</code> — view trades</li>
+                  <li><code className="text-[var(--amber)]">trades:write</code> — execute trades</li>
+                  <li><code className="text-[var(--amber)]">bots:read</code> — view bots</li>
+                  <li><code className="text-[var(--amber)]">alerts:read</code> — view alerts</li>
+                  <li><code className="text-[var(--amber)]">data:export</code> — export data</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-10">
+          <h2 className="text-xl font-bold text-white mb-1 flex items-center gap-2">
+            <Shield className="w-5 h-5 text-[var(--cyan)]" /> Plugin Permissions
+          </h2>
+          <p className="text-sm text-[var(--text-muted)] mb-4">Manage granular permissions for installed plugins.</p>
+          <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl overflow-hidden">
+            {[{ name: "Telegram Notifier", version: "1.2.0", perms: ["trades:read", "alerts:read"] },
+              { name: "Export Tool", version: "0.9.0", perms: ["trades:read", "data:export"] },
+              { name: "Market Scanner", version: "2.1.0", perms: ["trades:read", "bots:read", "alerts:read"] },
+            ].map((plugin) => (
+              <div key={plugin.name} className="p-4 border-b border-[var(--border)] last:border-0 hover:bg-white/5">
+                <div className="flex items-center justify-between mb-2">
+                  <div>
+                    <span className="text-sm font-bold text-white">{plugin.name}</span>
+                    <span className="text-xs text-[var(--text-muted)] ml-2">v{plugin.version}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {plugin.perms.map((perm) => (
+                      <label key={perm} className="flex items-center gap-1 text-[10px] cursor-pointer">
+                        <input type="checkbox" defaultChecked className="accent-[var(--cyan)] w-3 h-3" />
+                        <span className="text-[var(--text-muted)]">{perm}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
 
         <div className="mt-10">
           <h2 className="text-xl font-bold text-white mb-1 flex items-center gap-2">

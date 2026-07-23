@@ -16,7 +16,7 @@ function isSecureRequest(req: Request) {
 export function getSessionCookieOptions(req: Request): {
   httpOnly: boolean;
   path: string;
-  sameSite: "lax" | "none";
+  sameSite: "lax" | "strict";
   secure: boolean;
 } {
   const secure = isSecureRequest(req);
@@ -24,7 +24,7 @@ export function getSessionCookieOptions(req: Request): {
   return {
     httpOnly: true,
     path: "/",
-    sameSite: secure ? "lax" : "none",
+    sameSite: "lax",
     secure,
   };
 }

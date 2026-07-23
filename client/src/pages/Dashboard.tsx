@@ -13,6 +13,10 @@ import {
   Wallet,
   Sparkles,
   RotateCcw,
+  Bell,
+  BellOff,
+  Plus,
+  X,
 } from "lucide-react";
 import { useLocation } from "wouter";
 import TickChart from "@/components/TickChart";
@@ -49,19 +53,34 @@ export default function Dashboard() {
   const [selectedSymbol, setSelectedSymbol] = useState("R_50");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [showSymbolPicker, setShowSymbolPicker] = useState(false);
+  const [symbolSearch, setSymbolSearch] = useState("");
   const [showTokenModal, setShowTokenModal] = useState(false);
   const [tokenError, setTokenError] = useState<string | null>(null);
   const [tokenSaved, setTokenSaved] = useState(false);
   const [contract, setContract] = useState<ContractSelection>({ category: "rise_fall", direction: "rise" });
   const [stake, setStake] = useState<number>(1);
+  const [stopLoss, setStopLoss] = useState<number>(0);
+  const [takeProfit, setTakeProfit] = useState<number>(0);
   const [tradeBusy, setTradeBusy] = useState(false);
   const [tradeMsg, setTradeMsg] = useState<{ kind: "ok" | "err"; text: string } | null>(null);
+  const [alertsOpen, setAlertsOpen] = useState(false);
+  const [newAlertSym, setNewAlertSym] = useState("");
+  const [newAlertDir, setNewAlertDir] = useState<"above" | "below">("above");
+  const [newAlertPrice, setNewAlertPrice] = useState("");
 
   const tradesQuery = trpc.trades.list.useQuery({ limit: 20 });
   const signalsQuery = trpc.signals.list.useQuery({}, { refetchInterval: 30000 });
   const botRunsQuery = trpc.bot.getRuns.useQuery();
   const tokenQuery = trpc.deriv.getToken.useQuery();
   const saveTradeMutation = trpc.trades.save.useMutation();
+  const memoryQuery = trpc.memory.get.useQuery();
+  const alertsQuery = trpc.alerts.list.useQuery();
+  const createAlertMutation = trpc.alerts.create.useMutation({
+    onSuccess: () => { alertsQuery.refetch(); setNewAlertSym(""); setNewAlertPrice(""); },
+  });
+  const disableAlertMutation = trpc.alerts.disable.useMutation({
+    onSuccess: () => alertsQuery.refetch(),
+  });
   const [historyTab, setHistoryTab] = useState<"trades" | "prices">("trades");
   const priceQuery = trpc.market.getHistory.useQuery({ symbol: selectedSymbol, limit: 200 }, { enabled: historyTab === "prices", refetchInterval: historyTab === "prices" ? 3000 : false });
 
@@ -92,6 +111,16 @@ export default function Dashboard() {
 
   const handleQuickTrade = async () => {
     if (!derivWS.isAuthorized()) { setTradeMsg({ kind: "err", text: "Connect a Deriv token first (Settings)." }); return; }
+    const dailyLossLimit = (memoryQuery.data?.memory as any)?.dailyLossLimit;
+    if (dailyLossLimit > 0) {
+      const today = new Date().toDateString();
+      const todayTrades = (tradesQuery.data || []).filter((t: any) => new Date(t.entryTime).toDateString() === today);
+      const todayPnl = todayTrades.reduce((sum, t) => sum + parseFloat(t.profitLoss?.toString() || "0"), 0);
+      if (todayPnl <= -dailyLossLimit) {
+        setTradeMsg({ kind: "err", text: `Daily loss limit of $${dailyLossLimit} reached. Trading blocked until tomorrow.` });
+        return;
+      }
+    }
     if (accountType === "real") {
       const ok = window.confirm("You are connected to a REAL account. This trade uses real funds. Continue?");
       if (!ok) return;
@@ -115,6 +144,8 @@ export default function Dashboard() {
         durationUnit: "t",
         ...(contract.category === "over_under" && contract.barrier !== undefined ? { barrier: contract.barrier } : {}),
         ...(contract.category === "digits" && contract.digit !== undefined ? { barrier: contract.digit } : {}),
+        ...(stopLoss > 0 ? { stopLoss } : {}),
+        ...(takeProfit > 0 ? { takeProfit } : {}),
       });
       setTradeMsg({ kind: "ok", text: "Trade placed (contract #" + purchase.contractId + "). Tracking settlementâ€¦" });
 
@@ -202,6 +233,8 @@ export default function Dashboard() {
   }, []);
 
   const [symbols, setSymbols] = useState<DerivSymbol[]>([]);
+  const [widgets, setWidgets] = useState<string[]>(["trades", "signals", "chart", "history", "alerts"]);
+  const [showWidgetConfig, setShowWidgetConfig] = useState(false);
   useEffect(() => {
     const unsub = derivWS.onSymbols((syms) => {
       setSymbols(syms);
@@ -303,34 +336,60 @@ export default function Dashboard() {
             </div>
             {showSymbolPicker ? (
               <div className="max-h-[300px] md:max-h-[420px] overflow-y-auto space-y-5 p-4">
-                <div>
-                  <h3 className="section-title mb-2">Volatility 1s Indices</h3>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                    {vol1sSymbols.map(s => (
-                      <button
-                        key={s.symbol}
-                        onClick={() => { setSelectedSymbol(s.symbol); setShowSymbolPicker(false); }}
-                        className={`text-left px-3 py-2 rounded-lg text-xs font-semibold transition-all ${selectedSymbol === s.symbol ? "bg-[var(--amber-soft)] text-[var(--amber-hover)] border border-[var(--amber-border)]" : "bg-white/5 text-[var(--text-secondary)] hover:bg-white/10 border border-transparent"}`}
-                      >
-                        {s.displayName || s.symbol}
-                      </button>
-                    ))}
-                  </div>
+                <div className="sticky top-0 z-10 bg-[var(--card)] pb-2 -mt-2 pt-2">
+                  <input
+                    type="text"
+                    value={symbolSearch}
+                    onChange={(e) => setSymbolSearch(e.target.value)}
+                    placeholder="Search symbols..."
+                    className="input w-full text-sm"
+                  />
                 </div>
-                <div>
-                  <h3 className="section-title mb-2">Volatility Indices</h3>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                    {volRegularSymbols.map(s => (
-                      <button
-                        key={s.symbol}
-                        onClick={() => { setSelectedSymbol(s.symbol); setShowSymbolPicker(false); }}
-                        className={`text-left px-3 py-2 rounded-lg text-xs font-semibold transition-all ${selectedSymbol === s.symbol ? "bg-[var(--amber-soft)] text-[var(--amber-hover)] border border-[var(--amber-border)]" : "bg-white/5 text-[var(--text-secondary)] hover:bg-white/10 border border-transparent"}`}
-                      >
-                        {s.displayName || s.symbol}
-                      </button>
-                    ))}
-                  </div>
-                </div>
+                {(() => {
+                  const q = symbolSearch.toLowerCase().trim();
+                  const filter = (s: DerivSymbol) => !q || s.symbol.toLowerCase().includes(q) || s.displayName.toLowerCase().includes(q);
+                  const vol1sFiltered = vol1sSymbols.filter(filter);
+                  const volRegFiltered = volRegularSymbols.filter(filter);
+                  return (
+                    <>
+                      {vol1sFiltered.length > 0 && (
+                        <div>
+                          <h3 className="section-title mb-2">Volatility 1s Indices</h3>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                            {vol1sFiltered.map(s => (
+                              <button
+                                key={s.symbol}
+                                onClick={() => { setSelectedSymbol(s.symbol); setShowSymbolPicker(false); setSymbolSearch(""); }}
+                                className={`text-left px-3 py-2 rounded-lg text-xs font-semibold transition-all ${selectedSymbol === s.symbol ? "bg-[var(--amber-soft)] text-[var(--amber-hover)] border border-[var(--amber-border)]" : "bg-white/5 text-[var(--text-secondary)] hover:bg-white/10 border border-transparent"}`}
+                              >
+                                {s.displayName || s.symbol}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                      {volRegFiltered.length > 0 && (
+                        <div>
+                          <h3 className="section-title mb-2">Volatility Indices</h3>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                            {volRegFiltered.map(s => (
+                              <button
+                                key={s.symbol}
+                                onClick={() => { setSelectedSymbol(s.symbol); setShowSymbolPicker(false); setSymbolSearch(""); }}
+                                className={`text-left px-3 py-2 rounded-lg text-xs font-semibold transition-all ${selectedSymbol === s.symbol ? "bg-[var(--amber-soft)] text-[var(--amber-hover)] border border-[var(--amber-border)]" : "bg-white/5 text-[var(--text-secondary)] hover:bg-white/10 border border-transparent"}`}
+                              >
+                                {s.displayName || s.symbol}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                      {vol1sFiltered.length === 0 && volRegFiltered.length === 0 && (
+                        <p className="text-sm text-[var(--text-muted)] text-center py-8">No symbols match "{symbolSearch}"</p>
+                      )}
+                    </>
+                  );
+                })()}
               </div>
             ) : (
               <div className="chart-plot h-[300px] md:h-[420px]">
@@ -445,6 +504,41 @@ export default function Dashboard() {
         {/* Right column - Trade Studio & AI Insight */}
         <div className="space-y-8">
 
+          {/* Widget Customization */}
+          {(widgets.length > 0 || true) && (
+            <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="section-title text-[10px]">Dashboard Widgets</h3>
+                <button onClick={() => setShowWidgetConfig(!showWidgetConfig)} className="text-[10px] text-[var(--cyan)] hover:text-[var(--cyan)]/80 transition-colors">
+                  {showWidgetConfig ? "Done" : "Customize"}
+                </button>
+              </div>
+              {showWidgetConfig && (
+                <div className="space-y-2">
+                  {[
+                    { key: "trades", label: "Recent Trades" },
+                    { key: "signals", label: "AI Signals" },
+                    { key: "chart", label: "Live Chart" },
+                    { key: "history", label: "Trade History" },
+                    { key: "alerts", label: "Price Alerts" },
+                  ].map((w) => (
+                    <label key={w.key} className="flex items-center gap-2 text-xs text-[var(--text-secondary)] cursor-pointer py-1">
+                      <input
+                        type="checkbox"
+                        checked={widgets.includes(w.key)}
+                        onChange={() => {
+                          setWidgets((prev) => prev.includes(w.key) ? prev.filter((k) => k !== w.key) : [...prev, w.key]);
+                        }}
+                        className="accent-[var(--cyan)]"
+                      />
+                      {w.label}
+                    </label>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Trade Studio */}
           <div className="trade-studio p-6">
             <div className="flex items-center justify-between mb-5">
@@ -470,6 +564,32 @@ export default function Dashboard() {
                   className="input"
                 />
               </div>
+              <div className="grid grid-cols-2 gap-2">
+                <div className="input-group">
+                  <label className="input-label text-[var(--red)]">Stop Loss ($)</label>
+                  <input
+                    type="number"
+                    min={0}
+                    step="0.01"
+                    value={stopLoss || ""}
+                    onChange={(e) => setStopLoss(Math.max(0, parseFloat(e.target.value) || 0))}
+                    className="input border-[var(--red)]/40"
+                    placeholder="Optional"
+                  />
+                </div>
+                <div className="input-group">
+                  <label className="input-label text-[var(--green)]">Take Profit ($)</label>
+                  <input
+                    type="number"
+                    min={0}
+                    step="0.01"
+                    value={takeProfit || ""}
+                    onChange={(e) => setTakeProfit(Math.max(0, parseFloat(e.target.value) || 0))}
+                    className="input border-[var(--green)]/40"
+                    placeholder="Optional"
+                  />
+                </div>
+              </div>
               <Button onClick={handleQuickTrade} disabled={tradeBusy} className="btn btn-primary w-full flex items-center justify-center gap-2 py-2.5">
                 {tradeBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : (contract.direction === "fall" ? <TrendingDown className="w-4 h-4" /> : <TrendingUp className="w-4 h-4" />)}
                 {tradeBusy ? "Placing..." : "Buy"}
@@ -483,6 +603,67 @@ export default function Dashboard() {
             </div>
             <div className="mt-6 pt-6 border-t border-[var(--border)]">
               <DigitStats symbol={selectedSymbol} decimalPlaces={decimalPlaces} />
+            </div>
+          </div>
+
+          {/* Price Alerts */}
+          <div className="panel">
+            <div className="panel-header flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Bell className="w-3.5 h-3.5 text-[var(--amber)]" />
+                <h3 className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-widest">Price Alerts</h3>
+              </div>
+              <button onClick={() => setAlertsOpen(!alertsOpen)} className="text-[var(--text-muted)] hover:text-[var(--amber)] transition-colors">
+                {alertsOpen ? <X className="w-3.5 h-3.5" /> : <Plus className="w-3.5 h-3.5" />}
+              </button>
+            </div>
+            {alertsOpen && (
+              <div className="p-4 border-b border-[var(--border)] space-y-3">
+                <input
+                  type="text" value={newAlertSym || selectedSymbol} onChange={(e) => setNewAlertSym(e.target.value)}
+                  placeholder="Symbol (e.g. R_100)" className="w-full bg-[var(--card)] border border-[var(--border)] rounded-lg px-3 py-2 text-xs text-white"
+                />
+                <div className="flex gap-2">
+                  <button onClick={() => setNewAlertDir("above")} className={`flex-1 text-xs font-bold py-1.5 rounded ${newAlertDir === "above" ? "bg-[var(--green)]/20 text-[var(--green)] border border-[var(--green)]/30" : "bg-[var(--card)] text-[var(--text-muted)] border border-[var(--border)]"}`}>Above</button>
+                  <button onClick={() => setNewAlertDir("below")} className={`flex-1 text-xs font-bold py-1.5 rounded ${newAlertDir === "below" ? "bg-[var(--red)]/20 text-[var(--red)] border border-[var(--red)]/30" : "bg-[var(--card)] text-[var(--text-muted)] border border-[var(--border)]"}`}>Below</button>
+                </div>
+                <input
+                  type="number" value={newAlertPrice} onChange={(e) => setNewAlertPrice(e.target.value)}
+                  placeholder="Target price" className="w-full bg-[var(--card)] border border-[var(--border)] rounded-lg px-3 py-2 text-xs text-white"
+                />
+                <Button onClick={() => {
+                  if (!newAlertPrice) return;
+                  createAlertMutation.mutate({ symbol: newAlertSym || selectedSymbol, direction: newAlertDir, targetPrice: Number(newAlertPrice) });
+                }} disabled={createAlertMutation.isPending} className="w-full text-xs font-bold bg-[var(--amber)] text-black py-2 rounded-lg">
+                  {createAlertMutation.isPending ? "Creating..." : "Create Alert"}
+                </Button>
+              </div>
+            )}
+            <div className="p-4 space-y-2">
+              {alertsQuery.isLoading ? (
+                <Loader2 className="w-4 h-4 animate-spin text-[var(--amber)]" />
+              ) : (alertsQuery.data || []).length === 0 ? (
+                <p className="text-xs text-[var(--text-muted)] italic text-center py-3">No price alerts set.</p>
+              ) : (
+                (alertsQuery.data || []).slice(0, 5).map((a: any) => (
+                  <div key={a.id} className="flex items-center justify-between py-2 border-b border-[var(--border)] last:border-0">
+                    <div>
+                      <span className="text-xs font-bold text-white">{a.symbol}</span>
+                      <span className={`text-[10px] ml-2 ${a.direction === "above" ? "text-[var(--green)]" : "text-[var(--red)]"}`}>
+                        {a.direction === "above" ? "↑" : "↓"} {a.targetPrice}
+                      </span>
+                      <span className={`text-[10px] ml-2 ${a.status === "triggered" ? "text-[var(--amber)]" : "text-[var(--text-muted)]"}`}>
+                        {a.status}
+                      </span>
+                    </div>
+                    {a.status === "active" && (
+                      <button onClick={() => disableAlertMutation.mutate({ id: a.id })} className="text-[var(--text-muted)] hover:text-[var(--red)] transition-colors">
+                        <BellOff className="w-3 h-3" />
+                      </button>
+                    )}
+                  </div>
+                ))
+              )}
             </div>
           </div>
 

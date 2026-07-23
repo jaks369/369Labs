@@ -1,5 +1,5 @@
 import { useAuth } from "@/_core/hooks/useAuth";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -48,6 +48,12 @@ import {
   BarChart3,
   Search,
   Shield,
+  Webhook,
+  BookText,
+  Coins,
+  Book,
+  Users,
+  Crown,
 } from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
@@ -56,6 +62,7 @@ import { Button } from "./ui/button";
 import AITimeline from "./AITimeline";
 import { openCommandPalette } from "./CommandPalette";
 import { useVoiceCommands } from "./useVoiceCommands";
+import GlobalSearch from "./GlobalSearch";
 
 type NavItem = { icon: React.ComponentType<{ className?: string }>; label: string; path: string };
 type NavGroup = { title: string; items: NavItem[] };
@@ -85,6 +92,7 @@ const navGroups: NavGroup[] = [
       items: [
         { icon: Bot, label: "Bots", path: "/bots" },
         { icon: Wallet, label: "Portfolio", path: "/portfolio" },
+        { icon: BarChart3, label: "Trade History", path: "/trade-history" },
         { icon: BarChart3, label: "AI Performance", path: "/ai-performance" },
         { icon: Activity, label: "Market Intel", path: "/market-intelligence" },
         { icon: Search, label: "AI Explainability", path: "/ai-explainability" },
@@ -94,6 +102,8 @@ const navGroups: NavGroup[] = [
         { icon: BookOpen, label: "Journal", path: "/journal" },
         { icon: Terminal, label: "Observability", path: "/logs" },
         { icon: Home, label: "Home", path: "/?home=1" },
+        { icon: Coins, label: "Paper Trading", path: "/paper-trading" },
+        { icon: Book, label: "Order Book", path: "/order-book" },
       ],
     },
   {
@@ -101,7 +111,11 @@ const navGroups: NavGroup[] = [
     items: [
       { icon: MessageCircle, label: "Telegram", path: "/telegram" },
       { icon: Bell, label: "Notifications", path: "/notifications" },
+      { icon: Webhook, label: "Webhooks", path: "/webhooks" },
+      { icon: BookText, label: "API Docs", path: "/api-docs" },
       { icon: Settings, label: "Settings", path: "/settings" },
+      { icon: Users, label: "Team", path: "/team" },
+      { icon: Crown, label: "Subscription", path: "/subscription" },
     ],
   },
 ];
@@ -195,6 +209,7 @@ function DashboardLayoutContent({
   const isMobile = useIsMobile();
   const [riskDismissed, setRiskDismissed] = useState(false);
   const voice = useVoiceCommands(true);
+  const [globalSearchOpen, setGlobalSearchOpen] = useState(false);
 
 
   useEffect(() => {
@@ -242,19 +257,26 @@ function DashboardLayoutContent({
           disableTransition={isResizing}
         >
           <SidebarHeader className="h-14 justify-center border-b border-[#1E2A38]">
-            <button onClick={() => setLocation("/dashboard")} className="flex items-center gap-2.5 px-3 transition-all w-full text-left cursor-pointer group">
-              <div className="w-7 h-7 bg-[var(--amber)] rounded-md flex items-center justify-center shrink-0">
-                <Activity className="w-4 h-4 text-[var(--bg)]" />
-              </div>
-              {!isCollapsed && (
-                <div className="flex flex-col">
-                  <span className="font-semibold text-sm tracking-tight text-[#E8ECF1]">
-                    369Labs
-                  </span>
-                  <span className="text-[8px] font-medium text-[#5A6878] tracking-wider uppercase">Trading Terminal</span>
+            <div className="flex items-center gap-1 px-3">
+              <button onClick={() => setLocation("/dashboard")} className="flex items-center gap-2.5 transition-all cursor-pointer group flex-1 text-left">
+                <div className="w-7 h-7 bg-[var(--amber)] rounded-md flex items-center justify-center shrink-0">
+                  <Activity className="w-4 h-4 text-[var(--bg)]" />
                 </div>
+                {!isCollapsed && (
+                  <div className="flex flex-col">
+                    <span className="font-semibold text-sm tracking-tight text-[#E8ECF1]">
+                      369Labs
+                    </span>
+                    <span className="text-[8px] font-medium text-[#5A6878] tracking-wider uppercase">Trading Terminal</span>
+                  </div>
+                )}
+              </button>
+              {!isCollapsed && (
+                <button onClick={() => setGlobalSearchOpen(true)} className="w-6 h-6 rounded-md flex items-center justify-center text-[var(--text-muted)] hover:text-white hover:bg-white/5 transition-all" title="Search (Ctrl+K)">
+                  <Search className="w-3.5 h-3.5" />
+                </button>
               )}
-            </button>
+            </div>
           </SidebarHeader>
 
           <SidebarContent className="py-2">
@@ -359,6 +381,9 @@ function DashboardLayoutContent({
               <DropdownMenuTrigger asChild>
                 <button className="flex items-center gap-2.5 rounded-md px-2 py-1.5 hover:bg-white/[0.03] transition-all duration-150 w-full text-left group-data-[collapsible=icon]:justify-center focus:outline-none cursor-pointer focus-visible:ring-2 focus-visible:ring-[var(--amber)] focus-visible:outline-none">
                   <Avatar className="h-6 w-6 border border-[#1E2A38] shrink-0">
+                    {(user as any)?.avatarUrl ? (
+                      <AvatarImage src={(user as any).avatarUrl} alt="Avatar" className="object-cover" />
+                    ) : null}
                     <AvatarFallback className="bg-[var(--amber)] text-[var(--bg)] text-[9px] font-bold">
                       {user?.name?.charAt(0).toUpperCase()}
                     </AvatarFallback>
@@ -413,6 +438,7 @@ function DashboardLayoutContent({
           {children}
         </main>
       </SidebarInset>
+      <GlobalSearch open={globalSearchOpen} onClose={() => setGlobalSearchOpen(false)} />
     </div>
   );
 }

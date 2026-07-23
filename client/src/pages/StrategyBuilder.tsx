@@ -21,7 +21,11 @@ import {
   GitCompare,
   History,
   ArrowUp,
-  ArrowDown
+  ArrowDown,
+  Download,
+  Upload,
+  FileJson,
+  LayoutTemplate
 } from "lucide-react";
 import { useLocation, useSearch } from "wouter";
 import RuleBuilder, { StrategyRule, DEFAULT_RULE, summarizeRule } from "@/components/RuleBuilder";
@@ -60,6 +64,8 @@ export function StrategyBuilderContent({ embedded = false, onClose, onSaved }: S
   const [ensembleIds, setEnsembleIds] = useState<number[]>([]);
   const [versions, setVersions] = useState<{ savedAt: string; rule: any }[]>([]);
   const [compareIdx, setCompareIdx] = useState<[number, number] | null>(null);
+  const [showTemplates, setShowTemplates] = useState(false);
+  const [importJson, setImportJson] = useState("");
 
   const saveStrategyMutation = trpc.strategies.save.useMutation();
   const duplicateMutation = trpc.strategies.duplicate.useMutation({
@@ -67,6 +73,10 @@ export function StrategyBuilderContent({ embedded = false, onClose, onSaved }: S
   });
   const critiqueMutation = trpc.ai.critique.useMutation();
   const strategiesQuery = trpc.strategies.list.useQuery();
+  const templatesQuery = trpc.strategies.templates.useQuery();
+  const importRuleMutation = trpc.strategies.importRule.useMutation({
+    onSuccess: () => { strategiesQuery.refetch(); toast("Strategy imported successfully!", "success"); },
+  });
 
   const search = useSearch();
   const editId = new URLSearchParams(search).get("edit");
@@ -183,6 +193,50 @@ export function StrategyBuilderContent({ embedded = false, onClose, onSaved }: S
     }
   };
 
+  const loadTemplate = (template: any) => {
+    setStrategyName(template.name);
+    setDescription(template.description);
+    const config = template.config;
+    if (config?.rule) {
+      setRule(config.rule as StrategyRule);
+      setBuilderMode("visual");
+    }
+    setShowTemplates(false);
+    toast(`Loaded template: ${template.name}`, "success");
+  };
+
+  const handleExport = async () => {
+    if (!editId) { toast("Save the strategy first before exporting.", "error"); return; }
+    try {
+      const res = await fetch("/api/trpc/strategies.exportRule?batch=1&input=" + encodeURIComponent(JSON.stringify({ "0": { id: Number(editId) } })));
+      const json = await res.json();
+      const data = json?.[0]?.result?.data;
+      if (!data) throw new Error("No data");
+      const blob = new Blob([data.json], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url; a.download = `${data.name.replace(/[^a-zA-Z0-9]/g, "_")}.json`; a.click();
+      URL.revokeObjectURL(url);
+      toast("Strategy exported!", "success");
+    } catch { toast("Failed to export strategy", "error"); }
+  };
+
+  const handleImport = async () => {
+    const input = document.createElement("input");
+    input.type = "file"; input.accept = ".json";
+    input.onchange = async (e: any) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+      try {
+        const text = await file.text();
+        const parsed = JSON.parse(text);
+        const name = file.name.replace(/\.json$/, "").replace(/_/g, " ");
+        await importRuleMutation.mutateAsync({ name, config: parsed });
+      } catch { toast("Invalid JSON file", "error"); }
+    };
+    input.click();
+  };
+
   const blockTypes: { type: StrategyBlock["type"]; icon: any; color: string }[] = [
     { type: "market", icon: Database, color: "text-[var(--amber)]" },
     { type: "condition", icon: Activity, color: "text-[var(--green)]" },
@@ -216,6 +270,15 @@ export function StrategyBuilderContent({ embedded = false, onClose, onSaved }: S
             </Button>
             <Button onClick={() => setShowHistory(true)} variant="ghost" className="btn btn-secondary flex items-center gap-2">
               <History className="w-4 h-4" /> History
+            </Button>
+            <Button onClick={() => setShowTemplates(true)} variant="ghost" className="btn btn-secondary flex items-center gap-2">
+              <LayoutTemplate className="w-4 h-4" /> Templates
+            </Button>
+            <Button onClick={handleExport} variant="ghost" className="btn btn-secondary flex items-center gap-2">
+              <Download className="w-4 h-4" /> Export
+            </Button>
+            <Button onClick={handleImport} variant="ghost" className="btn btn-secondary flex items-center gap-2">
+              <Upload className="w-4 h-4" /> Import
             </Button>
             <Button onClick={handleSaveAndDeploy} disabled={saveStrategyMutation.isPending} className="btn btn-primary flex items-center gap-2">
               <Play className="w-4 h-4" /> {embedded ? "Save & Add Bot" : "Deploy to Cloud"}
@@ -451,6 +514,30 @@ export function StrategyBuilderContent({ embedded = false, onClose, onSaved }: S
         </div>
       </div>
 
+      {showTemplates && (
+        <div className="fixed inset-0 z-[90] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setShowTemplates(false)}>
+          <div className="w-full max-w-2xl bg-[var(--card)] border border-[var(--border)] rounded-xl max-h-[80vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between p-4 border-b border-[var(--border)]">
+              <h3 className="text-sm font-bold text-white flex items-center gap-2"><LayoutTemplate className="w-4 h-4" /> Strategy Templates</h3>
+              <button onClick={() => setShowTemplates(false)} className="text-[var(--text-muted)] hover:text-white">✕</button>
+            </div>
+            <div className="p-4 space-y-3">
+              {templatesQuery.isLoading ? (
+                <div className="flex items-center justify-center py-8"><Loader2 className="w-5 h-5 animate-spin text-[var(--amber)]" /></div>
+              ) : (templatesQuery.data || []).length === 0 ? (
+                <p className="text-sm text-[var(--text-muted)]">No templates available.</p>
+              ) : (
+                (templatesQuery.data || []).map((t: any, i: number) => (
+                  <div key={i} className="p-4 rounded-xl bg-[var(--card)] border border-[var(--border)] hover:border-[var(--amber)]/50 transition-all cursor-pointer" onClick={() => loadTemplate(t)}>
+                    <h4 className="text-sm font-bold text-white mb-1">{t.name}</h4>
+                    <p className="text-xs text-[var(--text-secondary)]">{t.description}</p>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        </div>
+      )}
       {showHistory && (
         <div className="fixed inset-0 z-[90] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setShowHistory(false)}>
           <div className="w-full max-w-2xl bg-[var(--card)] border border-[var(--border)] rounded-xl max-h-[80vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>

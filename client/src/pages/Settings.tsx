@@ -4,7 +4,7 @@ import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
-import { Loader2, Save, Brain, Wallet, RotateCcw, AlertCircle, Sun, Moon } from "lucide-react";
+import { Loader2, Save, Brain, Wallet, RotateCcw, AlertCircle, Sun, Moon, Camera, Database, Download, Trash2 } from "lucide-react";
 import { useLocation } from "wouter";
 import { derivWS } from "@/services/derivWebSocket";
 import { pushTimeline } from "@/components/AITimeline";
@@ -37,6 +37,7 @@ export default function Settings() {
   const [memNoMartingale, setMemNoMartingale] = useState(true);
   const [memStyle, setMemStyle] = useState("");
   const [memNotes, setMemNotes] = useState("");
+  const [memDailyLoss, setMemDailyLoss] = useState("");
 
   const saveDerivTokenMutation = trpc.deriv.saveToken.useMutation();
   const saveTelegramMutation = trpc.telegram.saveSettings.useMutation();
@@ -63,6 +64,13 @@ export default function Settings() {
   const [twoFASuccess, setTwoFASuccess] = useState(false);
   const [disablePwd, setDisablePwd] = useState("");
   const [disable2FAError, setDisable2FAError] = useState("");
+
+  const updateProfileMutation = trpc.auth.updateProfile.useMutation();
+  const [profileName, setProfileName] = useState(user?.name || "");
+  const [avatarUrl, setAvatarUrl] = useState((user as any)?.avatarUrl || "");
+  const [avatarPreview, setAvatarPreview] = useState((user as any)?.avatarUrl || "");
+  const [profileMsg, setProfileMsg] = useState("");
+  const [profileError, setProfileError] = useState("");
 
   const deleteAccountMutation = trpc.auth.deleteAccount.useMutation();
   const [deleteConfirm, setDeleteConfirm] = useState(false);
@@ -114,6 +122,18 @@ export default function Settings() {
     }
   };
 
+  const handleSaveProfile = async () => {
+    setProfileMsg(""); setProfileError("");
+    try {
+      await updateProfileMutation.mutateAsync({ name: profileName || undefined, avatarUrl: avatarUrl || undefined });
+      setAvatarPreview(avatarUrl);
+      setProfileMsg("Profile updated");
+      refresh();
+    } catch (err) {
+      setProfileError(err instanceof Error ? err.message : "Failed to update profile");
+    }
+  };
+
   const handleDeleteAccount = async () => {
     setDeleteError("");
     try {
@@ -158,6 +178,7 @@ export default function Settings() {
       setMemNoMartingale(!!m.noMartingale);
       setMemStyle(m.style || "");
       setMemNotes(m.notes || "");
+      setMemDailyLoss(m.dailyLossLimit != null ? String(m.dailyLossLimit) : "");
     }
   }, [memoryQuery.data]);
 
@@ -195,6 +216,7 @@ export default function Settings() {
       noMartingale: memNoMartingale,
       style: memStyle.trim(),
       notes: memNotes.trim(),
+      dailyLossLimit: memDailyLoss ? Number(memDailyLoss) : null,
     };
     try {
       await saveMemoryMutation.mutateAsync({ memory });
@@ -268,6 +290,56 @@ export default function Settings() {
             <p className="text-xs text-[var(--red)]">Some settings failed to load. Data may be incomplete.</p>
           </div>
         )}
+
+        <div className="hud-panel mb-6">
+          <h2 className="text-lg font-bold text-[var(--amber-hover)] mb-4">PROFILE</h2>
+          <div className="space-y-4">
+            <div className="flex items-center gap-4">
+              <div className="relative">
+                {avatarPreview ? (
+                  <img src={avatarPreview} alt="Avatar" className="w-16 h-16 rounded-full object-cover border-2 border-[var(--amber-border)]" onError={() => setAvatarPreview("")} />
+                ) : (
+                  <div className="w-16 h-16 rounded-full bg-[var(--amber)]/20 border-2 border-[var(--amber-border)] flex items-center justify-center text-xl font-bold text-[var(--amber)]">
+                    {(profileName || user?.name || "T").charAt(0).toUpperCase()}
+                  </div>
+                )}
+                <Camera className="w-4 h-4 text-[var(--text-muted)] absolute -bottom-1 -right-1 bg-[var(--card)] rounded-full p-0.5 border border-[var(--border)]" />
+              </div>
+              <div className="flex-1">
+                <label className="text-xs text-[var(--amber)]/70 uppercase tracking-wider block mb-1">Avatar URL</label>
+                <Input
+                  value={avatarUrl}
+                  onChange={e => { setAvatarUrl(e.target.value); setAvatarPreview(e.target.value); }}
+                  className="border-[var(--amber-border)] text-[var(--amber)] text-sm"
+                  placeholder="https://example.com/avatar.jpg"
+                />
+                <p className="text-[10px] text-[var(--text-muted)] mt-1">Paste a URL to your profile image</p>
+              </div>
+            </div>
+            <div>
+              <label className="text-xs text-[var(--amber)]/70 uppercase tracking-wider block mb-1">Display Name</label>
+              <Input
+                value={profileName}
+                onChange={e => setProfileName(e.target.value)}
+                className="border-[var(--amber-border)] text-[var(--amber)]"
+                placeholder="Your name"
+              />
+            </div>
+            <div>
+              <label className="text-xs text-[var(--amber)]/70 uppercase tracking-wider block mb-1">Email</label>
+              <p className="text-sm text-[var(--text-secondary)]">{user?.email || "—"}</p>
+            </div>
+            {profileMsg && <p className="text-xs text-[var(--green)]">{profileMsg}</p>}
+            {profileError && <p className="text-xs text-[var(--red)]">{profileError}</p>}
+            <Button
+              onClick={handleSaveProfile}
+              disabled={updateProfileMutation.isPending}
+              className="w-full bg-[var(--amber)] text-[var(--bg)] hover:bg-[var(--amber)]/80 font-bold py-2 px-4 rounded"
+            >
+              {updateProfileMutation.isPending ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />SAVING...</> : <><Save className="w-4 h-4 mr-2" />SAVE PROFILE</>}
+            </Button>
+          </div>
+        </div>
 
         <div className="hud-panel mb-6">
           <h2 className="text-lg font-bold text-[var(--amber-hover)] mb-4">DERIV API TOKEN</h2>
@@ -459,6 +531,17 @@ export default function Settings() {
                   onChange={(e) => setMemRisk(e.target.value)}
                   className="border-[var(--amber)]/40 text-[var(--amber)]"
                 />
+              </div>
+              <div>
+                <label className="text-sm text-[var(--amber)] block mb-2">Daily Loss Limit ($)</label>
+                <Input
+                  type="number"
+                  placeholder="100"
+                  value={memDailyLoss}
+                  onChange={(e) => setMemDailyLoss(e.target.value)}
+                  className="border-[var(--red)]/40 text-[var(--red)]"
+                />
+                <p className="text-[10px] text-[var(--text-muted)] mt-1">Trades will be blocked if today&#39;s losses exceed this amount</p>
               </div>
               <div className="flex items-end">
                 <label className="flex items-center gap-2 text-sm text-[var(--amber)] cursor-pointer">
@@ -705,6 +788,33 @@ export default function Settings() {
               {sessionsQuery.data?.length === 0 && <p className="text-xs text-[var(--text-muted)] text-center py-4">No active sessions.</p>}
             </div>
           )}
+        </div>
+
+        <div className="hud-panel mb-6">
+          <h2 className="text-lg font-bold text-[var(--cyan)] mb-4 flex items-center gap-2"><Database className="w-5 h-5" /> DATA MANAGEMENT</h2>
+          <div className="space-y-4">
+            <div>
+              <p className="text-sm text-[var(--text-muted)] mb-2">Data retention controls how long your trade history, bot logs, and AI knowledge are kept.</p>
+              <div className="flex items-center gap-3">
+                <span className="text-xs text-[var(--text-secondary)]">Retain trade data for:</span>
+                <select className="bg-[var(--card)] border border-[var(--border)] rounded-lg px-3 py-1.5 text-xs text-white outline-none">
+                  <option value="30">30 days</option>
+                  <option value="90">90 days</option>
+                  <option value="180">180 days</option>
+                  <option value="365" selected>1 year</option>
+                  <option value="0">Indefinitely</option>
+                </select>
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <Button className="bg-[var(--card)] border border-[var(--border)] text-[var(--text-secondary)] hover:text-white text-xs">
+                <Download className="w-3.5 h-3.5 mr-1" /> Export All Data
+              </Button>
+              <Button className="bg-[var(--red-soft)] text-[var(--red)] border border-[var(--red)]/30 hover:bg-[var(--red)]/20 text-xs">
+                <Trash2 className="w-3.5 h-3.5 mr-1" /> Clear Cached Data
+              </Button>
+            </div>
+          </div>
         </div>
 
         <div className="hud-panel mb-6 border-[var(--red)]/30">

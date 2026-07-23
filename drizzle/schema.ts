@@ -22,6 +22,7 @@ export const users = mysqlTable("users", {
   emailVerified: boolean("emailVerified").default(false).notNull(),
   twoFASecret: text("twoFASecret"),
   twoFactorEnabled: boolean("twoFactorEnabled").default(false).notNull(),
+  avatarUrl: text("avatarUrl"),
 });
 
 export type User = typeof users.$inferSelect;
@@ -105,6 +106,19 @@ export const trades = mysqlTable("trades", {
 
 export type Trade = typeof trades.$inferSelect;
 export type InsertTrade = typeof trades.$inferInsert;
+
+// Bot execution logs: timestamped messages for each bot run
+export const botLogs = mysqlTable("botLogs", {
+  id: int("id").autoincrement().primaryKey(),
+  botRunId: int("botRunId").notNull(),
+  userId: int("userId").notNull(),
+  message: text("message").notNull(),
+  level: mysqlEnum("level", ["info", "warn", "error"]).default("info").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type BotLog = typeof botLogs.$inferSelect;
+export type InsertBotLog = typeof botLogs.$inferInsert;
 
 // Bot Runs (for tracking bot execution history)
 export const botRuns = mysqlTable("botRuns", {
@@ -273,6 +287,22 @@ export const passwordResetTokens = mysqlTable("passwordResetTokens", {
 export type PasswordResetToken = typeof passwordResetTokens.$inferSelect;
 export type InsertPasswordResetToken = typeof passwordResetTokens.$inferInsert;
 
+// Price alerts: user-defined triggers when a symbol reaches a target price
+export const priceAlerts = mysqlTable("priceAlerts", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  symbol: varchar("symbol", { length: 32 }).notNull(),
+  direction: mysqlEnum("direction", ["above", "below"]).notNull(),
+  targetPrice: decimal("targetPrice", { precision: 18, scale: 8 }).notNull(),
+  status: mysqlEnum("status", ["active", "triggered", "disabled"]).default("active").notNull(),
+  triggeredAt: timestamp("triggeredAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type PriceAlert = typeof priceAlerts.$inferSelect;
+export type InsertPriceAlert = typeof priceAlerts.$inferInsert;
+
 // Email verification tokens (used to verify email after signup)
 export const verificationTokens = mysqlTable("verificationTokens", {
   id: int("id").autoincrement().primaryKey(),
@@ -332,3 +362,17 @@ export type AiKnowledge = typeof aiKnowledge.$inferSelect;
 export type InsertAiKnowledge = typeof aiKnowledge.$inferInsert;
 
 export type AiKnowledgeResult = AiKnowledge;
+
+// Webhooks: external URL callbacks for notification events
+export const webhooks = mysqlTable("webhooks", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  url: varchar("url", { length: 512 }).notNull(),
+  events: json("events").notNull(),
+  label: varchar("label", { length: 64 }),
+  active: boolean("active").default(true).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type Webhook = typeof webhooks.$inferSelect;
+export type InsertWebhook = typeof webhooks.$inferInsert;

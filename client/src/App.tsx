@@ -39,6 +39,12 @@ import AIChatPage from "./pages/AIChat";
 import MarketIntelligencePage from "./pages/MarketIntelligence";
 import OAuthCallback from "./pages/OAuthCallback";
 import Admin from "./pages/Admin";
+import WebhooksPage from "./pages/Webhooks";
+import ApiDocs from "./pages/ApiDocs";
+import PaperTrading from "./pages/PaperTrading";
+import OrderBook from "./pages/OrderBook";
+import TeamPage from "./pages/TeamPage";
+import SubscriptionPage from "./pages/SubscriptionPage";
 
 function AppLayout({ children }: { children: React.ReactNode }) {
   return <DashboardLayout>{children}</DashboardLayout>;
@@ -113,6 +119,12 @@ function Router() {
       <Route path={"/plugins"}>
         <AppLayout><Plugins /></AppLayout>
       </Route>
+      <Route path={"/webhooks"}>
+        <AppLayout><WebhooksPage /></AppLayout>
+      </Route>
+      <Route path={"/api-docs"}>
+        <AppLayout><ApiDocs /></AppLayout>
+      </Route>
       <Route path={"/ai-performance"}>
         <AppLayout><AIPerformance /></AppLayout>
       </Route>
@@ -127,6 +139,18 @@ function Router() {
       </Route>
       <Route path={"/market-intelligence"}>
         <AppLayout><MarketIntelligencePage /></AppLayout>
+      </Route>
+      <Route path={"/paper-trading"}>
+        <AppLayout><PaperTrading /></AppLayout>
+      </Route>
+      <Route path={"/order-book"}>
+        <AppLayout><OrderBook /></AppLayout>
+      </Route>
+      <Route path={"/team"}>
+        <AppLayout><TeamPage /></AppLayout>
+      </Route>
+      <Route path={"/subscription"}>
+        <AppLayout><SubscriptionPage /></AppLayout>
       </Route>
       <Route path={"/404"} component={NotFound} />
       <Route component={NotFound} />

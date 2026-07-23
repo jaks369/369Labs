@@ -234,6 +234,36 @@ export default function Backtesting() {
                     <p className="text-2xl font-bold text-[var(--red)] mt-1">-${result.maxDrawdown.toFixed(2)}</p>
                   </div>
                 </div>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  {(() => {
+                    const wins = result.trades.filter((t: any) => t.result === "win").length;
+                    const losses = result.trades.filter((t: any) => t.result === "loss").length;
+                    const avgWin = wins > 0 ? result.trades.filter((t: any) => t.result === "win").reduce((s: number, t: any) => s + t.pnl, 0) / wins : 0;
+                    const avgLoss = losses > 0 ? result.trades.filter((t: any) => t.result === "loss").reduce((s: number, t: any) => s + Math.abs(t.pnl), 0) / losses : 0;
+                    const profitFactor = avgLoss > 0 ? avgWin / avgLoss : avgWin > 0 ? 99 : 0;
+                    const avgWinLoss = wins > 0 && losses > 0 ? (result.trades.filter((t: any) => t.result === "win").reduce((s: number, t: any) => s + t.pnl, 0) / wins) / (result.trades.filter((t: any) => t.result === "loss").reduce((s: number, t: any) => s + Math.abs(t.pnl), 0) / losses) : 0;
+                    return (
+                      <>
+                        <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4">
+                          <p className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-wider">Avg Win</p>
+                          <p className="text-2xl font-bold text-[var(--green)] mt-1">+${avgWin.toFixed(2)}</p>
+                        </div>
+                        <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4">
+                          <p className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-wider">Avg Loss</p>
+                          <p className="text-2xl font-bold text-[var(--red)] mt-1">-${avgLoss.toFixed(2)}</p>
+                        </div>
+                        <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4">
+                          <p className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-wider">Profit Factor</p>
+                          <p className={`text-2xl font-bold mt-1 ${profitFactor >= 1.5 ? "text-[var(--green)]" : profitFactor >= 1 ? "text-[var(--amber)]" : "text-[var(--red)]"}`}>{profitFactor.toFixed(2)}</p>
+                        </div>
+                        <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4">
+                          <p className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-wider">Avg Win/Loss</p>
+                          <p className={`text-2xl font-bold mt-1 ${avgWinLoss >= 1 ? "text-[var(--green)]" : "text-[var(--red)]"}`}>{avgWinLoss.toFixed(2)}</p>
+                        </div>
+                      </>
+                    );
+                  })()}
+                </div>
 
                 <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-6">
                   <h3 className="text-sm font-bold text-white mb-4">Equity Curve (cumulative P&L)</h3>
@@ -311,30 +341,48 @@ export default function Backtesting() {
                     </Button>
                   </div>
                   {sweepError && <p className="text-sm text-[var(--red)] mb-3">{sweepError}</p>}
-                  {sweepGrid && (
-                    <div className="overflow-x-auto">
-                      <table className="w-full text-left text-xs">
-                        <thead>
-                          <tr className="text-[var(--text-muted)] border-b border-[var(--border)]">
-                            <th className="pb-2 font-bold">{sweepParam}</th>
-                            <th className="pb-2 font-bold">Win Rate</th>
-                            <th className="pb-2 font-bold">Trades</th>
-                            <th className="pb-2 font-bold text-right">P&L</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-[var(--border)]">
-                          {sweepGrid.map((c) => (
-                            <tr key={c.value} className="hover:bg-white/5">
-                              <td className="py-2 font-bold text-white">{c.value}</td>
-                              <td className={`py-2 px-2 rounded font-bold ${heatColor(c.winRate)}`}>{c.winRate.toFixed(1)}%</td>
-                              <td className="py-2 text-[var(--text-secondary)]">{c.trades}</td>
-                              <td className={`py-2 text-right font-bold ${c.pnl >= 0 ? "text-[var(--green)]" : "text-[var(--red)]"}`}>{c.pnl >= 0 ? "+" : ""}${c.pnl.toFixed(2)}</td>
+                  {sweepGrid && (() => {
+                    const bestIdx = sweepGrid.reduce((best, c, i, arr) => c.pnl > arr[best].pnl ? i : best, 0);
+                    const best = sweepGrid[bestIdx];
+                    const applyBest = () => {
+                      if (sweepParam === "stake") { setStake(best.value); }
+                      else if (result) {
+                        toast(`Best ${sweepParam}=${best.value} (${best.winRate.toFixed(1)}%, $${best.pnl.toFixed(2)} P&L). Update your strategy rule manually.`, "success");
+                      }
+                    };
+                    return (
+                    <div>
+                      {best && (
+                        <div className="mb-3 p-2 rounded-lg bg-[var(--green-soft)]/20 border border-[var(--green)]/20 text-[10px] text-[var(--green)] flex items-center justify-between">
+                          <span>Best: {sweepParam}={best.value} ({best.winRate.toFixed(1)}%, ${best.pnl.toFixed(2)} P&L)</span>
+                          <button onClick={applyBest} className="px-2 py-0.5 rounded bg-[var(--green)] text-black text-[9px] font-bold">Apply</button>
+                        </div>
+                      )}
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-left text-xs">
+                          <thead>
+                            <tr className="text-[var(--text-muted)] border-b border-[var(--border)]">
+                              <th className="pb-2 font-bold">{sweepParam}</th>
+                              <th className="pb-2 font-bold">Win Rate</th>
+                              <th className="pb-2 font-bold">Trades</th>
+                              <th className="pb-2 font-bold text-right">P&L</th>
                             </tr>
-                          ))}
-                        </tbody>
-                      </table>
+                          </thead>
+                          <tbody className="divide-y divide-[var(--border)]">
+                            {sweepGrid.map((c, i) => (
+                              <tr key={c.value} className={`hover:bg-white/5 ${i === bestIdx ? "bg-[var(--green-soft)]/10" : ""}`}>
+                                <td className="py-2 font-bold text-white">{c.value}{i === bestIdx ? " ← best" : ""}</td>
+                                <td className={`py-2 px-2 rounded font-bold ${heatColor(c.winRate)}`}>{c.winRate.toFixed(1)}%</td>
+                                <td className="py-2 text-[var(--text-secondary)]">{c.trades}</td>
+                                <td className={`py-2 text-right font-bold ${c.pnl >= 0 ? "text-[var(--green)]" : "text-[var(--red)]"}`}>{c.pnl >= 0 ? "+" : ""}${c.pnl.toFixed(2)}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
                     </div>
-                  )}
+                    );
+                  })()}
                 </div>
               </>
             )}

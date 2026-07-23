@@ -362,7 +362,7 @@
     padding: 1.25rem 1.5rem;
     position: relative;
     overflow: hidden;
-    transition: border-color 200ms ease;
+    transition: border-color 200ms ease, transform 200ms var(--ease-out-expo), box-shadow 200ms ease;
   }
   .kpi-card::before {
     content: '';
@@ -377,7 +377,7 @@
   .kpi-card-cyan::before { background: var(--cyan); }
   .kpi-card-green::before { background: var(--green); }
   .kpi-card-red::before { background: var(--red); }
-  .kpi-card:hover { border-color: #2A3A4A; }
+  .kpi-card:hover { border-color: #2A3A4A; transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.3); }
 
   .kpi-label {
     font-size: 0.6875rem;
@@ -880,15 +880,38 @@
     from { opacity: 0; transform: scale(0.96); }
     to { opacity: 1; transform: scale(1); }
   }
+  @keyframes slideUpFade {
+    from { opacity: 0; transform: translateY(12px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes cardEnter {
+    from { opacity: 0; transform: translateY(8px) scale(0.98); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+  }
+  @keyframes shimmer {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+  }
 
   .animate-fadeIn { animation: fadeIn 200ms ease both; }
   .animate-slideUp { animation: slideUp 300ms ease both; }
   .animate-pulse-dot { animation: pulse-dot 1.5s ease-in-out infinite; }
   .animate-slideInRight { animation: slideInRight 200ms ease both; }
   .animate-scaleIn { animation: scaleIn 200ms ease both; }
+  .animate-slideUpFade { animation: slideUpFade 300ms var(--ease-out-expo) both; }
+  .animate-cardEnter { animation: cardEnter 350ms var(--ease-out-expo) both; }
+  .animate-cardEnter:nth-child(2) { animation-delay: 50ms; }
+  .animate-cardEnter:nth-child(3) { animation-delay: 100ms; }
+  .animate-cardEnter:nth-child(4) { animation-delay: 150ms; }
+  .animate-cardEnter:nth-child(5) { animation-delay: 200ms; }
+  .animate-shimmer { background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.03) 50%, transparent 100%); background-size: 200% 100%; animation: shimmer 2s infinite; }
 
   /* ─── Utility ───────────────────────────────────────────── */
   .transition-fast { transition: all 150ms ease; }
   .transition-normal { transition: all 200ms ease; }
   .transition-slow { transition: all 300ms ease; }
+  .hover-lift { transition: transform 200ms var(--ease-out-expo), box-shadow 200ms ease; }
+  .hover-lift:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.3); }
+  .hover-glow { transition: box-shadow 200ms ease; }
+  .hover-glow:hover { box-shadow: 0 0 16px rgba(232,162,14,0.15); }
 }

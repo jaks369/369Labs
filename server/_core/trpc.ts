@@ -10,6 +10,23 @@ const t = initTRPC.context<TrpcContext>().create({
 export const router = t.router;
 export const publicProcedure = t.procedure;
 
+const csrfCheck = t.middleware(async opts => {
+  const { ctx, next } = opts;
+  const origin = ctx.req.headers["origin"];
+  const host = ctx.req.headers["host"];
+  if (origin && host) {
+    try {
+      const originHost = new URL(origin).host;
+      if (originHost !== host) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "CSRF check failed" });
+      }
+    } catch {
+      throw new TRPCError({ code: "FORBIDDEN", message: "CSRF check failed" });
+    }
+  }
+  return next(opts);
+});
+
 const requireUser = t.middleware(async opts => {
   const { ctx, next } = opts;
 
@@ -25,7 +42,7 @@ const requireUser = t.middleware(async opts => {
   });
 });
 
-export const protectedProcedure = t.procedure.use(requireUser);
+export const protectedProcedure = t.procedure.use(csrfCheck).use(requireUser);
 
 export const adminProcedure = t.procedure.use(
   t.middleware(async opts => {

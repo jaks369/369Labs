@@ -5,7 +5,7 @@ import { registerStorageProxy } from "./storageProxy";
 import { appRouter } from "../routers";
 import { createContext } from "./context";
 import { serveStatic } from "./staticServe";
-import { getDb, pruneBadTicks, ensureSignalExpiryColumn, recomputeLastDigits, ensureUserMemoryTable, ensurePluginsTable } from "../db";
+import { getDb, pruneBadTicks, ensureSignalExpiryColumn, recomputeLastDigits, ensureUserMemoryTable, ensurePluginsTable, ensureWebhooksTable } from "../db";
 import { users } from "../../drizzle/schema";
 import { startTickCollector } from "../tickCollector";
 import { runWatch } from "../signalScanner";
@@ -51,6 +51,26 @@ export async function createApp() {
   const app = express();
   app.use(express.json({ limit: "50mb" }));
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
+
+  // Security headers
+  app.use((_req, res, next) => {
+    res.setHeader("X-Content-Type-Options", "nosniff");
+    res.setHeader("X-Frame-Options", "DENY");
+    res.setHeader("X-XSS-Protection", "0");
+    res.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
+    res.setHeader("Content-Security-Policy",
+      "default-src 'self'; " +
+      "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.deriv.com https://*.tradingview.com https://apis.google.com; " +
+      "style-src 'self' 'unsafe-inline'; " +
+      "img-src 'self' data: https:; " +
+      "connect-src 'self' https: wss:; " +
+      "font-src 'self' data:; " +
+      "frame-src https://*.deriv.com https://*.tradingview.com https://accounts.google.com; " +
+      "object-src 'none'"
+    );
+    next();
+  });
+
   registerStorageProxy(app);
   app.use("/api/auth", oauthRouter);
 
@@ -108,6 +128,7 @@ export async function createApp() {
       try { await recomputeLastDigits(); } catch (e) { console.error("[startup] recomputeLastDigits failed", e); }
       try { await ensureUserMemoryTable(); } catch (e) { console.error("[startup] ensureUserMemoryTable failed", e); }
       try { await ensurePluginsTable(); } catch (e) { console.error("[startup] ensurePluginsTable failed", e); }
+      try { await ensureWebhooksTable(); } catch (e) { console.error("[startup] ensureWebhooksTable failed", e); }
     })();
   }
 
