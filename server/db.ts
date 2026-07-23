@@ -784,6 +784,28 @@ export async function setUserMemory(userId: number, memory: Record<string, any>)
   }
 }
 
+export async function ensureUsersColumns(): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+  const pool = (db as any).session?.client;
+  if (!pool) return;
+  const cols: [string, string][] = [
+    ["passwordHash", "varchar(255) NOT NULL DEFAULT ''"],
+    ["emailVerified", "tinyint(1) NOT NULL DEFAULT 0"],
+    ["twoFASecret", "text"],
+    ["twoFactorEnabled", "tinyint(1) NOT NULL DEFAULT 0"],
+    ["avatarUrl", "text"],
+  ];
+  for (const [name, def] of cols) {
+    try {
+      await pool.execute(`ALTER TABLE users ADD COLUMN \`${name}\` ${def}`);
+      console.log(`[ensureUsersColumns] added column ${name}`);
+    } catch (e: any) {
+      if (e?.errno !== 1060) console.error(`[ensureUsersColumns] add ${name} failed`, e?.message || e);
+    }
+  }
+}
+
 export async function ensureSignalExpiryColumn(): Promise<void> {
   const db = await getDb();
   if (!db) return;
