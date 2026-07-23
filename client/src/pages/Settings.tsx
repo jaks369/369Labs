@@ -1,10 +1,10 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
-import { Loader2, Save, Brain, Wallet, RotateCcw, AlertCircle, Sun, Moon, Camera, Database, Download, Trash2, Key } from "lucide-react";
+import { Loader2, Save, Brain, Wallet, RotateCcw, AlertCircle, Sun, Moon, Camera, Database, Download, Trash2, Key, Upload } from "lucide-react";
 import { useLocation } from "wouter";
 import { derivWS } from "@/services/derivWebSocket";
 import { pushTimeline } from "@/components/AITimeline";
@@ -71,6 +71,7 @@ export default function Settings() {
   const [avatarUrl, setAvatarUrl] = useState((user as any)?.avatarUrl || "");
   const [avatarPreview, setAvatarPreview] = useState((user as any)?.avatarUrl || "");
   const [profileMsg, setProfileMsg] = useState("");
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [profileError, setProfileError] = useState("");
 
   const deleteAccountMutation = trpc.auth.deleteAccount.useMutation();
@@ -314,7 +315,19 @@ export default function Settings() {
                   className="border-[var(--amber-border)] text-[var(--amber)] text-sm"
                   placeholder="https://example.com/avatar.jpg"
                 />
-                <p className="text-[10px] text-[var(--text-muted)] mt-1">Paste a URL to your profile image</p>
+                <div className="flex items-center gap-2 mt-2">
+                  <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (!file) return;
+                    const reader = new FileReader();
+                    reader.onload = (ev) => { const url = ev.target?.result as string; setAvatarUrl(url); setAvatarPreview(url); };
+                    reader.readAsDataURL(file);
+                  }} />
+                  <button onClick={() => fileInputRef.current?.click()} className="flex items-center gap-1 text-[10px] px-2 py-1 rounded bg-[var(--card)] border border-[var(--border)] text-[var(--text-secondary)] hover:text-white">
+                    <Upload className="w-3 h-3" /> Upload File
+                  </button>
+                  <span className="text-[10px] text-[var(--text-muted)]">or paste a URL above</span>
+                </div>
               </div>
             </div>
             <div>
