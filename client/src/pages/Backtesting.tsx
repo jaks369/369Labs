@@ -2,8 +2,9 @@ import { useState } from "react";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
-import { Play, BarChart3, Loader2, CheckCircle2, XCircle, AlertCircle, Search, CandlestickChart } from "lucide-react";
+import { Play, BarChart3, Loader2, CheckCircle2, XCircle, AlertCircle, Search, CandlestickChart, GitCompare } from "lucide-react";
 import { useLocation } from "wouter";
+import { toast } from "@/components/Toast";
 import { toast } from "@/components/Toast";
 import { derivWS } from "@/services/derivWebSocket";
 import { runBacktest, BacktestResult } from "@/services/BacktestEngine";
@@ -32,6 +33,12 @@ export default function Backtesting() {
   const [sweepRunning, setSweepRunning] = useState(false);
   const [sweepError, setSweepError] = useState<string | null>(null);
   const [sweepGrid, setSweepGrid] = useState<{ value: number; winRate: number; trades: number; pnl: number }[] | null>(null);
+
+  const [compareMode, setCompareMode] = useState(false);
+  const [compareIds, setCompareIds] = useState<number[]>([]);
+  const [compareResults, setCompareResults] = useState<any[] | null>(null);
+  const [compareRunning, setCompareRunning] = useState(false);
+  const backtestCompareMutation = trpc.strategies.backtestCompare.useMutation();
 
   const strategiesQuery = trpc.strategies.list.useQuery();
   const signalsQuery = trpc.signals.list.useQuery();
@@ -325,6 +332,50 @@ export default function Backtesting() {
                       );
                     })}
                   </div>
+                </div>
+
+                <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-6">
+                  <h3 className="text-sm font-bold text-white mb-1 flex items-center gap-2"><GitCompare className="w-4 h-4 text-[var(--cyan)]" /> Strategy Comparison</h3>
+                  <p className="text-xs text-[var(--text-muted)] mb-4">Compare up to 4 strategies side-by-side on the same tick window.</p>
+                  {!compareMode ? (
+                    <Button onClick={() => setCompareMode(true)} className="bg-[var(--cyan)]/20 text-[var(--cyan)] border border-[var(--cyan)]/30 text-xs">Select Strategies</Button>
+                  ) : (
+                    <div className="space-y-3">
+                      <div className="flex flex-wrap gap-2">
+                        {(strategiesQuery.data || []).filter(s => (s.config as any)?.rule).map((s) => (
+                          <button key={s.id} onClick={() => setCompareIds((prev) => prev.includes(s.id) ? prev.filter((id) => id !== s.id) : prev.length < 4 ? [...prev, s.id] : prev)} className={`px-3 py-1.5 rounded-lg text-xs border transition-all ${compareIds.includes(s.id) ? "bg-[var(--cyan)]/20 text-[var(--cyan)] border-[var(--cyan)]/30" : "bg-[var(--card)] text-[var(--text-muted)] border-[var(--border)]"}`}>{s.name}</button>
+                        ))}
+                      </div>
+                      {compareIds.length >= 2 && (
+                        <Button onClick={async () => {
+                          setCompareRunning(true);
+                          try { const res = await backtestCompareMutation.mutateAsync({ strategyIds: compareIds }); setCompareResults(res.comparisons); } catch (e: any) { toast(e?.message || "Comparison failed", "error"); }
+                          setCompareRunning(false);
+                        }} disabled={compareRunning} className="bg-[var(--cyan)] text-black text-xs">
+                          {compareRunning ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Running...</> : <>Compare</>}
+                        </Button>
+                      )}
+                      <button onClick={() => { setCompareMode(false); setCompareIds([]); setCompareResults(null); }} className="text-xs text-[var(--text-muted)] hover:text-white ml-2">Cancel</button>
+                    </div>
+                  )}
+                  {compareResults && (
+                    <div className="mt-4 overflow-x-auto">
+                      <table className="w-full text-left text-xs">
+                        <thead><tr className="text-[var(--text-muted)] border-b border-[var(--border)]"><th className="pb-2 font-bold">Strategy</th><th className="pb-2 font-bold">Trades</th><th className="pb-2 font-bold">Win Rate</th><th className="pb-2 font-bold text-right">P&L</th><th className="pb-2 font-bold text-right">Drawdown</th></tr></thead>
+                        <tbody className="divide-y divide-[var(--border)]">
+                          {compareResults.map((r: any) => (
+                            <tr key={r.strategyId} className="hover:bg-white/5">
+                              <td className="py-2 font-bold text-white">{r.name}</td>
+                              <td className="py-2 text-[var(--text-secondary)]">{r.totalTrades ?? 0}</td>
+                              <td className={`py-2 ${(r.winRate ?? 0) >= 50 ? "text-[var(--green)]" : "text-[var(--red)]"}`}>{(r.winRate ?? 0).toFixed(1)}%</td>
+                              <td className={`py-2 text-right font-bold ${(r.totalPnl ?? 0) >= 0 ? "text-[var(--green)]" : "text-[var(--red)]"}`}>${(r.totalPnl ?? 0).toFixed(2)}</td>
+                              <td className="py-2 text-right text-[var(--red)]">-${(r.maxDrawdown ?? 0).toFixed(2)}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
                 </div>
 
                 <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-6">

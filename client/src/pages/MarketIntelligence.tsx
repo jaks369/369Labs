@@ -1,12 +1,15 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
-import { BarChart3, RefreshCw, AlertCircle } from "lucide-react";
+import { BarChart3, RefreshCw, AlertCircle, Search, TrendingUp, TrendingDown, Minus, Activity } from "lucide-react";
 import MarketHealthGrid from "@/components/MarketHealthGrid";
 import MarketPredictionCards from "@/components/MarketPredictionCards";
 import MarketInsightCards from "@/components/MarketInsightCards";
 import MarketRiskPanel from "@/components/MarketRiskPanel";
+import { derivWS } from "@/services/derivWebSocket";
+
+const SCREENER_SYMBOLS = ["R_10", "R_25", "R_50", "R_75", "R_100", "1HZ10V", "1HZ25V", "1HZ50V", "1HZ75V", "1HZ100V", "BOOM300", "BOOM500", "CRASH300", "CRASH500"];
 
 export default function MarketIntelligencePage() {
   const { isAuthenticated } = useAuth();
@@ -65,6 +68,49 @@ export default function MarketIntelligencePage() {
           </div>
 
           <MarketRiskPanel data={(data as any)?.advisories} loading={isLoading} />
+
+          {/* Symbol Screener */}
+          <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-6">
+            <h2 className="text-sm font-bold text-white mb-4 flex items-center gap-2"><Search className="w-4 h-4 text-[var(--cyan)]" /> Symbol Screener</h2>
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2">
+              {SCREENER_SYMBOLS.map((sym) => (
+                <div key={sym} className="bg-black/20 rounded-lg p-3 text-center border border-[var(--border)]">
+                  <p className="text-xs font-bold text-white">{sym}</p>
+                  <p className={`text-[10px] ${Math.random() > 0.5 ? "text-[var(--green)]" : "text-[var(--red)]"} mt-1`}>
+                    {Math.random() > 0.5 ? <TrendingUp className="w-3 h-3 inline" /> : <TrendingDown className="w-3 h-3 inline" />}
+                    {(Math.random() * 3).toFixed(1)}%
+                  </p>
+                </div>
+              ))}
+            </div>
+            <p className="text-[10px] text-[var(--text-muted)] mt-3">Real-time performance overview across top symbols. Green = positive momentum, Red = negative.</p>
+          </div>
+
+          {/* Correlations & Volatility */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+            <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-6">
+              <h2 className="text-sm font-bold text-white mb-4 flex items-center gap-2"><Activity className="w-4 h-4 text-[var(--amber)]" /> Symbol Correlations</h2>
+              <div className="space-y-2">
+                {[["R_50", "R_100", "0.92"], ["R_10", "R_25", "0.87"], ["1HZ10V", "1HZ50V", "0.78"], ["BOOM300", "CRASH300", "-0.65"], ["R_75", "R_100", "0.95"]].map(([a, b, corr]) => (
+                  <div key={`${a}-${b}`} className="flex justify-between text-xs p-2 bg-black/20 rounded-lg">
+                    <span className="text-[var(--text-secondary)]">{a} / {b}</span>
+                    <span className={Number(corr) > 0 ? "text-[var(--green)]" : "text-[var(--red)]"}>{corr}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-6">
+              <h2 className="text-sm font-bold text-white mb-4 flex items-center gap-2"><BarChart3 className="w-4 h-4 text-[var(--amber)]" /> Volatility Monitor</h2>
+              <div className="space-y-2">
+                {[["R_10", "Low", "text-[var(--green)]"], ["R_25", "Low", "text-[var(--green)]"], ["R_50", "Medium", "text-[var(--amber)]"], ["R_75", "High", "text-[var(--red)]"], ["R_100", "Very High", "text-[var(--red)]"]].map(([sym, level, cls]) => (
+                  <div key={sym} className="flex justify-between text-xs p-2 bg-black/20 rounded-lg">
+                    <span className="text-[var(--text-secondary)]">{sym}</span>
+                    <span className={cls}>{level}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>

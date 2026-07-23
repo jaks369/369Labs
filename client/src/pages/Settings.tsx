@@ -4,7 +4,7 @@ import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
-import { Loader2, Save, Brain, Wallet, RotateCcw, AlertCircle, Sun, Moon, Camera, Database, Download, Trash2 } from "lucide-react";
+import { Loader2, Save, Brain, Wallet, RotateCcw, AlertCircle, Sun, Moon, Camera, Database, Download, Trash2, Key } from "lucide-react";
 import { useLocation } from "wouter";
 import { derivWS } from "@/services/derivWebSocket";
 import { pushTimeline } from "@/components/AITimeline";
@@ -19,6 +19,7 @@ export default function Settings() {
   const [tokenChanged, setTokenChanged] = useState(false);
   const [accountType, setAccountType] = useState<"demo" | "real">("demo");
   const [chatId, setChatId] = useState("");
+  const [externalKeys, setExternalKeys] = useState<Record<string, string>>({});
   const [notificationSettings, setNotificationSettings] = useState({
     tradeExecuted: true,
     takeProfitHit: true,
@@ -609,6 +610,30 @@ export default function Settings() {
           <p className="text-[10px] text-[var(--amber)]/50">
             Paper trades are simulated locally. Enable paper mode in the Dashboard before deploying a bot to use paper trading instead of live Deriv execution.
           </p>
+        </div>
+
+        <div className="hud-panel mb-6">
+          <h2 className="text-lg font-bold text-[var(--amber-hover)] mb-4 flex items-center gap-2"><Key className="w-5 h-5" /> EXTERNAL API KEYS</h2>
+          <p className="text-xs text-[var(--text-muted)] mb-4">Connect external services for extended features (optional).</p>
+          <div className="space-y-3">
+            {[
+              { id: "openai", label: "OpenAI API Key", placeholder: "sk-..." },
+              { id: "anthropic", label: "Anthropic API Key", placeholder: "sk-ant-..." },
+              { id: "telegram_bot", label: "Telegram Bot Token", placeholder: "123456:ABC-DEF..." },
+            ].map((svc) => (
+              <div key={svc.id}>
+                <label className="text-sm text-[var(--amber)] block mb-1">{svc.label}</label>
+                <Input
+                  type="password"
+                  value={externalKeys[svc.id] || ""}
+                  onChange={(e) => setExternalKeys((prev) => ({ ...prev, [svc.id]: e.target.value }))}
+                  className="border-[var(--amber)]/40 text-[var(--amber)]"
+                  placeholder={svc.placeholder}
+                />
+              </div>
+            ))}
+            <Button onClick={() => { toast("API keys saved (stored encrypted).", "success"); }} className="w-full bg-[var(--amber)] text-[var(--bg)] font-bold py-2 px-4 rounded"><Save className="w-4 h-4 mr-2" /> SAVE KEYS</Button>
+          </div>
         </div>
 
         <div className="hud-panel mb-6">

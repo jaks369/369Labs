@@ -17,6 +17,12 @@ import {
   BellOff,
   Plus,
   X,
+  Gauge,
+  BookOpen,
+  BarChart3,
+  Bot,
+  MessageSquare,
+  Settings,
 } from "lucide-react";
 import { useLocation } from "wouter";
 import TickChart from "@/components/TickChart";
@@ -312,6 +318,38 @@ export default function Dashboard() {
             <ChevronDown className={`w-4 h-4 shrink-0 transition-transform ${showSymbolPicker ? "rotate-180" : ""}`} />
           </Button>
         </div>
+      </div>
+
+      {/* Quick Actions */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+        <button onClick={() => navigate("/bots")} className="flex items-center gap-3 p-4 rounded-xl bg-[var(--card)] border border-[var(--border)] hover:border-[var(--cyan)]/40 transition-all">
+          <Bot className="w-5 h-5 text-[var(--cyan)]" />
+          <div className="text-left">
+            <p className="text-xs font-bold text-white">Bots</p>
+            <p className="text-[10px] text-[var(--text-muted)]">Manage automations</p>
+          </div>
+        </button>
+        <button onClick={() => navigate("/backtesting")} className="flex items-center gap-3 p-4 rounded-xl bg-[var(--card)] border border-[var(--border)] hover:border-[var(--amber)]/40 transition-all">
+          <BarChart3 className="w-5 h-5 text-[var(--amber)]" />
+          <div className="text-left">
+            <p className="text-xs font-bold text-white">Backtest</p>
+            <p className="text-[10px] text-[var(--text-muted)]">Test a strategy</p>
+          </div>
+        </button>
+        <button onClick={() => navigate("/journal")} className="flex items-center gap-3 p-4 rounded-xl bg-[var(--card)] border border-[var(--border)] hover:border-[var(--green)]/40 transition-all">
+          <BookOpen className="w-5 h-5 text-[var(--green)]" />
+          <div className="text-left">
+            <p className="text-xs font-bold text-white">Journal</p>
+            <p className="text-[10px] text-[var(--text-muted)]">AI trade analysis</p>
+          </div>
+        </button>
+        <button onClick={() => navigate("/settings")} className="flex items-center gap-3 p-4 rounded-xl bg-[var(--card)] border border-[var(--border)] hover:border-[var(--amber)]/40 transition-all">
+          <Settings className="w-5 h-5 text-[var(--amber)]" />
+          <div className="text-left">
+            <p className="text-xs font-bold text-white">Settings</p>
+            <p className="text-[10px] text-[var(--text-muted)]">Configure platform</p>
+          </div>
+        </button>
       </div>
 
       {/* Token error banner */}

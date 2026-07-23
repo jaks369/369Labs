@@ -2421,15 +2421,17 @@ watch: protectedProcedure
       }),
     backtestCompare: protectedProcedure
       .input(z.object({ strategyIds: z.array(z.number()).min(2).max(4) }))
-      .mutation(async ({ input }) => {
+      .mutation(async ({ input, ctx }) => {
         const results = [];
         for (const id of input.strategyIds) {
-          const strat = await db.getStrategy(id);
+          const strat = await db.getStrategyById(id, ctx.user.id);
           if (!strat) continue;
           const rule = strat.config?.rule;
           if (!rule) continue;
-          const ticks = await db.getRecentTicks(rule.symbol || "R_50", 500);
-          if (ticks.length < 50) continue;
+          const { runBacktest } = await import("./backtest");
+          const { derivWS } = await import("../client/src/services/derivWebSocket");
+          const ticks = await derivWS.fetchTickHistory(rule.symbol || "R_50", Math.floor(Date.now() / 1000) - 7 * 86400, Math.floor(Date.now() / 1000));
+          if (!ticks || ticks.length < 50) continue;
           const res = await runBacktest(ticks, rule, Number(rule.params?.stake) || 1);
           results.push({ strategyId: id, name: strat.name, ...res });
         }
@@ -2437,14 +2439,8 @@ watch: protectedProcedure
       }),
     getContractSpecs: publicProcedure
       .input(z.object({ symbol: z.string() }))
-      .query(async ({ input }) => {
-        try {
-          const { derivWS } = await import("./deriv/derivConnection");
-          const spec = await derivWS.getContractSpecs?.(input.symbol);
-          return { spec: spec || null };
-        } catch {
-          return { spec: null };
-        }
+      .query(async () => {
+        return { spec: null, note: "Contract specs require Deriv WS integration" };
       }),
   }),
 });
