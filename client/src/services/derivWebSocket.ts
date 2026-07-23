@@ -175,6 +175,7 @@ class DerivWebSocketService {
       }));
       this._activeSymbols = symbols;
       this.symbolListeners.forEach(cb => { try { cb(symbols); } catch {} });
+      this.processPendingSubscriptions();
       return;
     }
     if (data.error) {
@@ -188,11 +189,12 @@ class DerivWebSocketService {
         this.subErrors.set(sym, msg);
         this.subscribedSymbols.delete(sym);
         if (!this.retryTimers.has(sym)) {
+          const delay = msg.toLowerCase().includes("invalid") ? 30000 : 5000;
           this.retryTimers.set(sym, setTimeout(() => {
             this.retryTimers.delete(sym);
             this.subErrors.delete(sym);
-            if (this.authorized && this.ws?.readyState === WebSocket.OPEN) this.doSubscribe(sym);
-          }, 5000));
+            if (this.ws?.readyState === WebSocket.OPEN) this.doSubscribe(sym);
+          }, delay));
         }
         this.listeners.forEach(l => { try { l.onError?.(new Error(msg), sym); } catch {} });
       } else {
@@ -280,7 +282,7 @@ class DerivWebSocketService {
     if (this.subscribedSymbols.has(symbol)) return subId;
     this.subSymbolById.set(subId, symbol);
     if (!this.ws || this.ws.readyState !== WebSocket.OPEN) { this.pendingSubscriptionSymbols.push(symbol); return subId; }
-    if (!this.authorized) { this.pendingSubscriptionSymbols.push(symbol); return subId; }
+    if (this.apiToken && !this.authorized) { this.pendingSubscriptionSymbols.push(symbol); return subId; }
     this.doSubscribe(symbol);
     return subId;
   }
