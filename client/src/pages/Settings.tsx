@@ -299,7 +299,7 @@ export default function Settings() {
             <div className="flex items-center gap-4">
               <div className="relative">
                 {avatarPreview ? (
-                  <img src={avatarPreview} alt="Avatar" className="w-16 h-16 rounded-full object-cover border-2 border-[var(--amber-border)]" onError={() => setAvatarPreview("")} />
+                  <img src={avatarPreview} alt="Avatar" loading="lazy" className="w-16 h-16 rounded-full object-cover border-2 border-[var(--amber-border)]" onError={() => setAvatarPreview("")} />
                 ) : (
                   <div className="w-16 h-16 rounded-full bg-[var(--amber)]/20 border-2 border-[var(--amber-border)] flex items-center justify-center text-xl font-bold text-[var(--amber)]">
                     {(profileName || user?.name || "T").charAt(0).toUpperCase()}
@@ -727,7 +727,7 @@ export default function Settings() {
             <div className="space-y-4">
               <p className="text-sm text-[var(--text-muted)]">Scan this QR code in your authenticator app (Google Authenticator, Authy, etc.):</p>
               <div className="flex justify-center">
-                <img src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(twoFASetup)}`} alt="2FA QR Code" className="w-36 h-36 sm:w-48 sm:h-48" />
+                <img src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(twoFASetup)}&format=webp`} alt="2FA QR Code" loading="lazy" className="w-36 h-36 sm:w-48 sm:h-48" />
               </div>
               <p className="text-xs text-[var(--text-muted)] text-center">Or enter this key manually: <span className="font-mono text-[var(--amber)]">{twoFASecret}</span></p>
               <div>

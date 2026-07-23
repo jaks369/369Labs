@@ -58,6 +58,7 @@ import {
   FileText,
   GitCommit,
   Megaphone,
+  HardDrive,
 } from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
@@ -67,6 +68,8 @@ import AITimeline from "./AITimeline";
 import { openCommandPalette } from "./CommandPalette";
 import { useVoiceCommands } from "./useVoiceCommands";
 import GlobalSearch from "./GlobalSearch";
+import { useGlobalKeyboardNav } from "@/hooks/useKeyboardNav";
+import KeyboardShortcuts from "./KeyboardShortcuts";
 
 type NavItem = { icon: React.ComponentType<{ className?: string }>; label: string; path: string };
 type NavGroup = { title: string; items: NavItem[] };
@@ -126,6 +129,7 @@ const navGroups: NavGroup[] = [
       { icon: BookOpen, label: "User Guide", path: "/user-guide" },
       { icon: GitCommit, label: "Changelog", path: "/changelog" },
       { icon: Megaphone, label: "Release Notes", path: "/release-notes" },
+      { icon: HardDrive, label: "Backup", path: "/backup" },
     ],
   },
 ];
@@ -220,7 +224,14 @@ function DashboardLayoutContent({
   const [riskDismissed, setRiskDismissed] = useState(false);
   const voice = useVoiceCommands(true);
   const [globalSearchOpen, setGlobalSearchOpen] = useState(false);
+  const [shortcutsOpen, setShortcutsOpen] = useState(false);
+  useGlobalKeyboardNav();
 
+  useEffect(() => {
+    const h = (e: KeyboardEvent) => { if (e.shiftKey && e.key === "?") { e.preventDefault(); setShortcutsOpen(o => !o); } };
+    window.addEventListener("keydown", h);
+    return () => window.removeEventListener("keydown", h);
+  }, []);
 
   useEffect(() => {
     if (isCollapsed) {
@@ -387,6 +398,14 @@ function DashboardLayoutContent({
               </div>
             )}
 
+            {!isCollapsed && (
+              <button onClick={() => setShortcutsOpen(true)} className="w-full flex items-center gap-2 rounded-md border border-[#1E2A38] bg-[#111820] px-2.5 py-1.5 text-[11px] text-[#5A6878] hover:text-[#E8ECF1] hover:border-[#2A3A4A] transition-all duration-150 group cursor-pointer">
+                <Command className="w-3.5 h-3.5 group-hover:text-[var(--amber)] transition-colors" />
+                <span className="flex-1 text-left">Keyboard Shortcuts</span>
+                <kbd className="text-[9px] text-[#5A6878] border border-[#1E2A38] rounded px-1 py-0.5">?</kbd>
+              </button>
+            )}
+
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <button className="flex items-center gap-2.5 rounded-md px-2 py-1.5 hover:bg-white/[0.03] transition-all duration-150 w-full text-left group-data-[collapsible=icon]:justify-center focus:outline-none cursor-pointer focus-visible:ring-2 focus-visible:ring-[var(--amber)] focus-visible:outline-none">
@@ -449,6 +468,7 @@ function DashboardLayoutContent({
         </main>
       </SidebarInset>
       <GlobalSearch open={globalSearchOpen} onClose={() => setGlobalSearchOpen(false)} />
+      {shortcutsOpen && <KeyboardShortcuts onClose={() => setShortcutsOpen(false)} />}
     </div>
   );
 }

@@ -843,6 +843,17 @@ export const appRouter = router({
         await db.revokeSession(input.sessionId, ctx.user.id);
         return { success: true };
       }),
+
+    backupData: protectedProcedure
+      .query(async ({ ctx }) => {
+        return await db.exportUserData(ctx.user.id);
+      }),
+
+    restoreData: protectedProcedure
+      .input(z.object({ data: z.record(z.any()) }))
+      .mutation(async ({ ctx, input }) => {
+        return await db.importUserData(ctx.user.id, input.data);
+      }),
       }),
 
   // Deriv API Token Management

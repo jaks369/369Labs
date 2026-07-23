@@ -996,3 +996,36 @@ export async function getActiveWebhooksForEvent(userId: number, event: string): 
     return [];
   }
 }
+
+export async function exportUserData(userId: number): Promise<Record<string, any>> {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const [strategies, trades, journals, workflows, bots] = await Promise.all([
+    db.execute(sql`SELECT * FROM strategies WHERE userId = ${userId}`).then(r => (r as any)[0] ?? []),
+    db.execute(sql`SELECT * FROM trades WHERE userId = ${userId}`).then(r => (r as any)[0] ?? []),
+    db.execute(sql`SELECT * FROM journals WHERE userId = ${userId}`).then(r => (r as any)[0] ?? []),
+    db.execute(sql`SELECT * FROM workflows WHERE userId = ${userId}`).then(r => (r as any)[0] ?? []),
+    db.execute(sql`SELECT * FROM bots WHERE userId = ${userId}`).then(r => (r as any)[0] ?? []),
+  ]);
+  return { strategies, trades, journals, workflows, bots, exportedAt: new Date().toISOString() };
+}
+
+export async function importUserData(userId: number, data: Record<string, any>): Promise<{ imported: number }> {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  let imported = 0;
+  for (const table of ["strategies", "trades", "journals", "workflows", "bots"] as const) {
+    const rows = data[table];
+    if (!Array.isArray(rows)) continue;
+    for (const row of rows) {
+      const { id, createdAt, updatedAt, ...rest } = row;
+      try {
+        const cols = Object.keys(rest);
+        const vals = cols.map(c => (rest as any)[c]);
+        await db.execute(sql`INSERT INTO ${sql.raw(table)} (${sql.raw(cols.join(", "))}, userId) VALUES (${sql.raw(vals.map(() => "?").join(", "))}, ${userId})`, vals);
+        imported++;
+      } catch { /* skip dupes */ }
+    }
+  }
+  return { imported };
+}

@@ -236,7 +236,7 @@ export default function Journal() {
                 <div className="grid grid-cols-3 gap-2 mt-2">
                   {screenshots.map((s, i) => (
                     <div key={i} className="relative aspect-video rounded-lg overflow-hidden border border-[var(--border)]">
-                      <img src={s} alt={`Screenshot ${i + 1}`} className="w-full h-full object-cover" />
+                      <img src={s} alt={`Screenshot ${i + 1}`} loading="lazy" className="w-full h-full object-cover" />
                     </div>
                   ))}
                 </div>

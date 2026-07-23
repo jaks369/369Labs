@@ -45,6 +45,7 @@ import ReleaseNotes from "./pages/ReleaseNotes";
 import StrategyComparison from "./pages/StrategyComparison";
 import AutoReports from "./pages/AutoReports";
 import ServerError from "./pages/ServerError";
+import BackupRestore from "./pages/BackupRestore";
 
 const LazyBacktesting = lazy(() => import("./pages/Backtesting"));
 const LazyAnalytics = lazy(() => import("./pages/Analytics"));
@@ -111,6 +112,7 @@ function Router() {
       <Route path={"/release-notes"}><AppLayout><ReleaseNotes /></AppLayout></Route>
       <Route path={"/strategy-comparison"}><AppLayout><StrategyComparison /></AppLayout></Route>
       <Route path={"/auto-reports"}><AppLayout><AutoReports /></AppLayout></Route>
+      <Route path={"/backup"}><AppLayout><BackupRestore /></AppLayout></Route>
       <Route path={"/404"} component={NotFound} />
       <Route component={NotFound} />
     </Switch>
