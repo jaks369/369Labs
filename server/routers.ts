@@ -825,7 +825,7 @@ export const appRouter = router({
         }
       }),
 
-    listSessions: protectedProcedure(async ({ ctx }) => {
+    listSessions: protectedProcedure.query(async ({ ctx }) => {
       const sessions = await db.getUserSessions(ctx.user.id);
       return sessions.filter(s => !s.revokedAt).map(s => ({
         id: s.sessionId,
