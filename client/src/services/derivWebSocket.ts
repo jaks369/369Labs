@@ -118,8 +118,13 @@ class DerivWebSocketService {
     if (!this.ws || this.ws.readyState !== WebSocket.OPEN || !this.apiToken) return;
     const reqId = this.msgId++;
     try {
-      this.ws.send(JSON.stringify({ authorize: this.apiToken, req_id: reqId }));
-      console.log("[Deriv WS] Authorization sent");
+      console.log("[Deriv WS DEBUG] apiToken length:", this.apiToken.length);
+      console.log("[Deriv WS DEBUG] apiToken first 15:", this.apiToken.substring(0, 15));
+      console.log("[Deriv WS DEBUG] apiToken last 5:", this.apiToken.substring(this.apiToken.length - 5));
+      console.log("[Deriv WS DEBUG] apiToken hex check:", this.apiToken.split('').map(c => c.charCodeAt(0).toString(16)).join('').substring(0, 40));
+      const payload = { authorize: this.apiToken, req_id: reqId };
+      console.log("[Deriv WS] Sending authorize");
+      this.ws.send(JSON.stringify(payload));
     } catch (error) { console.error("[Deriv WS] Failed to authorize:", error); }
   }
 
@@ -146,6 +151,7 @@ class DerivWebSocketService {
       if (c.is_sold) this.contractListeners.delete(c.contract_id);
     }
     if (data.msg_type === "authorize") {
+      console.log("[Deriv WS DEBUG] Raw authorize response:", JSON.stringify(data));
       if (data.error) {
         console.error("[Deriv WS] Authorization failed:", data.error.message);
         this.authorized = false;
