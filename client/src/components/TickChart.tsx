@@ -16,20 +16,7 @@ interface TickChartProps {
 export default function TickChart({ symbol, maxDataPoints = 100, decimalPlaces = 3 }: TickChartProps) {
   const [data, setData] = useState<ChartData[]>([]);
   const [window, setWindow] = useState<number>(maxDataPoints);
-  const TIMEFRAMES = [
-    { label: "Fast (25)", n: 25 },
-    { label: "Normal (50)", n: 50 },
-    { label: "Slow (100)", n: 100 },
-    { label: "Wide (250)", n: 250 },
-    { label: "Ultra (500)", n: 500 },
-  ];
-  const TIMEFRAME_LABELS: Record<number, string> = {
-    25: "Fast (25 ticks)",
-    50: "Normal (50 ticks)",
-    100: "Slow (100 ticks)",
-    250: "Wide (250 ticks)",
-    500: "Ultra (500 ticks)",
-  };
+  const TICK_WINDOWS = [25, 50, 100, 250, 500];
 
   const historyQuery = trpc.market.getHistory.useQuery({ symbol, limit: window }, { enabled: Boolean(symbol) });
   useEffect(() => {
@@ -131,15 +118,15 @@ export default function TickChart({ symbol, maxDataPoints = 100, decimalPlaces =
         <span className="text-xs font-bold text-white">{symbol}</span>
         <div className="flex items-center gap-2">
           <div className="flex items-center gap-0.5 p-0.5 bg-[var(--card)] rounded border border-[var(--border)]">
-            {TIMEFRAMES.map((tf) => (
-              <button
-                key={tf.n}
-                onClick={() => setWindow(tf.n)}
-                className={`px-2 py-0.5 rounded text-[10px] font-bold transition-colors ${window === tf.n ? "bg-[var(--amber)] text-black" : "text-[var(--text-muted)] hover:text-white"}`}
-              >
-                {tf.label}
-              </button>
-            ))}
+              {TICK_WINDOWS.map((n) => (
+                <button
+                  key={n}
+                  onClick={() => setWindow(n)}
+                  className={`px-2 py-0.5 rounded text-[10px] font-bold transition-colors ${window === n ? "bg-[var(--amber)] text-black" : "text-[var(--text-muted)] hover:text-white"}`}
+                >
+                  {n}
+                </button>
+              ))}
           </div>
           <span className={`text-lg font-bold ${priceColor === "up" ? "text-[var(--green)]" : "text-[var(--red)]"}`}>
             {currentPrice !== null ? currentPrice.toFixed(decimalPlaces) : "--"}
@@ -147,15 +134,7 @@ export default function TickChart({ symbol, maxDataPoints = 100, decimalPlaces =
         </div>
       </div>
 
-      {/* Descriptive timeframe labels */}
-      <div className="pb-2 px-3 flex items-center gap-2 text-xs text-[var(--text-muted)]">
-        <span className="uppercase tracking-wider font-medium">View:</span>
-        <span className="text-[var(--amber)] font-bold">{TIMEFRAME_LABELS[window] || "Custom"}</span>
-        <span className="text-[var(--text-muted)]">— shows last {window} tick{window === 1 ? '' : 's'}</span>
-        <span className="ml-auto text-[var(--text-muted)]/70">
-          {window <= 50 ? 'Focuses on recent market dynamics' : window <= 100 ? 'Balanced view of recent activity' : 'Broader market context for trend analysis'}
-        </span>
-      </div>
+
 
       {error ? (
         <div className="w-full h-64 flex flex-col items-center justify-center gap-3 bg-[var(--bg)] rounded border border-[var(--red)]/30 p-6">
