@@ -968,6 +968,46 @@ export async function installPlugin(userId: number, pluginId: number, enabled: b
 }
 
 // --- Webhooks ---
+export async function ensureVerificationTokensTable(): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+  try {
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS verificationTokens (
+        id int NOT NULL AUTO_INCREMENT,
+        userId int NOT NULL,
+        token varchar(96) NOT NULL,
+        expiresAt timestamp NOT NULL,
+        usedAt timestamp NULL,
+        createdAt timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (id)
+      )
+    `);
+  } catch (e: any) {
+    console.error("[ensureVerificationTokensTable] failed", e?.message || e);
+  }
+}
+
+export async function ensurePasswordResetTokensTable(): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+  try {
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS passwordResetTokens (
+        id int NOT NULL AUTO_INCREMENT,
+        userId int NOT NULL,
+        token varchar(96) NOT NULL,
+        expiresAt timestamp NOT NULL,
+        usedAt timestamp NULL,
+        createdAt timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (id)
+      )
+    `);
+  } catch (e: any) {
+    console.error("[ensurePasswordResetTokensTable] failed", e?.message || e);
+  }
+}
+
 export async function ensureWebhooksTable(): Promise<void> {
   const db = await getDb();
   if (!db) return;

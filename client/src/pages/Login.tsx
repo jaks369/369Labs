@@ -10,6 +10,7 @@ export default function Login() {
   const [mode, setMode] = useState<"login" | "signup">("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [name, setName] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [showVerifyMsg, setShowVerifyMsg] = useState(false);
@@ -63,6 +64,29 @@ export default function Login() {
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
+
+    if (mode === "signup") {
+      if (password !== confirmPassword) {
+        setError("Passwords do not match");
+        return;
+      }
+      if (password.length < 8) {
+        setError("Password must be at least 8 characters");
+        return;
+      }
+      if (!/[A-Z]/.test(password)) {
+        setError("Password must contain an uppercase letter");
+        return;
+      }
+      if (!/[a-z]/.test(password)) {
+        setError("Password must contain a lowercase letter");
+        return;
+      }
+      if (!/[0-9]/.test(password)) {
+        setError("Password must contain a number");
+        return;
+      }
+    }
 
     if (needs2FA) {
       verify2FALoginMutation.mutate({ email, token: twoFAToken });
@@ -158,6 +182,31 @@ export default function Login() {
             />
           </div>
 
+          {mode === "signup" && (
+          <div>
+            <label className="text-[10px] text-[var(--amber)]/70 uppercase tracking-wider block mb-1">
+              Confirm Password
+            </label>
+            <Input
+              type="password"
+              required
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              className="border-[var(--amber-border)] text-[var(--amber)]"
+              placeholder="Repeat password"
+            />
+          </div>
+          )}
+
+          {mode === "signup" && (
+          <div className="text-[10px] text-[var(--text-muted)] space-y-0.5">
+            <p className={password.length >= 8 ? "text-[var(--green)]" : ""}>• At least 8 characters</p>
+            <p className={/[A-Z]/.test(password) ? "text-[var(--green)]" : ""}>• One uppercase letter</p>
+            <p className={/[a-z]/.test(password) ? "text-[var(--green)]" : ""}>• One lowercase letter</p>
+            <p className={/[0-9]/.test(password) ? "text-[var(--green)]" : ""}>• One number</p>
+          </div>
+          )}
+
           {error && (
             <p className="text-xs text-[var(--red)] border border-[var(--red)]/40 bg-[var(--red)]/10 rounded px-3 py-2">
               {error}
@@ -205,6 +254,7 @@ export default function Login() {
           onClick={() => {
             setMode(mode === "login" ? "signup" : "login");
             setError(null);
+            setConfirmPassword("");
           }}
           className="mt-4 text-xs text-[var(--amber-hover)] hover:underline w-full text-center"
         >
