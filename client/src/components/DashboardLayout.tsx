@@ -78,7 +78,7 @@ const navGroups: NavGroup[] = [
   {
     title: "Home",
     items: [
-      { icon: Home, label: "Home", path: "/dashboard" },
+      { icon: Home, label: "Home", path: "/" },
     ],
   },
   {
