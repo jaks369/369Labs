@@ -197,7 +197,7 @@ export default function ThemePreview() {
       <div className="max-w-6xl mx-auto">
         <div className="flex items-center justify-between mb-8">
           <div>
-            <h1 className="text-3xl font-bold">369Labs â€” Palette Preview</h1>
+            <h1 className="text-3xl font-bold">369Labs — Palette Preview</h1>
             <p className="text-slate-400 text-sm mt-1">Pick the direction for the redesign. Chosen: <b className="text-white">{chosen ?? "none"}</b></p>
           </div>
           <button onClick={() => navigate("/dashboard")} className="text-sm text-slate-400 hover:text-white">â† Back</button>

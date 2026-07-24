@@ -132,7 +132,7 @@ export default function Bots() {
   const handleDeploy = async (strategy: { id: number; name: string; config: any }) => {
     const rule = extractRule(strategy.config);
     if (!rule) {
-      toast("This strategy was built in freeform notes mode and can't be deployed yet â€” rebuild it using the visual IF/THEN rule builder.", "error");
+      toast("This strategy was built in freeform notes mode and can't be deployed yet — rebuild it using the visual IF/THEN rule builder.", "error");
       return;
     }
     if (!paperMode && !derivTokenQuery.data?.token) {
@@ -216,7 +216,7 @@ export default function Bots() {
           updateBot(botRun.id, { backtestWinRate: res.winRate });
         })
         .catch((error) => {
-          // Backtest unavailable (e.g. invalid token) â€” badge stays hidden
+          // Backtest unavailable (e.g. invalid token) — badge stays hidden
         });
     } catch (error) {
       toast(error instanceof Error ? error.message : "Failed to deploy bot", "error");
@@ -238,7 +238,7 @@ export default function Bots() {
     bot.engine.stop();
 
     if (bot.engine.hasPendingTrade()) {
-      updateBot(bot.runId, { lastLog: "Stopping â€” waiting for open trade to settle..." });
+      updateBot(bot.runId, { lastLog: "Stopping — waiting for open trade to settle..." });
       await bot.engine.waitForOpenTradeToSettle();
     }
 
@@ -259,7 +259,7 @@ export default function Bots() {
         totalProfitLoss: finalPnl.toFixed(2),
       });
     } catch {
-      // Non-fatal â€” the bot is already stopped client-side.
+      // Non-fatal — the bot is already stopped client-side.
     }
   };
 
@@ -358,7 +358,7 @@ export default function Bots() {
                         <div>
                           <h3 className="text-sm font-bold text-white">{bot.name}</h3>
                           <p className="text-[10px] text-[var(--text-muted)] uppercase font-bold tracking-wider">
-                            {bot.symbol} â€¢ {bot.trades} trades â€¢ {bot.status}
+                            {bot.symbol} • {bot.trades} trades • {bot.status}
                           </p>
                           {bot.lastLog && <p className="text-[10px] text-[var(--text-muted)] mt-1">{bot.lastLog}</p>}
                         </div>

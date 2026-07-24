@@ -63,7 +63,7 @@ export default function AIAssistant() {
     setInput("");
     setIsTyping(true);
     setTypingLabel("Analyzing");
-    pushTimeline({ icon: "ai", text: `369AI: ${text.length > 60 ? text.slice(0, 60) + "â€¦" : text}` });
+    pushTimeline({ icon: "ai", text: `369AI: ${text.length > 60 ? text.slice(0, 60) + "…" : text}` });
     try {
       const history = nextMessages
         .slice(1)

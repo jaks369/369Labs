@@ -74,7 +74,7 @@ export default function Backtesting() {
       const endEpoch = Math.floor(new Date(endDate).getTime() / 1000);
 
       const ticks = await derivWS.fetchTickHistory(symbol, startEpoch, endEpoch);
-      if (ticks.length < 20) { throw new Error(`Only ${ticks.length} ticks returned â€” need at least 20. Try a wider date range.`); }
+      if (ticks.length < 20) { throw new Error(`Only ${ticks.length} ticks returned — need at least 20. Try a wider date range.`); }
 
       const backtestResult = await runBacktest(ticks, rule, stake);
       setResult(backtestResult);
@@ -103,7 +103,7 @@ export default function Backtesting() {
       const startEpoch = Math.floor(new Date(startDate).getTime() / 1000);
       const endEpoch = Math.floor(new Date(endDate).getTime() / 1000);
       const ticks = await derivWS.fetchTickHistory(symbol, startEpoch, endEpoch);
-      if (ticks.length < 20) throw new Error(`Only ${ticks.length} ticks returned â€” need at least 20.`);
+      if (ticks.length < 20) throw new Error(`Only ${ticks.length} ticks returned — need at least 20.`);
       const values = SWEEP_RANGES[sweepParam];
       const grid: { value: number; winRate: number; trades: number; pnl: number }[] = [];
       for (const v of values) {

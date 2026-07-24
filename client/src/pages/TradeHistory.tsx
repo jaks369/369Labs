@@ -75,7 +75,7 @@ export default function TradeHistory() {
           <div className="flex items-center justify-between mb-3">
             <div>
               <h2 className="text-lg font-bold text-[var(--cyan)]">AI TRADING JOURNAL</h2>
-              <p className="text-xs text-[var(--cyan)]/60">Automatic post-trade analysis â€” why you won, why you lost, and how to improve.</p>
+              <p className="text-xs text-[var(--cyan)]/60">Automatic post-trade analysis — why you won, why you lost, and how to improve.</p>
             </div>
             <button
               onClick={() => journalMutation.mutate({})}
@@ -182,13 +182,13 @@ export default function TradeHistory() {
                     <td className="py-3 px-4">{trade.id}</td>
                     <td className="py-3 px-4 text-xs">{new Date(trade.entryTime).toLocaleString()}</td>
                     <td className="py-3 px-4 text-xs">
-                      {trade.exitTime ? new Date(trade.exitTime).toLocaleString() : "â€”"}
+                      {trade.exitTime ? new Date(trade.exitTime).toLocaleString() : "—"}
                     </td>
                     <td className="py-3 px-4 text-right">${trade.entryPrice}</td>
-                    <td className="py-3 px-4 text-right">${trade.exitPrice || "â€”"}</td>
+                    <td className="py-3 px-4 text-right">${trade.exitPrice || "—"}</td>
                     <td className="py-3 px-4 text-right">${trade.stake}</td>
                     <td className={`py-3 px-4 text-right font-bold ${parseFloat(trade.profitLoss?.toString() || "0") >= 0 ? "text-[var(--green)]" : "text-[var(--red)]"}`}>
-                      ${trade.profitLoss || "â€”"}
+                      ${trade.profitLoss || "—"}
                     </td>
                     <td className="py-3 px-4 text-center">
                       <span className={`px-2 py-1 rounded text-xs font-bold ${

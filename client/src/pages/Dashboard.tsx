@@ -143,7 +143,7 @@ export default function Dashboard() {
         ...(stopLoss > 0 ? { stopLoss } : {}),
         ...(takeProfit > 0 ? { takeProfit } : {}),
       });
-      setTradeMsg({ kind: "ok", text: "Trade placed (contract #" + purchase.contractId + "). Tracking settlementâ€¦" });
+      setTradeMsg({ kind: "ok", text: "Trade placed (contract #" + purchase.contractId + "). Tracking settlement…" });
 
       // Persist the open trade and subscribe to its settlement so the
       // user's trade history stays accurate even after navigating away.

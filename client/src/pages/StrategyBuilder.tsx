@@ -45,7 +45,7 @@ interface StrategyBuilderContentProps {
 }
 
 const summarizeRuleSafe = (r: any): string => {
-  try { return summarizeRule(r as StrategyRule); } catch { return "â€”"; }
+  try { return summarizeRule(r as StrategyRule); } catch { return "—"; }
 };
 
 export function StrategyBuilderContent({ embedded = false, onClose, onSaved }: StrategyBuilderContentProps) {
@@ -426,7 +426,7 @@ export function StrategyBuilderContent({ embedded = false, onClose, onSaved }: S
                       {((critiqueMutation.data.findings as any[]) || []).map((f, i) => (
                         <div key={i} className="flex items-start gap-2 text-xs">
                           <span className={`px-1.5 py-0.5 rounded font-bold uppercase ${f.severity === "high" ? "bg-[var(--red)]/30 text-[var(--red)]" : f.severity === "medium" ? "bg-[var(--amber)]/30 text-[var(--amber-hover)]" : "bg-[var(--text-muted)]/30 text-[var(--text-secondary)]"}`}>{f.severity}</span>
-                          <div><b className="text-white">{f.title}</b> <span className="text-[var(--text-secondary)]">â€” {f.detail}</span></div>
+                          <div><b className="text-white">{f.title}</b> <span className="text-[var(--text-secondary)]">— {f.detail}</span></div>
                         </div>
                       ))}
                     </div>
@@ -440,7 +440,7 @@ export function StrategyBuilderContent({ embedded = false, onClose, onSaved }: S
                   </div>
                 ) : builderMode === "ensemble" ? (
                   <div className="max-w-2xl mx-auto space-y-5">
-                    <p className="text-xs text-[var(--text-muted)]">Combine 2â€“3 saved strategies into one bot. A trade fires only when the chosen number of sub-strategies agree (vote).</p>
+                    <p className="text-xs text-[var(--text-muted)]">Combine 2–3 saved strategies into one bot. A trade fires only when the chosen number of sub-strategies agree (vote).</p>
                     <div>
                       <label className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-widest">Vote rule</label>
                       <div className="flex gap-2 mt-2">

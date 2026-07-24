@@ -82,7 +82,7 @@ export default function Workflow() {
     const add = (m: string) => { setLog((l) => [...l, m]); pushTimeline({ icon: "ai", text: m }); };
     add(`â–¶ Workflow "${w.name}" started on ${sym}`);
     for (const step of w.steps) {
-      add(`â€¢ ${step.label}`);
+      add(`• ${step.label}`);
       try {
         if (step.kind === "scan" || step.kind === "watch") {
           const res: any = await mutateWithTimeout(watchMutation.mutateAsync({ symbol: sym, durationMinutes: 30 }));
@@ -161,7 +161,7 @@ export default function Workflow() {
                 className="w-full bg-[var(--cyan)] hover:bg-[var(--cyan)] text-white text-sm font-bold py-2.5 rounded-lg flex items-center justify-center gap-2"
               >
                 {running === w.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />}
-                {running === w.id ? "Runningâ€¦" : "Run Workflow"}
+                {running === w.id ? "Running…" : "Run Workflow"}
               </button>
             </div>
           ))}

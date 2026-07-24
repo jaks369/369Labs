@@ -233,7 +233,7 @@ export default function Replay() {
 
               <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-6">
                 <h2 className="text-sm font-bold text-white mb-4">Your Decisions</h2>
-                {results.length === 0 ? <p className="text-sm text-[var(--text-muted)]">No trades yet â€” replay and take a position.</p> : (
+                {results.length === 0 ? <p className="text-sm text-[var(--text-muted)]">No trades yet — replay and take a position.</p> : (
                   <div className="space-y-1.5 max-h-64 overflow-y-auto font-mono text-xs">
                     {results.map((r, i) => (
                       <div key={i} className="flex justify-between p-2 bg-black/20 rounded-lg">

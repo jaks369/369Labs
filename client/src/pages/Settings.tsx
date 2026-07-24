@@ -223,7 +223,7 @@ export default function Settings() {
     try {
       await saveMemoryMutation.mutateAsync({ memory });
       pushTimeline({ icon: "ai", text: "Updated AI memory (trader profile)" });
-      toast("Trader profile saved â€” 369AI will remember these preferences.", "success");
+      toast("Trader profile saved — 369AI will remember these preferences.", "success");
     } catch (e) {
       toast("Failed to save memory: " + (e instanceof Error ? e.message : String(e)), "error");
     }
@@ -520,7 +520,7 @@ export default function Settings() {
 
         <div className="hud-panel mb-6">
           <h2 className="text-lg font-bold text-[var(--amber-hover)] mb-4 flex items-center gap-2">
-            <Brain className="w-5 h-5" /> AI MEMORY â€” TRADER PROFILE
+            <Brain className="w-5 h-5" /> AI MEMORY — TRADER PROFILE
           </h2>
           <p className="text-xs text-[var(--amber)]/70 mb-4">
             369AI remembers these so it can auto-apply them to every strategy, backtest and trade suggestion. No need to repeat yourself.

@@ -22,7 +22,7 @@ export default function CloudBots() {
     try {
       await stopRunMutation.mutateAsync({ id, status: "stopped" });
     } catch {
-      // Non-fatal â€” refresh to reflect current state.
+      // Non-fatal — refresh to reflect current state.
       botRunsQuery.refetch();
     } finally {
       setStoppingId(null);

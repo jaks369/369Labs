@@ -167,7 +167,7 @@ export default function Login() {
             disabled={pending}
             className="w-full bg-[var(--amber)] text-[var(--bg)] hover:bg-[var(--amber)]/80"
           >
-            {pending ? "Please waitâ€¦" : mode === "login" ? "Log in" : "Create account"}
+            {pending ? "Please wait…" : mode === "login" ? "Log in" : "Create account"}
           </Button>
           <p className="text-xs text-[var(--text-muted)] mt-4 text-center"><Link to="/forgot-password" className="text-[var(--amber)] hover:underline">Forgot password?</Link></p>
 
