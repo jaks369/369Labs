@@ -1,4 +1,4 @@
-import { getDb } from "./db";
+import { getDb, saveSignal as dbSaveSignal } from "./db";
 import { getTickHistory, normalizeSymbol } from "./aitools";
 import { notifyUser } from "./_core/notification";
 
@@ -137,7 +137,7 @@ export async function runWatch(opts: ScanOptions): Promise<any[]> {
   const saved = [];
   for (const f of found) {
     try {
-      const s = await db.saveSignal({
+      const s = await dbSaveSignal({
         userId: opts.userId,
         symbol: f.symbol,
         title: f.title,

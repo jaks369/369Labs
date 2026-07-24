@@ -5,7 +5,7 @@ import { registerStorageProxy } from "./storageProxy";
 import { appRouter } from "../routers";
 import { createContext } from "./context";
 import { serveStatic } from "./staticServe";
-import { getDb, pruneBadTicks, ensureSignalExpiryColumn, recomputeLastDigits, ensureUserMemoryTable, ensurePluginsTable, ensureWebhooksTable, ensureUsersColumns, ensureSessionsTable, ensureVerificationTokensTable, ensurePasswordResetTokensTable } from "../db";
+import { getDb, pruneBadTicks, ensureSignalExpiryColumn, ensureSignalsTable, recomputeLastDigits, ensureUserMemoryTable, ensurePluginsTable, ensureWebhooksTable, ensureUsersColumns, ensureSessionsTable, ensureVerificationTokensTable, ensurePasswordResetTokensTable } from "../db";
 import { users } from "../../drizzle/schema";
 import { startTickCollector } from "../tickCollector";
 import { runWatch } from "../signalScanner";
@@ -128,6 +128,7 @@ export async function createApp() {
       try { startAlwaysOnScanner(); } catch (e) { console.error("[startup] startAlwaysOnScanner failed", e); }
       try { await ensureSessionsTable(); } catch (e) { console.error("[startup] ensureSessionsTable failed", e); }
       try { await ensureUsersColumns(); } catch (e) { console.error("[startup] ensureUsersColumns failed", e); }
+      try { await ensureSignalsTable(); } catch (e) { console.error("[startup] ensureSignalsTable failed", e); }
       try { await ensureSignalExpiryColumn(); } catch (e) { console.error("[startup] ensureSignalExpiryColumn failed", e); }
       try { await pruneBadTicks(); } catch (e) { console.error("[startup] pruneBadTicks failed", e); }
       try { await recomputeLastDigits(); } catch (e) { console.error("[startup] recomputeLastDigits failed", e); }

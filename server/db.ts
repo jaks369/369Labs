@@ -829,6 +829,43 @@ export async function ensureUsersColumns(): Promise<void> {
   }
 }
 
+export async function ensureSignalsTable(): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+  try {
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS signals (
+        id int AUTO_INCREMENT NOT NULL,
+        userId int NOT NULL,
+        symbol varchar(32) NOT NULL,
+        title varchar(255) NOT NULL,
+        description text NOT NULL,
+        rule json NOT NULL,
+        evidence json NOT NULL,
+        patternType varchar(32) NOT NULL,
+        sampleSize int NOT NULL,
+        winRate decimal(5,2) NOT NULL,
+        confidence decimal(5,2) NOT NULL,
+        discoveredAt bigint NOT NULL,
+        startEpoch bigint NOT NULL,
+        endEpoch bigint NOT NULL,
+        source varchar(16) NOT NULL DEFAULT 'watch',
+        createdAt timestamp DEFAULT now() NOT NULL,
+        CONSTRAINT signals_id PRIMARY KEY(id)
+      )
+    `);
+    console.log("[ensureSignalsTable] created signals table");
+  } catch (e: any) {
+    console.error("[ensureSignalsTable] create failed", e?.message || e);
+  }
+  try {
+    await db.execute(sql`CREATE INDEX IF NOT EXISTS signals_userId_idx ON signals (userId)`);
+  } catch { }
+  try {
+    await db.execute(sql`CREATE INDEX IF NOT EXISTS signals_symbol_idx ON signals (symbol)`);
+  } catch { }
+}
+
 export async function ensureSignalExpiryColumn(): Promise<void> {
   const db = await getDb();
   if (!db) return;
