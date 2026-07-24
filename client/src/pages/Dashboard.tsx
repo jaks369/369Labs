@@ -22,7 +22,7 @@ import {
   BarChart3,
   Bot,
   MessageSquare,
-  Settings,
+  Brain,
 } from "lucide-react";
 import { useLocation } from "wouter";
 import TickChart from "@/components/TickChart";
@@ -327,11 +327,11 @@ export default function Dashboard() {
             <p className="text-[10px] text-[var(--text-muted)]">AI trade analysis</p>
           </div>
         </button>
-        <button onClick={() => navigate("/settings")} className="flex items-center gap-3 p-4 rounded-xl bg-[var(--card)] border border-[var(--border)] hover:border-[var(--amber)]/40 transition-all">
-          <Settings className="w-5 h-5 text-[var(--amber)]" />
+        <button onClick={() => navigate("/ai-assistant")} className="flex items-center gap-3 p-4 rounded-xl bg-[var(--card)] border border-[var(--border)] hover:border-[var(--cyan)]/40 transition-all">
+          <Brain className="w-5 h-5 text-[var(--cyan)]" />
           <div className="text-left">
-            <p className="text-xs font-bold text-white">Settings</p>
-            <p className="text-[10px] text-[var(--text-muted)]">Configure platform</p>
+            <p className="text-xs font-bold text-white">AI Assistant</p>
+            <p className="text-[10px] text-[var(--text-muted)]">AI-powered trading help</p>
           </div>
         </button>
       </div>
