@@ -925,6 +925,59 @@ export async function ensureIpWhitelistTable(): Promise<void> {
   }
 }
 
+export async function ensureTradesTable(): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+  const pool = (db as any).session?.client;
+  if (!pool) return;
+  try {
+    await pool.execute(`CREATE TABLE IF NOT EXISTS trades (
+      id int AUTO_INCREMENT NOT NULL,
+      userId int NOT NULL,
+      botRunId int,
+      strategyId int,
+      entryTime timestamp NOT NULL,
+      exitTime timestamp,
+      entryPrice decimal(18,8) NOT NULL,
+      exitPrice decimal(18,8),
+      stake decimal(18,8) NOT NULL,
+      profitLoss decimal(18,8),
+      symbol varchar(32) NOT NULL DEFAULT 'R_100',
+      contractType varchar(32) DEFAULT 'CALL',
+      result varchar(16),
+      updatedAt timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+      CONSTRAINT trades_id PRIMARY KEY(id)
+    )`);
+    console.log("[ensureTradesTable] created trades table");
+  } catch (e: any) {
+    console.error("[ensureTradesTable] create failed", e?.message || e);
+  }
+}
+
+export async function ensurePriceAlertsTable(): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+  const pool = (db as any).session?.client;
+  if (!pool) return;
+  try {
+    await pool.execute(`CREATE TABLE IF NOT EXISTS priceAlerts (
+      id int AUTO_INCREMENT NOT NULL,
+      userId int NOT NULL,
+      symbol varchar(32) NOT NULL,
+      direction varchar(10) NOT NULL,
+      targetPrice decimal(18,8) NOT NULL,
+      status varchar(10) NOT NULL DEFAULT 'active',
+      triggeredAt timestamp NULL,
+      createdAt timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updatedAt timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+      CONSTRAINT priceAlerts_id PRIMARY KEY(id)
+    )`);
+    console.log("[ensurePriceAlertsTable] created priceAlerts table");
+  } catch (e: any) {
+    console.error("[ensurePriceAlertsTable] create failed", e?.message || e);
+  }
+}
+
 export async function ensureSignalExpiryColumn(): Promise<void> {
   const db = await getDb();
   if (!db) return;

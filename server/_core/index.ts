@@ -5,7 +5,7 @@ import { registerStorageProxy } from "./storageProxy";
 import { appRouter } from "../routers";
 import { createContext } from "./context";
 import { serveStatic } from "./staticServe";
-import { getDb, pruneBadTicks, ensureSignalExpiryColumn, ensureSignalsTable, ensureNotificationSettingsColumns, ensureAuditLogsTable, ensureIpWhitelistTable, recomputeLastDigits, ensureUserMemoryTable, ensurePluginsTable, ensureWebhooksTable, ensureUsersColumns, ensureSessionsTable, ensureVerificationTokensTable, ensurePasswordResetTokensTable } from "../db";
+import { getDb, pruneBadTicks, ensureSignalExpiryColumn, ensureSignalsTable, ensureNotificationSettingsColumns, ensureAuditLogsTable, ensureIpWhitelistTable, ensureTradesTable, ensurePriceAlertsTable, recomputeLastDigits, ensureUserMemoryTable, ensurePluginsTable, ensureWebhooksTable, ensureUsersColumns, ensureSessionsTable, ensureVerificationTokensTable, ensurePasswordResetTokensTable } from "../db";
 import { users } from "../../drizzle/schema";
 import { startTickCollector } from "../tickCollector";
 import { runWatch } from "../signalScanner";
@@ -133,6 +133,8 @@ export async function createApp() {
       try { await ensureNotificationSettingsColumns(); } catch (e) { console.error("[startup] ensureNotificationSettingsColumns failed", e); }
       try { await ensureAuditLogsTable(); } catch (e) { console.error("[startup] ensureAuditLogsTable failed", e); }
       try { await ensureIpWhitelistTable(); } catch (e) { console.error("[startup] ensureIpWhitelistTable failed", e); }
+      try { await ensureTradesTable(); } catch (e) { console.error("[startup] ensureTradesTable failed", e); }
+      try { await ensurePriceAlertsTable(); } catch (e) { console.error("[startup] ensurePriceAlertsTable failed", e); }
       try { await pruneBadTicks(); } catch (e) { console.error("[startup] pruneBadTicks failed", e); }
       try { await recomputeLastDigits(); } catch (e) { console.error("[startup] recomputeLastDigits failed", e); }
       try { await ensureUserMemoryTable(); } catch (e) { console.error("[startup] ensureUserMemoryTable failed", e); }
