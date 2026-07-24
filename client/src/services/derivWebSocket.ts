@@ -174,6 +174,7 @@ class DerivWebSocketService {
           this.authorized = false;
           this.notifyConnect();
           this.fetchActiveSymbols();
+          this.processPendingSubscriptions();
         }
       };
       this.ws.onmessage = (event) => {
@@ -211,9 +212,10 @@ class DerivWebSocketService {
     }
     if (data.proposal_open_contract) {
       const c = data.proposal_open_contract;
+      const isSold = c.is_sold === 1 || c.status === "sold" || c.status === "won" || c.status === "lost";
       const cb = this.contractListeners.get(c.contract_id);
-      cb?.({ contract_id: c.contract_id, is_sold: c.is_sold, profit: c.profit, buy_price: c.buy_price, sell_price: c.sell_price, status: c.status, entry_tick: c.entry_tick, exit_tick: c.exit_tick });
-      if (c.is_sold) this.contractListeners.delete(c.contract_id);
+      cb?.({ contract_id: c.contract_id, is_sold: isSold, profit: c.profit, buy_price: c.buy_price, sell_price: c.sell_price, status: c.status, entry_tick: c.entry_tick, exit_tick: c.exit_tick });
+      if (isSold) this.contractListeners.delete(c.contract_id);
     }
     if (data.msg_type === "balance") {
       this.lastBalance = data.balance;
@@ -272,6 +274,8 @@ class DerivWebSocketService {
           setTimeout(() => this.processPendingSubscriptions(), 1000);
         }
         this.listeners.forEach(l => { try { l.onError?.(new Error(msg), sym); } catch {} });
+      } else if (data.msg_type === "proposal_open_contract") {
+        console.warn("[Deriv WS] Contract subscription error:", msg);
       } else {
         this.notifyError(new Error(msg));
       }
