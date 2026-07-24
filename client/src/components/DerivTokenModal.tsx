@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { trpc } from '@/lib/trpc';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -29,7 +30,7 @@ export default function DerivTokenModal({ open, onClose }: Props) {
     catch { setStatus('error'); setMsg('Failed to forget token.'); }
   };
 
-  return (
+  return createPortal(
     <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4">
       <div className="w-full max-w-md bg-[var(--card)] border border-[var(--border)] rounded-xl">
         <div className="flex items-center justify-between p-5 border-b border-[var(--border)]">
@@ -55,6 +56,6 @@ export default function DerivTokenModal({ open, onClose }: Props) {
           </div>
         </div>
       </div>
-    </div>
+    </div>, document.body
   );
 }
