@@ -3,6 +3,7 @@ import { useLocation, Link } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { COOKIE_NAME } from '@shared/const';
 
 export default function Login() {
   const [, navigate] = useLocation();
@@ -24,7 +25,7 @@ export default function Login() {
         setError(null);
       } else {
         if (result?.sessionToken) {
-          try { sessionStorage.setItem("manus-cookie", `session=${result.sessionToken}`); } catch {}
+          try { sessionStorage.setItem("manus-cookie", `${COOKIE_NAME}=${result.sessionToken}`); } catch {}
         }
         utils.auth.me.setData(undefined, result);
         navigate("/dashboard");
@@ -42,9 +43,12 @@ export default function Login() {
   });
 
   const signupMutation = trpc.auth.signup.useMutation({
-    onSuccess: (user: any) => {
-      utils.auth.me.setData(undefined, user);
-      if (user.emailSent) {
+    onSuccess: (result: any) => {
+      if (result?.sessionToken) {
+        try { sessionStorage.setItem("manus-cookie", `${COOKIE_NAME}=${result.sessionToken}`); } catch {}
+      }
+      utils.auth.me.setData(undefined, result);
+      if (result.emailSent) {
         setError(null);
         setShowVerifyMsg(true);
       } else {

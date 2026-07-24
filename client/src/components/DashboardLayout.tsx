@@ -76,60 +76,79 @@ type NavGroup = { title: string; items: NavItem[] };
 
 const navGroups: NavGroup[] = [
   {
-    title: "Workspace",
+    title: "Home",
     items: [
-      { icon: LayoutDashboard, label: "Command Center", path: "/dashboard" },
-      { icon: Brain, label: "369AI Assistant", path: "/ai-assistant" },
+      { icon: Home, label: "Home", path: "/dashboard" },
     ],
   },
-      {
-        title: "Build",
-        items: [
-          { icon: Zap, label: "Strategy Builder", path: "/strategy-builder" },
-          { icon: FlaskConical, label: "Backtesting", path: "/backtesting" },
-          { icon: RotateCcw, label: "Replay", path: "/replay" },
-          { icon: CandlestickChart, label: "AI Signals", path: "/marketplace" },
-          { icon: Workflow, label: "Workflows", path: "/workflow" },
-          { icon: Code2, label: "AI Coding", path: "/coding" },
-          { icon: Plug, label: "Plugins", path: "/plugins" },
-        ],
-      },
-    {
-      title: "Operate",
-      items: [
-        { icon: Bot, label: "Bots", path: "/bots" },
-        { icon: Wallet, label: "Portfolio", path: "/portfolio" },
-        { icon: BarChart3, label: "Trade History", path: "/trade-history" },
-        { icon: BarChart3, label: "AI Performance", path: "/ai-performance" },
-        { icon: Activity, label: "Market Intel", path: "/market-intelligence" },
-        { icon: Search, label: "AI Explainability", path: "/ai-explainability" },
-        { icon: Bot, label: "AI Copilot", path: "/trading-copilot" },
-        { icon: MessageSquare, label: "AI Chat", path: "/ai-chat" },
-        { icon: Activity, label: "Analytics", path: "/analytics" },
-        { icon: BookOpen, label: "Journal", path: "/journal" },
-        { icon: Terminal, label: "Observability", path: "/logs" },
-        { icon: Home, label: "Home", path: "/?home=1" },
-        { icon: Coins, label: "Paper Trading", path: "/paper-trading" },
-        { icon: Book, label: "Order Book", path: "/order-book" },
-        { icon: Star, label: "Watchlist", path: "/watchlist" },
-        { icon: BarChart3, label: "Strategy Comparison", path: "/strategy-comparison" },
-        { icon: FileText, label: "Auto Reports", path: "/auto-reports" },
-      ],
-    },
+  {
+    title: "Build",
+    items: [
+      { icon: Zap, label: "Strategy Builder", path: "/strategy-builder" },
+      { icon: CandlestickChart, label: "AI Builder", path: "/marketplace" },
+      { icon: Code2, label: "AI Coding", path: "/coding" },
+      { icon: Workflow, label: "Workflows", path: "/workflow" },
+      { icon: Plug, label: "Plugins", path: "/plugins" },
+    ],
+  },
+  {
+    title: "Trade",
+    items: [
+      { icon: LayoutDashboard, label: "Trading Terminal", path: "/dashboard" },
+      { icon: Coins, label: "Paper Trading", path: "/paper-trading" },
+      { icon: Bot, label: "Bots", path: "/bots" },
+      { icon: Wallet, label: "Portfolio", path: "/portfolio" },
+      { icon: BarChart3, label: "Trade History", path: "/trade-history" },
+      { icon: Star, label: "Watchlist", path: "/watchlist" },
+      { icon: Book, label: "Order Book", path: "/order-book" },
+    ],
+  },
+  {
+    title: "Intelligence",
+    items: [
+      { icon: Activity, label: "Market Intel", path: "/market-intelligence" },
+      { icon: CandlestickChart, label: "AI Signals", path: "/marketplace" },
+      { icon: BarChart3, label: "AI Performance", path: "/ai-performance" },
+      { icon: Activity, label: "Analytics", path: "/analytics" },
+      { icon: RotateCcw, label: "Replay", path: "/replay" },
+      { icon: FlaskConical, label: "Backtesting", path: "/backtesting" },
+      { icon: BarChart3, label: "Strategy Comparison", path: "/strategy-comparison" },
+      { icon: Search, label: "AI Explainability", path: "/ai-explainability" },
+    ],
+  },
+  {
+    title: "369AI",
+    items: [
+      { icon: Brain, label: "AI Assistant", path: "/ai-assistant" },
+      { icon: MessageSquare, label: "AI Chat", path: "/ai-chat" },
+      { icon: Bot, label: "AI Copilot", path: "/trading-copilot" },
+    ],
+  },
+  {
+    title: "Journal",
+    items: [
+      { icon: BookOpen, label: "Journal", path: "/journal" },
+      { icon: FileText, label: "Auto Reports", path: "/auto-reports" },
+    ],
+  },
   {
     title: "Connect",
     items: [
       { icon: MessageCircle, label: "Telegram", path: "/telegram" },
-      { icon: Bell, label: "Notifications", path: "/notifications" },
       { icon: Webhook, label: "Webhooks", path: "/webhooks" },
-      { icon: BookText, label: "API Docs", path: "/api-docs" },
+    ],
+  },
+  {
+    title: "System",
+    items: [
       { icon: Settings, label: "Settings", path: "/settings" },
       { icon: Users, label: "Team", path: "/team" },
       { icon: Crown, label: "Subscription", path: "/subscription" },
+      { icon: HardDrive, label: "Backup", path: "/backup" },
+      { icon: BookText, label: "API Docs", path: "/api-docs" },
       { icon: BookOpen, label: "User Guide", path: "/user-guide" },
       { icon: GitCommit, label: "Changelog", path: "/changelog" },
       { icon: Megaphone, label: "Release Notes", path: "/release-notes" },
-      { icon: HardDrive, label: "Backup", path: "/backup" },
     ],
   },
 ];
@@ -302,8 +321,8 @@ function DashboardLayoutContent({
 
           <SidebarContent className="py-2">
             {navGroups.map((group) => {
-              const sectionColor = group.title === "Workspace" ? "text-[var(--cyan)]" : group.title === "Build" ? "text-[var(--amber)]" : group.title === "Operate" ? "text-[var(--cyan)]" : "text-[#5A6878]";
-              const dotColor = group.title === "Workspace" ? "accent-dot-cyan" : group.title === "Build" ? "accent-dot-amber" : group.title === "Operate" ? "accent-dot-cyan" : "accent-dot-green";
+              const sectionColor = group.title === "Build" ? "text-[var(--amber)]" : group.title === "Trade" ? "text-[var(--green)]" : group.title === "Intelligence" || group.title === "369AI" ? "text-[var(--cyan)]" : "text-[#5A6878]";
+              const dotColor = group.title === "Build" ? "accent-dot-amber" : group.title === "Trade" ? "accent-dot-green" : group.title === "Intelligence" || group.title === "369AI" ? "accent-dot-cyan" : "accent-dot-green";
               return (
               <div key={group.title} className="mb-1.5">
                 {!isCollapsed && (
@@ -373,7 +392,7 @@ function DashboardLayoutContent({
             >
               <Command className="w-3.5 h-3.5 text-[#5A6878] group-hover:text-[var(--amber)] transition-colors" />
               <span className="flex-1 text-left">Quick Command</span>
-              <kbd className="text-[9px] text-[#5A6878] border border-[#1E2A38] rounded px-1 py-0.5">ΓîÿK</kbd>
+              <kbd className="text-[9px] text-[#5A6878] border border-[#1E2A38] rounded px-1 py-0.5">⌘K</kbd>
             </button>
 
             <button
@@ -385,7 +404,7 @@ function DashboardLayoutContent({
               }`}
             >
               {voice.listening ? <Square className="w-3.5 h-3.5" /> : <Mic className="w-3.5 h-3.5 text-[#5A6878] group-hover:text-[var(--amber)] transition-colors" />}
-              <span className="flex-1 text-left">{voice.listening ? "ListeningΓÇª" : "Voice Commands"}</span>
+              <span className="flex-1 text-left">{voice.listening ? "Listening…" : "Voice Commands"}</span>
               {voice.listening && <span className="w-1.5 h-1.5 rounded-full bg-[var(--red)] animate-pulse-dot" />}
             </button>
             {voice.listening && voice.transcript && (
@@ -461,7 +480,7 @@ function DashboardLayoutContent({
               <span className="flex-1">
                 Trading involves substantial risk. 369Labs is an analysis tool, not financial advice.
               </span>
-              <button onClick={() => setRiskDismissed(true)} className="text-[#5A6878] hover:text-[#E8ECF1] transition-colors font-semibold px-2 shrink-0 text-xs cursor-pointer">Γ£ò</button>
+              <button onClick={() => setRiskDismissed(true)} className="text-[#5A6878] hover:text-[#E8ECF1] transition-colors font-semibold px-2 shrink-0 text-xs cursor-pointer">✕</button>
             </div>
           )}
           {children}
