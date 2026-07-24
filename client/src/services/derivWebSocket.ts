@@ -199,13 +199,18 @@ class DerivWebSocketService {
       return;
     }
     if (data.msg_type === "active_symbols") {
-      const symbols: DerivSymbol[] = (data.active_symbols || []).map((s: any) => ({
-        symbol: s.symbol,
-        displayName: s.display_name || s.symbol,
-        market: s.market || s.market,
-        submarket: s.submarket || "",
+      const raw = data.active_symbols || [];
+      if (!raw.length) {
+        console.warn("[Deriv WS] active_symbols empty", data);
+        return;
+      }
+      const symbols: DerivSymbol[] = raw.map((s: any) => ({
+        symbol: s.symbol || s.name || "",
+        displayName: s.display_name || s.displayName || s.symbol_description || s.symbol || "",
+        market: s.market || s.market_name || "",
+        submarket: s.submarket || s.submarket_name || "",
         decimalPlaces: (() => {
-          const pip = s.pip;
+          const pip = s.pip ?? s.pip_size;
           const countDecimals = (v: any): number => {
             const str = typeof v === "number" ? v.toString() : String(v || "");
             const parts = str.split(".");
@@ -214,7 +219,12 @@ class DerivWebSocketService {
           if (typeof pip === "number" || typeof pip === "string") return countDecimals(pip);
           return 3;
         })(),
-      }));
+      })).filter(s => s.symbol && s.displayName);
+      if (!symbols.length) {
+        console.warn("[Deriv WS] active_symbols parsed empty from", raw.slice(0, 2));
+        return;
+      }
+      console.log("[Deriv WS] active_symbols loaded:", symbols.length);
       this._activeSymbols = symbols;
       this.symbolListeners.forEach(cb => { try { cb(symbols); } catch {} });
       this.processPendingSubscriptions();

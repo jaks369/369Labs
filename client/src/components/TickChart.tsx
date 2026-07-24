@@ -118,7 +118,7 @@ export default function TickChart({ symbol, maxDataPoints = 100, decimalPlaces =
   const yMax = maxPrice + padding;
 
   const width = 800;
-  const height = 280;
+  const height = 220;
   const points = data.map((d, i) => {
     const x = data.length > 1 ? (i / (data.length - 1)) * width : 0;
     const y = yMax === yMin ? height / 2 : height - ((d.price - yMin) / (yMax - yMin)) * height;
@@ -163,7 +163,7 @@ export default function TickChart({ symbol, maxDataPoints = 100, decimalPlaces =
           <p className="text-[var(--text-muted)] text-xs text-center max-w-md">The symbol <span className="font-mono text-[var(--amber)]">{symbol}</span> may not be available on your Deriv account or may have been renamed. Try selecting a different symbol from the picker.</p>
         </div>
       ) : data.length > 1 ? (
-        <svg ref={svgRef} viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="none" className="w-full h-[280px]">
+        <svg ref={svgRef} viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="none" className="w-full h-[220px]">
            <defs>
             <linearGradient id="lineGrad" x1="0" y1="0" x2="0" y2="1">
               <stop offset="0%" stopColor="var(--amber)" stopOpacity="0.18" />

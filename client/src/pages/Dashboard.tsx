@@ -31,12 +31,9 @@ import { derivWS, DerivSymbol } from "@/services/derivWebSocket";
 import { useDerivStatus } from "@/hooks/useDerivStatus";
 import DerivTokenModal from "@/components/DerivTokenModal";
 import ContractTypeSelector, { ContractSelection } from "@/components/ContractTypeSelector";
-import { paperEngine } from "@/services/PaperEngine";
-import { STANDARD_SYMBOLS, VOLATILITY_SYMBOLS } from "@/lib/symbols";
+import { VOLATILITY_SYMBOLS } from "@/lib/symbols";
 
-const IT_SYMBOLS = STANDARD_SYMBOLS;
-
-const VOLATILITY_FALLBACK: DerivSymbol[] = VOLATILITY_SYMBOLS.filter(s => s.market === "volatility").map(s => ({ ...s, decimalPlaces: 2 }));
+const ALL_FALLBACK: DerivSymbol[] = VOLATILITY_SYMBOLS.map(s => ({ ...s, decimalPlaces: 2 }));
 
 export default function Dashboard() {
   const { user, isAuthenticated } = useAuth();
@@ -44,9 +41,8 @@ export default function Dashboard() {
   const [pnl, setPnl] = useState(0);
   const [balance, setBalance] = useState(0);
   const [balanceInfo, setBalanceInfo] = useState<{ currency: string; accountType: string } | null>(null);
-  const [paperBal, setPaperBal] = useState(() => paperEngine.getBalance());
   const [botRunning, setBotRunning] = useState(false);
-  const [selectedSymbol, setSelectedSymbol] = useState(STANDARD_SYMBOLS[0]);
+  const [selectedSymbol, setSelectedSymbol] = useState(ALL_FALLBACK[0]?.symbol || "");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [showSymbolPicker, setShowSymbolPicker] = useState(false);
   const [symbolSearch, setSymbolSearch] = useState("");
@@ -207,18 +203,17 @@ export default function Dashboard() {
     }
   }, [tokenQuery.data]);
 
-  useEffect(() => {
-    return paperEngine.onBalance(setPaperBal);
-  }, []);
-
   // Three distinct token states: none saved | saved but invalid/unauthorized | connected.
   const tokenStatus: "none" | "invalid" | "connected" =
     !tokenSaved ? "none" : tokenError || !derivWS.isAuthorized() ? "invalid" : "connected";
 
   useEffect(() => {
     const unsub = derivWS.onTokenError((msg) => setTokenError(msg));
-    return () => { /* tokenListeners is a Set; ignore */ };
-  }, []);
+    const interval = setInterval(() => {
+      if (derivWS.isAuthorized() && tokenError) setTokenError(null);
+    }, 1000);
+    return () => { clearInterval(interval); };
+  }, [tokenError]);
 
   const [symbols, setSymbols] = useState<DerivSymbol[]>([]);
   const [widgets, setWidgets] = useState<string[]>(["trades", "signals", "chart", "history", "alerts"]);
@@ -232,10 +227,11 @@ export default function Dashboard() {
     return () => {};
   }, []);
 
-  const symbolList = symbols.length > 0 ? symbols : VOLATILITY_FALLBACK;
-  const pickerSymbols = symbols.length > 0 ? symbols : VOLATILITY_FALLBACK;
+  const symbolList = symbols.length > 0 ? symbols : ALL_FALLBACK;
+  const pickerSymbols = symbols.length > 0 ? symbols : ALL_FALLBACK;
   const vol1sSymbols = pickerSymbols.filter(s => /^1HZ/i.test(s.symbol) || /\(1s\)/i.test(s.displayName));
   const volRegularSymbols = pickerSymbols.filter(s => /volatility/i.test(s.displayName) && !/\(1s\)/i.test(s.displayName) && !/^1HZ/i.test(s.symbol));
+  const boomCrashSymbols = pickerSymbols.filter(s => /boom|crash/i.test(s.market) || /boom|crash/i.test(s.displayName));
 
   const selectedDisplay = symbolList.find(s => s.symbol === selectedSymbol)?.displayName || selectedSymbol;
   const decimalPlaces = derivWS.decimalPlacesFor(selectedSymbol);
@@ -275,17 +271,7 @@ export default function Dashboard() {
               <span className="badge badge-green">connected</span>
             )}
           </div>
-          <button
-            onClick={() => navigate("/settings")}
-            className="flex items-center gap-2 px-3 py-2 rounded-lg panel-secondary hover:bg-[var(--amber-soft)] transition-colors"
-            title="Paper Trading Balance"
-          >
-            <Wallet className="w-4 h-4 text-[var(--amber-hover)]" />
-            <span className="text-sm font-bold text-white">
-              ${paperBal.toFixed(2)}
-            </span>
-            <span className="badge badge-amber">paper</span>
-          </button>
+
           <Button onClick={() => setShowTokenModal(true)} className="btn btn-primary gap-2 w-full sm:w-auto">
             <Zap className="w-4 h-4 shrink-0" /> <span className="sm:inline">Connect Deriv</span>
           </Button>
@@ -363,11 +349,12 @@ export default function Dashboard() {
                     className="input w-full text-sm"
                   />
                 </div>
-                {(() => {
-                  const q = symbolSearch.toLowerCase().trim();
-                  const filter = (s: DerivSymbol) => !q || s.symbol.toLowerCase().includes(q) || s.displayName.toLowerCase().includes(q);
-                  const vol1sFiltered = vol1sSymbols.filter(filter);
-                  const volRegFiltered = volRegularSymbols.filter(filter);
+                  {(() => {
+                    const q = symbolSearch.toLowerCase().trim();
+                    const filter = (s: DerivSymbol) => !q || s.symbol.toLowerCase().includes(q) || s.displayName.toLowerCase().includes(q);
+                    const vol1sFiltered = vol1sSymbols.filter(filter);
+                    const volRegFiltered = volRegularSymbols.filter(filter);
+                    const boomCrashFiltered = boomCrashSymbols.filter(filter);
                   return (
                     <>
                       {vol1sFiltered.length > 0 && (
@@ -402,7 +389,23 @@ export default function Dashboard() {
                           </div>
                         </div>
                       )}
-                      {vol1sFiltered.length === 0 && volRegFiltered.length === 0 && (
+                      {boomCrashFiltered.length > 0 && (
+                        <div>
+                          <h3 className="section-title mb-2">Boom & Crash Indices</h3>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                            {boomCrashFiltered.map(s => (
+                              <button
+                                key={s.symbol}
+                                onClick={() => { setSelectedSymbol(s.symbol); setShowSymbolPicker(false); setSymbolSearch(""); }}
+                                className={`text-left px-3 py-2 rounded-lg text-xs font-semibold transition-all ${selectedSymbol === s.symbol ? "bg-[var(--amber-soft)] text-[var(--amber-hover)] border border-[var(--amber-border)]" : "bg-white/5 text-[var(--text-secondary)] hover:bg-white/10 border border-transparent"}`}
+                              >
+                                {s.displayName || s.symbol}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                      {vol1sFiltered.length === 0 && volRegFiltered.length === 0 && boomCrashFiltered.length === 0 && (
                         <p className="text-sm text-[var(--text-muted)] text-center py-8">No symbols match "{symbolSearch}"</p>
                       )}
                     </>
@@ -410,7 +413,7 @@ export default function Dashboard() {
                 })()}
               </div>
             ) : (
-              <div className="chart-plot h-[300px] md:h-[420px]">
+              <div className="chart-plot min-h-[400px]">
                 {symInitDone || symbols.length > 0 ? (
                   <TickChart symbol={selectedSymbol} maxDataPoints={50} decimalPlaces={decimalPlaces} />
                 ) : (
