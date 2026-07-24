@@ -133,7 +133,12 @@ export async function authenticateRequest(req: Request): Promise<{ user: User; s
   console.log(`[auth] OK user found id=${user.id}`);
 
   // IP whitelist check
-  const whitelist = await db.getIpWhitelist(payload.userId);
+  let whitelist: any[] = [];
+  try {
+    whitelist = await db.getIpWhitelist(payload.userId);
+  } catch (e: any) {
+    console.log(`[auth] getIpWhitelist threw (table may not exist): ${e?.message || e}`);
+  }
   if (whitelist.length > 0) {
     const clientIp = req.headers["x-forwarded-for"]?.toString().split(",")[0]?.trim() || req.socket?.remoteAddress || "";
     const matched = whitelist.some(e => clientIp.startsWith(e.ip));

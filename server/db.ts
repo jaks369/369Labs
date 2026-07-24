@@ -905,6 +905,26 @@ export async function ensureAuditLogsTable(): Promise<void> {
   }
 }
 
+export async function ensureIpWhitelistTable(): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+  const pool = (db as any).session?.client;
+  if (!pool) return;
+  try {
+    await pool.execute(`CREATE TABLE IF NOT EXISTS ipWhitelist (
+      id int AUTO_INCREMENT NOT NULL,
+      userId int NOT NULL,
+      ip varchar(45) NOT NULL,
+      label text,
+      createdAt timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      CONSTRAINT ipWhitelist_id PRIMARY KEY(id)
+    )`);
+    console.log("[ensureIpWhitelistTable] created ipWhitelist table");
+  } catch (e: any) {
+    console.error("[ensureIpWhitelistTable] create failed", e?.message || e);
+  }
+}
+
 export async function ensureSignalExpiryColumn(): Promise<void> {
   const db = await getDb();
   if (!db) return;
