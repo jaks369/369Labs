@@ -517,7 +517,7 @@ export const appRouter = router({
           html: buildVerificationEmail(verifyUrl),
         }).catch(() => {});
 
-        return { ...sanitizeUser(user), emailSent: !!ENV.resendApiKey };
+        return { ...sanitizeUser(user), sessionToken, emailSent: !!ENV.resendApiKey };
       }),
 
     login: publicProcedure
@@ -549,7 +549,7 @@ export const appRouter = router({
         const cookieOptions = getSessionCookieOptions(ctx.req);
         ctx.res.cookie(COOKIE_NAME, sessionToken, { ...cookieOptions, maxAge: SESSION_MS });
 
-        return sanitizeUser(user);
+        return { ...sanitizeUser(user), sessionToken };
       }),
 
     verify2FALogin: publicProcedure

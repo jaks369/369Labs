@@ -23,6 +23,9 @@ export default function Login() {
         setNeeds2FA(true);
         setError(null);
       } else {
+        if (result?.sessionToken) {
+          try { sessionStorage.setItem("manus-cookie", `session=${result.sessionToken}`); } catch {}
+        }
         utils.auth.me.setData(undefined, result);
         navigate("/dashboard");
       }
