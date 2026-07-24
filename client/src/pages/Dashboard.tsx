@@ -219,11 +219,9 @@ export default function Dashboard() {
   const [symbols, setSymbols] = useState<DerivSymbol[]>([]);
   const [widgets, setWidgets] = useState<string[]>(["trades", "signals", "chart", "history", "alerts"]);
   const [showWidgetConfig, setShowWidgetConfig] = useState(false);
-  const [symInitDone, setSymInitDone] = useState(false);
   useEffect(() => {
     const unsub = derivWS.onSymbols((syms) => {
       setSymbols(syms);
-      if (syms.length > 0) setSymInitDone(true);
     });
     return () => {};
   }, []);
@@ -421,13 +419,7 @@ export default function Dashboard() {
               </div>
             ) : (
               <div className="chart-plot min-h-[400px]">
-                {symInitDone || symbols.length > 0 ? (
-                  <TickChart symbol={selectedSymbol} maxDataPoints={50} decimalPlaces={decimalPlaces} />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center">
-                    <p className="text-[var(--text-muted)] text-sm">Loading market data...</p>
-                  </div>
-                )}
+                <TickChart symbol={selectedSymbol} maxDataPoints={50} decimalPlaces={decimalPlaces} />
               </div>
             )}
           </div>
