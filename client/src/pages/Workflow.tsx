@@ -80,7 +80,7 @@ export default function Workflow() {
     setRunning(w.id);
     setLog([]);
     const add = (m: string) => { setLog((l) => [...l, m]); pushTimeline({ icon: "ai", text: m }); };
-    add(`â–¶ Workflow "${w.name}" started on ${sym}`);
+    add(`▶ Workflow "${w.name}" started on ${sym}`);
     for (const step of w.steps) {
       add(`• ${step.label}`);
       try {
@@ -103,10 +103,10 @@ export default function Workflow() {
           add(`  ↳ Draft the bot from the latest signal in /strategy-builder, then deploy from /bots.`);
         }
       } catch (e: any) {
-        add(`  â†³ Step skipped: ${e?.message || "action unavailable"}`);
+        add(`  ↳ Step skipped: ${e?.message || "action unavailable"}`);
       }
     }
-    add(`âœ“ Workflow complete. Review results in AI Signals / Bots.`);
+    add(`✓ Workflow complete. Review results in AI Signals / Bots.`);
     setRunning(null);
   };
 
@@ -119,7 +119,7 @@ export default function Workflow() {
           <h1 className="text-3xl font-bold text-white flex items-center gap-3">
             <WorkflowIcon className="w-7 h-7 text-[var(--cyan)]" /> Workflow Automation
           </h1>
-          <p className="text-[var(--text-secondary)] text-sm mt-1">Chain agent steps into repeatable automation. Runs the existing scan â†’ backtest â†’ risk â†’ notify pipeline.</p>
+          <p className="text-[var(--text-secondary)] text-sm mt-1">Chain agent steps into repeatable automation. Runs the existing scan → backtest → risk → notify pipeline.</p>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -172,7 +172,7 @@ export default function Workflow() {
             <h2 className="text-sm font-bold text-white mb-3 flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-[var(--green)]" /> Run Log</h2>
             <div className="space-y-1 font-mono text-xs">
               {log.map((l, i) => (
-                <div key={i} className={l.startsWith("âœ“") ? "text-[var(--green)]" : l.startsWith("â–¶") ? "text-[var(--cyan)]" : "text-[var(--text-secondary)]"}>{l}</div>
+                <div key={i} className={l.startsWith("✓") ? "text-[var(--green)]" : l.startsWith("▶") ? "text-[var(--cyan)]" : "text-[var(--text-secondary)]"}>{l}</div>
               ))}
             </div>
           </div>

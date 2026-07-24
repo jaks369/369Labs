@@ -250,7 +250,7 @@ export default function Bots() {
 
     setRunningBots((prev) => prev.filter((b) => b.runId !== bot.runId));
     pushTimeline({ icon: "bot", text: `Bot stopped: ${bot.name} Â· ${finalTrades} trades Â· P&L ${finalPnl >= 0 ? "+" : ""}$${finalPnl.toFixed(2)}` });
-    alertTg(`â¹ï¸ Bot stopped: ${bot.name} Â· ${finalTrades} trades Â· P&L ${finalPnl >= 0 ? "+" : ""}$${finalPnl.toFixed(2)}`);
+    alertTg(`⏹️ Bot stopped: ${bot.name} Â· ${finalTrades} trades Â· P&L ${finalPnl >= 0 ? "+" : ""}$${finalPnl.toFixed(2)}`);
     try {
       await stopRunMutation.mutateAsync({
         id: bot.runId,

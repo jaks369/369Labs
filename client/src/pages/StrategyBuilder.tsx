@@ -543,7 +543,7 @@ export function StrategyBuilderContent({ embedded = false, onClose, onSaved }: S
           <div className="w-full max-w-2xl bg-[var(--card)] border border-[var(--border)] rounded-xl max-h-[80vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between p-4 border-b border-[var(--border)]">
               <h3 className="text-sm font-bold text-white flex items-center gap-2"><History className="w-4 h-4" /> Version History</h3>
-              <button onClick={() => setShowHistory(false)} className="text-[var(--text-muted)] hover:text-white">âœ•</button>
+              <button onClick={() => setShowHistory(false)} className="text-[var(--text-muted)] hover:text-white">✕</button>
             </div>
             <div className="p-4 space-y-2">
               {(() => {
@@ -579,7 +579,7 @@ export function StrategyBuilderContent({ embedded = false, onClose, onSaved }: S
                     </div>
                     {diffLines.length > 0 && (
                       <div className="mt-3 p-3 bg-black/40 rounded-lg font-mono text-[11px] overflow-x-auto">
-                        <p className="text-[var(--text-muted)] mb-2">Diff: v{(diffA ?? 0) + 1} â†’ v{(diffB ?? 0) + 1}</p>
+                        <p className="text-[var(--text-muted)] mb-2">Diff: v{(diffA ?? 0) + 1} → v{(diffB ?? 0) + 1}</p>
                         {diffLines.map((l, i) => (
                           <div key={i} className={l.kind === "add" ? "text-[var(--green)]" : l.kind === "del" ? "text-[var(--red)]" : "text-[var(--text-muted)]"}>
                             {l.kind === "add" ? "+ " : l.kind === "del" ? "- " : "  "}{l.text}

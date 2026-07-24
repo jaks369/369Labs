@@ -200,7 +200,7 @@ export default function ThemePreview() {
             <h1 className="text-3xl font-bold">369Labs — Palette Preview</h1>
             <p className="text-slate-400 text-sm mt-1">Pick the direction for the redesign. Chosen: <b className="text-white">{chosen ?? "none"}</b></p>
           </div>
-          <button onClick={() => navigate("/dashboard")} className="text-sm text-slate-400 hover:text-white">â† Back</button>
+          <button onClick={() => navigate("/dashboard")} className="text-sm text-slate-400 hover:text-white">← Back</button>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -216,7 +216,7 @@ export default function ThemePreview() {
                   className="text-xs px-3 py-1.5 rounded-lg font-bold border"
                   style={{ borderColor: chosen === p.name ? p.accent : "#232A36", color: chosen === p.name ? p.accent : "#8B95A7", background: chosen === p.name ? "rgba(255,255,255,0.06)" : "transparent" }}
                 >
-                  {chosen === p.name ? "âœ“ Selected" : "Select"}
+                  {chosen === p.name ? "✓ Selected" : "Select"}
                 </button>
               </div>
               {render(p)}

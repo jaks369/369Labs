@@ -98,8 +98,8 @@ export default function AIAssistant() {
       setMessages(prev => [...prev, {
         role: "ai",
         content: isProviderError
-          ? `âš ï¸ AI provider error: ${errorMessage}\n\nTap "Retry" below to try again.`
-          : `âš ï¸ Error: ${errorMessage}`
+          ? `⚠️ AI provider error: ${errorMessage}\n\nTap "Retry" below to try again.`
+          : `⚠️ Error: ${errorMessage}`
       }]);
       // Store the failed attempt for retry
       setInput(failedMsg);
