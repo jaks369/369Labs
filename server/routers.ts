@@ -1285,7 +1285,7 @@ save: protectedProcedure
               entryTime: new Date(row.entrytime || row.entry_time || Date.now()),
               exitTime: row.exittime || row.exit_time ? new Date(row.exittime || row.exit_time) : undefined,
               contractType: row.contracttype || row.contract_type || "",
-              contractId: row.contractid || row.contract_id ? parseInt(row.contractid || row.contract_id) : undefined,
+              contractId: row.contractid || row.contract_id || undefined,
             });
             imported++;
           } catch { /* skip invalid rows */ }

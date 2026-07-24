@@ -56,6 +56,20 @@ class DerivConnection {
     this.apiToken = apiToken;
   }
 
+  private friendlyError(msg: string): string {
+    const lower = msg.toLowerCase();
+    if (lower.includes("invalidtoken") || lower.includes("invalid token") || lower.includes("401")) {
+      return "Your Deriv API token is invalid or has expired. Generate a new token at app.deriv.com/account/api-token and update it in Settings.";
+    }
+    if (lower.includes("403") || lower.includes("forbidden") || lower.includes("permission")) {
+      return "This API token lacks required permissions. Create a token with 'Trade' and 'Read' scopes.";
+    }
+    if (lower.includes("no trading accounts") || lower.includes("no accounts")) {
+      return "No Deriv trading accounts found. Open a demo account at app.deriv.com first.";
+    }
+    return msg;
+  }
+
   private async fetchOtpUrl(): Promise<{ url: string; accountType: string }> {
     const accountsRes = await fetch(`${DERIV_API_BASE}/trading/v1/options/accounts`, {
       headers: {
@@ -63,10 +77,13 @@ class DerivConnection {
         "Deriv-App-ID": DERIV_APP_ID,
       },
     });
-    if (!accountsRes.ok) throw new Error(`Accounts API: ${accountsRes.status}`);
+    if (!accountsRes.ok) {
+      const body = await accountsRes.text().catch(() => "");
+      throw new Error(this.friendlyError(body || `Status ${accountsRes.status}`));
+    }
     const accountsJson = await accountsRes.json();
     const accounts: any[] = accountsJson.data || [];
-    if (!accounts.length) throw new Error("No trading accounts found");
+    if (!accounts.length) throw new Error(this.friendlyError("No trading accounts found"));
     const accountId = accounts[0].account_id;
     const otpRes = await fetch(`${DERIV_API_BASE}/trading/v1/options/accounts/${accountId}/otp`, {
       method: "POST",
@@ -75,10 +92,13 @@ class DerivConnection {
         "Deriv-App-ID": DERIV_APP_ID,
       },
     });
-    if (!otpRes.ok) throw new Error(`OTP API: ${otpRes.status}`);
+    if (!otpRes.ok) {
+      const body = await otpRes.text().catch(() => "");
+      throw new Error(this.friendlyError(body || `Status ${otpRes.status}`));
+    }
     const otpJson = await otpRes.json();
     const url: string = otpJson.data?.url;
-    if (!url) throw new Error("OTP response missing url");
+    if (!url) throw new Error("Deriv OTP response missing WebSocket URL. Contact support.");
     const accountType = url.includes("/real") ? "real" : "demo";
     return { url, accountType };
   }

@@ -2,7 +2,6 @@ import { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
-import { Switch } from "@/components/ui/switch";
 import {
   Bot,
   Play,
@@ -12,7 +11,6 @@ import {
   AlertTriangle,
   Zap,
   Plus,
-  Wallet,
   FileText,
   X,
   Loader2,
@@ -25,9 +23,6 @@ import { derivWS } from "@/services/derivWebSocket";
 import { StrategyRule } from "@/components/RuleBuilder";
 import { StrategyBuilderContent } from "@/pages/StrategyBuilder";
 import { pushTimeline } from "@/components/AITimeline";
-import { paperEngine } from "@/services/PaperEngine";
-
-const PAPER_MODE_KEY = "369labs_paper_mode";
 
 interface RunningBot {
   runId: number;
@@ -59,8 +54,6 @@ export default function Bots() {
   const [runningBots, setRunningBots] = useState<RunningBot[]>([]);
   const [deployingId, setDeployingId] = useState<number | null>(null);
   const [creating, setCreating] = useState(false);
-  const [paperMode, setPaperMode] = useState(() => localStorage.getItem(PAPER_MODE_KEY) === "true");
-  const [paperBal, setPaperBal] = useState(() => paperEngine.getBalance());
   const [viewLogsFor, setViewLogsFor] = useState<number | null>(null);
   const [selectedMulti, setSelectedMulti] = useState<number[]>([]);
 
@@ -114,19 +107,8 @@ export default function Bots() {
     };
   }, []);
 
-  useEffect(() => {
-    return paperEngine.onBalance(setPaperBal);
-  }, []);
-
   const updateBot = (runId: number, patch: Partial<RunningBot>) => {
     setRunningBots((prev) => prev.map((b) => (b.runId === runId ? { ...b, ...patch } : b)));
-  };
-
-  const togglePaperMode = () => {
-    const next = !paperMode;
-    setPaperMode(next);
-    localStorage.setItem(PAPER_MODE_KEY, String(next));
-    toast(next ? "Paper trading enabled" : "Live trading mode", "success");
   };
 
   const handleDeploy = async (strategy: { id: number; name: string; config: any }) => {
@@ -135,20 +117,18 @@ export default function Bots() {
       toast("This strategy was built in freeform notes mode and can't be deployed yet — rebuild it using the visual IF/THEN rule builder.", "error");
       return;
     }
-    if (!paperMode && !derivTokenQuery.data?.token) {
-      toast("Add your Deriv API token in Settings before deploying a bot, or enable Paper Trading.", "error");
+    if (!derivTokenQuery.data?.token) {
+      toast("Add your Deriv API token in Settings before deploying a bot.", "error");
       navigate("/settings");
       return;
     }
 
     setDeployingId(strategy.id);
     try {
-      if (!paperMode) {
-        derivWS.setApiToken(derivTokenQuery.data?.token ?? "");
-        if (!derivWS.isAuthorized() || !derivWS.isConnected()) {
-          toast("Authentication failed. Please check your API token and try again.", "error");
-          return;
-        }
+      await derivWS.setApiToken(derivTokenQuery.data?.token ?? "");
+      if (!derivWS.isAuthorized() || !derivWS.isConnected()) {
+        toast("Authentication failed. Your token may be invalid or expired. Update it in Settings.", "error");
+        return;
       }
 
       const botRun = await startRunMutation.mutateAsync({ strategyId: strategy.id });
@@ -185,7 +165,7 @@ export default function Bots() {
           updateBot(botRun.id, { lastLog: message });
           try { fetch("/api/trpc/bot.saveLog", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ "0": { botRunId: botRun.id, message, level: "info" } }) }).catch(() => {}); } catch {}
         },
-      }, paperMode);
+      });
 
       const newBot: RunningBot = {
         runId: botRun.id,
@@ -283,40 +263,21 @@ export default function Bots() {
             <p className="text-[var(--text-muted)] text-sm font-medium">Manage and monitor your 24/7 trading instances.</p>
           </div>
           <div className="flex flex-wrap items-center gap-4">
-            <div className="flex items-center gap-2 text-sm">
-              <Wallet className={`w-4 h-4 ${paperMode ? "text-[var(--amber-hover)]" : "text-[var(--text-muted)]"}`} />
-              <span className={`font-semibold ${paperMode ? "text-[var(--amber-hover)]" : "text-[var(--text-muted)]"}`}>
-                Paper
-              </span>
-              <Switch checked={paperMode} onCheckedChange={togglePaperMode} className="data-[state=checked]:bg-[var(--amber-hover)]" />
-            </div>
             <Button onClick={() => setCreating(true)} className="btn btn-primary flex items-center gap-2">
               <Plus className="w-4 h-4" /> Create New Bot
             </Button>
           </div>
         </div>
 
-        {paperMode && (
-          <div className="mb-6 p-4 rounded-lg border border-[var(--amber)]/30 bg-[var(--amber-soft)] flex items-center gap-3">
-            <Wallet className="w-4 h-4 text-[var(--amber-hover)] shrink-0" />
-            <p className="text-xs text-[var(--amber-hover)]">
-              Paper trading active — bots will use simulated trades. Paper balance: <strong>${paperBal.toFixed(2)}</strong>.{" "}
-              <button className="underline font-bold" onClick={() => navigate("/settings")}>
-                Manage in Settings
-              </button>
-            </p>
-          </div>
-        )}
-
-        {!paperMode && !derivTokenQuery.data?.token && (
+        {!derivTokenQuery.data?.token && (
           <div className="mb-6 p-4 rounded-lg border border-[var(--amber-border)] bg-[var(--amber-soft)] flex items-center gap-3">
             <AlertCircle className="w-4 h-4 text-[var(--amber)] shrink-0" />
             <p className="text-xs text-[var(--amber)]">
-              No Deriv API token on file — enable Paper Trading above or add a token in{" "}
+              No Deriv API token on file — add a token in{" "}
               <button className="underline font-bold" onClick={() => navigate("/settings")}>
                 Settings
-              </button>
-              .
+              </button>{" "}
+              to deploy bots.
             </p>
           </div>
         )}

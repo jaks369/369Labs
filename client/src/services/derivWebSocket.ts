@@ -75,10 +75,35 @@ class DerivWebSocketService {
   private _activeSymbols: DerivSymbol[] = [];
   private symbolListeners: Set<(symbols: DerivSymbol[]) => void> = new Set();
   private tokenListeners: Set<(msg: string) => void> = new Set();
+  private otpInProgress = false;
 
   constructor() {
     try { this.apiToken = localStorage.getItem("deriv_token"); } catch {}
-    this.connectPublic();
+    if (this.apiToken) {
+      this.connectWithOtp(this.apiToken).catch(() => this.connectPublic());
+    } else {
+      this.connectPublic();
+    }
+  }
+
+  private friendlyError(msg: string, status?: number): string {
+    const lower = msg.toLowerCase();
+    if (status === 401 || lower.includes("invalidtoken") || lower.includes("invalid token")) {
+      return "Your Deriv API token is invalid or has expired. Generate a new token at app.deriv.com/account/api-token and update it in Settings.";
+    }
+    if (status === 403 || lower.includes("forbidden") || lower.includes("permission")) {
+      return "This API token lacks required permissions. Create a token with 'Trade' and 'Read' scopes at app.deriv.com/account/api-token.";
+    }
+    if (lower.includes("no trading accounts") || lower.includes("no accounts")) {
+      return "No Deriv trading accounts found. Open a demo account at app.deriv.com first, then try again.";
+    }
+    if (lower.includes("network") || lower.includes("fetch") || lower.includes("econnrefused") || lower.includes("enotfound")) {
+      return "Cannot reach Deriv servers. Check your internet connection or try again later.";
+    }
+    if (lower.includes("timeout")) {
+      return "Deriv server did not respond in time. Check your connection and try again.";
+    }
+    return msg;
   }
 
   private async fetchAccounts(): Promise<any[]> {
@@ -93,10 +118,10 @@ class DerivWebSocketService {
     const body = await res.text();
     console.log("[Deriv OTP] response", res.status, body);
     if (!res.ok) {
-      throw new Error(`Failed to fetch accounts: ${res.status} ${body}`);
+      throw new Error(this.friendlyError(body, res.status));
     }
     let json: any;
-    try { json = JSON.parse(body); } catch { throw new Error(`Accounts: invalid JSON: ${body}`); }
+    try { json = JSON.parse(body); } catch { throw new Error(this.friendlyError(`Accounts: invalid JSON: ${body}`)); }
     const accounts = json.data || json.accounts || [];
     if (!accounts.length) console.warn("[Deriv OTP] No accounts found in:", json);
     return accounts;
@@ -115,12 +140,12 @@ class DerivWebSocketService {
     const body = await res.text();
     console.log("[Deriv OTP] response", res.status, body);
     if (!res.ok) {
-      throw new Error(`Failed to fetch OTP: ${res.status} ${body}`);
+      throw new Error(this.friendlyError(body, res.status));
     }
     let json: any;
-    try { json = JSON.parse(body); } catch { throw new Error(`OTP: invalid JSON: ${body}`); }
+    try { json = JSON.parse(body); } catch { throw new Error(this.friendlyError(`OTP: invalid JSON: ${body}`)); }
     const wsUrl: string = json.data?.url || json.url;
-    if (!wsUrl) throw new Error(`OTP response missing url: ${body}`);
+    if (!wsUrl) throw new Error(this.friendlyError(`OTP response missing url: ${body}`));
     const accountType = wsUrl.includes("/real") ? "real" : "demo";
     return { url: wsUrl, accountType };
   }
@@ -329,7 +354,7 @@ class DerivWebSocketService {
       console.log(`[Deriv WS] Reconnect attempt ${this.reconnectAttempts}/${this.maxReconnectAttempts}`);
       const delay = this.baseReconnectDelay * (2 ** (this.reconnectAttempts - 1));
       setTimeout(() => {
-        if (this.apiToken && this.authorized) {
+        if (this.apiToken) {
           this.connectWithOtp(this.apiToken).catch(() => this.connectPublic());
         } else {
           this.connectPublic();
@@ -403,6 +428,7 @@ class DerivWebSocketService {
 
   public async setApiToken(token: string): Promise<void> {
     const changed = this.apiToken !== token;
+    if (!changed && this.authorized) return;
     this.apiToken = token;
     this.authorized = false;
     try { if (token) localStorage.setItem("deriv_token", token); else localStorage.removeItem("deriv_token"); } catch {}
@@ -414,9 +440,11 @@ class DerivWebSocketService {
   }
 
   private async connectWithOtp(token: string): Promise<void> {
+    if (this.otpInProgress) return;
+    this.otpInProgress = true;
     try {
       const accounts = await this.fetchAccounts();
-      if (!accounts.length) throw new Error("No trading accounts found");
+      if (!accounts.length) throw new Error(this.friendlyError("No trading accounts found"));
       const account = accounts[0];
       const { url, accountType } = await this.fetchOtpUrl(account.account_id);
       this.lastAccountType = accountType;
@@ -424,8 +452,12 @@ class DerivWebSocketService {
       this.connectWs(url, true);
     } catch (error: any) {
       console.error("[Deriv WS] OTP connection failed:", error.message);
-      this.notifyTokenError(error.message || "Failed to connect. Check your token.");
+      const msg = error.message || "";
+      const friendly = msg.includes(".") ? msg : this.friendlyError(msg);
+      this.notifyTokenError(friendly);
       this.connectPublic();
+    } finally {
+      this.otpInProgress = false;
     }
   }
 }

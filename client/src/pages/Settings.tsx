@@ -4,12 +4,11 @@ import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
-import { Loader2, Save, Brain, Wallet, RotateCcw, AlertCircle, Sun, Moon, Camera, Database, Download, Trash2, Key, Upload } from "lucide-react";
+import { Loader2, Save, Brain, AlertCircle, Sun, Moon, Camera, Database, Download, Trash2, Key, Upload } from "lucide-react";
 import { useLocation } from "wouter";
 import { derivWS } from "@/services/derivWebSocket";
 import { pushTimeline } from "@/components/AITimeline";
 import { toast } from "@/components/Toast";
-import { paperEngine } from "@/services/PaperEngine";
 import { useTheme } from "@/contexts/ThemeContext";
 
 export default function Settings() {
@@ -235,10 +234,11 @@ export default function Settings() {
         token: derivToken,
         accountType,
       });
-      derivWS.setApiToken(derivToken);
+      await derivWS.setApiToken(derivToken);
       toast("Deriv token saved and connected!", "success");
     } catch (error) {
-      toast("Failed to save Deriv token", "error");
+      const msg = error instanceof Error ? error.message : String(error);
+      toast("Deriv token error: " + msg, "error");
     }
   };
 
@@ -602,28 +602,7 @@ export default function Settings() {
           </div>
         </div>
 
-        <div className="hud-panel mb-6">
-          <h2 className="text-lg font-bold text-[var(--amber-hover)] mb-4 flex items-center gap-2">
-            <Wallet className="w-5 h-5" /> PAPER TRADING
-          </h2>
-          <p className="text-xs text-[var(--amber)]/70 mb-4">
-            Paper trading simulates trades without real money. Use it to test strategies risk-free.
-          </p>
-          <div className="flex items-center justify-between mb-4">
-            <span className="text-sm text-[var(--amber)]">Balance: <strong className="text-lg">${paperEngine.getBalance().toFixed(2)}</strong></span>
-            <Button
-              onClick={() => { paperEngine.resetBalance(); toast("Paper balance reset to $10,000", "success"); }}
-              variant="outline"
-              size="sm"
-              className="border-[var(--amber)]/40 text-[var(--amber)] text-xs"
-            >
-              <RotateCcw className="w-3 h-3 mr-1" /> Reset
-            </Button>
-          </div>
-          <p className="text-[10px] text-[var(--amber)]/50">
-            Paper trades are simulated locally. Enable paper mode in the Dashboard before deploying a bot to use paper trading instead of live Deriv execution.
-          </p>
-        </div>
+
 
         <div className="hud-panel mb-6">
           <h2 className="text-lg font-bold text-[var(--amber-hover)] mb-4 flex items-center gap-2"><Key className="w-5 h-5" /> EXTERNAL API KEYS</h2>

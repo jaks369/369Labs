@@ -88,6 +88,7 @@ function parseDbUrl(url: string) {
 
 let _db: ReturnType<typeof drizzle> | null = null;
 let _dbError: string | null = null;
+let _pool: mysql.Pool | null = null;
 
 export async function getDb() {
   if (!_db && !_dbError) {
@@ -97,8 +98,8 @@ export async function getDb() {
     } else {
       try {
         const cfg = parseDbUrl(process.env.DATABASE_URL);
-        const pool = mysql.createPool(cfg);
-        _db = drizzle(pool);
+        _pool = mysql.createPool(cfg);
+        _db = drizzle(_pool);
         console.log("[Database] Connected successfully");
       } catch (error) {
         _dbError = String(error);
@@ -107,6 +108,10 @@ export async function getDb() {
     }
   }
   return _db;
+}
+
+export function getRawPool() {
+  return _pool;
 }
 
 export async function listAllUsers(): Promise<User[]> {
@@ -808,9 +813,7 @@ export async function ensureSessionsTable(): Promise<void> {
 }
 
 export async function ensureUsersColumns(): Promise<void> {
-  const db = await getDb();
-  if (!db) return;
-  const pool = (db as any).session?.client;
+  const pool = getRawPool();
   if (!pool) return;
   const cols: [string, string][] = [
     ["passwordHash", "varchar(255) NOT NULL DEFAULT ''"],
@@ -867,9 +870,7 @@ export async function ensureSignalsTable(): Promise<void> {
 }
 
 export async function ensureNotificationSettingsColumns(): Promise<void> {
-  const db = await getDb();
-  if (!db) return;
-  const pool = (db as any).session?.client;
+  const pool = getRawPool();
   if (!pool) return;
   const cols: [string, string][] = [
     ["emailEnabled", "tinyint(1) NOT NULL DEFAULT 1"],
@@ -885,9 +886,7 @@ export async function ensureNotificationSettingsColumns(): Promise<void> {
 }
 
 export async function ensureAuditLogsTable(): Promise<void> {
-  const db = await getDb();
-  if (!db) return;
-  const pool = (db as any).session?.client;
+  const pool = getRawPool();
   if (!pool) return;
   try {
     await pool.execute(`CREATE TABLE IF NOT EXISTS auditLogs (
@@ -906,9 +905,7 @@ export async function ensureAuditLogsTable(): Promise<void> {
 }
 
 export async function ensureIpWhitelistTable(): Promise<void> {
-  const db = await getDb();
-  if (!db) return;
-  const pool = (db as any).session?.client;
+  const pool = getRawPool();
   if (!pool) return;
   try {
     await pool.execute(`CREATE TABLE IF NOT EXISTS ipWhitelist (
@@ -926,9 +923,7 @@ export async function ensureIpWhitelistTable(): Promise<void> {
 }
 
 export async function ensureTradesTable(): Promise<void> {
-  const db = await getDb();
-  if (!db) return;
-  const pool = (db as any).session?.client;
+  const pool = getRawPool();
   if (!pool) return;
   try {
     await pool.execute(`CREATE TABLE IF NOT EXISTS trades (
@@ -945,6 +940,7 @@ export async function ensureTradesTable(): Promise<void> {
       symbol varchar(32) NOT NULL DEFAULT 'R_100',
       contractType varchar(32) DEFAULT 'CALL',
       result varchar(16),
+      contractId varchar(64),
       updatedAt timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
       CONSTRAINT trades_id PRIMARY KEY(id)
     )`);
@@ -955,9 +951,7 @@ export async function ensureTradesTable(): Promise<void> {
 }
 
 export async function ensurePriceAlertsTable(): Promise<void> {
-  const db = await getDb();
-  if (!db) return;
-  const pool = (db as any).session?.client;
+  const pool = getRawPool();
   if (!pool) return;
   try {
     await pool.execute(`CREATE TABLE IF NOT EXISTS priceAlerts (
@@ -979,9 +973,7 @@ export async function ensurePriceAlertsTable(): Promise<void> {
 }
 
 export async function ensureSignalExpiryColumn(): Promise<void> {
-  const db = await getDb();
-  if (!db) return;
-  const pool = (db as any).session?.client;
+  const pool = getRawPool();
   if (!pool) return;
   try {
     await pool.execute(`ALTER TABLE signals ADD COLUMN expiresAt bigint NOT NULL DEFAULT 0`);

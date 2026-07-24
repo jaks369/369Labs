@@ -33,7 +33,6 @@ import OAuthCallback from "./pages/OAuthCallback";
 import Admin from "./pages/Admin";
 import WebhooksPage from "./pages/Webhooks";
 import ApiDocs from "./pages/ApiDocs";
-import PaperTrading from "./pages/PaperTrading";
 import OrderBook from "./pages/OrderBook";
 import TeamPage from "./pages/TeamPage";
 import SubscriptionPage from "./pages/SubscriptionPage";
@@ -102,7 +101,6 @@ function Router() {
       <Route path={"/trading-copilot"}><AppLayout><LazyLoad><LazyTradingCopilot /></LazyLoad></AppLayout></Route>
       <Route path={"/ai-chat"}><AppLayout><AIChatPage /></AppLayout></Route>
       <Route path={"/market-intelligence"}><AppLayout><LazyLoad><LazyMarketIntelligence /></LazyLoad></AppLayout></Route>
-      <Route path={"/paper-trading"}><AppLayout><PaperTrading /></AppLayout></Route>
       <Route path={"/order-book"}><AppLayout><OrderBook /></AppLayout></Route>
       <Route path={"/team"}><AppLayout><TeamPage /></AppLayout></Route>
       <Route path={"/subscription"}><AppLayout><SubscriptionPage /></AppLayout></Route>

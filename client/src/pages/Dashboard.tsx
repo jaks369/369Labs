@@ -13,6 +13,7 @@ import {
   Wallet,
   Sparkles,
   RotateCcw,
+  AlertCircle,
   Bell,
   BellOff,
   Plus,
@@ -264,7 +265,7 @@ export default function Dashboard() {
                 {balanceInfo.accountType}
               </span>
             ) : tokenStatus === "invalid" ? (
-              <span className="badge badge-red" title={tokenError || "Token saved but not authorized by Deriv"}>token invalid</span>
+              <span className="badge badge-red" title={"Click 'Connect Deriv' to fix the token issue"}>{tokenError?.includes("invalid") || tokenError?.includes("expired") ? "BAD TOKEN" : "NOT CONNECTED"}</span>
             ) : tokenStatus === "none" ? (
               <span className="badge badge-gray">no token</span>
             ) : (
@@ -316,9 +317,15 @@ export default function Dashboard() {
 
       {/* Token error banner */}
       {tokenError && (
-        <div className="flex items-center justify-between gap-3 bg-[var(--amber-soft)] border border-[var(--amber-border)] text-[var(--amber)] text-sm rounded-[var(--radius)] px-4 py-2 mb-6">
-          <span>Deriv token issue: {tokenError}. Update it to trade.</span>
-          <Button onClick={() => setShowTokenModal(true)} className="btn btn-outline text-white border-[var(--amber)] text-xs px-3 py-1">UPDATE TOKEN</Button>
+        <div className="flex items-start justify-between gap-3 bg-[var(--red-soft)] border border-[var(--red)]/30 text-[var(--red)] text-sm rounded-[var(--radius)] px-4 py-3 mb-6">
+          <div className="flex items-start gap-2">
+            <AlertCircle className="w-5 h-5 shrink-0 mt-0.5" />
+            <div>
+              <p className="font-bold text-sm mb-1">Deriv Authentication Failed</p>
+              <p className="text-xs leading-relaxed">{tokenError}</p>
+            </div>
+          </div>
+          <Button onClick={() => setShowTokenModal(true)} className="shrink-0 bg-[var(--red)]/20 text-[var(--red)] border border-[var(--red)]/40 text-xs px-3 py-1 rounded-lg hover:bg-[var(--red)] hover:text-white transition-colors">UPDATE TOKEN</Button>
         </div>
       )}
 
@@ -571,7 +578,7 @@ export default function Dashboard() {
             <div className="flex items-center justify-between mb-5">
               <h3 className="section-title text-[11px]">Trade Studio</h3>
               <span className={`badge ${accountType === "real" ? "badge-red" : accountType === "demo" ? "badge-amber" : tokenStatus === "invalid" ? "badge-red" : "badge-gray"}`}>
-                {accountType === "real" ? "REAL" : accountType === "demo" ? "DEMO" : tokenStatus === "invalid" ? "INVALID" : "NO TOKEN"}
+                {accountType === "real" ? "REAL" : accountType === "demo" ? "DEMO" : tokenStatus === "invalid" ? "UNAUTHORIZED" : "NO TOKEN"}
               </span>
             </div>
             <div className="space-y-4">

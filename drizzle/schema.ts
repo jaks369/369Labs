@@ -101,6 +101,7 @@ export const trades = mysqlTable("trades", {
   symbol: varchar("symbol", { length: 32 }).notNull().default("R_100"),
   contractType: varchar("contractType", { length: 32 }).default("CALL"),
   result: varchar("result", { length: 16 }),
+  contractId: varchar("contractId", { length: 64 }),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
 

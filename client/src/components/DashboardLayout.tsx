@@ -50,7 +50,6 @@ import {
   Shield,
   Webhook,
   BookText,
-  Coins,
   Book,
   Users,
   Crown,
@@ -95,7 +94,6 @@ const navGroups: NavGroup[] = [
     title: "Trade",
     items: [
       { icon: LayoutDashboard, label: "Trading Terminal", path: "/dashboard" },
-      { icon: Coins, label: "Paper Trading", path: "/paper-trading" },
       { icon: Bot, label: "Bots", path: "/bots" },
       { icon: Wallet, label: "Portfolio", path: "/portfolio" },
       { icon: BarChart3, label: "Trade History", path: "/trade-history" },
