@@ -292,9 +292,8 @@ class DerivWebSocketService {
     const pending = [...this.pendingSubscriptionSymbols];
     this.pendingSubscriptionSymbols = [];
     for (const symbol of pending) {
-      if (!this.subscribedSymbols.has(symbol)) {
-        this.doSubscribe(symbol);
-      }
+      try { this.ws?.send(JSON.stringify({ ticks: symbol, subscribe: 1, req_id: this.msgId++ })); }
+      catch (error) { console.error("[Deriv WS] Failed to subscribe:", error); }
     }
   }
 
@@ -371,8 +370,11 @@ class DerivWebSocketService {
     const subId = this.msgId++;
     if (this.subscribedSymbols.has(symbol)) return subId;
     this.subSymbolById.set(subId, symbol);
+    this.subscribedSymbols.add(symbol);
+    this.subErrors.delete(symbol);
     if (!this.ws || this.ws.readyState !== WebSocket.OPEN) { this.pendingSubscriptionSymbols.push(symbol); return subId; }
-    this.doSubscribe(symbol);
+    try { this.ws!.send(JSON.stringify({ ticks: symbol, subscribe: 1, req_id: this.msgId++ })); }
+    catch (error) { console.error("[Deriv WS] Failed to subscribe:", error); this.subscribedSymbols.delete(symbol); }
     return subId;
   }
 
