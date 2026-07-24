@@ -31,7 +31,7 @@ export default function DerivTokenModal({ open, onClose }: Props) {
   };
 
   return createPortal(
-    <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 bg-[#0D1016]/90 z-50 flex items-center justify-center p-4">
       <div className="w-full max-w-md bg-[var(--card)] border border-[var(--border)] rounded-xl">
         <div className="flex items-center justify-between p-5 border-b border-[var(--border)]">
           <h2 className="text-lg font-bold text-white">Connect Deriv Account</h2>
