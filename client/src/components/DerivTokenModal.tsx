@@ -21,12 +21,16 @@ export default function DerivTokenModal({ open, onClose }: Props) {
   useEffect(() => { if (q.data?.token) { setPreview(q.data.token.substring(0, 10) + '...'); setStatus('ok'); setMsg('Connected'); } }, [q.data]);
 
   const save = async () => {
-    try { await m.mutateAsync({ token, accountType: 'demo' }); derivWS.setApiToken(token); setPreview(token.substring(0, 10) + '...'); setToken(''); setStatus('ok'); setMsg('Token saved!'); onClose();
-    } catch { setStatus('error'); setMsg('Failed to save.'); }
+    try {
+      await m.mutateAsync({ token, accountType: 'demo' });
+      setStatus('ok'); setMsg('Connecting...');
+      await derivWS.setApiToken(token);
+      setPreview(token.substring(0, 10) + '...'); setToken(''); setStatus('ok'); setMsg('Token saved!'); onClose();
+    } catch { setStatus('error'); setMsg('Failed to save or connect.'); }
   };
 
   const forget = async () => {
-    try { await rm.mutateAsync(); derivWS.setApiToken(''); setPreview(''); setStatus('idle'); setMsg('Token forgotten. Paste a new one to reconnect.'); }
+    try { await rm.mutateAsync(); await derivWS.setApiToken(''); setPreview(''); setStatus('idle'); setMsg('Token forgotten. Paste a new one to reconnect.'); }
     catch { setStatus('error'); setMsg('Failed to forget token.'); }
   };
 

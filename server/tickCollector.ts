@@ -2,7 +2,7 @@ import { WebSocket } from "ws";
 import { saveTickHistory } from "./db";
 import { getAllVolatilitySymbols } from "@shared/symbols";
 
-const DERIV_APP_ID = Number(process.env.VITE_DERIV_APP_ID) || 1089;
+const DERIV_WS_PUBLIC = "wss://api.derivws.com/trading/v1/options/ws/public";
 const VOLATILITY_PREFIXES = getAllVolatilitySymbols();
 
 let ws: WebSocket | null = null;
@@ -53,7 +53,7 @@ export function startTickCollector() {
   if (started) return;
   started = true;
   try {
-    ws = new WebSocket(`wss://ws.derivws.com/websockets/v3?app_id=${DERIV_APP_ID}`);
+    ws = new WebSocket(DERIV_WS_PUBLIC);
     ws.on("open", async () => {
       console.log("[tickCollector] connected");
       const symbols = await fetchActiveSymbols();

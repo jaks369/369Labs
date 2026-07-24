@@ -203,16 +203,8 @@ export default function Dashboard() {
   useEffect(() => {
     setTokenSaved(Boolean(tokenQuery.data?.token));
     if (tokenQuery.data?.token) {
-      derivWS.setApiToken(tokenQuery.data.token);
-      if (derivWS.isAuthorized()) derivWS.fetchBalance();
+      derivWS.setApiToken(tokenQuery.data.token).catch(console.error);
     }
-    const authTimer = setInterval(() => {
-      if (tokenQuery.data?.token) {
-        derivWS.ensureAuthorized();
-        if (derivWS.isAuthorized()) derivWS.fetchBalance();
-      }
-    }, 5000);
-    return () => clearInterval(authTimer);
   }, [tokenQuery.data]);
 
   useEffect(() => {

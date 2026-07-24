@@ -3,8 +3,8 @@ import WebSocket from "ws";
 import * as db from "./db";
 import { normalizeSymbol } from "./aitools";
 
-const DERIV_APP_ID = Number(process.env.VITE_DERIV_APP_ID) || 1089;
-const WS_URL = `wss://ws.derivws.com/websockets/v3?app_id=${DERIV_APP_ID}`;
+const DERIV_APP_ID = process.env.VITE_DERIV_APP_ID || "33V0MWtYaZLLmAZBWUycN";
+const DERIV_API_BASE = "https://api.derivws.com";
 const REQUEST_TIMEOUT = 15000;
 
 interface PendingRequest {
@@ -56,20 +56,43 @@ class DerivConnection {
     this.apiToken = apiToken;
   }
 
+  private async fetchOtpUrl(): Promise<{ url: string; accountType: string }> {
+    const accountsRes = await fetch(`${DERIV_API_BASE}/trading/v1/options/accounts`, {
+      headers: {
+        "Authorization": `Bearer ${this.apiToken}`,
+        "Deriv-App-ID": DERIV_APP_ID,
+      },
+    });
+    if (!accountsRes.ok) throw new Error(`Accounts API: ${accountsRes.status}`);
+    const accountsJson = await accountsRes.json();
+    const accounts: any[] = accountsJson.data || [];
+    if (!accounts.length) throw new Error("No trading accounts found");
+    const accountId = accounts[0].account_id;
+    const otpRes = await fetch(`${DERIV_API_BASE}/trading/v1/options/accounts/${accountId}/otp`, {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${this.apiToken}`,
+        "Deriv-App-ID": DERIV_APP_ID,
+      },
+    });
+    if (!otpRes.ok) throw new Error(`OTP API: ${otpRes.status}`);
+    const otpJson = await otpRes.json();
+    const url: string = otpJson.data?.url;
+    if (!url) throw new Error("OTP response missing url");
+    const accountType = url.includes("/real") ? "real" : "demo";
+    return { url, accountType };
+  }
+
   private async connect(): Promise<void> {
     if (this.connectPromise) return this.connectPromise;
-    this.connectPromise = new Promise<void>((resolve, reject) => {
+    this.connectPromise = new Promise<void>(async (resolve, reject) => {
       try {
-        this.ws = new WebSocket(WS_URL);
-        this.ws.onopen = async () => {
-          try {
-            await this.sendRaw({ authorize: this.apiToken });
-            this._authorized = true;
-            await this.refresh();
-            resolve();
-          } catch (e) {
-            reject(e);
-          }
+        const { url } = await this.fetchOtpUrl();
+        this.ws = new WebSocket(url);
+        this.ws.onopen = () => {
+          this._authorized = true;
+          this.refresh();
+          resolve();
         };
         this.ws.onmessage = (event) => {
           let data: any;
@@ -79,6 +102,7 @@ class DerivConnection {
         this.ws.onerror = () => { this._authorized = false; };
         this.ws.onclose = () => { this._authorized = false; };
       } catch (e) {
+        this._authorized = false;
         reject(e);
       }
     });
@@ -155,7 +179,7 @@ class DerivConnection {
   async refresh(): Promise<void> {
     try {
       const [balRes] = await Promise.allSettled([
-        this.sendRaw({ balance: 1, account: "all" }),
+        this.sendRaw({ balance: 1 }),
       ]);
       if (balRes.status === "fulfilled") {
         const d = balRes.value;

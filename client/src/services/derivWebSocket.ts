@@ -1,6 +1,3 @@
-/**
- * Deriv WebSocket Service for Real-time Tick Streaming
- */
 export interface Tick {
   symbol: string;
   price: number;
@@ -50,7 +47,9 @@ export interface DerivSymbol {
   decimalPlaces?: number;
 }
 
-const DERIV_APP_ID = (import.meta as any).env?.VITE_DERIV_APP_ID || "1089";
+const DERIV_APP_ID = (import.meta as any).env?.VITE_DERIV_APP_ID || "33V0MWtYaZLLmAZBWUycN";
+const DERIV_API_BASE = "https://api.derivws.com";
+const DERIV_WS_PUBLIC = "wss://api.derivws.com/trading/v1/options/ws/public";
 
 class DerivWebSocketService {
   private ws: WebSocket | null = null;
@@ -79,21 +78,76 @@ class DerivWebSocketService {
 
   constructor() {
     try { this.apiToken = localStorage.getItem("deriv_token"); } catch {}
-    this.setupWebSocket();
+    this.connectPublic();
   }
 
-  private setupWebSocket() {
+  private async fetchAccounts(): Promise<any[]> {
+    const url = `${DERIV_API_BASE}/trading/v1/options/accounts`;
+    console.log("[Deriv OTP] GET", url);
+    const res = await fetch(url, {
+      headers: {
+        "Authorization": `Bearer ${this.apiToken}`,
+        "Deriv-App-ID": DERIV_APP_ID,
+      },
+    });
+    const body = await res.text();
+    console.log("[Deriv OTP] response", res.status, body);
+    if (!res.ok) {
+      throw new Error(`Failed to fetch accounts: ${res.status} ${body}`);
+    }
+    let json: any;
+    try { json = JSON.parse(body); } catch { throw new Error(`Accounts: invalid JSON: ${body}`); }
+    const accounts = json.data || json.accounts || [];
+    if (!accounts.length) console.warn("[Deriv OTP] No accounts found in:", json);
+    return accounts;
+  }
+
+  private async fetchOtpUrl(accountId: string): Promise<{ url: string; accountType: string }> {
+    const url = `${DERIV_API_BASE}/trading/v1/options/accounts/${accountId}/otp`;
+    console.log("[Deriv OTP] POST", url);
+    const res = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${this.apiToken}`,
+        "Deriv-App-ID": DERIV_APP_ID,
+      },
+    });
+    const body = await res.text();
+    console.log("[Deriv OTP] response", res.status, body);
+    if (!res.ok) {
+      throw new Error(`Failed to fetch OTP: ${res.status} ${body}`);
+    }
+    let json: any;
+    try { json = JSON.parse(body); } catch { throw new Error(`OTP: invalid JSON: ${body}`); }
+    const wsUrl: string = json.data?.url || json.url;
+    if (!wsUrl) throw new Error(`OTP response missing url: ${body}`);
+    const accountType = wsUrl.includes("/real") ? "real" : "demo";
+    return { url: wsUrl, accountType };
+  }
+
+  private connectPublic() {
+    this.disconnect();
+    this.authorized = false;
+    this.connectWs(DERIV_WS_PUBLIC, false);
+  }
+
+  private connectWs(url: string, authenticated: boolean) {
+    this.intentionallyDisconnected = false;
     try {
-      const endpoint = `wss://ws.derivws.com/websockets/v3?app_id=${DERIV_APP_ID}`;
-      this.ws = new WebSocket(endpoint);
+      this.ws = new WebSocket(url);
       this.ws.onopen = () => {
-        console.log("[Deriv WS] Connected");
+        console.log(`[Deriv WS] Connected (${authenticated ? "authenticated" : "public"})`);
         this.reconnectAttempts = 0;
         this.subErrors.clear();
-        this.notifyConnect();
-        if (this.apiToken) {
-          this.authorize();
+        if (authenticated) {
+          this.authorized = true;
+          this.notifyConnect();
+          this.fetchBalance();
+          this.fetchActiveSymbols();
+          this.processPendingSubscriptions();
         } else {
+          this.authorized = false;
+          this.notifyConnect();
           this.fetchActiveSymbols();
         }
       };
@@ -112,20 +166,6 @@ class DerivWebSocketService {
         if (!this.intentionallyDisconnected) this.attemptReconnect();
       };
     } catch (error) { console.error("[Deriv WS] Setup failed:", error); }
-  }
-
-  private authorize() {
-    if (!this.ws || this.ws.readyState !== WebSocket.OPEN || !this.apiToken) return;
-    const reqId = this.msgId++;
-    try {
-      console.log("[Deriv WS DEBUG] apiToken length:", this.apiToken.length);
-      console.log("[Deriv WS DEBUG] apiToken first 15:", this.apiToken.substring(0, 15));
-      console.log("[Deriv WS DEBUG] apiToken last 5:", this.apiToken.substring(this.apiToken.length - 5));
-      console.log("[Deriv WS DEBUG] apiToken hex check:", this.apiToken.split('').map(c => c.charCodeAt(0).toString(16)).join('').substring(0, 40));
-      const payload = { authorize: this.apiToken, req_id: reqId };
-      console.log("[Deriv WS] Sending authorize");
-      this.ws.send(JSON.stringify(payload));
-    } catch (error) { console.error("[Deriv WS] Failed to authorize:", error); }
   }
 
   private handleMessage(data: any) {
@@ -149,21 +189,6 @@ class DerivWebSocketService {
       const cb = this.contractListeners.get(c.contract_id);
       cb?.({ contract_id: c.contract_id, is_sold: c.is_sold, profit: c.profit, buy_price: c.buy_price, sell_price: c.sell_price, status: c.status, entry_tick: c.entry_tick, exit_tick: c.exit_tick });
       if (c.is_sold) this.contractListeners.delete(c.contract_id);
-    }
-    if (data.msg_type === "authorize") {
-      console.log("[Deriv WS DEBUG] Raw authorize response:", JSON.stringify(data));
-      if (data.error) {
-        console.error("[Deriv WS] Authorization failed:", data.error.message);
-        this.authorized = false;
-        this.notifyTokenError(data.error.message || "Authorization failed");
-        return;
-      }
-      console.log("[Deriv WS] Authorized successfully");
-      this.authorized = true;
-      this.notifyConnect();
-      this.fetchBalance();
-      this.fetchActiveSymbols();
-      this.processPendingSubscriptions();
     }
     if (data.msg_type === "balance") {
       this.lastBalance = data.balance;
@@ -229,18 +254,14 @@ class DerivWebSocketService {
     this.pendingSubscriptionSymbols = [];
     for (const symbol of pending) {
       if (!this.subscribedSymbols.has(symbol)) {
-        if (this.authorized || !this.apiToken) {
-          this.doSubscribe(symbol);
-        } else {
-          this.pendingSubscriptionSymbols.push(symbol);
-        }
+        this.doSubscribe(symbol);
       }
     }
   }
 
   public fetchBalance() {
     if (!this.ws) return;
-    try { this.ws.send(JSON.stringify({ balance: 1, account: "all", req_id: this.msgId++ })); }
+    try { this.ws.send(JSON.stringify({ balance: 1, req_id: this.msgId++ })); }
     catch (error) { console.error("[Deriv WS] Failed to fetch balance:", error); }
   }
 
@@ -278,7 +299,7 @@ class DerivWebSocketService {
   public async purchaseContract(params: PurchaseParams): Promise<PurchaseResult> {
     if (!this.ws || this.ws.readyState !== WebSocket.OPEN) throw new Error("WebSocket not connected");
     if (!this.authorized) throw new Error("Not authorized");
-    const proposalRes = await this.sendRequest({ proposal: 1, amount: params.amount, basis: "stake", contract_type: params.contractType, currency: "USD", duration: params.duration, duration_unit: params.durationUnit || "t", symbol: params.symbol, ...(params.barrier !== undefined ? { barrier: String(params.barrier) } : {}), ...(params.stopLoss !== undefined ? { stop_loss: String(params.stopLoss) } : {}), ...(params.takeProfit !== undefined ? { take_profit: String(params.takeProfit) } : {}) });
+    const proposalRes = await this.sendRequest({ proposal: 1, amount: params.amount, basis: "stake", contract_type: params.contractType, currency: "USD", duration: params.duration, duration_unit: params.durationUnit || "t", underlying_symbol: params.symbol, ...(params.barrier !== undefined ? { barrier: String(params.barrier) } : {}), ...(params.stopLoss !== undefined ? { stop_loss: String(params.stopLoss) } : {}), ...(params.takeProfit !== undefined ? { take_profit: String(params.takeProfit) } : {}) });
     if (!proposalRes.proposal) throw new Error("No proposal returned");
     const buyRes = await this.sendRequest({ buy: proposalRes.proposal.id, price: proposalRes.proposal.ask_price });
     if (!buyRes.buy) throw new Error("Buy request failed");
@@ -296,7 +317,14 @@ class DerivWebSocketService {
     if (this.reconnectAttempts < this.maxReconnectAttempts) {
       this.reconnectAttempts++;
       console.log(`[Deriv WS] Reconnect attempt ${this.reconnectAttempts}/${this.maxReconnectAttempts}`);
-      setTimeout(() => this.setupWebSocket(), this.baseReconnectDelay * (2 ** (this.reconnectAttempts - 1)));
+      const delay = this.baseReconnectDelay * (2 ** (this.reconnectAttempts - 1));
+      setTimeout(() => {
+        if (this.apiToken && this.authorized) {
+          this.connectWithOtp(this.apiToken).catch(() => this.connectPublic());
+        } else {
+          this.connectPublic();
+        }
+      }, delay);
     }
   }
 
@@ -305,7 +333,6 @@ class DerivWebSocketService {
     if (this.subscribedSymbols.has(symbol)) return subId;
     this.subSymbolById.set(subId, symbol);
     if (!this.ws || this.ws.readyState !== WebSocket.OPEN) { this.pendingSubscriptionSymbols.push(symbol); return subId; }
-    if (!this.authorized) { this.pendingSubscriptionSymbols.push(symbol); return subId; }
     this.doSubscribe(symbol);
     return subId;
   }
@@ -362,24 +389,34 @@ class DerivWebSocketService {
   public decimalPlacesFor(symbol: string): number { return this.getSymbol(symbol)?.decimalPlaces ?? 3; }
   private notifyBalance(b: any): void { this.balanceListeners.forEach(cb => { try { cb(b); } catch {} }); }
   private notifyTokenError(msg: string): void { this.tokenListeners.forEach(cb => { try { cb(msg); } catch {} }); }
-  public disconnect(): void { this.intentionallyDisconnected = true; if (this.ws) { this.ws.close(); this.ws = null; } this.contractListeners.clear(); this.pendingRequests.forEach(p => p.reject(new Error("Connection closed"))); this.pendingRequests.clear(); }
-  public setApiToken(token: string): void {
-    if (this.apiToken !== token) this.authorized = false;
+  public disconnect(): void { this.intentionallyDisconnected = true; if (this.ws) { this.ws.close(); this.ws = null; } this.authorized = false; this.contractListeners.clear(); this.pendingRequests.forEach(p => p.reject(new Error("Connection closed"))); this.pendingRequests.clear(); }
+
+  public async setApiToken(token: string): Promise<void> {
+    const changed = this.apiToken !== token;
     this.apiToken = token;
+    this.authorized = false;
     try { if (token) localStorage.setItem("deriv_token", token); else localStorage.removeItem("deriv_token"); } catch {}
-    if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
-      this.setupWebSocket();
+    if (!token) {
+      this.connectPublic();
       return;
     }
-    if (this.authorized) return;
-    this.authorized = false;
-    this.authorize();
+    await this.connectWithOtp(token);
   }
 
-  public ensureAuthorized(): void {
-    if (!this.apiToken || this.authorized) return;
-    if (!this.ws || this.ws.readyState !== WebSocket.OPEN) { this.setupWebSocket(); return; }
-    this.authorize();
+  private async connectWithOtp(token: string): Promise<void> {
+    try {
+      const accounts = await this.fetchAccounts();
+      if (!accounts.length) throw new Error("No trading accounts found");
+      const account = accounts[0];
+      const { url, accountType } = await this.fetchOtpUrl(account.account_id);
+      this.lastAccountType = accountType;
+      this.disconnect();
+      this.connectWs(url, true);
+    } catch (error: any) {
+      console.error("[Deriv WS] OTP connection failed:", error.message);
+      this.notifyTokenError(error.message || "Failed to connect. Check your token.");
+      this.connectPublic();
+    }
   }
 }
 

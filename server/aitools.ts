@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { normalizeSymbol as normalizeShared, getAllVolatilitySymbols } from '@shared/symbols';
 
-const DERIV_APP_ID = Number(process.env.VITE_DERIV_APP_ID) || 1089;
+const DERIV_WS_PUBLIC = "wss://api.derivws.com/trading/v1/options/ws/public";
 let derivConnection: any = null;
 
 export const VALID_SYMBOLS = getAllVolatilitySymbols();
@@ -13,7 +13,7 @@ export function normalizeSymbol(input: string): string {
 async function ensureDerivWS() {
   if (derivConnection?.readyState === 1) return derivConnection;
   const { default: WebSocket } = await import('ws');
-  derivConnection = new WebSocket('wss://ws.derivws.com/websockets/v3?app_id=' + DERIV_APP_ID);
+  derivConnection = new WebSocket(DERIV_WS_PUBLIC);
   await new Promise<void>((res, rej) => { derivConnection.onopen = () => res(); derivConnection.onerror = rej; });
   return derivConnection;
 }
