@@ -340,7 +340,7 @@ export default function Dashboard() {
       {tokenError && (
         <div className="flex items-center justify-between gap-3 bg-[var(--amber-soft)] border border-[var(--amber-border)] text-[var(--amber)] text-sm rounded-[var(--radius)] px-4 py-2 mb-6">
           <span>Deriv token issue: {tokenError}. Update it to trade.</span>
-          <Button onClick={() => setShowTokenModal(true)} className="btn btn-outline text-[var(--amber)] border-[var(--amber-border)] text-xs px-3 py-1">UPDATE TOKEN</Button>
+          <Button onClick={() => setShowTokenModal(true)} className="btn btn-outline text-white border-[var(--amber)] text-xs px-3 py-1">UPDATE TOKEN</Button>
         </div>
       )}
 
