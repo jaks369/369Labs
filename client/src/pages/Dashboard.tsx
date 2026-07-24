@@ -336,12 +336,6 @@ export default function Dashboard() {
           <div className="chart-container">
             <div className="chart-header">
               <h2 className="card-title text-sm">Live Chart &mdash; {selectedDisplay}</h2>
-              <div className="chart-toolbar">
-                <button className="chart-toolbar-btn active">1m</button>
-                <button className="chart-toolbar-btn">5m</button>
-                <button className="chart-toolbar-btn">15m</button>
-                <button className="chart-toolbar-btn">1h</button>
-              </div>
             </div>
             {showSymbolPicker ? (
               <div className="max-h-[300px] md:max-h-[420px] overflow-y-auto space-y-5 p-4">
