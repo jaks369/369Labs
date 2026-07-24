@@ -61,9 +61,9 @@ async function verifySessionToken(token: string | undefined | null): Promise<Ses
   if (!token) return null;
   try {
     const { payload } = await jwtVerify(token, getSessionSecret(), { algorithms: ["HS256"] });
-    const { userId } = payload as Record<string, unknown>;
+    const { userId, sessionId } = payload as Record<string, unknown>;
     if (typeof userId !== "number") return null;
-    return { userId };
+    return { userId, sessionId: typeof sessionId === "string" ? sessionId : "" };
   } catch (error) {
     console.warn("[Auth] Session verification failed", String(error));
     return null;
@@ -79,17 +79,21 @@ function parseCookies(cookieHeader: string | undefined) {
 /** Authenticate an incoming request via session cookie (or Bearer header fallback). Returns user and sessionId. */
 export async function authenticateRequest(req: Request): Promise<{ user: User; sessionId: string | null }> {
   const cookies = parseCookies(req.headers.cookie);
-  let sessionToken = cookies.get(COOKIE_NAME);
+  const cookieVal = cookies.get(COOKIE_NAME);
+  console.log(`[auth] cookie=${cookieVal ? "found" : "missing"}, header=${req.headers.authorization ? "present" : "missing"}, hasCookieHeader=${!!req.headers.cookie}`);
+  let sessionToken = cookieVal;
 
   if (!sessionToken) {
     const authHeader = req.headers.authorization;
     if (typeof authHeader === "string" && authHeader.startsWith("Bearer ")) {
       sessionToken = authHeader.slice(7);
+      console.log(`[auth] using Bearer token, len=${sessionToken.length}`);
     }
   }
 
   const payload = await verifySessionToken(sessionToken);
   if (!payload) {
+    console.log(`[auth] verifySessionToken returned null, token=${sessionToken ? sessionToken.slice(0,20)+"..." : "null"}`);
     throw ForbiddenError("Invalid session cookie");
   }
 
