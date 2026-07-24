@@ -80,27 +80,35 @@ function parseCookies(cookieHeader: string | undefined) {
 export async function authenticateRequest(req: Request): Promise<{ user: User; sessionId: string | null }> {
   const cookies = parseCookies(req.headers.cookie);
   const cookieVal = cookies.get(COOKIE_NAME);
-  console.log(`[auth] cookie=${cookieVal ? "found" : "missing"}, header=${req.headers.authorization ? "present" : "missing"}, hasCookieHeader=${!!req.headers.cookie}`);
   let sessionToken = cookieVal;
 
   if (!sessionToken) {
     const authHeader = req.headers.authorization;
     if (typeof authHeader === "string" && authHeader.startsWith("Bearer ")) {
       sessionToken = authHeader.slice(7);
-      console.log(`[auth] using Bearer token, len=${sessionToken.length}`);
     }
   }
 
+  console.log(`[auth] cookie=${cookieVal ? "found" : "missing"}, bearer=${req.headers.authorization?.startsWith("Bearer ") ? "found" : "missing"}, token=${sessionToken ? sessionToken.slice(0,15)+"..." : "null"}`);
+
   const payload = await verifySessionToken(sessionToken);
   if (!payload) {
-    console.log(`[auth] verifySessionToken returned null, token=${sessionToken ? sessionToken.slice(0,20)+"..." : "null"}`);
+    console.log(`[auth] FAIL verifySessionToken returned null`);
     throw ForbiddenError("Invalid session cookie");
   }
+  console.log(`[auth] OK payload userId=${payload.userId}, hasSessionId=${!!payload.sessionId}`);
 
   // Check if session was revoked
   if (payload.sessionId) {
-    const session = await db.getSessionBySessionId(payload.sessionId);
+    let session: any;
+    try {
+      session = await db.getSessionBySessionId(payload.sessionId);
+    } catch (e: any) {
+      console.log(`[auth] FAIL getSessionBySessionId threw: ${e?.message || e}`);
+      throw ForbiddenError("Session revoked");
+    }
     if (!session || session.revokedAt) {
+      console.log(`[auth] FAIL session ${session ? "revoked" : "not found"}`);
       throw ForbiddenError("Session revoked");
     }
     // Touch lastActiveAt periodically (once per minute per session)
@@ -111,10 +119,18 @@ export async function authenticateRequest(req: Request): Promise<{ user: User; s
     }
   }
 
-  const user = await db.getUserById(payload.userId);
-  if (!user) {
+  let user: User | null = null;
+  try {
+    user = await db.getUserById(payload.userId);
+  } catch (e: any) {
+    console.log(`[auth] FAIL getUserById threw: ${e?.message || e}`);
     throw ForbiddenError("User not found");
   }
+  if (!user) {
+    console.log(`[auth] FAIL user not found for userId=${payload.userId}`);
+    throw ForbiddenError("User not found");
+  }
+  console.log(`[auth] OK user found id=${user.id}`);
 
   // IP whitelist check
   const whitelist = await db.getIpWhitelist(payload.userId);
@@ -122,9 +138,11 @@ export async function authenticateRequest(req: Request): Promise<{ user: User; s
     const clientIp = req.headers["x-forwarded-for"]?.toString().split(",")[0]?.trim() || req.socket?.remoteAddress || "";
     const matched = whitelist.some(e => clientIp.startsWith(e.ip));
     if (!matched) {
+      console.log(`[auth] FAIL ip not whitelisted: ${clientIp}`);
       throw ForbiddenError("Access denied: IP not whitelisted");
     }
   }
 
+  console.log(`[auth] SUCCESS authenticated userId=${user.id}`);
   return { user: sanitizeUser(user), sessionId: payload.sessionId || null };
 }

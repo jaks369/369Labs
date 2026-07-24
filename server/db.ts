@@ -866,17 +866,58 @@ export async function ensureSignalsTable(): Promise<void> {
   } catch { }
 }
 
+export async function ensureNotificationSettingsColumns(): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+  const pool = (db as any).session?.client;
+  if (!pool) return;
+  const cols: [string, string][] = [
+    ["emailEnabled", "tinyint(1) NOT NULL DEFAULT 1"],
+  ];
+  for (const [name, def] of cols) {
+    try {
+      await pool.execute(`ALTER TABLE notificationSettings ADD COLUMN \`${name}\` ${def}`);
+      console.log(`[ensureNotificationSettingsColumns] added column ${name}`);
+    } catch (e: any) {
+      if (e?.errno !== 1060) console.error(`[ensureNotificationSettingsColumns] add ${name} failed`, e?.message || e);
+    }
+  }
+}
+
+export async function ensureAuditLogsTable(): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+  const pool = (db as any).session?.client;
+  if (!pool) return;
+  try {
+    await pool.execute(`CREATE TABLE IF NOT EXISTS auditLogs (
+      id int AUTO_INCREMENT NOT NULL,
+      userId int NOT NULL,
+      action varchar(48) NOT NULL,
+      target varchar(64),
+      detail json,
+      createdAt timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      CONSTRAINT auditLogs_id PRIMARY KEY(id)
+    )`);
+    console.log("[ensureAuditLogsTable] created auditLogs table");
+  } catch (e: any) {
+    console.error("[ensureAuditLogsTable] create failed", e?.message || e);
+  }
+}
+
 export async function ensureSignalExpiryColumn(): Promise<void> {
   const db = await getDb();
   if (!db) return;
+  const pool = (db as any).session?.client;
+  if (!pool) return;
   try {
-    await db.execute(sql`ALTER TABLE signals ADD COLUMN expiresAt bigint NOT NULL DEFAULT 0`);
+    await pool.execute(`ALTER TABLE signals ADD COLUMN expiresAt bigint NOT NULL DEFAULT 0`);
     console.log("[ensureSignalExpiryColumn] added expiresAt column");
   } catch (e: any) {
     if (e?.errno !== 1060) console.error("[ensureSignalExpiryColumn] alter failed", e?.message || e);
   }
   try {
-    await db.execute(sql`UPDATE signals SET expiresAt = discoveredAt + 3600 WHERE expiresAt = 0`);
+    await pool.execute(`UPDATE signals SET expiresAt = discoveredAt + 3600 WHERE expiresAt = 0`);
   } catch (e) {
     console.error("[ensureSignalExpiryColumn] backfill failed", e);
   }
