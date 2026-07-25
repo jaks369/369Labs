@@ -99,6 +99,36 @@ export default function Dashboard() {
     return () => { derivWS.removeListener(listener); derivWS.unsubscribe(subId); };
   }, [selectedSymbol, historyTab]);
 
+  // Recover pending contract subscriptions after page refresh / reconnect.
+  useEffect(() => {
+    if (!derivWS.isAuthorized()) return;
+    const pendingIds = derivWS.restorePendingContractsFromLocalStorage();
+    if (pendingIds.length === 0) return;
+    const existingIds = new Set(Array.from(derivWS["contractListeners"]?.keys() || []));
+    for (const contractId of pendingIds) {
+      if (existingIds.has(contractId)) continue;
+      const meta = derivWS.getContractMeta(contractId);
+      if (!meta) continue;
+      derivWS.subscribeToContract(contractId, (c: any) => {
+        if (c.status !== "open") {
+          const profit = parseFloat(c.profit || c.profit_loss || "0");
+          saveTradeMutation.mutate({
+            result: (profit >= 0 ? "win" : "loss") as any,
+            stake: meta.stake,
+            entryPrice: meta.entryPrice,
+            profitLoss: profit.toFixed(2),
+            entryTime: new Date(meta.entryTime),
+            exitTime: new Date(),
+            symbol: meta.symbol,
+            contractType: meta.contractType,
+            contractId: String(contractId),
+          } as any, { onSuccess: () => tradesQuery.refetch() });
+          derivWS.clearContractMeta(contractId);
+        }
+      });
+    }
+  }, [derivWS.isAuthorized()]);
+
   // Use live ticks if streaming, else fall back to the DB snapshot.
   const displayTicks = liveTicks.length ? liveTicks : (priceQuery.data?.ticks || []).slice(0, 50);
 
@@ -141,9 +171,27 @@ export default function Dashboard() {
         ...(takeProfit > 0 ? { takeProfit } : {}),
       });
       setTradeMsg({ kind: "ok", text: "Trade placed (contract #" + purchase.contractId + "). Tracking settlement…" });
+      setBalance(purchase.balanceAfter);
 
-      // Persist the open trade and subscribe to its settlement so the
-      // user's trade history stays accurate even after navigating away.
+      // Save an initial pending trade so it shows in history immediately.
+      const entryTime = new Date();
+      saveTradeMutation.mutate({
+        result: "pending" as any,
+        stake: String(stake),
+        entryPrice: String(purchase.buyPrice ?? ""),
+        entryTime,
+        symbol: selectedSymbol,
+        contractType: contractType,
+        contractId: String(purchase.contractId),
+      } as any, { onSuccess: () => tradesQuery.refetch() });
+
+      derivWS.registerContractMeta(purchase.contractId, {
+        stake: String(stake),
+        entryPrice: String(purchase.buyPrice ?? ""),
+        entryTime: entryTime.toISOString(),
+        symbol: selectedSymbol,
+        contractType: contractType,
+      });
       derivWS.subscribeToContract(purchase.contractId, (c: any) => {
         if (c.status !== "open") {
           const profit = parseFloat(c.profit || c.profit_loss || "0");
@@ -152,10 +200,13 @@ export default function Dashboard() {
             stake: String(stake),
             entryPrice: String(purchase.buyPrice ?? ""),
             profitLoss: profit.toFixed(2),
-            entryTime: new Date(),
+            entryTime,
             exitTime: new Date(),
+            symbol: selectedSymbol,
+            contractType: contractType,
             contractId: String(purchase.contractId),
           } as any, { onSuccess: () => tradesQuery.refetch() });
+          derivWS.clearContractMeta(purchase.contractId);
         }
       });
     } catch (e: any) {

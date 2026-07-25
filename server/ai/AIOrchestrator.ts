@@ -32,6 +32,10 @@ export class AIOrchestrator {
   };
 
   private intervalId: ReturnType<typeof setInterval> | null = null;
+  private lastInsightKeys = new Set<string>();
+  private lastRiskAlert = new Map<string, number>();
+  private lastAdvisoryLevel = new Map<string, string>();
+  private lastHealthScores = new Map<string, number>();
 
   start(): void {
     if (this.intervalId) return;
@@ -77,9 +81,9 @@ export class AIOrchestrator {
   private async tick(): Promise<void> {
     try {
       const insights = await this.insightEngine.generateAll();
-      if (insights.length > 0) {
-        this.state.insights = insights;
-        for (const insight of insights) {
+      for (const insight of insights) {
+        if (!this.lastInsightKeys.has(insight.id)) {
+          this.lastInsightKeys.add(insight.id);
           this.pushFeed({
             id: generateFeedId(),
             symbol: insight.market,
@@ -91,12 +95,17 @@ export class AIOrchestrator {
           });
         }
       }
+      if (insights.length > 0) {
+        this.state.insights = insights;
+        if (this.lastInsightKeys.size > 200) this.lastInsightKeys.clear();
+      }
 
       const health = await this.healthEngine.scoreAll();
       for (const h of health) {
         this.state.health.set(h.symbol, h);
-        const prev = this.state.health.get(h.symbol);
-        if (!prev || Math.abs(prev.score - h.score) > 5) {
+        const prevScore = this.lastHealthScores.get(h.symbol);
+        if (prevScore === undefined || Math.abs(prevScore - h.score) > 5) {
+          this.lastHealthScores.set(h.symbol, h.score);
           this.pushFeed({
             id: generateFeedId(),
             symbol: h.symbol,
@@ -117,11 +126,14 @@ export class AIOrchestrator {
 
           const health = this.state.health.get(symbol);
           const risk = await this.riskEngine.assess(symbol, prices);
-          if (risk.volatility === "High" || risk.confidence < 30) {
+          const now = Date.now();
+          const lastAlert = this.lastRiskAlert.get(symbol) || 0;
+          if ((risk.volatility === "High" || risk.confidence < 30) && now - lastAlert > 60000) {
+            this.lastRiskAlert.set(symbol, now);
             this.pushFeed({
               id: generateFeedId(),
               symbol,
-              timestamp: Date.now(),
+              timestamp: now,
               message: `Risk alert: ${symbol} ΓÇö ${risk.warnings[0] || "Unstable conditions"}`,
               confidence: risk.confidence,
               reasoning: [`Volatility: ${risk.volatility}`, `Trend quality: ${risk.trendQuality}%`, risk.recommendation],
@@ -149,7 +161,9 @@ export class AIOrchestrator {
 
           const advisory = await riskIntelligence.assess(symbol, prices, health, prediction ?? undefined, risk);
           this.state.riskAdvisories.set(symbol, advisory);
-          if (advisory.riskLevel === "HIGH" || advisory.riskLevel === "CRITICAL") {
+          const prevLevel = this.lastAdvisoryLevel.get(symbol);
+          if ((advisory.riskLevel === "HIGH" || advisory.riskLevel === "CRITICAL") && advisory.riskLevel !== prevLevel) {
+            this.lastAdvisoryLevel.set(symbol, advisory.riskLevel);
             this.pushFeed({
               id: generateFeedId(),
               symbol,
@@ -183,10 +197,17 @@ export class AIOrchestrator {
     }
   }
 
+  addFeedEntry(entry: LiveFeedEntry): void {
+    this.state.feed.push(entry);
+    if (this.state.feed.length > 300) {
+      this.state.feed = this.state.feed.slice(-200);
+    }
+  }
+
   private pushFeed(entry: LiveFeedEntry): void {
     this.state.feed.push(entry);
-    if (this.state.feed.length > 200) {
-      this.state.feed = this.state.feed.slice(-100);
+    if (this.state.feed.length > 300) {
+      this.state.feed = this.state.feed.slice(-200);
     }
   }
 }

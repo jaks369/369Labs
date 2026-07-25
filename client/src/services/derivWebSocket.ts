@@ -28,6 +28,7 @@ export interface PurchaseResult {
   contractId: number;
   buyPrice: number;
   longcode: string;
+  balanceAfter: number;
 }
 export interface ContractUpdate {
   contract_id: number;
@@ -164,17 +165,17 @@ class DerivWebSocketService {
         console.log(`[Deriv WS] Connected (${authenticated ? "authenticated" : "public"})`);
         this.reconnectAttempts = 0;
         this.subErrors.clear();
+        this.processPendingSubscriptions();
         if (authenticated) {
           this.authorized = true;
           this.notifyConnect();
           this.fetchBalance();
           this.fetchActiveSymbols();
-          this.processPendingSubscriptions();
+          setTimeout(() => this.resubscribeToContracts(), 500);
         } else {
           this.authorized = false;
           this.notifyConnect();
           this.fetchActiveSymbols();
-          this.processPendingSubscriptions();
         }
       };
       this.ws.onmessage = (event) => {
@@ -215,7 +216,10 @@ class DerivWebSocketService {
       const isSold = c.is_sold === 1 || c.status === "sold" || c.status === "won" || c.status === "lost";
       const cb = this.contractListeners.get(c.contract_id);
       cb?.({ contract_id: c.contract_id, is_sold: isSold, profit: c.profit, buy_price: c.buy_price, sell_price: c.sell_price, status: c.status, entry_tick: c.entry_tick, exit_tick: c.exit_tick });
-      if (isSold) this.contractListeners.delete(c.contract_id);
+      if (isSold) {
+        this.contractListeners.delete(c.contract_id);
+        this.clearContractMeta(c.contract_id);
+      }
     }
     if (data.msg_type === "balance") {
       this.lastBalance = data.balance;
@@ -337,11 +341,14 @@ class DerivWebSocketService {
   public async purchaseContract(params: PurchaseParams): Promise<PurchaseResult> {
     if (!this.ws || this.ws.readyState !== WebSocket.OPEN) throw new Error("WebSocket not connected");
     if (!this.authorized) throw new Error("Not authorized");
-    const proposalRes = await this.sendRequest({ proposal: 1, amount: params.amount, basis: "stake", contract_type: params.contractType, currency: "USD", duration: params.duration, duration_unit: params.durationUnit || "t", underlying_symbol: params.symbol, ...(params.barrier !== undefined ? { barrier: String(params.barrier) } : {}), ...(params.stopLoss !== undefined ? { stop_loss: String(params.stopLoss) } : {}), ...(params.takeProfit !== undefined ? { take_profit: String(params.takeProfit) } : {}) });
+    const proposalRes = await this.sendRequest({ proposal: 1, amount: params.amount, basis: "stake", contract_type: params.contractType, currency: "USD", duration: params.duration, duration_unit: params.durationUnit || "t", symbol: params.symbol, ...(params.barrier !== undefined ? { barrier: String(params.barrier) } : {}), ...(params.stopLoss !== undefined ? { stop_loss: String(params.stopLoss) } : {}), ...(params.takeProfit !== undefined ? { take_profit: String(params.takeProfit) } : {}) });
     if (!proposalRes.proposal) throw new Error("No proposal returned");
     const buyRes = await this.sendRequest({ buy: proposalRes.proposal.id, price: proposalRes.proposal.ask_price });
     if (!buyRes.buy) throw new Error("Buy request failed");
-    return { contractId: buyRes.buy.contract_id, buyPrice: buyRes.buy.buy_price, longcode: buyRes.buy.longcode };
+    const b = buyRes.buy.balance_after ?? (this.lastBalance?.balance ?? 0) - params.amount;
+    this.lastBalance = { ...(this.lastBalance || {}), balance: b };
+    this.notifyBalance(this.lastBalance);
+    return { contractId: buyRes.buy.contract_id, buyPrice: buyRes.buy.buy_price, longcode: buyRes.buy.longcode, balanceAfter: b };
   }
 
   public subscribeToContract(contractId: number, onUpdate: (c: ContractUpdate) => void): void {
@@ -349,6 +356,68 @@ class DerivWebSocketService {
     if (!this.ws || this.ws.readyState !== WebSocket.OPEN) return;
     try { this.ws.send(JSON.stringify({ proposal_open_contract: 1, contract_id: contractId, subscribe: 1, req_id: this.msgId++ })); }
     catch (error) { console.error("[Deriv WS] Failed to subscribe to contract:", error); }
+  }
+
+  public resubscribeToContracts(): void {
+    const ids = Array.from(this.contractListeners.keys());
+    for (const contractId of ids) {
+      if (!this.ws || this.ws.readyState !== WebSocket.OPEN) return;
+      try {
+        this.ws.send(JSON.stringify({ proposal_open_contract: 1, contract_id: contractId, subscribe: 1, req_id: this.msgId++ }));
+      } catch (error) {
+        console.error("[Deriv WS] Failed to re-subscribe to contract:", error);
+      }
+    }
+  }
+
+  // Persist contract metadata to localStorage so settlement callbacks can
+  // be reconstituted after a page refresh.
+  private contractMeta = new Map<number, { stake: string; entryPrice: string; entryTime: string; symbol: string; contractType: string }>();
+
+  public registerContractMeta(contractId: number, meta: { stake: string; entryPrice: string; entryTime: string; symbol: string; contractType: string }): void {
+    this.contractMeta.set(contractId, meta);
+    try {
+      const key = "pendingTrade_" + contractId;
+      localStorage.setItem(key, JSON.stringify(meta));
+    } catch {}
+  }
+
+  public getContractMeta(contractId: number): { stake: string; entryPrice: string; entryTime: string; symbol: string; contractType: string } | undefined {
+    if (this.contractMeta.has(contractId)) return this.contractMeta.get(contractId);
+    try {
+      const key = "pendingTrade_" + contractId;
+      const raw = localStorage.getItem(key);
+      if (!raw) return undefined;
+      const meta = JSON.parse(raw);
+      this.contractMeta.set(contractId, meta);
+      return meta;
+    } catch {
+      return undefined;
+    }
+  }
+
+  public clearContractMeta(contractId: number): void {
+    this.contractMeta.delete(contractId);
+    try {
+      const key = "pendingTrade_" + contractId;
+      localStorage.removeItem(key);
+    } catch {}
+  }
+
+  public restorePendingContractsFromLocalStorage(): number[] {
+    const restored: number[] = [];
+    try {
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key?.startsWith("pendingTrade_")) {
+          const contractId = parseInt(key.replace("pendingTrade_", ""));
+          if (!isNaN(contractId) && !this.contractListeners.has(contractId)) {
+            restored.push(contractId);
+          }
+        }
+      }
+    } catch {}
+    return restored;
   }
 
   private attemptReconnect() {

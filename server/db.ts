@@ -1,4 +1,4 @@
-import { eq, and, desc, gt, sql } from "drizzle-orm";
+import { eq, and, asc, desc, gt, sql } from "drizzle-orm";
 import * as mysql from "mysql2/promise";
 import { drizzle } from "drizzle-orm/mysql2";
 import {
@@ -481,6 +481,41 @@ export async function saveTrade(trade: InsertTrade): Promise<Trade> {
   const result = await db.insert(trades).values(trade);
   const id = result[0].insertId;
   return (await db.select().from(trades).where(eq(trades.id, id as number)).limit(1))[0];
+}
+
+export async function getPendingTrades(): Promise<Trade[]> {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(trades)
+    .where(and(eq(trades.result, "pending"), sql`${trades.contractId} IS NOT NULL`))
+    .orderBy(asc(trades.entryTime))
+    .limit(200);
+}
+
+export async function settleTrade(tradeId: number, data: {
+  result: "win" | "loss";
+  profitLoss: string;
+  exitPrice: string;
+  exitTime: Date;
+}): Promise<Trade | null> {
+  const db = await getDb();
+  if (!db) return null;
+  await db.update(trades)
+    .set({
+      result: data.result,
+      profitLoss: data.profitLoss,
+      exitPrice: data.exitPrice,
+      exitTime: data.exitTime,
+    })
+    .where(eq(trades.id, tradeId));
+  const updated = await db.select().from(trades).where(eq(trades.id, tradeId)).limit(1);
+  return updated[0] || null;
+}
+
+export async function getTradeById(tradeId: number): Promise<Trade | undefined> {
+  const db = await getDb();
+  if (!db) return undefined;
+  return (await db.select().from(trades).where(eq(trades.id, tradeId)).limit(1))[0];
 }
 
 export async function getTradesByUserId(userId: number, limit: number = 50): Promise<Trade[]> {
@@ -969,6 +1004,25 @@ export async function ensurePriceAlertsTable(): Promise<void> {
     console.log("[ensurePriceAlertsTable] created priceAlerts table");
   } catch (e: any) {
     console.error("[ensurePriceAlertsTable] create failed", e?.message || e);
+  }
+}
+
+export async function ensureTickHistoryTable(): Promise<void> {
+  const pool = getRawPool();
+  if (!pool) return;
+  try {
+    await pool.execute(`CREATE TABLE IF NOT EXISTS tickHistory (
+      id int AUTO_INCREMENT NOT NULL,
+      symbol varchar(32) NOT NULL,
+      price decimal(18,8) NOT NULL,
+      lastDigit int NOT NULL,
+      epoch bigint NOT NULL,
+      createdAt timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      CONSTRAINT tickHistory_id PRIMARY KEY(id)
+    )`);
+    console.log("[ensureTickHistoryTable] created tickHistory table");
+  } catch (e: any) {
+    console.error("[ensureTickHistoryTable] create failed", e?.message || e);
   }
 }
 

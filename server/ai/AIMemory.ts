@@ -24,22 +24,44 @@ interface HealthSnapshotInput {
   recommendation: string;
 }
 
+export interface TradeContext {
+  tradeId?: number;
+  symbol: string;
+  contractType?: string;
+  stake: number;
+  profitLoss: number;
+  result: string;
+  entryPrice: number;
+  exitPrice: number;
+  entryTime: string;
+  exitTime?: string;
+  strategyId?: number;
+  botRunId?: number;
+  contractId?: string;
+  marketHealth: number;
+  volatility: string;
+  trend: number;
+  momentum: number;
+  prediction?: string;
+  predictionConfidence?: number;
+  reviewScore?: number;
+  reviewSummary?: string;
+}
+
 let tickCounter = 0;
 const SNAPSHOT_INTERVAL = 20;
 
 export class AIMemory {
   async logAccuracy(userId: number, tradeReviewData: TradeReviewData): Promise<void> {
-    const prediction = tradeReviewData.context?.snapshot?.prediction;
-    if (!prediction) return;
-
     const outcome = tradeReviewData.result?.outcome;
     if (!outcome) return;
 
-    const correct = this.predictionMatchedOutcome(prediction.prediction, outcome);
+    const prediction = tradeReviewData.context?.snapshot?.prediction;
+    const correct = prediction ? this.predictionMatchedOutcome(prediction.prediction, outcome) : false;
 
     const accuracyEntry = {
-      prediction: prediction.prediction,
-      confidence: prediction.confidence,
+      prediction: prediction?.prediction || "N/A",
+      confidence: prediction?.confidence || 0,
       actualOutcome: outcome,
       correct,
       symbol: tradeReviewData.context.symbol,
@@ -81,6 +103,40 @@ export class AIMemory {
       return true;
     }
     return false;
+  }
+
+  async storeTradeContext(userId: number, context: TradeContext): Promise<void> {
+    try {
+      await db.saveAiKnowledge({
+        userId,
+        knowledgeType: AIKnowledgeType.TRADE_CONTEXT,
+        symbol: context.symbol,
+        data: context as any,
+        relatedTradeId: context.tradeId,
+        relatedStrategyId: context.strategyId,
+        source: "AIMemory",
+      });
+    } catch {
+      /* non-critical */
+    }
+  }
+
+  async getTradeContexts(userId: number, limit: number = 100): Promise<TradeContext[]> {
+    try {
+      const entries = await db.getAiKnowledge(userId, AIKnowledgeType.TRADE_CONTEXT, limit);
+      return entries.map((e) => e.data as TradeContext).filter(Boolean);
+    } catch {
+      return [];
+    }
+  }
+
+  async queryKnowledge(userId: number, type: string, limit: number = 50): Promise<any[]> {
+    try {
+      const entries = await db.getAiKnowledge(userId, type, limit);
+      return entries.map((e) => e.data).filter(Boolean);
+    } catch {
+      return [];
+    }
   }
 
   async getAccuracyStats(
@@ -192,10 +248,10 @@ export class AIMemory {
         warnings.push(`Win rate is ${winRate}% over ${tradeReviews.length} trades`);
       }
       if (totalPnL < -20) {
-        warnings.push(`Net PnL is ${totalPnL.toFixed(2)} GÇö review strategy settings`);
+        warnings.push(`Net PnL is ${totalPnL.toFixed(2)} â€” review strategy settings`);
       }
       if (accuracy.accuracyPct < 40 && accuracy.totalPredictions >= 5) {
-        warnings.push(`AI prediction accuracy is ${accuracy.accuracyPct}% GÇö predictions may need recalibration`);
+        warnings.push(`AI prediction accuracy is ${accuracy.accuracyPct}% â€” predictions may need recalibration`);
       }
 
       return {
@@ -221,4 +277,3 @@ export class AIMemory {
 }
 
 export const aiMemory = new AIMemory();
-

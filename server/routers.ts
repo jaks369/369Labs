@@ -1250,10 +1250,31 @@ save: protectedProcedure
       }))
       .mutation(async ({ ctx, input }) => {
         try {
-          return await db.saveTrade({
+          const trade = await db.saveTrade({
             userId: ctx.user.id,
             ...input,
           });
+          if (input.result !== "pending") {
+            import("./ai/AIIntelligenceHub").then(({ aiIntelligenceHub }) => {
+              aiIntelligenceHub.processTradeCompletion({
+                id: trade.id,
+                userId: ctx.user.id,
+                symbol: input.symbol || "R_100",
+                contractType: input.contractType,
+                stake: input.stake,
+                profitLoss: input.profitLoss,
+                result: input.result,
+                entryTime: input.entryTime,
+                exitTime: input.exitTime,
+                strategyId: input.strategyId,
+                botRunId: input.botRunId,
+                contractId: input.contractId,
+                entryPrice: input.entryPrice,
+                exitPrice: input.exitPrice,
+              }).catch(() => {});
+            }).catch(() => {});
+          }
+          return trade;
         } catch (error) {
           throw new TRPCError({
             code: "INTERNAL_SERVER_ERROR",
@@ -1926,6 +1947,20 @@ Return ONLY the JSON.`;
         active: state.active,
       };
     }),
+    intelligenceSummary: protectedProcedure.query(async ({ ctx }) => {
+      const { aiIntelligenceHub } = await import("./ai/AIIntelligenceHub");
+      return aiIntelligenceHub.getIntelligenceSummary(ctx.user.id);
+    }),
+    tradeContexts: protectedProcedure
+      .input(z.object({ limit: z.number().optional() }).optional())
+      .query(async ({ ctx, input }) => {
+        const { aiMemory } = await import("./ai/AIMemory");
+        return aiMemory.getTradeContexts(ctx.user.id, input?.limit ?? 100);
+      }),
+    patterns: protectedProcedure.query(async ({ ctx }) => {
+      const { patternDiscovery } = await import("./ai/PatternDiscovery");
+      return patternDiscovery.getLatestPatterns(ctx.user.id);
+    }),
   }),
 
   signals: router({
@@ -2383,6 +2418,55 @@ watch: protectedProcedure
         platform: process.platform,
       };
     }),
+    triggerSettlement: adminProcedure.mutation(async () => {
+      const { settlementTracker } = await import("./SettlementTracker");
+      const stats = await settlementTracker.runOnce();
+      return { ok: true, ...stats };
+    }),
+    pendingTrades: adminProcedure.query(async () => {
+      return { trades: await db.getPendingTrades() };
+    }),
+    createTestTrade: adminProcedure
+      .input(z.object({ userId: z.number(), contractId: z.string(), symbol: z.string(), stake: z.string(), contractType: z.string(), entryPrice: z.string().optional() }))
+      .mutation(async ({ input }) => {
+        const trade = await db.saveTrade({
+          userId: input.userId,
+          contractId: input.contractId,
+          symbol: input.symbol,
+          stake: input.stake,
+          contractType: input.contractType,
+          entryPrice: input.entryPrice || "100.00",
+          result: "pending",
+          entryTime: new Date(),
+        });
+        return { trade };
+      }),
+    checkTrade: adminProcedure
+      .input(z.object({ tradeId: z.number() }))
+      .query(async ({ input }) => {
+        return { trade: await db.getTradeById(input.tradeId) };
+      }),
+    checkAIKnowledge: adminProcedure
+      .input(z.object({ tradeId: z.number(), userId: z.number() }))
+      .query(async ({ input }) => {
+        return { entries: await db.getAiKnowledgeByRelatedTradeId(input.userId, input.tradeId) };
+      }),
+    reconcileTrade: adminProcedure
+      .input(z.object({ tradeId: z.number(), userId: z.number() }))
+      .mutation(async ({ input }) => {
+        const trade = await db.getTradeById(input.tradeId);
+        if (!trade) return { ok: false, reason: "not_found" };
+        if (trade.result !== "pending") return { ok: false, reason: "already_settled", result: trade.result };
+        const { settlementTracker } = await import("./SettlementTracker");
+        const result = await settlementTracker.reconcileTrade(trade);
+        const updated = await db.getTradeById(input.tradeId);
+        return { ok: true, ...result, trade: updated };
+      }),
+    settlementRetryCount: adminProcedure.query(async () => {
+      const { settlementTracker } = await import("./SettlementTracker");
+      const retries = settlementTracker.getRetryCount();
+      return { retries: Object.fromEntries(retries) };
+    }),
     aiJournalEntry: protectedProcedure
       .input(z.object({ title: z.string(), content: z.string(), strategy: z.string().optional() }))
       .mutation(async ({ input, ctx }) => {
@@ -2438,11 +2522,11 @@ watch: protectedProcedure
           const strat = await db.getStrategyById(id, ctx.user.id);
           if (!strat) continue;
           const rule = strat.config?.rule;
-          if (!rule) continue;
+          if (!rule || !rule.symbol) continue;
           const { runBacktest } = await import("./backtest");
-          const { derivWS } = await import("../client/src/services/derivWebSocket");
-          const ticks = await derivWS.fetchTickHistory(rule.symbol || "R_50", Math.floor(Date.now() / 1000) - 7 * 86400, Math.floor(Date.now() / 1000));
-          if (!ticks || ticks.length < 50) continue;
+          const rows = await db.getTickHistory(rule.symbol, 1000);
+          if (rows.length < 50) continue;
+          const ticks = rows.map((r: any) => ({ price: Number(r.price), timestamp: Number(r.epoch) * 1000 }));
           const res = await runBacktest(ticks, rule, Number(rule.params?.stake) || 1);
           results.push({ strategyId: id, name: strat.name, ...res });
         }

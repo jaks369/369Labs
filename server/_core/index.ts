@@ -5,7 +5,7 @@ import { registerStorageProxy } from "./storageProxy";
 import { appRouter } from "../routers";
 import { createContext } from "./context";
 import { serveStatic } from "./staticServe";
-import { getDb, pruneBadTicks, ensureSignalExpiryColumn, ensureSignalsTable, ensureNotificationSettingsColumns, ensureAuditLogsTable, ensureIpWhitelistTable, ensureTradesTable, ensurePriceAlertsTable, recomputeLastDigits, ensureUserMemoryTable, ensurePluginsTable, ensureWebhooksTable, ensureUsersColumns, ensureSessionsTable, ensureVerificationTokensTable, ensurePasswordResetTokensTable } from "../db";
+import { getDb, pruneBadTicks, ensureSignalExpiryColumn, ensureSignalsTable, ensureNotificationSettingsColumns, ensureAuditLogsTable, ensureIpWhitelistTable, ensureTradesTable, ensurePriceAlertsTable, ensureTickHistoryTable, recomputeLastDigits, ensureUserMemoryTable, ensurePluginsTable, ensureWebhooksTable, ensureUsersColumns, ensureSessionsTable, ensureVerificationTokensTable, ensurePasswordResetTokensTable } from "../db";
 import { users } from "../../drizzle/schema";
 import { startTickCollector } from "../tickCollector";
 import { runWatch } from "../signalScanner";
@@ -134,6 +134,7 @@ export async function createApp() {
       try { await ensureAuditLogsTable(); } catch (e) { console.error("[startup] ensureAuditLogsTable failed", e); }
       try { await ensureIpWhitelistTable(); } catch (e) { console.error("[startup] ensureIpWhitelistTable failed", e); }
       try { await ensureTradesTable(); } catch (e) { console.error("[startup] ensureTradesTable failed", e); }
+      try { await ensureTickHistoryTable(); } catch (e) { console.error("[startup] ensureTickHistoryTable failed", e); }
       try { await ensurePriceAlertsTable(); } catch (e) { console.error("[startup] ensurePriceAlertsTable failed", e); }
       try { await pruneBadTicks(); } catch (e) { console.error("[startup] pruneBadTicks failed", e); }
       try { await recomputeLastDigits(); } catch (e) { console.error("[startup] recomputeLastDigits failed", e); }
@@ -142,6 +143,27 @@ export async function createApp() {
       try { await ensureWebhooksTable(); } catch (e) { console.error("[startup] ensureWebhooksTable failed", e); }
       try { await ensureVerificationTokensTable(); } catch (e) { console.error("[startup] ensureVerificationTokensTable failed", e); }
       try { await ensurePasswordResetTokensTable(); } catch (e) { console.error("[startup] ensurePasswordResetTokensTable failed", e); }
+      try {
+        const { aiOrchestrator } = await import("../ai/AIOrchestrator");
+        aiOrchestrator.start();
+        const { aiIntelligenceHub } = await import("../ai/AIIntelligenceHub");
+        aiIntelligenceHub.onEvent((event) => {
+          try {
+            aiOrchestrator.addFeedEntry({
+              id: "hub_" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+              type: event.type === "strategy_warning" ? "warning" : "insight",
+              symbol: event.symbol,
+              message: event.message,
+              timestamp: event.timestamp,
+            });
+          } catch {}
+        });
+        console.log("[startup] AI Intelligence Hub started");
+      } catch (e) { console.error("[startup] AI Intelligence Hub failed", e); }
+      try {
+        const { settlementTracker } = await import("../SettlementTracker");
+        settlementTracker.start();
+      } catch (e) { console.error("[startup] SettlementTracker failed", e); }
     })();
   }
 

@@ -231,6 +231,13 @@ class DerivConnection {
     return prices.map((p, i) => ({ price: p, timestamp: times[i] * 1000 }));
   }
 
+  async getContractStatus(contractId: number): Promise<any> {
+    await this.ensureConnected();
+    const res = await this.sendRaw({ proposal_open_contract: 1, contract_id: contractId });
+    if (res?.error) throw new Error(res.error.message);
+    return res?.proposal_open_contract || null;
+  }
+
   async closePosition(contractId: number): Promise<any> {
     await this.ensureConnected();
     const res = await this.sendRaw({ sell: contractId, price: 0 });

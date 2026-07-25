@@ -55,7 +55,8 @@ class BotRunner {
   stop(id: string, userId: number, reason: string): void {
     const bot = this.bots.get(id);
     if (!bot || bot.def.userId !== userId) return;
-    bot.status = reason as BotRuntime["status"];
+    const validStatuses: BotRuntime["status"][] = ["running", "paused", "stopped", "error", "restarting"];
+    bot.status = validStatuses.includes(reason as any) ? reason as BotRuntime["status"] : "stopped";
     if (reason === "error") {
       notifyUser(userId, "botError", "Bot Error", `Bot "${bot.def.name}" stopped due to an error.`, bot.lastError || "Unknown error");
     }
