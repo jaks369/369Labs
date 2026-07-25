@@ -1232,7 +1232,7 @@ save: protectedProcedure
         strategyId: z.number().optional(),
         entryTime: z.date(),
         exitTime: z.date().optional(),
-        entryPrice: z.string(),
+        entryPrice: z.string().optional(),
         exitPrice: z.string().optional(),
         stake: z.string().refine((val) => {
           const decimalRegex = /^\d+(\.\d{1,8})?$/;
@@ -1273,7 +1273,8 @@ save: protectedProcedure
             }).catch(() => {});
           }
           return trade;
-        } catch (error) {
+        } catch (error: any) {
+          console.error("[trades.save] error:", error?.message || error);
           throw new TRPCError({
             code: "INTERNAL_SERVER_ERROR",
             message: "Failed to save trade",

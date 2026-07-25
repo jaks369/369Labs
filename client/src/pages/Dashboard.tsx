@@ -178,7 +178,7 @@ export default function Dashboard() {
       saveTradeMutation.mutate({
         result: "pending" as any,
         stake: String(stake),
-        entryPrice: String(purchase.buyPrice ?? ""),
+        entryPrice: String(purchase.buyPrice ?? stake),
         entryTime,
         symbol: selectedSymbol,
         contractType: contractType,
@@ -198,7 +198,7 @@ export default function Dashboard() {
           saveTradeMutation.mutate({
             result: (profit >= 0 ? "win" : "loss") as any,
             stake: String(stake),
-            entryPrice: String(purchase.buyPrice ?? ""),
+            entryPrice: String(purchase.buyPrice ?? stake),
             profitLoss: profit.toFixed(2),
             entryTime,
             exitTime: new Date(),
