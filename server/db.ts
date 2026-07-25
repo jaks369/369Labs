@@ -483,25 +483,70 @@ export async function saveTrade(trade: InsertTrade): Promise<Trade> {
     const result = await db.insert(trades).values(trade);
     id = result[0].insertId;
   } catch (e: any) {
-    // Fallback: raw SQL insert if Drizzle ORM fails
     const pool = getRawPool();
     if (!pool) throw new Error("Pool not available");
-    const [r] = await pool.execute(
-      "INSERT INTO trades (userId, botRunId, strategyId, entryTime, exitTime, entryPrice, exitPrice, stake, profitLoss, symbol, contractType, result, contractId) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-      [trade.userId, trade.botRunId ?? null, trade.strategyId ?? null, trade.entryTime, trade.exitTime ?? null, trade.entryPrice ?? null, trade.exitPrice ?? null, trade.stake, trade.profitLoss ?? null, trade.symbol ?? "R_100", trade.contractType ?? "CALL", trade.result ?? null, trade.contractId ?? null]
-    );
-    id = (r as any).insertId;
+    try {
+      const [r] = await pool.execute(
+        "INSERT INTO trades (userId, botRunId, strategyId, entryTime, exitTime, entryPrice, exitPrice, stake, profitLoss, symbol, contractType, result, contractId) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        [trade.userId, trade.botRunId ?? null, trade.strategyId ?? null, trade.entryTime, trade.exitTime ?? null, trade.entryPrice ?? null, trade.exitPrice ?? null, trade.stake, trade.profitLoss ?? null, trade.symbol ?? "R_100", trade.contractType ?? "CALL", trade.result ?? null, trade.contractId ?? null]
+      );
+      id = (r as any).insertId;
+    } catch (e2: any) {
+      // if symbol column doesn't exist yet (schema not migrated), save without it
+      if (e2?.errno === 1054 || e2?.code === 'ER_BAD_FIELD_ERROR') {
+        const [r] = await pool.execute(
+          "INSERT INTO trades (userId, botRunId, strategyId, entryTime, exitTime, entryPrice, exitPrice, stake, profitLoss, contractType, result, contractId) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+          [trade.userId, trade.botRunId ?? null, trade.strategyId ?? null, trade.entryTime, trade.exitTime ?? null, trade.entryPrice ?? null, trade.exitPrice ?? null, trade.stake, trade.profitLoss ?? null, trade.contractType ?? "CALL", trade.result ?? null, trade.contractId ?? null]
+        );
+        id = (r as any).insertId;
+      } else {
+        throw e2;
+      }
+    }
   }
-  return (await db.select().from(trades).where(eq(trades.id, id as number)).limit(1))[0];
+  try {
+    return (await db.select().from(trades).where(eq(trades.id, id as number)).limit(1))[0];
+  } catch {
+    return {
+      id,
+      userId: trade.userId,
+      botRunId: trade.botRunId ?? null,
+      strategyId: trade.strategyId ?? null,
+      entryTime: trade.entryTime,
+      exitTime: trade.exitTime ?? null,
+      entryPrice: trade.entryPrice ?? null,
+      exitPrice: trade.exitPrice ?? null,
+      stake: trade.stake,
+      profitLoss: trade.profitLoss ?? null,
+      symbol: trade.symbol ?? "R_100",
+      contractType: trade.contractType ?? null,
+      result: trade.result ?? null,
+      contractId: trade.contractId ?? null,
+      updatedAt: new Date(),
+    } as Trade;
+  }
 }
 
 export async function getPendingTrades(): Promise<Trade[]> {
   const db = await getDb();
   if (!db) return [];
-  return db.select().from(trades)
-    .where(and(eq(trades.result, "pending"), sql`${trades.contractId} IS NOT NULL`))
-    .orderBy(asc(trades.entryTime))
-    .limit(200);
+  try {
+    return await db.select().from(trades)
+      .where(and(eq(trades.result, "pending"), sql`${trades.contractId} IS NOT NULL`))
+      .orderBy(asc(trades.entryTime))
+      .limit(200);
+  } catch {
+    const pool = getRawPool();
+    if (!pool) return [];
+    try {
+      const [rows] = await pool.execute(
+        "SELECT id, userId, botRunId, strategyId, entryTime, exitTime, entryPrice, exitPrice, stake, profitLoss, contractType, result, contractId, updatedAt FROM trades WHERE result = 'pending' AND contractId IS NOT NULL ORDER BY entryTime ASC LIMIT 200"
+      );
+      return rows as Trade[];
+    } catch {
+      return [];
+    }
+  }
 }
 
 export async function settleTrade(tradeId: number, data: {
@@ -512,29 +557,74 @@ export async function settleTrade(tradeId: number, data: {
 }): Promise<Trade | null> {
   const db = await getDb();
   if (!db) return null;
-  await db.update(trades)
-    .set({
-      result: data.result,
-      profitLoss: data.profitLoss,
-      exitPrice: data.exitPrice,
-      exitTime: data.exitTime,
-    })
-    .where(eq(trades.id, tradeId));
-  const updated = await db.select().from(trades).where(eq(trades.id, tradeId)).limit(1);
-  return updated[0] || null;
+  try {
+    await db.update(trades)
+      .set({
+        result: data.result,
+        profitLoss: data.profitLoss,
+        exitPrice: data.exitPrice,
+        exitTime: data.exitTime,
+      })
+      .where(eq(trades.id, tradeId));
+    const updated = await db.select().from(trades).where(eq(trades.id, tradeId)).limit(1);
+    return updated[0] || null;
+  } catch {
+    const pool = getRawPool();
+    if (!pool) return null;
+    try {
+      await pool.execute(
+        "UPDATE trades SET result=?, profitLoss=?, exitPrice=?, exitTime=? WHERE id=?",
+        [data.result, data.profitLoss, data.exitPrice, data.exitTime, tradeId]
+      );
+      const [rows] = await pool.execute(
+        "SELECT id, userId, botRunId, strategyId, entryTime, exitTime, entryPrice, exitPrice, stake, profitLoss, contractType, result, contractId, updatedAt FROM trades WHERE id=?",
+        [tradeId]
+      );
+      return (rows as any[])[0] || null;
+    } catch {
+      return null;
+    }
+  }
 }
 
 export async function getTradeById(tradeId: number): Promise<Trade | undefined> {
   const db = await getDb();
   if (!db) return undefined;
-  return (await db.select().from(trades).where(eq(trades.id, tradeId)).limit(1))[0];
+  try {
+    return (await db.select().from(trades).where(eq(trades.id, tradeId)).limit(1))[0];
+  } catch {
+    const pool = getRawPool();
+    if (!pool) return undefined;
+    try {
+      const [rows] = await pool.execute(
+        "SELECT id, userId, botRunId, strategyId, entryTime, exitTime, entryPrice, exitPrice, stake, profitLoss, contractType, result, contractId, updatedAt FROM trades WHERE id=?",
+        [tradeId]
+      );
+      return (rows as any[])[0] || undefined;
+    } catch {
+      return undefined;
+    }
+  }
 }
 
 export async function getTradesByUserId(userId: number, limit: number = 50): Promise<Trade[]> {
   const db = await getDb();
   if (!db) return [];
-  
-  return db.select().from(trades).where(eq(trades.userId, userId)).orderBy(desc(trades.updatedAt)).limit(limit);
+  try {
+    return await db.select().from(trades).where(eq(trades.userId, userId)).orderBy(desc(trades.updatedAt)).limit(limit);
+  } catch {
+    const pool = getRawPool();
+    if (!pool) return [];
+    try {
+      const [rows] = await pool.execute(
+        "SELECT id, userId, botRunId, strategyId, entryTime, exitTime, entryPrice, exitPrice, stake, profitLoss, contractType, result, contractId, updatedAt FROM trades WHERE userId=? ORDER BY updatedAt DESC LIMIT ?",
+        [userId, limit]
+      );
+      return rows as Trade[];
+    } catch {
+      return [];
+    }
+  }
 }
 
 export async function getAccountByUserId(userId: number): Promise<{ balance: string } | null> {
@@ -992,6 +1082,14 @@ export async function ensureTradesTable(): Promise<void> {
       CONSTRAINT trades_id PRIMARY KEY(id)
     )`);
     console.log("[ensureTradesTable] created trades table");
+    // migrate existing table if missing columns from earlier schema
+    try {
+      await pool.execute("ALTER TABLE trades ADD COLUMN symbol varchar(32) NOT NULL DEFAULT 'R_100'");
+    } catch (e2: any) {
+      if (e2?.errno !== 1060 && !e2?.message?.includes('Duplicate column')) {
+        console.warn("[ensureTradesTable] column migration note", e2?.message || e2);
+      }
+    }
   } catch (e: any) {
     console.error("[ensureTradesTable] create failed", e?.message || e);
   }
