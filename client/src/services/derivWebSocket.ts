@@ -230,21 +230,30 @@ class DerivWebSocketService {
       return;
     }
     if (data.msg_type === "active_symbols") {
-      const raw = data.active_symbols || [];
+      const raw = data.active_symbols || data.data || [];
       if (!raw.length) {
-        console.warn("[Deriv WS] active_symbols empty", data);
+        console.warn("[Deriv WS] active_symbols empty", JSON.stringify(data).slice(0, 400));
         return;
       }
+      const first = raw[0];
+      const keys = Object.keys(first);
+      console.log("[Deriv WS] active_symbols sample keys:", keys.join(", "), "sample:", JSON.stringify(first).slice(0, 200));
+      const guessField = (...names: string[]): string => names.find(n => n in first) || "";
+      const symField = guessField("symbol", "name", "id", "key", "code", "underlying", "ticker");
+      const dispField = guessField("display_name", "displayName", "description", "name", "symbol_description", "long_name", "full_name", "label", "title");
+      const mktField = guessField("market", "market_name", "market_display_name", "sector", "group", "asset_class");
+      const smktField = guessField("submarket", "submarket_name", "sub_sector", "subgroup", "sub_market");
+      const pipField = guessField("pip", "pip_size", "pip_display", "display_digits", "decimal_places", "fractional_digits", "digits");
       const symbols: DerivSymbol[] = raw.map((s: any) => {
-        const sym = s.symbol || s.name || s.display_name || "";
-        const display = s.display_name || s.displayName || s.symbol_description || s.symbol || s.name || sym;
+        const sym = String(s[symField] || s.name || s.id || s.code || s.underlying || s.ticker || "").trim();
+        const display = String(s[dispField] || s.display_name || s.displayName || s.description || s.name || s.long_name || s.label || s.title || sym).trim();
         return {
           symbol: sym,
           displayName: display,
-          market: s.market || s.market_name || s.market_display_name || "",
-          submarket: s.submarket || s.submarket_name || "",
+          market: String(s[mktField] || s.market || "").trim(),
+          submarket: String(s[smktField] || "").trim(),
           decimalPlaces: (() => {
-            const pip = s.pip ?? s.pip_size ?? s.pip_display ?? s.display_digits;
+            const pip = s[pipField] ?? s.pip ?? s.pip_size ?? s.display_digits;
             const countDecimals = (v: any): number => {
               const str = typeof v === "number" ? v.toString() : String(v || "");
               const parts = str.split(".");
@@ -256,8 +265,7 @@ class DerivWebSocketService {
         };
       }).filter(s => s.symbol && s.displayName);
       if (!symbols.length) {
-        console.warn("[Deriv WS] active_symbols parsed empty from", JSON.stringify(raw.slice(0, 2)).slice(0, 300));
-        console.warn("[Deriv WS] Using default volatility symbols as fallback");
+        console.warn("[Deriv WS] active_symbols all filtered out, using defaults");
         symbols = [
           { symbol: "R_10", displayName: "Volatility 10 Index", market: "volatility", submarket: "synthetic_index", decimalPlaces: 3 },
           { symbol: "R_25", displayName: "Volatility 25 Index", market: "volatility", submarket: "synthetic_index", decimalPlaces: 3 },
@@ -304,7 +312,8 @@ class DerivWebSocketService {
 
   private fetchActiveSymbols() {
     if (!this.ws) return;
-    try { this.ws.send(JSON.stringify({ active_symbols: "full", req_id: this.msgId++ })); }
+    const msg = { active_symbols: "full", req_id: this.msgId++ };
+    try { this.ws.send(JSON.stringify(msg)); }
     catch (error) { console.error("[Deriv WS] Failed to fetch active symbols:", error); }
   }
 
@@ -325,13 +334,23 @@ class DerivWebSocketService {
   }
 
   public async fetchTickHistory(symbol: string, start: number, end: number): Promise<Tick[]> {
-    const res = await this.sendRequest({
-      ticks_history: symbol,
-      start,
-      end,
-      style: "ticks",
-      adjust_start_time: 1,
-    }, 30000);
+    let payload: Record<string, any> = { start, end, style: "ticks", adjust_start_time: 1 };
+    for (const field of ["ticks_history", "ticks", "tick_history", "symbol"]) {
+      payload[field] = symbol;
+      const res = await this.sendRequest({ ...payload }, 30000).catch(() => null);
+      if (res?.history?.times || res?.ticks_history?.history) {
+        const history = res.history || res.ticks_history.history;
+        if (!history?.times || !history?.prices) break;
+        const ticks: Tick[] = [];
+        for (let i = 0; i < history.times.length; i++) {
+          ticks.push({ symbol, price: Number(history.prices[i]), timestamp: history.times[i] * 1000 });
+        }
+        return ticks;
+      }
+      if (res?.error?.message?.includes("Properties not allowed") || res?.error?.message?.includes("not allow")) continue;
+      if (res && !res.error) break;
+    }
+    return [];
     const history = res?.history || res?.ticks_history?.history;
     if (!history?.times || !history?.prices) {
       console.warn("[Deriv WS] Unexpected tick history response format", res);
@@ -358,14 +377,30 @@ class DerivWebSocketService {
   public async purchaseContract(params: PurchaseParams): Promise<PurchaseResult> {
     if (!this.ws || this.ws.readyState !== WebSocket.OPEN) throw new Error("WebSocket not connected");
     if (!this.authorized) throw new Error("Not authorized");
-    const proposalRes = await this.sendRequest({ proposal: 1, amount: params.amount, basis: "stake", contract_type: params.contractType, currency: "USD", duration: params.duration, duration_unit: params.durationUnit || "t", symbol: params.symbol, ...(params.barrier !== undefined ? { barrier: String(params.barrier) } : {}), ...(params.stopLoss !== undefined ? { stop_loss: String(params.stopLoss) } : {}), ...(params.takeProfit !== undefined ? { take_profit: String(params.takeProfit) } : {}) });
-    if (!proposalRes.proposal) throw new Error("No proposal returned");
-    const buyRes = await this.sendRequest({ buy: proposalRes.proposal.id, price: proposalRes.proposal.ask_price });
-    if (!buyRes.buy) throw new Error("Buy request failed");
-    const b = buyRes.buy.balance_after ?? (this.lastBalance?.balance ?? 0) - params.amount;
-    this.lastBalance = { ...(this.lastBalance || {}), balance: b };
-    this.notifyBalance(this.lastBalance);
-    return { contractId: buyRes.buy.contract_id, buyPrice: buyRes.buy.buy_price, longcode: buyRes.buy.longcode, balanceAfter: b };
+    let proposalPayload: Record<string, any> = { proposal: 1, amount: params.amount, basis: "stake", contract_type: params.contractType, currency: "USD", duration: params.duration, duration_unit: params.durationUnit || "t" };
+    if (params.barrier !== undefined) proposalPayload.barrier = String(params.barrier);
+    if (params.stopLoss !== undefined) proposalPayload.stop_loss = String(params.stopLoss);
+    if (params.takeProfit !== undefined) proposalPayload.take_profit = String(params.takeProfit);
+    for (const symField of ["symbol", "underlying", "underlying_symbol"]) {
+      try {
+        proposalPayload[symField] = params.symbol;
+        const proposalRes = await this.sendRequest({ ...proposalPayload });
+        if (proposalRes.proposal) {
+          const buyRes = await this.sendRequest({ buy: proposalRes.proposal.id, price: proposalRes.proposal.ask_price });
+          if (!buyRes.buy) throw new Error("Buy request failed");
+          const b = buyRes.buy.balance_after ?? (this.lastBalance?.balance ?? 0) - params.amount;
+          this.lastBalance = { ...(this.lastBalance || {}), balance: b };
+          this.notifyBalance(this.lastBalance);
+          return { contractId: buyRes.buy.contract_id, buyPrice: buyRes.buy.buy_price, longcode: buyRes.buy.longcode, balanceAfter: b };
+        }
+        if (proposalRes.error?.message?.includes("Properties not allowed")) continue;
+        throw new Error("No proposal returned: " + JSON.stringify(proposalRes).slice(0, 200));
+      } catch (e: any) {
+        if (e.message?.includes("Properties not allowed") && symField !== "underlying_symbol") continue;
+        throw e;
+      }
+    }
+    throw new Error("Trade failed: symbol field not accepted by Deriv API");
   }
 
   public subscribeToContract(contractId: number, onUpdate: (c: ContractUpdate) => void): void {
