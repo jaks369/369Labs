@@ -492,15 +492,22 @@ export async function saveTrade(trade: InsertTrade): Promise<Trade> {
       );
       id = (r as any).insertId;
     } catch (e2: any) {
-      // if symbol column doesn't exist yet (schema not migrated), save without it
-      if (e2?.errno === 1054 || e2?.code === 'ER_BAD_FIELD_ERROR') {
+      if (e2?.errno !== 1054 && e2?.code !== 'ER_BAD_FIELD_ERROR') throw e2;
+      // try without symbol (schema may be missing it)
+      try {
         const [r] = await pool.execute(
           "INSERT INTO trades (userId, botRunId, strategyId, entryTime, exitTime, entryPrice, exitPrice, stake, profitLoss, contractType, result, contractId) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
           [trade.userId, trade.botRunId ?? null, trade.strategyId ?? null, trade.entryTime, trade.exitTime ?? null, trade.entryPrice ?? null, trade.exitPrice ?? null, trade.stake, trade.profitLoss ?? null, trade.contractType ?? "CALL", trade.result ?? null, trade.contractId ?? null]
         );
         id = (r as any).insertId;
-      } else {
-        throw e2;
+      } catch (e3: any) {
+        if (e3?.errno !== 1054 && e3?.code !== 'ER_BAD_FIELD_ERROR') throw e3;
+        // try without both symbol and contractType
+        const [r] = await pool.execute(
+          "INSERT INTO trades (userId, botRunId, strategyId, entryTime, exitTime, entryPrice, exitPrice, stake, profitLoss, result, contractId) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+          [trade.userId, trade.botRunId ?? null, trade.strategyId ?? null, trade.entryTime, trade.exitTime ?? null, trade.entryPrice ?? null, trade.exitPrice ?? null, trade.stake, trade.profitLoss ?? null, trade.result ?? null, trade.contractId ?? null]
+        );
+        id = (r as any).insertId;
       }
     }
   }
@@ -1083,11 +1090,16 @@ export async function ensureTradesTable(): Promise<void> {
     )`);
     console.log("[ensureTradesTable] created trades table");
     // migrate existing table if missing columns from earlier schema
-    try {
-      await pool.execute("ALTER TABLE trades ADD COLUMN symbol varchar(32) NOT NULL DEFAULT 'R_100'");
-    } catch (e2: any) {
-      if (e2?.errno !== 1060 && !e2?.message?.includes('Duplicate column')) {
-        console.warn("[ensureTradesTable] column migration note", e2?.message || e2);
+    for (const col of [
+      "ADD COLUMN symbol varchar(32) NOT NULL DEFAULT 'R_100'",
+      "ADD COLUMN contractType varchar(32) DEFAULT 'CALL'",
+    ]) {
+      try {
+        await pool.execute(`ALTER TABLE trades ${col}`);
+      } catch (e2: any) {
+        if (e2?.errno !== 1060 && !e2?.message?.includes('Duplicate column')) {
+          console.warn("[ensureTradesTable] column migration note", e2?.message || e2);
+        }
       }
     }
   } catch (e: any) {
