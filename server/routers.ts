@@ -12,6 +12,9 @@ import { getTickHistory, getActiveSymbols, getDigitStats, getTrend, suggestStrat
 import type { PatternType } from "./signalScanner";
 import { createHmac, timingSafeEqual, randomBytes } from "crypto";
 
+const DERIV_APP_ID = process.env.VITE_DERIV_APP_ID || "33V0MWtYaZLLmAZBWUycN";
+const DERIV_API_BASE = "https://api.derivws.com";
+
 function hexToBase32(hex: string): string {
   const base32Chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
   const bytes = Buffer.from(hex, "hex");
@@ -912,6 +915,28 @@ export const appRouter = router({
             message: "Failed to remove Deriv token",
           });
         }
+      }),
+
+    // Proxy REST requests to Deriv v1 API (avoids browser CORS)
+    restProxy: protectedProcedure
+      .input(z.object({
+        path: z.string(),
+        body: z.any(),
+        method: z.enum(["POST", "GET", "PUT", "DELETE"]).default("POST"),
+        accountId: z.string(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const token = await db.getDerivTokenByUserId(ctx.user.id);
+        if (!token) throw new TRPCError({ code: "BAD_REQUEST", message: "No Deriv token found" });
+        const url = `${DERIV_API_BASE}/trading/v1/options/accounts/${input.accountId}${input.path}`;
+        const fetchOpts: RequestInit = { method: input.method, headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token.token}`, "Deriv-App-ID": DERIV_APP_ID } };
+        if (input.method !== "GET") fetchOpts.body = JSON.stringify(input.body);
+        const res = await fetch(url, fetchOpts);
+        const text = await res.text();
+        if (!res.ok) throw new TRPCError({ code: "BAD_REQUEST", message: `Deriv REST ${input.path} failed (${res.status}): ${text.slice(0, 500)}` });
+        let json: any;
+        try { json = JSON.parse(text); } catch { throw new TRPCError({ code: "BAD_REQUEST", message: `Deriv REST ${input.path}: invalid JSON: ${text.slice(0, 200)}` }); }
+        return json;
       }),
 
     // --- Control-center endpoints (server-owned live connection) ---

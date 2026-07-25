@@ -367,14 +367,22 @@ class DerivWebSocketService {
   }
 
   private async restRequest<T = any>(path: string, body: any, method = "POST"): Promise<T> {
+    if (typeof window !== "undefined") {
+      const res = await fetch("/api/deriv-proxy", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ path, body: method !== "GET" ? body : undefined, method, accountId: this.accountId }),
+      });
+      const text = await res.text();
+      let json: any;
+      try { json = JSON.parse(text); } catch { throw new Error(`Proxy ${path}: invalid JSON: ${text}`); }
+      if (!res.ok) throw new Error(json.error || `Proxy ${path} failed (${res.status})`);
+      return json as T;
+    }
     const url = `${DERIV_API_BASE}/trading/v1/options/accounts/${this.accountId}${path}`;
     const res = await fetch(url, {
       method,
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${this.apiToken}`,
-        "Deriv-App-ID": DERIV_APP_ID,
-      },
+      headers: { "Content-Type": "application/json", "Authorization": `Bearer ${this.apiToken}`, "Deriv-App-ID": DERIV_APP_ID },
       body: JSON.stringify(body),
     });
     const text = await res.text();
