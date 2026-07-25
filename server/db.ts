@@ -478,8 +478,20 @@ export async function saveTrade(trade: InsertTrade): Promise<Trade> {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   
-  const result = await db.insert(trades).values(trade);
-  const id = result[0].insertId;
+  let id: number;
+  try {
+    const result = await db.insert(trades).values(trade);
+    id = result[0].insertId;
+  } catch (e: any) {
+    // Fallback: raw SQL insert if Drizzle ORM fails
+    const pool = getRawPool();
+    if (!pool) throw new Error("Pool not available");
+    const [r] = await pool.execute(
+      "INSERT INTO trades (userId, botRunId, strategyId, entryTime, exitTime, entryPrice, exitPrice, stake, profitLoss, symbol, contractType, result, contractId) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+      [trade.userId, trade.botRunId ?? null, trade.strategyId ?? null, trade.entryTime, trade.exitTime ?? null, trade.entryPrice ?? null, trade.exitPrice ?? null, trade.stake, trade.profitLoss ?? null, trade.symbol ?? "R_100", trade.contractType ?? "CALL", trade.result ?? null, trade.contractId ?? null]
+    );
+    id = (r as any).insertId;
+  }
   return (await db.select().from(trades).where(eq(trades.id, id as number)).limit(1))[0];
 }
 

@@ -1274,7 +1274,7 @@ save: protectedProcedure
           }
           return trade;
         } catch (error: any) {
-          console.error("[trades.save] error:", error?.message || error);
+          console.error("[trades.save] FAILED input:", JSON.stringify({ ...input, userId: ctx.user.id }), "error:", error?.message || error, "stack:", error?.stack?.split("\n").slice(0, 3).join("|"));
           throw new TRPCError({
             code: "INTERNAL_SERVER_ERROR",
             message: "Failed to save trade",
