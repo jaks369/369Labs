@@ -235,25 +235,41 @@ class DerivWebSocketService {
         console.warn("[Deriv WS] active_symbols empty", data);
         return;
       }
-      const symbols: DerivSymbol[] = raw.map((s: any) => ({
-        symbol: s.symbol || s.name || "",
-        displayName: s.display_name || s.displayName || s.symbol_description || s.symbol || "",
-        market: s.market || s.market_name || "",
-        submarket: s.submarket || s.submarket_name || "",
-        decimalPlaces: (() => {
-          const pip = s.pip ?? s.pip_size;
-          const countDecimals = (v: any): number => {
-            const str = typeof v === "number" ? v.toString() : String(v || "");
-            const parts = str.split(".");
-            return parts[1] ? parts[1].replace(/0+$/, "").length || parts[1].length : 0;
-          };
-          if (typeof pip === "number" || typeof pip === "string") return countDecimals(pip);
-          return 3;
-        })(),
-      })).filter(s => s.symbol && s.displayName);
+      const symbols: DerivSymbol[] = raw.map((s: any) => {
+        const sym = s.symbol || s.name || s.display_name || "";
+        const display = s.display_name || s.displayName || s.symbol_description || s.symbol || s.name || sym;
+        return {
+          symbol: sym,
+          displayName: display,
+          market: s.market || s.market_name || s.market_display_name || "",
+          submarket: s.submarket || s.submarket_name || "",
+          decimalPlaces: (() => {
+            const pip = s.pip ?? s.pip_size ?? s.pip_display ?? s.display_digits;
+            const countDecimals = (v: any): number => {
+              const str = typeof v === "number" ? v.toString() : String(v || "");
+              const parts = str.split(".");
+              return parts[1] ? parts[1].replace(/0+$/, "").length || parts[1].length : 0;
+            };
+            if (typeof pip === "number" || typeof pip === "string") return countDecimals(pip);
+            return 3;
+          })(),
+        };
+      }).filter(s => s.symbol && s.displayName);
       if (!symbols.length) {
-        console.warn("[Deriv WS] active_symbols parsed empty from", raw.slice(0, 2));
-        return;
+        console.warn("[Deriv WS] active_symbols parsed empty from", JSON.stringify(raw.slice(0, 2)).slice(0, 300));
+        console.warn("[Deriv WS] Using default volatility symbols as fallback");
+        symbols = [
+          { symbol: "R_10", displayName: "Volatility 10 Index", market: "volatility", submarket: "synthetic_index", decimalPlaces: 3 },
+          { symbol: "R_25", displayName: "Volatility 25 Index", market: "volatility", submarket: "synthetic_index", decimalPlaces: 3 },
+          { symbol: "R_50", displayName: "Volatility 50 Index", market: "volatility", submarket: "synthetic_index", decimalPlaces: 3 },
+          { symbol: "R_75", displayName: "Volatility 75 Index", market: "volatility", submarket: "synthetic_index", decimalPlaces: 3 },
+          { symbol: "R_100", displayName: "Volatility 100 Index", market: "volatility", submarket: "synthetic_index", decimalPlaces: 3 },
+          { symbol: "R_150", displayName: "Volatility 150 Index", market: "volatility", submarket: "synthetic_index", decimalPlaces: 3 },
+          { symbol: "R_200", displayName: "Volatility 200 Index", market: "volatility", submarket: "synthetic_index", decimalPlaces: 3 },
+          { symbol: "1HZ10V", displayName: "Volatility 10 (1s) Index", market: "volatility", submarket: "synthetic_index", decimalPlaces: 3 },
+          { symbol: "1HZ50V", displayName: "Volatility 50 (1s) Index", market: "volatility", submarket: "synthetic_index", decimalPlaces: 3 },
+          { symbol: "1HZ100V", displayName: "Volatility 100 (1s) Index", market: "volatility", submarket: "synthetic_index", decimalPlaces: 3 },
+        ];
       }
       console.log("[Deriv WS] active_symbols loaded:", symbols.length);
       this._activeSymbols = symbols;
@@ -296,6 +312,7 @@ class DerivWebSocketService {
     const pending = [...this.pendingSubscriptionSymbols];
     this.pendingSubscriptionSymbols = [];
     for (const symbol of pending) {
+      if (!symbol || typeof symbol !== "string") continue;
       try { this.ws?.send(JSON.stringify({ ticks: symbol, subscribe: 1, req_id: this.msgId++ })); }
       catch (error) { console.error("[Deriv WS] Failed to subscribe:", error); }
     }
@@ -448,6 +465,7 @@ class DerivWebSocketService {
   }
 
   private doSubscribe(symbol: string) {
+    if (!symbol) return;
     if (this.subscribedSymbols.has(symbol)) return;
     this.subscribedSymbols.add(symbol);
     this.subErrors.delete(symbol);

@@ -1208,10 +1208,8 @@ export const appRouter = router({
         try {
           return await db.getTradesByUserId(ctx.user.id, input.limit);
         } catch (error) {
-          throw new TRPCError({
-            code: "INTERNAL_SERVER_ERROR",
-            message: "Failed to retrieve trades",
-          });
+          console.error("[trades.list] Error:", error);
+          return [];
         }
       }),
 
