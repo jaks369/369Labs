@@ -72,6 +72,8 @@ class DerivWebSocketService {
   private intentionallyDisconnected = false;
   private lastBalance: any = null;
   private lastAccountType: string = "";
+  private accountId: string = "";
+  private apiMode: "v1" | "v3" = "v3";
   private balanceListeners: Set<(b: any) => void> = new Set();
   private _activeSymbols: DerivSymbol[] = [];
   private symbolListeners: Set<(symbols: DerivSymbol[]) => void> = new Set();
@@ -239,12 +241,12 @@ class DerivWebSocketService {
       const keys = Object.keys(first);
       console.log("[Deriv WS] active_symbols sample keys:", keys.join(", "), "sample:", JSON.stringify(first).slice(0, 200));
       const guessField = (...names: string[]): string => names.find(n => n in first) || "";
-      const symField = guessField("symbol", "name", "id", "key", "code", "underlying", "ticker");
-      const dispField = guessField("display_name", "displayName", "description", "name", "symbol_description", "long_name", "full_name", "label", "title");
+      const symField = guessField("underlying_symbol", "symbol", "name", "id", "key", "code", "underlying", "ticker");
+      const dispField = guessField("underlying_symbol_name", "display_name", "displayName", "description", "name", "symbol_description", "long_name", "full_name", "label", "title");
       const mktField = guessField("market", "market_name", "market_display_name", "sector", "group", "asset_class");
       const smktField = guessField("submarket", "submarket_name", "sub_sector", "subgroup", "sub_market");
       const pipField = guessField("pip", "pip_size", "pip_display", "display_digits", "decimal_places", "fractional_digits", "digits");
-      const symbols: DerivSymbol[] = raw.map((s: any) => {
+      let symbols: DerivSymbol[] = raw.map((s: any) => {
         const sym = String(s[symField] || s.name || s.id || s.code || s.underlying || s.ticker || "").trim();
         const display = String(s[dispField] || s.display_name || s.displayName || s.description || s.name || s.long_name || s.label || s.title || sym).trim();
         return {
@@ -351,16 +353,6 @@ class DerivWebSocketService {
       if (res && !res.error) break;
     }
     return [];
-    const history = res?.history || res?.ticks_history?.history;
-    if (!history?.times || !history?.prices) {
-      console.warn("[Deriv WS] Unexpected tick history response format", res);
-      return [];
-    }
-    const ticks: Tick[] = [];
-    for (let i = 0; i < history.times.length; i++) {
-      ticks.push({ symbol, price: Number(history.prices[i]), timestamp: history.times[i] * 1000 });
-    }
-    return ticks;
   }
 
   private sendRequest(payload: Record<string, any>, timeoutMs = 15000): Promise<any> {
@@ -374,9 +366,46 @@ class DerivWebSocketService {
     });
   }
 
+  private async restRequest<T = any>(path: string, body: any, method = "POST"): Promise<T> {
+    const url = `${DERIV_API_BASE}/trading/v1/options/accounts/${this.accountId}${path}`;
+    const res = await fetch(url, {
+      method,
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${this.apiToken}`,
+        "Deriv-App-ID": DERIV_APP_ID,
+      },
+      body: JSON.stringify(body),
+    });
+    const text = await res.text();
+    if (!res.ok) throw new Error(`REST ${path} failed (${res.status}): ${text}`);
+    let json: any;
+    try { json = JSON.parse(text); } catch { throw new Error(`REST ${path}: invalid JSON: ${text}`); }
+    return json as T;
+  }
+
   public async purchaseContract(params: PurchaseParams): Promise<PurchaseResult> {
-    if (!this.ws || this.ws.readyState !== WebSocket.OPEN) throw new Error("WebSocket not connected");
     if (!this.authorized) throw new Error("Not authorized");
+    if (this.apiMode === "v1") {
+      const proposalRes = await this.restRequest<any>("/proposal", {
+        contract_type: params.contractType, amount: params.amount, basis: "stake",
+        currency: "USD", duration: params.duration, duration_unit: params.durationUnit || "t",
+        underlying_symbol: params.symbol,
+        ...(params.barrier !== undefined ? { barrier: String(params.barrier) } : {}),
+      });
+      const proposal = proposalRes.data || proposalRes.proposal || proposalRes;
+      if (!proposal.id && !proposal.proposal_id) throw new Error("No proposal ID from REST: " + JSON.stringify(proposal).slice(0, 200));
+      const proposalId = proposal.id || proposal.proposal_id;
+      const price = proposal.ask_price || proposal.price;
+      const buyRes = await this.restRequest<any>("/buy", { proposal_id: proposalId, price });
+      const buyData = buyRes.data || buyRes.buy || buyRes;
+      if (!buyData.contract_id) throw new Error("Buy failed: " + JSON.stringify(buyRes).slice(0, 200));
+      const b = buyData.balance_after ?? (this.lastBalance?.balance ?? 0) - params.amount;
+      this.lastBalance = { ...(this.lastBalance || {}), balance: buyData.balance_after ?? b };
+      this.notifyBalance(this.lastBalance);
+      return { contractId: buyData.contract_id, buyPrice: buyData.buy_price || price, longcode: buyData.longcode || "", balanceAfter: buyData.balance_after ?? b };
+    }
+    if (!this.ws || this.ws.readyState !== WebSocket.OPEN) throw new Error("WebSocket not connected");
     let proposalPayload: Record<string, any> = { proposal: 1, amount: params.amount, basis: "stake", contract_type: params.contractType, currency: "USD", duration: params.duration, duration_unit: params.durationUnit || "t" };
     if (params.barrier !== undefined) proposalPayload.barrier = String(params.barrier);
     if (params.stopLoss !== undefined) proposalPayload.stop_loss = String(params.stopLoss);
@@ -574,6 +603,8 @@ class DerivWebSocketService {
       const accounts = await this.fetchAccounts();
       if (!accounts.length) throw new Error(this.friendlyError("No trading accounts found"));
       const account = accounts[0];
+      this.accountId = account.account_id;
+      this.apiMode = "v1";
       const { url, accountType } = await this.fetchOtpUrl(account.account_id);
       this.lastAccountType = accountType;
       this.disconnect();
