@@ -48,7 +48,7 @@ export interface DerivSymbol {
   decimalPlaces?: number;
 }
 
-const DERIV_APP_ID_V1_V1 = (import.meta as any).env?.VITE_DERIV_APP_ID_V1 || "33V0MWtYaZLLmAZBWUycN";
+const DERIV_APP_ID = (import.meta as any).env?.VITE_DERIV_APP_ID || "33V0MWtYaZLLmAZBWUycN";
 const DERIV_API_BASE = "https://api.derivws.com";
 const DERIV_WS_PUBLIC = "wss://api.derivws.com/trading/v1/options/ws/public";
 const DERIV_WS_V3 = "wss://ws.derivws.com/websockets/v3?app_id=1089";
@@ -116,7 +116,7 @@ class DerivWebSocketService {
     const res = await fetch(url, {
       headers: {
         "Authorization": `Bearer ${this.apiToken}`,
-        "Deriv-App-ID": DERIV_APP_ID_V1,
+        "Deriv-App-ID": DERIV_APP_ID,
       },
     });
     const body = await res.text();
@@ -138,7 +138,7 @@ class DerivWebSocketService {
       method: "POST",
       headers: {
         "Authorization": `Bearer ${this.apiToken}`,
-        "Deriv-App-ID": DERIV_APP_ID_V1,
+        "Deriv-App-ID": DERIV_APP_ID,
       },
     });
     const body = await res.text();
