@@ -405,7 +405,31 @@ class DerivWebSocketService {
   public async purchaseContract(params: PurchaseParams): Promise<PurchaseResult> {
     if (!this.authorized) throw new Error("Not authorized");
     if (this.apiMode === "v1") {
-      return this.v3Trade(params);
+      // Try v1 OTP WS — tries various message formats
+      try {
+        const contractParams = { amount: params.amount, basis: "stake", contract_type: params.contractType, currency: "USD", duration: params.duration, duration_unit: params.durationUnit || "t", underlying_symbol: params.symbol, ...(params.barrier !== undefined ? { barrier: String(params.barrier) } : {}) };
+        for (const format of [
+          { proposal: 1, ...contractParams },
+          { proposal: 1, contract: contractParams },
+          { proposal: 1, parameters: contractParams },
+        ]) {
+          const proposalRes = await this.sendRequest(format, 15000).catch(() => null);
+          if (proposalRes?.proposal) {
+            const buyRes = await this.sendRequest({ buy: proposalRes.proposal.id, price: proposalRes.proposal.ask_price });
+            if (!buyRes?.buy) continue;
+            const b = buyRes.buy.balance_after ?? (this.lastBalance?.balance ?? 0) - params.amount;
+            this.lastBalance = { ...(this.lastBalance || {}), balance: b };
+            this.notifyBalance(this.lastBalance);
+            return { contractId: buyRes.buy.contract_id, buyPrice: buyRes.buy.buy_price, longcode: buyRes.buy.longcode, balanceAfter: b };
+          }
+        }
+        console.warn("[Deriv WS] v1 proposal failed all formats");
+      } catch (e: any) {
+        console.warn("[Deriv WS] v1 proposal error:", e.message);
+      }
+      // Fall back to v3 WS
+      try { return await this.v3Trade(params); } catch {}
+      throw new Error("All trading methods failed");
     }
     if (!this.ws || this.ws.readyState !== WebSocket.OPEN) throw new Error("WebSocket not connected");
     let proposalPayload: Record<string, any> = { proposal: 1, amount: params.amount, basis: "stake", contract_type: params.contractType, currency: "USD", duration: params.duration, duration_unit: params.durationUnit || "t" };
