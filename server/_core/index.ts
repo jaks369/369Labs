@@ -13,9 +13,6 @@ import { ENV } from "./env";
 import { oauthRouter } from "./oauth";
 import { getStandardVolatilitySymbols } from "@shared/symbols";
 
-const DERIV_APP_ID = process.env.VITE_DERIV_APP_ID || "33V0MWtYaZLLmAZBWUycN";
-const DERIV_API_BASE = "https://api.derivws.com";
-
 process.on("unhandledRejection", (reason) => {
   console.error("[Startup] Unhandled promise rejection:", reason);
 });
@@ -79,31 +76,6 @@ export async function createApp() {
 
   registerStorageProxy(app);
   app.use("/api/auth", oauthRouter);
-
-  // Proxy for Deriv v1 REST API (browser CORS workaround)
-  app.post("/api/deriv-proxy", async (req, res) => {
-    try {
-      const { path, body, method, accountId } = req.body || {};
-      if (!path || !accountId) { res.status(400).json({ error: "path and accountId required" }); return; }
-      const { authenticateRequest } = await import("./auth");
-      const auth = await authenticateRequest(req as any);
-      if (!auth?.user) { res.status(401).json({ error: "Not authenticated" }); return; }
-      const { getDerivTokenByUserId } = await import("../db");
-      const token = await getDerivTokenByUserId(auth.user.id);
-      if (!token) { res.status(400).json({ error: "No Deriv token found" }); return; }
-      const url = `${DERIV_API_BASE}/trading/v1/options/accounts/${accountId}${path}`;
-      const fetchOpts: any = { method: method || "POST", headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token.token}`, "Deriv-App-ID": DERIV_APP_ID } };
-      if ((method || "POST") !== "GET") fetchOpts.body = JSON.stringify(body);
-      console.log("[Deriv Proxy]", method || "POST", url.slice(0, 100));
-      const r = await fetch(url, fetchOpts);
-      const text = await r.text();
-      console.log("[Deriv Proxy] response", r.status, text.slice(0, 200));
-      res.status(r.status).type("json").send(text || "{}");
-    } catch (e: any) {
-      console.error("[Deriv Proxy] error:", e.message);
-      res.status(502).json({ error: e.message || "Proxy error" });
-    }
-  });
 
   // Lightweight in-memory rate limiter (per-IP + per-key). Stricter caps on auth/trading/AI paths.
   const rateBuckets: Record<string, { count: number; reset: number }> = {};

@@ -51,6 +51,7 @@ export interface DerivSymbol {
 const DERIV_APP_ID = (import.meta as any).env?.VITE_DERIV_APP_ID || "33V0MWtYaZLLmAZBWUycN";
 const DERIV_API_BASE = "https://api.derivws.com";
 const DERIV_WS_PUBLIC = "wss://api.derivws.com/trading/v1/options/ws/public";
+const DERIV_WS_V3 = "wss://ws.derivws.com/websockets/v3?app_id=" + DERIV_APP_ID;
 
 class DerivWebSocketService {
   private ws: WebSocket | null = null;
@@ -366,52 +367,45 @@ class DerivWebSocketService {
     });
   }
 
-  private async restRequest<T = any>(path: string, body: any, method = "POST"): Promise<T> {
-    if (typeof window !== "undefined") {
-      const res = await fetch("/api/deriv-proxy", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ path, body: method !== "GET" ? body : undefined, method, accountId: this.accountId }),
-      });
-      const text = await res.text();
-      let json: any;
-      try { json = JSON.parse(text); } catch { throw new Error(`Proxy ${path}: invalid JSON: ${text}`); }
-      if (!res.ok) throw new Error(json.error || `Proxy ${path} failed (${res.status})`);
-      return json as T;
-    }
-    const url = `${DERIV_API_BASE}/trading/v1/options/accounts/${this.accountId}${path}`;
-    const res = await fetch(url, {
-      method,
-      headers: { "Content-Type": "application/json", "Authorization": `Bearer ${this.apiToken}`, "Deriv-App-ID": DERIV_APP_ID },
-      body: JSON.stringify(body),
+  private async v3Trade(params: PurchaseParams): Promise<PurchaseResult> {
+    return new Promise((resolve, reject) => {
+      try {
+        const ws = new WebSocket(DERIV_WS_V3);
+        const timeout = setTimeout(() => { ws.close(); reject(new Error("v3 WS timed out")); }, 30000);
+        let reqId = 1;
+        const pending = new Map<number, { res: (v: any) => void; rej: (e: Error) => void }>();
+        let proposalId = "";
+        let askPrice = 0;
+        ws.onopen = () => {
+          ws.send(JSON.stringify({ authorize: this.apiToken, req_id: reqId++ }));
+        };
+        ws.onmessage = (event) => {
+          let data: any;
+          try { data = JSON.parse(event.data); } catch { return; }
+          if (data.error) { ws.close(); clearTimeout(timeout); reject(new Error(data.error.message || JSON.stringify(data.error))); return; }
+          if (data.msg_type === "authorize") {
+            ws.send(JSON.stringify({ proposal: 1, amount: params.amount, basis: "stake", contract_type: params.contractType, currency: "USD", duration: params.duration, duration_unit: params.durationUnit || "t", symbol: params.symbol, ...(params.barrier !== undefined ? { barrier: String(params.barrier) } : {}), req_id: reqId++ }));
+          } else if (data.msg_type === "proposal") {
+            proposalId = data.proposal.id;
+            askPrice = data.proposal.ask_price;
+            ws.send(JSON.stringify({ buy: proposalId, price: askPrice, req_id: reqId++ }));
+          } else if (data.msg_type === "buy") {
+            ws.close(); clearTimeout(timeout);
+            const b = data.buy;
+            this.lastBalance = { ...(this.lastBalance || {}), balance: b.balance_after ?? (this.lastBalance?.balance ?? 0) - params.amount };
+            this.notifyBalance(this.lastBalance);
+            resolve({ contractId: b.contract_id, buyPrice: b.buy_price, longcode: b.longcode || "", balanceAfter: b.balance_after ?? 0 });
+          }
+        };
+        ws.onerror = () => { clearTimeout(timeout); reject(new Error("v3 WS connection failed")); };
+      } catch (e: any) { reject(e); }
     });
-    const text = await res.text();
-    if (!res.ok) throw new Error(`REST ${path} failed (${res.status}): ${text}`);
-    let json: any;
-    try { json = JSON.parse(text); } catch { throw new Error(`REST ${path}: invalid JSON: ${text}`); }
-    return json as T;
   }
 
   public async purchaseContract(params: PurchaseParams): Promise<PurchaseResult> {
     if (!this.authorized) throw new Error("Not authorized");
     if (this.apiMode === "v1") {
-      const proposalRes = await this.restRequest<any>("/proposal", {
-        contract_type: params.contractType, amount: params.amount, basis: "stake",
-        currency: "USD", duration: params.duration, duration_unit: params.durationUnit || "t",
-        underlying_symbol: params.symbol,
-        ...(params.barrier !== undefined ? { barrier: String(params.barrier) } : {}),
-      });
-      const proposal = proposalRes.data || proposalRes.proposal || proposalRes;
-      if (!proposal.id && !proposal.proposal_id) throw new Error("No proposal ID from REST: " + JSON.stringify(proposal).slice(0, 200));
-      const proposalId = proposal.id || proposal.proposal_id;
-      const price = proposal.ask_price || proposal.price;
-      const buyRes = await this.restRequest<any>("/buy", { proposal_id: proposalId, price });
-      const buyData = buyRes.data || buyRes.buy || buyRes;
-      if (!buyData.contract_id) throw new Error("Buy failed: " + JSON.stringify(buyRes).slice(0, 200));
-      const b = buyData.balance_after ?? (this.lastBalance?.balance ?? 0) - params.amount;
-      this.lastBalance = { ...(this.lastBalance || {}), balance: buyData.balance_after ?? b };
-      this.notifyBalance(this.lastBalance);
-      return { contractId: buyData.contract_id, buyPrice: buyData.buy_price || price, longcode: buyData.longcode || "", balanceAfter: buyData.balance_after ?? b };
+      return this.v3Trade(params);
     }
     if (!this.ws || this.ws.readyState !== WebSocket.OPEN) throw new Error("WebSocket not connected");
     let proposalPayload: Record<string, any> = { proposal: 1, amount: params.amount, basis: "stake", contract_type: params.contractType, currency: "USD", duration: params.duration, duration_unit: params.durationUnit || "t" };
