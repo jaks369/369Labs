@@ -483,12 +483,11 @@ export default function Dashboard() {
                 {(() => {
                   const symTrades = (tradesQuery.data || []).filter((t: any) => (t.symbol || "") === selectedSymbol);
                   const wins = symTrades.filter((t: any) => t.result === "win").length;
-                  const grossProfit = symTrades.filter((t: any) => parseFloat(t.profitLoss?.toString() || "0") >= 0).reduce((a: number, t: any) => a + parseFloat(t.profitLoss?.toString() || "0"), 0);
-                  const grossLoss = symTrades.filter((t: any) => parseFloat(t.profitLoss?.toString() || "0") < 0).reduce((a: number, t: any) => a + parseFloat(t.profitLoss?.toString() || "0"), 0);
-                  const net = grossProfit + grossLoss;
-                  const winRate = symTrades.length ? Math.round((wins / symTrades.length) * 100) : 0;
+                  const losses = symTrades.filter((t: any) => t.result === "loss").length;
+                  const net = symTrades.reduce((a: number, t: any) => a + parseFloat(t.profitLoss?.toString() || "0"), 0);
+                  const winRate = wins + losses ? Math.round((wins / (wins + losses)) * 100) : 0;
                   return (
-                    <div className="p-4 grid grid-cols-2 md:grid-cols-4 gap-3 border-b border-[var(--border)]">
+                    <div className="p-4 grid grid-cols-2 md:grid-cols-3 gap-3 border-b border-[var(--border)]">
                       <div className="kpi-card">
                         <div className="kpi-label">Trades</div>
                         <div className="kpi-value text-lg">{symTrades.length}</div>
@@ -497,12 +496,8 @@ export default function Dashboard() {
                         <div className="kpi-label">Win Rate</div>
                         <div className="kpi-value text-lg">{winRate}%</div>
                       </div>
-                      <div className="kpi-card kpi-card-green">
-                        <div className="kpi-label">Gross Profit</div>
-                        <div className="kpi-value text-lg text-[var(--green)]">+{grossProfit.toFixed(2)}</div>
-                      </div>
                       <div className="kpi-card">
-                        <div className="kpi-label">Net P&L</div>
+                        <div className="kpi-label">P&L</div>
                         <div className={`kpi-value text-lg ${net >= 0 ? "text-[var(--green)]" : "text-[var(--red)]"}`}>{net >= 0 ? "+" : ""}{net.toFixed(2)}</div>
                       </div>
                     </div>
