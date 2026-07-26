@@ -113,17 +113,7 @@ export default function MarketIntelligencePage() {
                       <span className={Number(ins.value) > 0 ? "text-[var(--green)]" : "text-[var(--red)]"}>{ins.value}</span>
                     </div>
                   )) || (
-                    <>
-                      {[["R_50", "R_100"], ["R_10", "R_25"], ["1HZ50V", "1HZ100V"], ["BOOM300", "CRASH300"], ["R_75", "R_100"]].map((pair) => {
-                        const val = (Math.random() * 1.8 - 0.9);
-                        return (
-                          <div key={pair[0]} className="flex justify-between text-xs p-2 bg-black/20 rounded-lg">
-                            <span className="text-[var(--text-secondary)]">{pair[0]} / {pair[1]}</span>
-                            <span className={val > 0 ? "text-[var(--green)]" : "text-[var(--red)]"}>{val > 0 ? "+" : ""}{val.toFixed(2)}</span>
-                          </div>
-                        );
-                      })}
-                    </>
+                    <p className="text-xs text-[var(--text-muted)] py-4 text-center">Correlation data will appear once sufficient market data is collected.</p>
                   )}
                 </div>
               )}
@@ -136,9 +126,9 @@ export default function MarketIntelligencePage() {
                 <div className="space-y-2">
                   {SCREENER_SYMBOLS.slice(0, 5).map((sym) => {
                     const healthData = (data as any)?.health?.find?.((h: any) => h?.symbol === sym || h?.name === sym);
-                    const vol = healthData?.volatility ?? healthData?.score ?? Math.random() * 100;
-                    const level = vol > 70 ? "Very High" : vol > 50 ? "High" : vol > 30 ? "Medium" : "Low";
-                    const cls = vol > 70 ? "text-[var(--red)]" : vol > 50 ? "text-[var(--amber)]" : "text-[var(--green)]";
+                    const vol = healthData?.volatility ?? healthData?.score;
+                    const level = vol != null ? (vol > 70 ? "Very High" : vol > 50 ? "High" : vol > 30 ? "Medium" : "Low") : "—";
+                    const cls = vol != null ? (vol > 70 ? "text-[var(--red)]" : vol > 50 ? "text-[var(--amber)]" : "text-[var(--green)]") : "text-[var(--text-muted)]";
                     return (
                       <div key={sym} className="flex justify-between text-xs p-2 bg-black/20 rounded-lg">
                         <span className="text-[var(--text-secondary)]">{sym}</span>

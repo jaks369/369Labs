@@ -73,10 +73,12 @@ export default function Replay() {
     setTrade(null);
   };
 
+  const orderIdRef = useRef(0);
   const addCondOrder = (type: CondOrder["type"]) => {
     if (!cur) return;
     const price = type === "stop" ? cur.price * 0.98 : type === "limit" ? cur.price * 1.02 : cur.price;
-    setCondOrders((o) => [...o, { id: Math.random().toString(36).slice(2, 9), type, price: Math.round(price * 10000) / 10000, triggered: false }]);
+    orderIdRef.current++;
+    setCondOrders((o) => [...o, { id: `cond_${Date.now()}_${orderIdRef.current}`, type, price: Math.round(price * 10000) / 10000, triggered: false }]);
   };
 
   useEffect(() => {
