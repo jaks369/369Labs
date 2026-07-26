@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
-import { CandlestickChart, Sparkles, TrendingUp, Clock, Bot, Loader2, ChevronDown, ChevronRight, FlaskConical, Users, Code, Shield, CheckCircle2, XCircle, BookOpen, Star, ShoppingCart, Upload } from "lucide-react";
+import { CandlestickChart, Sparkles, TrendingUp, Clock, Bot, Loader2, ChevronDown, ChevronRight, FlaskConical, Users, Code, Shield, CheckCircle2, XCircle, BookOpen, Star, Upload } from "lucide-react";
 import { useLocation } from "wouter";
 import { toast } from "@/components/Toast";
 import { getValidSymbols } from "@/lib/symbols";
