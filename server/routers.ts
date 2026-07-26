@@ -1885,7 +1885,7 @@ Return ONLY the JSON.`;
     aiScheduledAnalysis: protectedProcedure
       .input(z.object({ symbol: z.string(), interval: z.enum(["1h", "4h", "1d", "1w"]), prompt: z.string().optional() }))
       .mutation(async ({ input, ctx }) => {
-        await db.saveAiKnowledge({ userId: ctx.user.id, type: "schedule", title: `Scheduled Analysis: ${input.symbol}`, content: input.prompt || `Analyze ${input.symbol} every ${input.interval}`, metadata: { symbol: input.symbol, interval: input.interval } });
+        await db.saveAiKnowledge({ userId: ctx.user.id, knowledgeType: "schedule", symbol: input.symbol, data: { title: `Scheduled Analysis: ${input.symbol}`, content: input.prompt || `Analyze ${input.symbol} every ${input.interval}`, symbol: input.symbol, interval: input.interval } });
         db.saveAuditLog({ userId: ctx.user.id, action: "ai.scheduleAnalysis", detail: { symbol: input.symbol, interval: input.interval } }).catch(() => {});
         return { ok: true };
       }),
@@ -2498,13 +2498,6 @@ watch: protectedProcedure
         await db.saveAiKnowledge({ userId: ctx.user.id, type: "alert", title: input.title, content: input.message, metadata: { severity: input.severity } });
         db.saveAuditLog({ userId: ctx.user.id, action: "ai.alert", detail: { title: input.title, severity: input.severity } }).catch(() => {});
         return { ok: true, notification };
-      }),
-    aiScheduledAnalysis: protectedProcedure
-      .input(z.object({ symbol: z.string(), interval: z.enum(["1h", "4h", "1d", "1w"]), prompt: z.string().optional() }))
-      .mutation(async ({ input, ctx }) => {
-        await db.saveAiKnowledge({ userId: ctx.user.id, type: "schedule", title: `Scheduled Analysis: ${input.symbol}`, content: input.prompt || `Analyze ${input.symbol} every ${input.interval}`, metadata: { symbol: input.symbol, interval: input.interval } });
-        db.saveAuditLog({ userId: ctx.user.id, action: "ai.scheduleAnalysis", detail: { symbol: input.symbol, interval: input.interval } }).catch(() => {});
-        return { ok: true };
       }),
     aiJournalList: protectedProcedure
       .input(z.object({ limit: z.number().default(50) }))
