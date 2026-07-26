@@ -29,6 +29,7 @@ export default function AIAssistant() {
   const [reveal, setReveal] = useState<Record<number, number>>({});
   const askMutation = trpc.ai.ask.useMutation();
   const strategiesQuery = trpc.strategies.list.useQuery();
+  const saveStrategyMutation = trpc.strategies.save.useMutation();
   const journalMutation = trpc.ai.journalEntry.useMutation();
   const alertMutation = trpc.ai.aiAlert.useMutation();
   const scheduleMutation = trpc.ai.aiScheduledAnalysis.useMutation();
@@ -123,9 +124,14 @@ export default function AIAssistant() {
         });
         setMessages(prev => [...prev, { role: "ai", content: `Order filled: ${a.params.symbol} ${a.params.contractType} (contract ${r.contractId}).` }]);
       } else if (a.action === "deployBot") {
-        const strat = strategiesQuery.data?.find((s: any) => s.id === a.params.strategyId);
-        setMessages(prev => [...prev, { role: "ai", content: `Bot "${strat?.name ?? a.params.strategyId}" armed for ${a.params.symbol || "default symbol"} @ stake ${a.params.stake}. Open Bots to monitor.` }]);
-        navigate("/bots");
+        try {
+          const saved = await saveStrategyMutation.mutateAsync({
+            name: a.params.strategyName || `AI Bot - ${a.params.symbol || "default"}`,
+            description: `Deployed by AI Assistant on ${a.params.symbol || "default"} @ $${a.params.stake || 1}`,
+            config: { rule: { symbol: a.params.symbol || "R_100", params: { stake: a.params.stake || 1 } } },
+          });
+          setMessages(prev => [...prev, { role: "ai", content: `Bot "${saved.name}" deployed for ${a.params.symbol || "default symbol"} @ stake $${a.params.stake || 1}. Open Bots to monitor.` }]);
+        } catch { setMessages(prev => [...prev, { role: "ai", content: "Failed to deploy bot. Check your strategy configuration." }]); }
       } else if (a.action === "runBacktest") {
         setMessages(prev => [...prev, { role: "ai", content: `Spinning up backtest: strategy ${a.params.strategyId} on ${a.params.symbol}...` }]);
         navigate("/backtesting");

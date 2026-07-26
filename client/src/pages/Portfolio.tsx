@@ -189,7 +189,7 @@ export default function Portfolio() {
                                   try {
                                     await closePositionMutation.mutateAsync({ contractId: p.contractId || p.id });
                                     positionsQuery.refetch();
-                                  } catch {}
+                                  } catch (e: any) { toast(e?.message || "Failed to close position", "error"); }
                                 }}
                                 disabled={closePositionMutation.isPending}
                                 className="px-2 py-1 rounded text-[10px] font-bold bg-[var(--red)]/20 text-[var(--red)] border border-[var(--red)]/40 hover:bg-[var(--red)]/30 disabled:opacity-50"

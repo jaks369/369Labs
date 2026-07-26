@@ -3,6 +3,7 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import { trpc } from "@/lib/trpc";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
+import { toast } from "@/components/Toast";
 import { Users, UserPlus, Share2, Copy, CheckCircle2, XCircle, Loader2 } from "lucide-react";
 
 export default function TeamPage() {
@@ -23,14 +24,14 @@ export default function TeamPage() {
       await inviteMutation.mutateAsync({ email });
       setEmail("");
       refetch();
-    } catch {}
+    } catch (e: any) { toast(e?.message || "Failed to send invite", "error"); }
   };
 
   const remove = async (id: number) => {
     try {
       await removeMutation.mutateAsync({ id });
       refetch();
-    } catch {}
+    } catch (e: any) { toast(e?.message || "Failed to remove member", "error"); }
   };
 
   const shareLink = `${window.location.origin}/register?ref=${user?.id}`;
