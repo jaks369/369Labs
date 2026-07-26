@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { useLocation } from "wouter";
 import { Book, TrendingUp, TrendingDown, Loader2 } from "lucide-react";
-import { STANDARD_SYMBOLS } from "@/lib/symbols";
+import { getValidSymbols } from "@/lib/symbols";
 
 const mockBids = Array.from({ length: 12 }, (_, i) => ({
   price: (50 + Math.random() * 5).toFixed(4),
@@ -25,8 +25,6 @@ export default function OrderBook() {
 
   if (!isAuthenticated) { navigate("/login"); return null; }
 
-  const SYMBOLS = STANDARD_SYMBOLS;
-
   return (
     <div className="min-h-screen bg-[var(--card)] p-6">
       <div className="max-w-4xl mx-auto space-y-6">
@@ -38,8 +36,8 @@ export default function OrderBook() {
               <p className="text-xs text-[var(--text-muted)]">Live market depth visualization</p>
             </div>
           </div>
-          <select value={symbol} onChange={(e) => setSymbol(e.target.value)} className="bg-[var(--card)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-white">
-            {SYMBOLS.map((s) => <option key={s} value={s}>{s}</option>)}
+          <select value={symbol} onChange={(e) => setSymbol(e.target.value)} className="bg-[#1a1a2e] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-white focus:border-[var(--amber)] outline-none [&>option]:bg-[#1a1a2e] [&>option]:text-white">
+            {getValidSymbols().map((s) => <option key={s} value={s}>{s}</option>)}
           </select>
         </div>
 
