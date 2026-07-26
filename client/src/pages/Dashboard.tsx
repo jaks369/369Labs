@@ -740,7 +740,7 @@ export default function Dashboard() {
               <h3 className="section-title text-[11px]">369AI Insight</h3>
             </div>
             {(() => {
-              const sigs = (signalsQuery.data as any[]) || [];
+              const sigs = Array.isArray(signalsQuery.data) ? signalsQuery.data : [];
               const latest = sigs[0];
               if (!latest) {
                 return <div className="empty-state py-6"><p className="empty-state-desc">No signals yet. Ask 369AI to watch a market, or wait for the always-on scanner to surface a pattern.</p></div>;

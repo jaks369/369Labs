@@ -69,9 +69,9 @@ export default function Marketplace() {
 
   const pluginsQuery = trpc.plugins.marketplace.useQuery();
   if (!isAuthenticated) { navigate("/login"); return null; }
-  const signals = (signalsQuery.data as any[]) || [];
-  const published = (publishedQuery.data as any[]) || [];
-  const pluginList = (pluginsQuery.data as any[]) || [];
+  const signals = Array.isArray(signalsQuery.data) ? signalsQuery.data : [];
+  const published = Array.isArray(publishedQuery.data) ? publishedQuery.data : [];
+  const pluginList = Array.isArray(pluginsQuery.data) ? pluginsQuery.data : [];
 
   return (
     <div className="min-h-screen bg-[var(--card)] text-white">
@@ -121,7 +121,7 @@ export default function Marketplace() {
             {signals.map((sig: any) => {
               const win = parseFloat(sig.winRate);
               const isOpen = expanded === sig.id;
-              const ev = (sig.evidence || []).slice(0, 12);
+              const ev = Array.isArray(sig.evidence) ? sig.evidence.slice(0, 12) : [];
               return (
                 <div key={sig.id} className="bg-[var(--card)] border border-[var(--border)] rounded-xl overflow-hidden">
                   <div className="p-4 flex items-start justify-between gap-4">

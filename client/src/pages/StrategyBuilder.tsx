@@ -426,7 +426,7 @@ export function StrategyBuilderContent({ embedded = false, onClose, onSaved }: S
                     </div>
                     <p className="text-xs text-[var(--text-secondary)] mb-3">{critiqueMutation.data.summary}</p>
                     <div className="space-y-2">
-                      {((critiqueMutation.data.findings as any[]) || []).map((f, i) => (
+                      {(Array.isArray(critiqueMutation.data?.findings) ? critiqueMutation.data.findings : []).map((f: any, i: number) => (
                         <div key={i} className="flex items-start gap-2 text-xs">
                           <span className={`px-1.5 py-0.5 rounded font-bold uppercase ${f.severity === "high" ? "bg-[var(--red)]/30 text-[var(--red)]" : f.severity === "medium" ? "bg-[var(--amber)]/30 text-[var(--amber-hover)]" : "bg-[var(--text-muted)]/30 text-[var(--text-secondary)]"}`}>{f.severity}</span>
                           <div><b className="text-white">{f.title}</b> <span className="text-[var(--text-secondary)]">— {f.detail}</span></div>

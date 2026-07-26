@@ -456,7 +456,7 @@ export default function Bots() {
                 </div>
               ) : strategiesQuery.isError ? (
                 <p className="text-xs text-[var(--red)] italic text-center py-4">Failed to load strategies. Please try again.</p>
-              ) : strategiesQuery.data?.map((s: any) => {
+              ) : (Array.isArray(strategiesQuery.data) ? strategiesQuery.data : []).map((s: any) => {
                 const isSelected = selectedMulti.includes(s.id);
                 const isRunning = runningBots.some((b) => b.strategyId === s.id);
                 return (

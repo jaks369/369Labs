@@ -786,7 +786,7 @@ export default function Settings() {
             <p className="text-xs text-[var(--red)]">Failed to load sessions.</p>
           ) : (
             <div className="space-y-3">
-              {sessionsQuery.data?.map(s => (
+              {(Array.isArray(sessionsQuery.data) ? sessionsQuery.data : []).map(s => (
                 <div key={s.id} className="flex items-center justify-between py-2 border-b border-[var(--border)]/50 last:border-0">
                   <div className="min-w-0 flex-1">
                     <p className="text-sm text-white truncate">{s.userAgent || "Unknown device"} {s.isCurrent && <span className="text-[10px] text-[var(--green)] ml-1">(current)</span>}</p>
