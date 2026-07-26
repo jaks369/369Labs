@@ -5,7 +5,7 @@ import { registerStorageProxy } from "./storageProxy";
 import { appRouter } from "../routers";
 import { createContext } from "./context";
 import { serveStatic } from "./staticServe";
-import { getDb, pruneBadTicks, ensureSignalExpiryColumn, ensureSignalsTable, ensureNotificationSettingsColumns, ensureAuditLogsTable, ensureIpWhitelistTable, ensureTradesTable, ensureStrategiesTable, ensurePriceAlertsTable, ensureTickHistoryTable, recomputeLastDigits, ensureUserMemoryTable, ensurePluginsTable, ensureWebhooksTable, ensureUsersColumns, ensureSessionsTable, ensureVerificationTokensTable, ensurePasswordResetTokensTable } from "../db";
+import { getDb, pruneBadTicks, ensureSignalExpiryColumn, ensureSignalsTable, ensureNotificationSettingsColumns, ensureAuditLogsTable, ensureIpWhitelistTable, ensureTradesTable, ensureStrategiesTable, ensurePriceAlertsTable, ensureTickHistoryTable, recomputeLastDigits, ensureUserMemoryTable, ensurePluginsTable, ensureWebhooksTable, ensureAiKnowledgeTable, ensureUsersColumns, ensureSessionsTable, ensureVerificationTokensTable, ensurePasswordResetTokensTable } from "../db";
 import { users } from "../../drizzle/schema";
 import { startTickCollector } from "../tickCollector";
 import { runWatch } from "../signalScanner";
@@ -142,6 +142,7 @@ export async function createApp() {
       try { await ensureUserMemoryTable(); } catch (e) { console.error("[startup] ensureUserMemoryTable failed", e); }
       try { await ensurePluginsTable(); } catch (e) { console.error("[startup] ensurePluginsTable failed", e); }
       try { await ensureWebhooksTable(); } catch (e) { console.error("[startup] ensureWebhooksTable failed", e); }
+      try { await ensureAiKnowledgeTable(); } catch (e) { console.error("[startup] ensureAiKnowledgeTable failed", e); }
       try { await ensureVerificationTokensTable(); } catch (e) { console.error("[startup] ensureVerificationTokensTable failed", e); }
       try { await ensurePasswordResetTokensTable(); } catch (e) { console.error("[startup] ensurePasswordResetTokensTable failed", e); }
       try {

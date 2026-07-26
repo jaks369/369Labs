@@ -681,7 +681,11 @@ export async function getAiKnowledge(userId: number, knowledgeType: string, limi
 export async function saveAiKnowledge(data: InsertAiKnowledge): Promise<void> {
   const db = await getDb();
   if (!db) return;
-  await db.insert(aiKnowledge).values(data);
+  try {
+    await db.insert(aiKnowledge).values(data);
+  } catch (e: any) {
+    console.error("[aiKnowledge] insert failed", e?.message || e);
+  }
 }
 
 export async function searchAllAiKnowledge(userId: number, query: string, limit: number = 50): Promise<AiKnowledgeResult[]> {
@@ -1458,6 +1462,29 @@ export async function ensureWebhooksTable(): Promise<void> {
     `);
   } catch (e: any) {
     console.error("[ensureWebhooksTable] failed", e?.message || e);
+  }
+}
+
+export async function ensureAiKnowledgeTable(): Promise<void> {
+  const pool = getRawPool();
+  if (!pool) return;
+  try {
+    await pool.execute(`CREATE TABLE IF NOT EXISTS aiKnowledge (
+      id int AUTO_INCREMENT NOT NULL,
+      userId int NOT NULL,
+      knowledgeType varchar(32) NOT NULL,
+      symbol varchar(32),
+      data json,
+      source varchar(32),
+      confidence varchar(8),
+      relatedTradeId int,
+      relatedStrategyId int,
+      createdAt timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      CONSTRAINT aiKnowledge_id PRIMARY KEY(id)
+    )`);
+    console.log("[ensureAiKnowledgeTable] created aiKnowledge table");
+  } catch (e: any) {
+    console.error("[ensureAiKnowledgeTable] create failed", e?.message || e);
   }
 }
 

@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { addError } from "@/lib/errorLog";
 
 export type ToastKind = "success" | "error" | "info" | "warning" | "loading";
 
@@ -9,6 +10,7 @@ export function toast(text: string, kind: ToastKind = "info", _options?: { durat
   const id = nextId++;
   const t = { id, kind, text };
   listeners.forEach((l) => l(t));
+  if (kind === "error" || kind === "warning") addError(text, kind);
   return id;
 }
 
