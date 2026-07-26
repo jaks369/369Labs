@@ -26,7 +26,7 @@ function lastDigitOf(price: number): number {
 export async function scanTicks(opts: ScanOptions): Promise<any[]> {
   const symbol = normalizeSymbol(opts.symbol);
   const sample = opts.sampleSize || 300;
-  const minWin = opts.minWinRate ?? 62;
+  const minWin = opts.minWinRate ?? 55;
   const ticks = await getTickHistory(symbol, sample); // [{price, timestamp(ms)}]
   if (ticks.length < 30) return [];
 

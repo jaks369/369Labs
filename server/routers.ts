@@ -128,7 +128,7 @@ async function runTool(name: string, args: any, ctxUser?: any) {
           userId: ctxUser.id,
           symbol: args.symbol,
           sampleSize: Math.min(2000, (args.durationMinutes || 30) * 20),
-          minWinRate: args.minWinRate || 62,
+          minWinRate: args.minWinRate || 55,
           patternType: args.patternType || "any",
         });
         return { data: { scanned: true, signalsFound: saved.length, signals: saved } };
@@ -1834,7 +1834,7 @@ When you use a tool, briefly note which specialist is acting (e.g. "[Market Anal
                   userId: ctx.user.id,
                   symbol: intent.symbol,
                   sampleSize: Math.min(2000, intent.durationMinutes * 20),
-                  minWinRate: 62,
+                  minWinRate: 55,
                   patternType: intent.patternType,
                 });
                 const msg2 = saved.length
@@ -1985,7 +1985,7 @@ Return ONLY the JSON.`;
         }
       }),
 watch: protectedProcedure
-      .input(z.object({ symbol: z.string(), durationMinutes: z.number().default(30), patternType: z.enum(["any", "digit_streak", "digit_bias", "even_odd_run", "momentum_after_digit"]).default('any'), minWinRate: z.number().default(62) }))
+      .input(z.object({ symbol: z.string(), durationMinutes: z.number().default(30), patternType: z.enum(["any", "digit_streak", "digit_bias", "even_odd_run", "momentum_after_digit"]).default('any'), minWinRate: z.number().default(55) }))
       .mutation(async ({ ctx, input }) => {
         try {
           const { runWatch } = await import('./signalScanner');

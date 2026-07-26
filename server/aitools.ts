@@ -267,7 +267,7 @@ export const TOOL_DEFS = [
           symbol: { type: 'string' },
           durationMinutes: { type: 'number', description: 'How long to watch (minutes). Default 30.' },
           patternType: { type: 'string', description: 'digit_streak | digit_bias | even_odd_run | any' },
-          minWinRate: { type: 'number', description: 'Minimum win-rate percent to record a signal (default 62)' },
+          minWinRate: { type: 'number', description: 'Minimum win-rate percent to record a signal (default 55)' },
         },
         required: ['symbol'],
       },
