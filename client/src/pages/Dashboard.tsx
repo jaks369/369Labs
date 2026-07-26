@@ -481,16 +481,16 @@ export default function Dashboard() {
             {historyTab === "trades" ? (
               <div>
                 {(() => {
-                  const symTrades = (tradesQuery.data || []).filter((t: any) => (t.symbol || "") === selectedSymbol);
-                  const wins = symTrades.filter((t: any) => t.result === "win").length;
-                  const losses = symTrades.filter((t: any) => t.result === "loss").length;
-                  const net = symTrades.reduce((a: number, t: any) => a + parseFloat(t.profitLoss?.toString() || "0"), 0);
+                  const allTrades = tradesQuery.data || [];
+                  const wins = allTrades.filter((t: any) => t.result === "win").length;
+                  const losses = allTrades.filter((t: any) => t.result === "loss").length;
+                  const net = allTrades.reduce((a: number, t: any) => a + parseFloat(t.profitLoss?.toString() || "0"), 0);
                   const winRate = wins + losses ? Math.round((wins / (wins + losses)) * 100) : 0;
                   return (
                     <div className="p-4 grid grid-cols-2 md:grid-cols-3 gap-3 border-b border-[var(--border)]">
                       <div className="kpi-card">
                         <div className="kpi-label">Trades</div>
-                        <div className="kpi-value text-lg">{symTrades.length}</div>
+                        <div className="kpi-value text-lg">{allTrades.length}</div>
                       </div>
                       <div className="kpi-card">
                         <div className="kpi-label">Win Rate</div>
