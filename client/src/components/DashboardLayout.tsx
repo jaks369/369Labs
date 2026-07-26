@@ -96,7 +96,7 @@ const navGroups: NavGroup[] = [
       { icon: LayoutDashboard, label: "Trading Terminal", path: "/dashboard" },
       { icon: Bot, label: "Bots", path: "/bots" },
       { icon: Wallet, label: "Portfolio", path: "/portfolio" },
-      { icon: BarChart3, label: "Trade History", path: "/trade-history" },
+      { icon: BarChart3, label: "Trade History", path: "/trades" },
       { icon: Star, label: "Watchlist", path: "/watchlist" },
       { icon: Book, label: "Order Book", path: "/order-book" },
     ],

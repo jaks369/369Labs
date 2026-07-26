@@ -43,7 +43,7 @@ export default function GlobalSearch({ open, onClose }: { open: boolean; onClose
               <div className="text-center py-6 text-xs text-[var(--text-muted)]">No results found for "{query}"</div>
             ) : (
               <>
-                {data.trades?.length > 0 && <ResultGroup title="Trades" icon={CandlestickChart} results={data.trades.map((t: any) => ({ label: `${t.symbol} ${t.contractType || ""} ${t.result === "win" ? "✓" : t.result === "loss" ? "✗" : ""} ${Number(t.profitLoss || 0).toFixed(2)}`, onClick: () => { setLocation("/trade-history"); onClose(); } }))} />}
+                {data.trades?.length > 0 && <ResultGroup title="Trades" icon={CandlestickChart} results={data.trades.map((t: any) => ({ label: `${t.symbol} ${t.contractType || ""} ${t.result === "win" ? "✓" : t.result === "loss" ? "✗" : ""} ${Number(t.profitLoss || 0).toFixed(2)}`, onClick: () => { setLocation("/trades"); onClose(); } }))} />}
                 {data.strategies?.length > 0 && <ResultGroup title="Strategies" icon={Zap} results={data.strategies.map((s: any) => ({ label: s.name, onClick: () => { setLocation("/strategy-builder"); onClose(); } }))} />}
                 {data.botRuns?.length > 0 && <ResultGroup title="Bot Runs" icon={Bot} results={data.botRuns.map((b: any) => ({ label: `${b.strategyName || "Unknown"} - ${b.status}`, onClick: () => { setLocation("/bots"); onClose(); } }))} />}
                 {data.aiKnowledge?.length > 0 && <ResultGroup title="AI Knowledge" icon={Brain} results={data.aiKnowledge.map((k: any) => ({ label: `[${k.knowledgeType}] ${k.symbol || ""} ${JSON.stringify(k.data).slice(0, 60)}`, onClick: () => onClose() }))} />}
