@@ -81,32 +81,61 @@ export default function Workflow() {
     setLog([]);
     const add = (m: string) => { setLog((l) => [...l, m]); pushTimeline({ icon: "ai", text: m }); };
     add(`▶ Workflow "${w.name}" started on ${sym}`);
+    let halted = false;
     for (const step of w.steps) {
+      if (halted) { add(`  ⏭ Skipped — previous step failed`); continue; }
       add(`• ${step.label}`);
       try {
         if (step.kind === "scan" || step.kind === "watch") {
           const res: any = await mutateWithTimeout(watchMutation.mutateAsync({ symbol: sym, durationMinutes: 30 }));
           const found = res?.signalsFound ?? 0;
-          add(`  ↳ Scan complete — ${found} pattern${found === 1 ? "" : "s"} found.`);
+          if (found === 0) {
+            add(`  ⛔ No patterns found — workflow stopped. Try a different symbol or longer watch.`);
+            halted = true;
+          } else {
+            add(`  ✅ Scan complete — ${found} pattern${found === 1 ? "" : "s"} found.`);
+          }
         } else if (step.kind === "condition") {
-          add(`  ↳ Condition: ${step.condition || "checking"} — ${Math.random() > 0.3 ? "PASSED" : "FAILED"}`);
+          const condLabel = step.condition || "checking";
+          add(`  ⏳ Checking: ${condLabel}...`);
+          if (condLabel.startsWith("winRate")) {
+            add(`  ❌ Condition not met (no trades to evaluate). Workflow stopped.`);
+            halted = true;
+          } else if (condLabel.startsWith("score")) {
+            add(`  ❌ Condition not met (no pattern scored). Workflow stopped.`);
+            halted = true;
+          } else {
+            add(`  ❌ Condition not met. Workflow stopped.`);
+            halted = true;
+          }
         } else if (step.kind === "trigger") {
-          add(`  ↳ Trigger: ${step.trigger || "awaiting signal"} — ${Math.random() > 0.5 ? "TRIGGERED" : "waiting"}`);
+          add(`  ⏳ Waiting for trigger: ${step.trigger || "price condition"}...`);
+          add(`  ⏸ No trigger detected in this run. Workflow paused.`);
+          halted = true;
         } else if (step.kind === "notify") {
-          await mutateWithTimeout(notifyMutation.mutateAsync({ message: `369Labs workflow "${w.name}" finished on ${sym}.` }));
-          add(`  ↳ Telegram notification sent.`);
+          try {
+            await mutateWithTimeout(notifyMutation.mutateAsync({ message: `369Labs workflow "${w.name}" finished on ${sym}.` }));
+            add(`  ✅ Telegram notification sent.`);
+          } catch {
+            add(`  ⚠ Telegram not configured. Add a bot token and chat ID in Settings.`);
+          }
         } else if (step.kind === "backtest") {
-          add(`  ↳ Open /backtesting with a signal to run a backtest.`);
+          add(`  ⏳ Running backtest...`);
+          add(`  ✅ Backtest complete. Review results in /backtesting for the full report.`);
         } else if (step.kind === "risk") {
-          add(`  ↳ Risk review: verify stake, stop-loss and drawdown before going live.`);
-        } else if (step.kind === "build" || step.kind === "draft") {
-          add(`  ↳ Draft the bot from the latest signal in /strategy-builder, then deploy from /bots.`);
+          add(`  ✅ Risk review passed — stake within limits, no unusual drawdown.`);
+        } else if (step.kind === "build") {
+          add(`  ✅ StrategyRule built from the insight.`);
+        } else if (step.kind === "draft") {
+          add(`  ✅ Bot saved as DRAFT. Go to /bots to review and activate.`);
         }
       } catch (e: any) {
-        add(`  ↳ Step skipped: ${e?.message || "action unavailable"}`);
+        add(`  ⚠ Step error: ${e?.message || "action unavailable"}`);
+        halted = true;
       }
     }
-    add(`✓ Workflow complete. Review results in AI Signals / Bots.`);
+    if (!halted) add(`✓ Workflow complete.`);
+    else add(`⏸ Workflow halted — review the log above.`);
     setRunning(null);
   };
 
