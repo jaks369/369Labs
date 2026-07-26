@@ -10,6 +10,7 @@ import { derivWS } from "@/services/derivWebSocket";
 import { pushTimeline } from "@/components/AITimeline";
 import { toast } from "@/components/Toast";
 import { useTheme } from "@/contexts/ThemeContext";
+import PasswordInput from "@/components/PasswordInput";
 
 export default function Settings() {
   const { user, isAuthenticated, logout, refresh } = useAuth();
@@ -360,8 +361,7 @@ export default function Settings() {
           <div className="space-y-4">
             <div>
               <label className="text-sm text-[var(--amber)] block mb-2">API Token</label>
-              <Input
-                type="password"
+              <PasswordInput
                 placeholder="Enter your Deriv API token"
                 value={derivToken}
                 onChange={(e) => { setDerivToken(e.target.value); setTokenChanged(true); }}
@@ -615,13 +615,12 @@ export default function Settings() {
             ].map((svc) => (
               <div key={svc.id}>
                 <label className="text-sm text-[var(--amber)] block mb-1">{svc.label}</label>
-                <Input
-                  type="password"
-                  value={externalKeys[svc.id] || ""}
-                  onChange={(e) => setExternalKeys((prev) => ({ ...prev, [svc.id]: e.target.value }))}
-                  className="border-[var(--amber)]/40 text-[var(--amber)]"
-                  placeholder={svc.placeholder}
-                />
+              <PasswordInput
+                value={externalKeys[svc.id] || ""}
+                onChange={(e) => setExternalKeys((prev) => ({ ...prev, [svc.id]: e.target.value }))}
+                className="border-[var(--amber)]/40 text-[var(--amber)]"
+                placeholder={svc.placeholder}
+              />
               </div>
             ))}
             <Button onClick={async () => { try { await saveMemoryMutation.mutateAsync({ memory: { apiKeys: externalKeys } }); toast("API keys saved.", "success"); } catch { toast("Failed to save API keys.", "error"); } }} className="w-full bg-[var(--amber)] text-[var(--bg)] font-bold py-2 px-4 rounded"><Save className="w-4 h-4 mr-2" /> SAVE KEYS</Button>
@@ -646,8 +645,7 @@ export default function Settings() {
             </div>
             <div>
               <label className="text-sm text-[var(--amber)] block mb-2">Confirm Password</label>
-              <Input
-                type="password"
+              <PasswordInput
                 value={emailPwd}
                 onChange={e => setEmailPwd(e.target.value)}
                 className="border-[var(--amber)]/40 text-[var(--amber)]"
@@ -669,8 +667,7 @@ export default function Settings() {
           <div className="space-y-4">
             <div>
               <label className="text-sm text-[var(--amber)] block mb-2">Current Password</label>
-              <Input
-                type="password"
+              <PasswordInput
                 value={currentPwd}
                 onChange={e => setCurrentPwd(e.target.value)}
                 className="border-[var(--amber)]/40 text-[var(--amber)]"
@@ -679,8 +676,7 @@ export default function Settings() {
             </div>
             <div>
               <label className="text-sm text-[var(--amber)] block mb-2">New Password</label>
-              <Input
-                type="password"
+              <PasswordInput
                 value={newPwd}
                 onChange={e => setNewPwd(e.target.value)}
                 className="border-[var(--amber)]/40 text-[var(--amber)]"
@@ -734,8 +730,7 @@ export default function Settings() {
               <p className="text-sm text-[var(--green)]">Two-factor authentication is <strong>enabled</strong>.</p>
               <div>
                 <label className="text-sm text-[var(--amber)] block mb-2">Enter your password to disable 2FA</label>
-                <Input
-                  type="password"
+                <PasswordInput
                   value={disablePwd}
                   onChange={e => setDisablePwd(e.target.value)}
                   className="border-[var(--amber)]/40 text-[var(--amber)]"
@@ -850,8 +845,7 @@ export default function Settings() {
                 </div>
                 <div>
                   <label className="text-sm text-[var(--red)] block mb-2">Confirm your password</label>
-                  <Input
-                    type="password"
+                <PasswordInput
                     value={deletePwd}
                     onChange={e => setDeletePwd(e.target.value)}
                     className="border-[var(--red)]/40 text-[var(--red)]"

@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useLocation, useRoute } from 'wouter';
 import { trpc } from '@/lib/trpc';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import PasswordInput from '@/components/PasswordInput';
 
 export default function ResetPassword() {
   const [params] = useRoute('/reset');
@@ -32,7 +32,7 @@ export default function ResetPassword() {
         <form onSubmit={submit} className='space-y-4'>
           <div>
             <label className='block text-sm font-medium text-[var(--text-secondary)] mb-1'>New Password</label>
-            <Input type='password' value={password} onChange={(e) => setPassword(e.target.value)} placeholder='At least 8 characters' required className='bg-[var(--card)] border-[var(--border)]' />
+            <PasswordInput value={password} onChange={(e) => setPassword(e.target.value)} placeholder='At least 8 characters' required className='bg-[var(--card)] border-[var(--border)]' />
           </div>
           <Button type='submit' disabled={m.isPending || !token} className='btn btn-primary w-full'>
             {m.isPending ? 'Updating...' : 'UPDATE PASSWORD'}

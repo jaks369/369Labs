@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Send, MessageCircle, Loader2, CheckCircle2, AlertCircle } from "lucide-react";
 import { useLocation } from "wouter";
+import PasswordInput from "@/components/PasswordInput";
 
 export default function TelegramSettings() {
   const { isAuthenticated } = useAuth();
@@ -74,12 +75,11 @@ export default function TelegramSettings() {
 
             <div>
               <label className="text-xs text-[var(--text-muted)] font-bold uppercase tracking-wider">Bot Token</label>
-              <Input
+              <PasswordInput
                 value={botToken}
                 onChange={e => setBotToken(e.target.value)}
                 placeholder="1234567890:ABCdefGHIjklMNOpqrsTUVwxyz"
                 className="mt-1 bg-[var(--card)] border-[var(--border)] text-white"
-                type="password"
               />
             </div>
 

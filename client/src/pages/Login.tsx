@@ -4,6 +4,7 @@ import { trpc } from "@/lib/trpc";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { COOKIE_NAME } from '@shared/const';
+import PasswordInput from "@/components/PasswordInput";
 
 export default function Login() {
   const [, navigate] = useLocation();
@@ -171,8 +172,7 @@ export default function Login() {
             <label className="text-[10px] text-[var(--amber)]/70 uppercase tracking-wider block mb-1">
               Password
             </label>
-            <Input
-              type="password"
+            <PasswordInput
               required
               minLength={8}
               value={password}
@@ -187,8 +187,7 @@ export default function Login() {
             <label className="text-[10px] text-[var(--amber)]/70 uppercase tracking-wider block mb-1">
               Confirm Password
             </label>
-            <Input
-              type="password"
+            <PasswordInput
               required
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
