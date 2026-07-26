@@ -423,17 +423,38 @@ export async function removeDerivToken(userId: number): Promise<void> {
 export async function saveStrategy(strategy: InsertStrategy): Promise<Strategy> {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-
-  const result = await db.insert(strategies).values(strategy);
-  const id = result[0].insertId;
-  return (await db.select().from(strategies).where(eq(strategies.id, id as number)).limit(1))[0];
+  try {
+    const result = await db.insert(strategies).values(strategy);
+    const id = result[0].insertId;
+    return (await db.select().from(strategies).where(eq(strategies.id, id as number)).limit(1))[0];
+  } catch {
+    const pool = getRawPool();
+    if (!pool) throw new Error("Pool not available");
+    const [r] = await pool.execute(
+      "INSERT INTO strategies (userId, name, description, config, isActive, published) VALUES (?, ?, ?, ?, ?, ?)",
+      [strategy.userId, strategy.name, strategy.description ?? null, JSON.stringify(strategy.config), strategy.isActive ?? true, strategy.published ?? false]
+    );
+    const id = (r as any).insertId;
+    const [rows] = await pool.execute("SELECT * FROM strategies WHERE id=?", [id]);
+    return (rows as any[])[0];
+  }
 }
 
 export async function getStrategiesByUserId(userId: number): Promise<Strategy[]> {
   const db = await getDb();
   if (!db) return [];
-  
-  return db.select().from(strategies).where(eq(strategies.userId, userId));
+  try {
+    return await db.select().from(strategies).where(eq(strategies.userId, userId));
+  } catch {
+    const pool = getRawPool();
+    if (!pool) return [];
+    try {
+      const [rows] = await pool.execute("SELECT * FROM strategies WHERE userId=? ORDER BY createdAt DESC", [userId]);
+      return rows as Strategy[];
+    } catch {
+      return [];
+    }
+  }
 }
 
 export async function getPublishedStrategies(): Promise<Strategy[]> {
@@ -1104,6 +1125,39 @@ export async function ensureTradesTable(): Promise<void> {
     }
   } catch (e: any) {
     console.error("[ensureTradesTable] create failed", e?.message || e);
+  }
+}
+
+export async function ensureStrategiesTable(): Promise<void> {
+  const pool = getRawPool();
+  if (!pool) return;
+  try {
+    await pool.execute(`CREATE TABLE IF NOT EXISTS strategies (
+      id int AUTO_INCREMENT NOT NULL,
+      userId int NOT NULL,
+      name varchar(255) NOT NULL,
+      description text,
+      config json NOT NULL,
+      isActive boolean NOT NULL DEFAULT true,
+      published boolean NOT NULL DEFAULT false,
+      createdAt timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updatedAt timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+      CONSTRAINT strategies_id PRIMARY KEY(id)
+    )`);
+    console.log("[ensureStrategiesTable] created strategies table");
+    for (const col of [
+      "ADD COLUMN config json NOT NULL",
+    ]) {
+      try {
+        await pool.execute(`ALTER TABLE strategies ${col}`);
+      } catch (e2: any) {
+        if (e2?.errno !== 1060 && !e2?.message?.includes('Duplicate column')) {
+          console.warn("[ensureStrategiesTable] column migration note", e2?.message || e2);
+        }
+      }
+    }
+  } catch (e: any) {
+    console.error("[ensureStrategiesTable] create failed", e?.message || e);
   }
 }
 
