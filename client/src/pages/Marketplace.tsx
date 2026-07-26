@@ -67,9 +67,11 @@ export default function Marketplace() {
     }
   };
 
+  const pluginsQuery = trpc.plugins.marketplace.useQuery();
   if (!isAuthenticated) { navigate("/login"); return null; }
   const signals = (signalsQuery.data as any[]) || [];
   const published = (publishedQuery.data as any[]) || [];
+  const pluginList = (pluginsQuery.data as any[]) || [];
 
   return (
     <div className="min-h-screen bg-[var(--card)] text-white">
@@ -143,8 +145,8 @@ export default function Marketplace() {
                       <Button onClick={() => navigate("/backtesting?signal=" + sig.id)} className="bg-[var(--amber)] hover:bg-[var(--amber)] text-black text-xs px-3 py-1.5 rounded-lg flex items-center gap-1">
                         <FlaskConical className="w-3.5 h-3.5" /> Backtest
                       </Button>
-                      <Button onClick={() => toast("Purchase flow started for signal #" + sig.id + ". Credits will be deducted from your account.", "success")} className="bg-[var(--green)]/20 text-[var(--green)] border border-[var(--green)]/30 text-xs px-3 py-1.5 rounded-lg flex items-center gap-1">
-                        <ShoppingCart className="w-3.5 h-3.5" /> Purchase
+                      <Button onClick={() => sendToBot(sig)} className="bg-[var(--green)]/20 text-[var(--green)] border border-[var(--green)]/30 text-xs px-3 py-1.5 rounded-lg flex items-center gap-1">
+                        <Bot className="w-3.5 h-3.5" /> Deploy Bot
                       </Button>
                       <button onClick={() => setExpanded(isOpen ? null : sig.id)} className="text-[11px] text-[var(--text-secondary)] hover:text-[var(--amber)] flex items-center gap-1 justify-center">
                         {isOpen ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />} Evidence
@@ -231,31 +233,31 @@ export default function Marketplace() {
 
         <div className="mt-10">
           <h2 className="text-xl font-bold text-white mb-1 flex items-center gap-2">
-            <Shield className="w-5 h-5 text-[var(--cyan)]" /> Plugin Permissions
+            <Shield className="w-5 h-5 text-[var(--cyan)]" /> Plugin Marketplace
           </h2>
-          <p className="text-sm text-[var(--text-muted)] mb-4">Manage granular permissions for installed plugins.</p>
+          <p className="text-sm text-[var(--text-muted)] mb-4">Browse available plugins for your trading bots.</p>
           <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl overflow-hidden">
-            {[{ name: "Telegram Notifier", version: "1.2.0", perms: ["trades:read", "alerts:read"] },
-              { name: "Export Tool", version: "0.9.0", perms: ["trades:read", "data:export"] },
-              { name: "Market Scanner", version: "2.1.0", perms: ["trades:read", "bots:read", "alerts:read"] },
-            ].map((plugin) => (
-              <div key={plugin.name} className="p-4 border-b border-[var(--border)] last:border-0 hover:bg-white/5">
-                <div className="flex items-center justify-between mb-2">
-                  <div>
-                    <span className="text-sm font-bold text-white">{plugin.name}</span>
-                    <span className="text-xs text-[var(--text-muted)] ml-2">v{plugin.version}</span>
+            {pluginsQuery.isLoading ? (
+              <div className="flex justify-center py-6"><Loader2 className="w-5 h-5 animate-spin text-[var(--cyan)]" /></div>
+            ) : pluginList.length === 0 ? (
+              <p className="text-sm text-[var(--text-muted)] p-4">No plugins available. Plugins can be created via the Plugin SDK above.</p>
+            ) : (
+              pluginList.map((plugin: any) => (
+                <div key={plugin.id || plugin.name} className="p-4 border-b border-[var(--border)] last:border-0 hover:bg-white/5">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <span className="text-sm font-bold text-white">{plugin.name}</span>
+                      <span className="text-xs text-[var(--text-muted)] ml-2">v{plugin.version || "1.0.0"}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] text-[var(--text-muted)]">{plugin.author || "Community"}</span>
+                      <span className="text-[10px] px-2 py-0.5 rounded bg-[var(--cyan)]/20 text-[var(--cyan)]">{plugin.hook || "general"}</span>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    {plugin.perms.map((perm) => (
-                      <label key={perm} className="flex items-center gap-1 text-[10px] cursor-pointer">
-                        <input type="checkbox" defaultChecked className="accent-[var(--cyan)] w-3 h-3" />
-                        <span className="text-[var(--text-muted)]">{perm}</span>
-                      </label>
-                    ))}
-                  </div>
+                  <p className="text-xs text-[var(--text-secondary)] mt-1">{plugin.description || ""}</p>
                 </div>
-              </div>
-            ))}
+              ))
+            )}
           </div>
         </div>
 
@@ -292,9 +294,6 @@ export default function Marketplace() {
                       <Button onClick={() => cloneStrategy(s)} className="bg-[var(--amber)] hover:bg-[var(--amber-hover)] text-white text-xs px-3 py-1.5 rounded-lg">
                         Clone
                       </Button>
-                      <Button onClick={() => toast("Thanks for rating!", "success")} className="bg-[var(--card)] border border-[var(--border)] text-[var(--text-muted)] text-[10px] px-3 py-1 rounded-lg flex items-center gap-1">
-                        <Star className="w-3 h-3" /> Rate
-                      </Button>
                     </div>
                   </div>
                 </div>
@@ -323,7 +322,7 @@ export default function Marketplace() {
                   <label className="text-xs text-[var(--text-muted)] font-bold block mb-1">Price (credits)</label>
                   <input type="number" value={uploadPrice} onChange={(e) => setUploadPrice(e.target.value)} className="w-full bg-[var(--card)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-white" placeholder="0 (free)" />
                 </div>
-                <Button onClick={() => { toast("Strategy submitted for review!", "success"); setShowUpload(false); setUploadName(""); setUploadDesc(""); setUploadPrice(""); }} className="w-full bg-[var(--cyan)] text-black text-xs font-bold py-2 rounded-lg">Submit for Review</Button>
+                <Button onClick={async () => { if (!uploadName.trim()) { toast("Strategy name required", "error"); return; } try { await cloneMutation.mutateAsync({ name: uploadName, description: uploadDesc || "Published from Marketplace", config: {}, published: true }); toast("Strategy published to community!", "success"); setShowUpload(false); setUploadName(""); setUploadDesc(""); setUploadPrice(""); publishedQuery.refetch(); } catch (e: any) { toast(e?.message || "Failed to publish", "error"); } }} className="w-full bg-[var(--cyan)] text-black text-xs font-bold py-2 rounded-lg">Submit for Review</Button>
               </div>
             </div>
           </div>
