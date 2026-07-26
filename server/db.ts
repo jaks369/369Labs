@@ -744,6 +744,12 @@ export async function getAiKnowledgeByRelatedTradeId(userId: number, tradeId: nu
     .orderBy(desc(aiKnowledge.createdAt)).limit(20);
 }
 
+export async function deleteAiKnowledgeEntry(id: number, userId: number): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+  await db.delete(aiKnowledge).where(and(eq(aiKnowledge.id, id), eq(aiKnowledge.userId, userId)));
+}
+
 export async function saveBotLog(data: InsertBotLog): Promise<void> {
   const db = await getDb();
   if (!db) return;

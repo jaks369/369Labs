@@ -67,8 +67,7 @@ export default function Workflow() {
   const [menuOpen, setMenuOpen] = useState<string | null>(null);
   const watchMutation = trpc.signals.watch.useMutation();
   const notifyMutation = trpc.telegram.send.useMutation();
-  const checkTrigger = (opts: { symbol: string; trigger: string }) =>
-    (trpc.market.checkTrigger as any).query(opts);
+  const utils = trpc.useUtils();
 
   const SYMBOLS = getValidSymbols();
 
@@ -100,20 +99,42 @@ export default function Workflow() {
         } else if (step.kind === "condition") {
           const condLabel = step.condition || "checking";
           add(`  ⏳ Checking: ${condLabel}...`);
-          if (condLabel.startsWith("winRate")) {
-            add(`  ❌ Condition not met (no trades to evaluate). Workflow stopped.`);
-            halted = true;
-          } else if (condLabel.startsWith("score")) {
-            add(`  ❌ Condition not met (no pattern scored). Workflow stopped.`);
-            halted = true;
-          } else {
-            add(`  ❌ Condition not met. Workflow stopped.`);
+          try {
+            if (condLabel.startsWith("winRate")) {
+              const trades = await utils.client.trades.list.query({ limit: 100 });
+              const all = trades?.trades || [];
+              const wins = all.filter((t: any) => t.result === "win").length;
+              const total = all.filter((t: any) => t.result === "win" || t.result === "loss").length;
+              const rate = total > 0 ? (wins / total) * 100 : 0;
+              const threshold = parseFloat(condLabel.match(/[\d.]+/)?.[0] || "65");
+              if (rate >= threshold) {
+                add(`  ✅ Condition met — win rate ${rate.toFixed(1)}% >= ${threshold}% (${wins}/${total} trades).`);
+              } else {
+                add(`  ❌ Condition not met — win rate ${rate.toFixed(1)}% < ${threshold}% (${wins}/${total} trades). Workflow stopped.`);
+                halted = true;
+              }
+            } else if (condLabel.startsWith("score")) {
+              const signals = await utils.client.signals.list.query({ symbol, limit: 10 });
+              const all = (signals as any)?.signals || (signals as any) || [];
+              const topScore = Array.isArray(all) ? Math.max(...all.map((s: any) => parseFloat(s.confidence) || 0), 0) : 0;
+              const threshold = parseFloat(condLabel.match(/[\d.]+/)?.[0] || "70");
+              if (topScore >= threshold) {
+                add(`  ✅ Condition met — top pattern score ${topScore.toFixed(1)} >= ${threshold}.`);
+              } else {
+                add(`  ❌ Condition not met — top pattern score ${topScore.toFixed(1)} < ${threshold}. Workflow stopped.`);
+                halted = true;
+              }
+            } else {
+              add(`  ✅ Condition passed (${condLabel}).`);
+            }
+          } catch (e: any) {
+            add(`  ⚠ Condition check failed: ${e?.message || "error"}. Workflow stopped.`);
             halted = true;
           }
         } else if (step.kind === "trigger") {
           add(`  ⏳ Checking trigger: ${step.trigger || "ma_cross"} on ${sym}...`);
           try {
-            const res: any = await checkTrigger({ symbol: sym, trigger: step.trigger || "ma_cross" });
+            const res: any = await utils.client.market.checkTrigger.query({ symbol: sym, trigger: step.trigger || "ma_cross" });
             if (res?.crossed) {
               add(`  ✅ ${res.reason}`);
             } else {

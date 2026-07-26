@@ -1,8 +1,9 @@
 import { useState } from "react";
 import { useAuth } from "@/_core/hooks/useAuth";
+import { trpc } from "@/lib/trpc";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
-import { Crown, CheckCircle2, Zap, Shield, BarChart3, Users, Bot, Sparkles, CreditCard, X, Loader2 } from "lucide-react";
+import { Crown, CheckCircle2, Zap, Shield, BarChart3, Users, Bot, Sparkles, CreditCard, Loader2 } from "lucide-react";
 
 const plans = [
   { name: "Starter", price: "$0", period: "free", features: ["1 bot", "Basic backtesting", "Paper trading", "3-day history"], cta: "Current Plan", popular: false },
@@ -11,32 +12,16 @@ const plans = [
 ];
 
 export default function SubscriptionPage() {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
   const [, navigate] = useLocation();
   const [selected, setSelected] = useState(0);
-  const [checkout, setCheckout] = useState(false);
-  const [cardNumber, setCardNumber] = useState("");
-  const [cardName, setCardName] = useState("");
-  const [cardExpiry, setCardExpiry] = useState("");
-  const [cardCvc, setCardCvc] = useState("");
-  const [paying, setPaying] = useState(false);
-  const [paid, setPaid] = useState(false);
+
+  const activeBots = trpc.bot.listActive.useQuery(undefined, { enabled: isAuthenticated });
+  const tradeCount = trpc.trades.list.useQuery({ limit: 5000 }, { enabled: isAuthenticated });
+  const activeCount = activeBots.data?.runs?.length ?? 0;
+  const totalTrades = tradeCount.data?.trades?.length ?? 0;
 
   if (!isAuthenticated) { navigate("/login"); return null; }
-
-  const handleSubscribe = async () => {
-    if (selected === 0) return;
-    setCheckout(true);
-  };
-
-  const handlePay = async () => {
-    setPaying(true);
-    await new Promise((r) => setTimeout(r, 1500));
-    setPaying(false);
-    setPaid(true);
-    setCheckout(false);
-    setTimeout(() => setPaid(false), 3000);
-  };
 
   return (
     <div className="min-h-screen bg-[var(--card)] p-6">
@@ -67,7 +52,7 @@ export default function SubscriptionPage() {
                 ))}
               </div>
               <Button
-                onClick={() => { setSelected(i); if (i > 0) handleSubscribe(); }}
+                onClick={() => setSelected(i)}
                 className={`mt-6 w-full text-xs font-bold py-2 rounded-lg ${i === selected ? "bg-[var(--amber)] text-black" : "bg-white/5 text-[var(--text-secondary)] border border-[var(--border)] hover:bg-white/10"}`}
               >
                 {i === selected ? (plan.cta === "Current Plan" ? "Current Plan" : "Selected") : plan.cta}
@@ -77,30 +62,50 @@ export default function SubscriptionPage() {
         </div>
 
         <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-6">
-          <h2 className="text-sm font-bold text-white mb-4 flex items-center gap-2"><Bot className="w-4 h-4 text-[var(--amber)]" /> Usage Limits</h2>
+          <h2 className="text-sm font-bold text-white mb-4 flex items-center gap-2"><Bot className="w-4 h-4 text-[var(--amber)]" /> Usage</h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
             <div className="bg-black/20 rounded-lg p-4">
               <p className="text-[var(--text-muted)] mb-1">Active Bots</p>
-              <p className="text-xl font-bold text-white">1 <span className="text-sm text-[var(--text-muted)] font-normal">/ 10 (Pro)</span></p>
-              <div className="mt-2 h-1.5 bg-[var(--border)] rounded-full overflow-hidden">
-                <div className="h-full bg-[var(--amber)] rounded-full" style={{ width: "10%" }} />
-              </div>
+              {activeBots.isLoading ? (
+                <Loader2 className="w-4 h-4 animate-spin text-[var(--amber)]" />
+              ) : (
+                <>
+                  <p className="text-xl font-bold text-white">{activeCount} <span className="text-sm text-[var(--text-muted)] font-normal">/ 10 (Pro)</span></p>
+                  <div className="mt-2 h-1.5 bg-[var(--border)] rounded-full overflow-hidden">
+                    <div className="h-full bg-[var(--amber)] rounded-full" style={{ width: `${Math.min((activeCount / 10) * 100, 100)}%` }} />
+                  </div>
+                </>
+              )}
             </div>
             <div className="bg-black/20 rounded-lg p-4">
-              <p className="text-[var(--text-muted)] mb-1">Daily API Calls</p>
-              <p className="text-xl font-bold text-white">247 <span className="text-sm text-[var(--text-muted)] font-normal">/ 1,000 (Pro)</span></p>
-              <div className="mt-2 h-1.5 bg-[var(--border)] rounded-full overflow-hidden">
-                <div className="h-full bg-[var(--green)] rounded-full" style={{ width: "24.7%" }} />
-              </div>
+              <p className="text-[var(--text-muted)] mb-1">Total Trades</p>
+              {tradeCount.isLoading ? (
+                <Loader2 className="w-4 h-4 animate-spin text-[var(--green)]" />
+              ) : (
+                <>
+                  <p className="text-xl font-bold text-white">{totalTrades.toLocaleString()}</p>
+                  <div className="mt-2 h-1.5 bg-[var(--border)] rounded-full overflow-hidden">
+                    <div className="h-full bg-[var(--green)] rounded-full" style={{ width: `${Math.min((totalTrades / 10000) * 100, 100)}%` }} />
+                  </div>
+                </>
+              )}
             </div>
             <div className="bg-black/20 rounded-lg p-4">
-              <p className="text-[var(--text-muted)] mb-1">Storage Used</p>
-              <p className="text-xl font-bold text-white">12 MB <span className="text-sm text-[var(--text-muted)] font-normal">/ 500 MB (Pro)</span></p>
-              <div className="mt-2 h-1.5 bg-[var(--border)] rounded-full overflow-hidden">
-                <div className="h-full bg-[var(--cyan)] rounded-full" style={{ width: "2.4%" }} />
-              </div>
+              <p className="text-[var(--text-muted)] mb-1">Account</p>
+              <p className="text-xl font-bold text-white">{user?.email || "—"}</p>
             </div>
           </div>
+        </div>
+
+        <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-6">
+          <div className="flex items-center gap-3 mb-4">
+            <CreditCard className="w-5 h-5 text-[var(--amber)]" />
+            <h2 className="text-sm font-bold text-white">Payment</h2>
+          </div>
+          <p className="text-xs text-[var(--text-secondary)] mb-4">To upgrade or manage your subscription, visit the billing portal.</p>
+          <Button onClick={() => window.open("https://billing.stripe.com", "_blank")} className="bg-[var(--amber)] text-black text-xs font-bold px-6 py-2.5 rounded-lg">
+            Manage Billing
+          </Button>
         </div>
 
         <div className="text-center">
@@ -109,47 +114,6 @@ export default function SubscriptionPage() {
           </p>
         </div>
       </div>
-
-      {paid && (
-        <div className="fixed bottom-6 right-6 bg-[var(--green)]/20 border border-[var(--green)]/40 rounded-xl p-4 text-sm text-[var(--green)] font-bold shadow-2xl z-50 animate-cardEnter">
-          <CheckCircle2 className="w-4 h-4 inline mr-2" />Subscribed to {plans[selected].name}!
-        </div>
-      )}
-
-      {checkout && (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4" onClick={() => !paying && setCheckout(false)}>
-          <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-6 w-full max-w-md" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-bold text-white flex items-center gap-2"><CreditCard className="w-5 h-5 text-[var(--amber)]" /> Payment</h2>
-              <button onClick={() => setCheckout(false)} className="text-[var(--text-muted)] hover:text-white"><X className="w-5 h-5" /></button>
-            </div>
-            <p className="text-sm text-[var(--text-secondary)] mb-4">{plans[selected].name} — {plans[selected].price}{plans[selected].period}</p>
-            <div className="space-y-3">
-              <div>
-                <label className="text-xs text-[var(--text-muted)] block mb-1">Card Number</label>
-                <input value={cardNumber} onChange={(e) => setCardNumber(e.target.value)} placeholder="4242 4242 4242 4242" className="w-full bg-[var(--card)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-white font-mono" />
-              </div>
-              <div>
-                <label className="text-xs text-[var(--text-muted)] block mb-1">Cardholder Name</label>
-                <input value={cardName} onChange={(e) => setCardName(e.target.value)} placeholder="John Doe" className="w-full bg-[var(--card)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-white" />
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="text-xs text-[var(--text-muted)] block mb-1">Expiry</label>
-                  <input value={cardExpiry} onChange={(e) => setCardExpiry(e.target.value)} placeholder="12/26" className="w-full bg-[var(--card)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-white font-mono" />
-                </div>
-                <div>
-                  <label className="text-xs text-[var(--text-muted)] block mb-1">CVC</label>
-                  <input value={cardCvc} onChange={(e) => setCardCvc(e.target.value)} placeholder="123" className="w-full bg-[var(--card)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-white font-mono" />
-                </div>
-              </div>
-              <Button onClick={handlePay} disabled={paying || !cardNumber || !cardName || !cardExpiry || !cardCvc} className="w-full bg-[var(--amber)] text-black font-bold py-2.5 rounded-lg text-sm mt-2">
-                {paying ? <><Loader2 className="w-4 h-4 animate-spin inline mr-2" />Processing...</> : `Pay ${plans[selected].price}${plans[selected].period}`}
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

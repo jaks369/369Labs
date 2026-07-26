@@ -8,9 +8,10 @@ import MarketPredictionCards from "@/components/MarketPredictionCards";
 import MarketInsightCards from "@/components/MarketInsightCards";
 import MarketRiskPanel from "@/components/MarketRiskPanel";
 import { derivWS } from "@/services/derivWebSocket";
-import { ALL_VOLATILITY_SYMBOLS, STANDARD_SYMBOLS } from "@/lib/symbols";
+import { STANDARD_SYMBOLS, ALL_VOLATILITY_SYMBOLS } from "@/lib/symbols";
+import { getAllSymbols } from "@shared/symbols";
 
-const SCREENER_SYMBOLS = [...ALL_VOLATILITY_SYMBOLS, "BOOM300", "BOOM500", "CRASH300", "CRASH500"];
+const SCREENER_SYMBOLS = getAllSymbols();
 
 export default function MarketIntelligencePage() {
   const { isAuthenticated } = useAuth();

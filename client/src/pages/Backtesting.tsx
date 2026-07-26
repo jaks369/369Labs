@@ -5,14 +5,14 @@ import { Button } from "@/components/ui/button";
 import { Play, BarChart3, Loader2, CheckCircle2, XCircle, AlertCircle, Search, CandlestickChart, GitCompare } from "lucide-react";
 import { useLocation } from "wouter";
 import { toast } from "@/components/Toast";
-import { toast } from "@/components/Toast";
 import { derivWS } from "@/services/derivWebSocket";
 import { runBacktest, BacktestResult } from "@/services/BacktestEngine";
 import Sparkline from "@/components/Sparkline";
 import { StrategyRule } from "@/components/RuleBuilder";
 import { getValidSymbols } from "@/lib/symbols";
+import { getAllSymbols } from "@shared/symbols";
 
-const IT_SYMBOLS = [...getValidSymbols(), "BOOM300", "BOOM500", "BOOM1000", "CRASH300", "CRASH500", "CRASH1000"];
+const IT_SYMBOLS = getAllSymbols();
 
 export default function Backtesting() {
   const { isAuthenticated } = useAuth();

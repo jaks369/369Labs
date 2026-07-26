@@ -2611,6 +2611,27 @@ watch: protectedProcedure
         }),
     },
   }),
+  team: {
+    invite: protectedProcedure
+      .input(z.object({ email: z.string().email() }))
+      .mutation(async ({ ctx, input }) => {
+        await db.saveAiKnowledge({ userId: ctx.user.id, knowledgeType: "team_invite", data: { email: input.email, status: "pending", invitedBy: ctx.user.id, invitedAt: new Date().toISOString() } });
+        await db.saveAuditLog({ userId: ctx.user.id, action: "team.invite", target: input.email }).catch(() => {});
+        return { ok: true };
+      }),
+    list: protectedProcedure.query(async ({ ctx }) => {
+      const entries = await db.getAiKnowledge(ctx.user.id, "team_invite", 100);
+      return (entries || []).map(e => ({ id: e.id, email: (e.data as any)?.email || "", status: (e.data as any)?.status || "pending", invitedAt: (e.data as any)?.invitedAt || "" }));
+    }),
+    remove: protectedProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ ctx, input }) => {
+        const entries = await db.getAiKnowledge(ctx.user.id, "team_invite", 100);
+        const entry = entries.find(e => e.id === input.id);
+        if (entry) await db.deleteAiKnowledgeEntry(input.id, ctx.user.id);
+        return { ok: true };
+      }),
+  },
 });
 
 
