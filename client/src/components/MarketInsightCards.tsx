@@ -97,7 +97,7 @@ export default function MarketInsightCards({ data, loading }: MarketInsightCards
             <div className="flex items-center justify-between mb-1.5">
               <div className={`flex items-center gap-1.5 ${insightColor(insight.type)}`}>
                 {insightIcon(insight.type)}
-                <span className="text-[8px] font-bold uppercase tracking-wider">{insight.type.replace(/_/g, " ")}</span>
+                <span className="text-[8px] font-bold uppercase tracking-wider">{(insight.type || "").replace(/_/g, " ")}</span>
               </div>
               <span className="text-[8px] text-[var(--text-muted)]">{formatTime(insight.timestamp)}</span>
             </div>

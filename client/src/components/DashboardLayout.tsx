@@ -98,7 +98,7 @@ const navGroups: NavGroup[] = [
       { icon: Wallet, label: "Portfolio", path: "/portfolio" },
       { icon: BarChart3, label: "Trade History", path: "/trades" },
       { icon: Star, label: "Watchlist", path: "/watchlist" },
-      { icon: Book, label: "Order Book", path: "/order-book" },
+
     ],
   },
   {
