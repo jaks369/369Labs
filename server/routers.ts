@@ -1882,6 +1882,13 @@ Return ONLY the JSON.`;
           return { ok: false, error: String(e) };
         }
       }),
+    aiScheduledAnalysis: protectedProcedure
+      .input(z.object({ symbol: z.string(), interval: z.enum(["1h", "4h", "1d", "1w"]), prompt: z.string().optional() }))
+      .mutation(async ({ input, ctx }) => {
+        await db.saveAiKnowledge({ userId: ctx.user.id, type: "schedule", title: `Scheduled Analysis: ${input.symbol}`, content: input.prompt || `Analyze ${input.symbol} every ${input.interval}`, metadata: { symbol: input.symbol, interval: input.interval } });
+        db.saveAuditLog({ userId: ctx.user.id, action: "ai.scheduleAnalysis", detail: { symbol: input.symbol, interval: input.interval } }).catch(() => {});
+        return { ok: true };
+      }),
   }),
 
   // 369AI Live Intelligence Feed ΓÇö powers the dashboard AI panel.
