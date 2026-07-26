@@ -1,6 +1,19 @@
 import { GitCommit, Bug, Sparkles, RefreshCw, Shield } from "lucide-react";
 
 const ENTRIES = [
+  { version: "2.2.0", date: "2026-07-26", items: [
+    { icon: Sparkles, text: "Trading Copilot page with live market context and AI chat" },
+    { icon: Sparkles, text: "Auto Reports with in-app viewer and real trade data" },
+    { icon: Sparkles, text: "AI Explainability wired to live aiKnowledge data" },
+    { icon: Sparkles, text: "Strategy Comparison with real strategy/trade data" },
+    { icon: Sparkles, text: "Analytics page: bot vs manual trade filter" },
+    { icon: RefreshCw, text: "All symbol pickers unified with live symbol list and opaque styling" },
+    { icon: RefreshCw, text: "User Guide rewritten as comprehensive reference" },
+    { icon: RefreshCw, text: "API Docs auto-generated from server endpoint metadata" },
+    { icon: Bug, text: "Telegram botToken not being saved to database" },
+    { icon: Bug, text: "Fixed React hooks ordering bug in Telegram page" },
+    { icon: Bug, text: "Replay mode Invalid Date display" },
+  ]},
   { version: "2.1.0", date: "2026-07-20", items: [{ icon: Sparkles, text: "Onboarding flow for new users" }, { icon: Sparkles, text: "Watchlist with live price tracking" }, { icon: Sparkles, text: "Strategy comparison analytics" }, { icon: Bug, text: "Fixed 1HZ25V/1HZ75V invalid symbol error" }] },
   { version: "2.0.0", date: "2026-06-15", items: [{ icon: Sparkles, text: "AI Assistant with tool integration" }, { icon: RefreshCw, text: "Complete UI redesign with new components" }, { icon: Sparkles, text: "Cloud bot deployment and monitoring" }, { icon: Shield, text: "Risk management system added" }] },
   { version: "1.5.0", date: "2026-05-01", items: [{ icon: Sparkles, text: "Backtesting with parameter sweep" }, { icon: Bug, text: "Trade history pagination fix" }, { icon: RefreshCw, text: "Performance optimizations for large datasets" }] },

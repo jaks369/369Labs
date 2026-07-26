@@ -1,32 +1,139 @@
 import { useState } from "react";
-import { FileText, Download, Calendar, Clock, Loader2, BarChart3, TrendingUp, PieChart } from "lucide-react";
+import { FileText, Download, Calendar, Loader2, BarChart3, TrendingUp, PieChart, X, Eye, Activity } from "lucide-react";
+import { trpc } from "@/lib/trpc";
 import { toast } from "@/components/Toast";
 
 const REPORT_TEMPLATES = [
-  { id: "weekly", name: "Weekly Performance", icon: BarChart3, description: "Win rate, profit/loss, trade count for the past week" },
-  { id: "monthly", name: "Monthly Report", icon: TrendingUp, description: "Full monthly performance with equity curve and drawdown" },
-  { id: "portfolio", name: "Portfolio Summary", icon: PieChart, description: "Allocation, performance by symbol, risk metrics" },
+  { id: "weekly" as const, name: "Weekly Performance", icon: BarChart3, description: "Win rate, profit/loss, trade count for the past week" },
+  { id: "monthly" as const, name: "Monthly Report", icon: TrendingUp, description: "Full monthly performance with equity curve and drawdown" },
+  { id: "portfolio" as const, name: "Portfolio Summary", icon: PieChart, description: "Allocation, performance by symbol, risk metrics" },
 ];
 
-const MOCK_REPORTS = [
-  { id: "1", name: "Weekly Performance - Jul 20", date: "2026-07-20", type: "weekly", status: "ready" },
-  { id: "2", name: "Monthly Report - June", date: "2026-07-01", type: "monthly", status: "ready" },
-  { id: "3", name: "Portfolio Summary - Q2", date: "2026-07-15", type: "portfolio", status: "ready" },
-];
+function exportCsv(report: any) {
+  const header = "Metric,Value";
+  const rows = [
+    `Period,${report.period?.from} to ${report.period?.to}`,
+    `Total Trades,${report.summary?.totalTrades}`,
+    `Wins,${report.summary?.wins}`,
+    `Losses,${report.summary?.losses}`,
+    `Win Rate,${report.summary?.winRate}%`,
+    `Total P&L,$${report.summary?.totalPnl}`,
+    `Max Drawdown,$${report.summary?.maxDrawdown}`,
+    ...(report.bySymbol || []).map((s: any) => `${s.symbol},${s.pnl >= 0 ? "+" : ""}$${s.pnl} (${s.wins}W/${s.losses}L)`),
+  ];
+  const blob = new Blob([`${header}\n${rows.join("\n")}`], { type: "text/csv" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a"); a.href = url; a.download = `${report.label || "report"}.csv`; a.click();
+  URL.revokeObjectURL(url);
+}
+
+function ReportViewer({ report, onClose }: { report: any; onClose: () => void }) {
+  const s = report.summary || {};
+  return (
+    <div className="fixed inset-0 z-[90] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4" onClick={onClose}>
+      <div className="w-full max-w-2xl bg-[var(--card)] border border-[var(--border)] rounded-xl max-h-[85vh] flex flex-col" onClick={e => e.stopPropagation()}>
+        <div className="flex items-center justify-between p-4 border-b border-[var(--border)]">
+          <div>
+            <h3 className="text-sm font-bold text-white">{report.label}</h3>
+            <p className="text-[10px] text-[var(--text-muted)]">{report.period?.from} → {report.period?.to}</p>
+          </div>
+          <div className="flex items-center gap-2">
+            <button onClick={() => { exportCsv(report); toast("CSV exported", "success"); }} className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-[var(--amber)]/20 text-[var(--amber)] text-xs font-bold hover:bg-[var(--amber)]/30">
+              <Download className="w-3.5 h-3.5" /> CSV
+            </button>
+            <button onClick={onClose} className="p-1.5 rounded-lg text-[var(--text-muted)] hover:text-white"><X className="w-4 h-4" /></button>
+          </div>
+        </div>
+        <div className="flex-1 overflow-y-auto p-4 space-y-5">
+          {/* Summary cards */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <div className="bg-black/20 rounded-lg p-3 text-center">
+              <p className="text-[9px] text-[var(--text-muted)] uppercase font-bold">Trades</p>
+              <p className="text-lg font-bold text-white">{s.totalTrades}</p>
+            </div>
+            <div className="bg-black/20 rounded-lg p-3 text-center">
+              <p className="text-[9px] text-[var(--text-muted)] uppercase font-bold">Win Rate</p>
+              <p className="text-lg font-bold text-[var(--green)]">{s.winRate}%</p>
+            </div>
+            <div className="bg-black/20 rounded-lg p-3 text-center">
+              <p className="text-[9px] text-[var(--text-muted)] uppercase font-bold">Net P&L</p>
+              <p className={`text-lg font-bold ${s.totalPnl >= 0 ? "text-[var(--green)]" : "text-[var(--red)]"}`}>${s.totalPnl}</p>
+            </div>
+            <div className="bg-black/20 rounded-lg p-3 text-center">
+              <p className="text-[9px] text-[var(--text-muted)] uppercase font-bold">Max DD</p>
+              <p className="text-lg font-bold text-[var(--red)]">${s.maxDrawdown}</p>
+            </div>
+          </div>
+
+          {/* W/L breakdown */}
+          <div className="bg-black/20 rounded-lg p-4">
+            <p className="text-[10px] text-[var(--text-muted)] font-bold uppercase mb-3">Win / Loss Breakdown</p>
+            <div className="flex items-center gap-4">
+              <div className="flex-1">
+                <div className="flex justify-between text-xs mb-1">
+                  <span className="text-[var(--green)]">Wins ({s.wins})</span>
+                  <span className="text-[var(--green)]">{s.totalTrades > 0 ? ((s.wins / s.totalTrades) * 100).toFixed(0) : 0}%</span>
+                </div>
+                <div className="h-3 bg-black/40 rounded-full overflow-hidden">
+                  <div className="h-full bg-[var(--green)] rounded-full" style={{ width: `${s.totalTrades > 0 ? (s.wins / s.totalTrades) * 100 : 0}%` }} />
+                </div>
+              </div>
+              <div className="flex-1">
+                <div className="flex justify-between text-xs mb-1">
+                  <span className="text-[var(--red)]">Losses ({s.losses})</span>
+                  <span className="text-[var(--red)]">{s.totalTrades > 0 ? ((s.losses / s.totalTrades) * 100).toFixed(0) : 0}%</span>
+                </div>
+                <div className="h-3 bg-black/40 rounded-full overflow-hidden">
+                  <div className="h-full bg-[var(--red)] rounded-full" style={{ width: `${s.totalTrades > 0 ? (s.losses / s.totalTrades) * 100 : 0}%` }} />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* By Symbol */}
+          {report.bySymbol && report.bySymbol.length > 0 && (
+            <div>
+              <p className="text-[10px] text-[var(--text-muted)] font-bold uppercase mb-2">Performance by Symbol</p>
+              <div className="space-y-1.5">
+                {report.bySymbol.map((sym: any) => (
+                  <div key={sym.symbol} className="flex items-center justify-between px-3 py-2 bg-black/20 rounded-lg text-xs">
+                    <span className="text-white font-bold">{sym.symbol}</span>
+                    <span className="text-[var(--text-muted)]">{sym.wins}W / {sym.losses}L</span>
+                    <span className={`font-bold ${sym.pnl >= 0 ? "text-[var(--green)]" : "text-[var(--red)]"}`}>
+                      {sym.pnl >= 0 ? "+" : ""}${sym.pnl}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export default function AutoReports() {
   const [generating, setGenerating] = useState<string | null>(null);
-  const [reports, setReports] = useState(MOCK_REPORTS);
+  const [viewReportId, setViewReportId] = useState<number | null>(null);
 
-  const generate = async (id: string) => {
-    setGenerating(id);
-    await new Promise((r) => setTimeout(r, 1500));
-    const t = REPORT_TEMPLATES.find((r) => r.id === id)!;
-    const newR = { id: crypto.randomUUID?.() || Math.random().toString(36), name: `${t.name} - ${new Date().toLocaleDateString()}`, date: new Date().toISOString().split("T")[0], type: id, status: "ready" };
-    setReports((prev) => [newR, ...prev]);
-    setGenerating(null);
-    toast(`${t.name} generated successfully`, "success");
+  const generateMutation = trpc.reports.generate.useMutation();
+  const reportsQuery = trpc.reports.list.useQuery();
+  const reportDetailQuery = trpc.reports.getById.useQuery({ id: viewReportId || 0 }, { enabled: viewReportId !== null });
+  const viewReport = viewReportId ? reportDetailQuery.data : null;
+
+  const generate = async (type: "weekly" | "monthly" | "portfolio") => {
+    setGenerating(type);
+    try {
+      await generateMutation.mutateAsync({ type });
+      toast("Report generated", "success");
+      await reportsQuery.refetch();
+    } catch (e: any) {
+      toast(e?.message || "Generation failed", "error");
+    } finally { setGenerating(null); }
   };
+
+  const openReport = (id: number) => setViewReportId(id);
 
   return (
     <div className="min-h-screen bg-[var(--card)] p-6">
@@ -58,14 +165,16 @@ export default function AutoReports() {
           <div className="p-4 border-b border-[var(--border)]">
             <h2 className="text-sm font-bold text-white">Generated Reports</h2>
           </div>
-          {reports.length === 0 ? (
+          {reportsQuery.isLoading ? (
+            <div className="p-8 text-center"><Loader2 className="w-6 h-6 animate-spin text-[var(--amber)] mx-auto" /></div>
+          ) : (reportsQuery.data || []).length === 0 ? (
             <div className="p-8 text-center">
               <FileText className="w-8 h-8 text-[var(--border)] mx-auto mb-2" />
               <p className="text-xs text-[var(--text-muted)]">No reports generated yet</p>
             </div>
           ) : (
             <div className="divide-y divide-[var(--border)]/50">
-              {reports.map((r) => (
+              {(reportsQuery.data || []).map((r: any) => (
                 <div key={r.id} className="flex items-center justify-between p-4">
                   <div className="flex items-center gap-3">
                     <FileText className="w-4 h-4 text-[var(--amber)]" />
@@ -73,19 +182,31 @@ export default function AutoReports() {
                       <span className="text-sm text-white">{r.name}</span>
                       <div className="flex items-center gap-3 text-xs text-[var(--text-muted)] mt-0.5">
                         <span className="flex items-center gap-1"><Calendar className="w-3 h-3" />{r.date}</span>
-                        <span className="flex items-center gap-1"><Clock className="w-3 h-3" />Ready</span>
+                        <span className="flex items-center gap-1"><Activity className="w-3 h-3" />Ready</span>
                       </div>
                     </div>
                   </div>
-                  <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[var(--amber)]/20 text-[var(--amber)] text-xs font-bold hover:bg-[var(--amber)]/30">
-                    <Download className="w-3.5 h-3.5" /> CSV
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button onClick={() => openReport(r.id)} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[var(--cyan)]/20 text-[var(--cyan)] text-xs font-bold hover:bg-[var(--cyan)]/30">
+                      <Eye className="w-3.5 h-3.5" /> View
+                    </button>
+                  </div>
                 </div>
               ))}
             </div>
           )}
         </div>
       </div>
+
+      {viewReportId && (
+        reportDetailQuery.isLoading ? (
+          <div className="fixed inset-0 z-[90] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+            <Loader2 className="w-8 h-8 animate-spin text-[var(--amber)]" />
+          </div>
+        ) : viewReport ? (
+          <ReportViewer report={viewReport} onClose={() => setViewReportId(null)} />
+        ) : null
+      )}
     </div>
   );
 }

@@ -15,10 +15,10 @@ import { useState } from "react";
 import { legacyConditionToNode, ConditionNode, LeafCondition } from "@/services/conditionEval";
 import { trpc } from "@/lib/trpc";
 import ConditionTreeEditor from "@/components/ConditionTreeEditor";
-import { ALL_VOLATILITY_SYMBOLS, getSymbolOptions } from "@/lib/symbols";
+import { getValidSymbols, getSymbolOptions } from "@/lib/symbols";
 
 // ---- Natural-language -> StrategyRule parser (client-side, no API call) ----
-const NL_SYMBOLS = ALL_VOLATILITY_SYMBOLS;
+const NL_SYMBOLS = getValidSymbols();
 function nlNormalizeSymbol(input: string): string {
   if (!input) return "";
   let s = input.trim().toUpperCase().replace(/\s+/g, "");

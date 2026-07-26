@@ -4,10 +4,10 @@ import { useLocation } from "wouter";
 import { Star, TrendingUp, TrendingDown, Plus, X, Loader2 } from "lucide-react";
 import { derivWS } from "@/services/derivWebSocket";
 import { toast } from "@/components/Toast";
-import { ALL_VOLATILITY_SYMBOLS, STANDARD_SYMBOLS } from "@/lib/symbols";
+import { getValidSymbols, STANDARD_SYMBOLS } from "@/lib/symbols";
 
 const WATCHLIST_KEY = "369labs_watchlist";
-const VALID_SYMBOLS = ALL_VOLATILITY_SYMBOLS;
+const VALID_SYMBOLS = getValidSymbols();
 
 export default function Watchlist() {
   const { isAuthenticated } = useAuth();
@@ -59,7 +59,7 @@ export default function Watchlist() {
 
         {adding && (
           <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4 flex gap-2">
-            <select value={newSym} onChange={(e) => setNewSym(e.target.value)} className="flex-1 bg-[var(--card)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-white">
+            <select value={newSym} onChange={(e) => setNewSym(e.target.value)} className="flex-1 bg-[#1a1a2e] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-white focus:border-[var(--amber)] outline-none [&>option]:bg-[#1a1a2e] [&>option]:text-white">
               {VALID_SYMBOLS.filter((s) => !symbols.includes(s)).map((s) => (<option key={s} value={s}>{s}</option>))}
             </select>
             <button onClick={addSymbol} className="px-4 py-2 rounded-lg bg-[var(--amber)] text-black text-xs font-bold">Add</button>

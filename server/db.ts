@@ -791,9 +791,10 @@ export async function saveTelegramSettings(settings: InsertTelegramSettings): Pr
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   
-  const result = await db.insert(telegramSettings).values(settings);
-  const id = result[0].insertId;
-  return (await db.select().from(telegramSettings).where(eq(telegramSettings.id, id as number)).limit(1))[0];
+  await db.delete(telegramSettings).where(eq(telegramSettings.userId, settings.userId)).catch(() => {});
+  await db.insert(telegramSettings).values(settings);
+  const result = await db.select().from(telegramSettings).where(eq(telegramSettings.userId, settings.userId)).limit(1);
+  return result[0];
 }
 
 export async function getTelegramSettingsByUserId(userId: number): Promise<TelegramSettings | undefined> {

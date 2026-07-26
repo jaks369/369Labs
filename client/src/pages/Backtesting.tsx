@@ -10,9 +10,9 @@ import { derivWS } from "@/services/derivWebSocket";
 import { runBacktest, BacktestResult } from "@/services/BacktestEngine";
 import Sparkline from "@/components/Sparkline";
 import { StrategyRule } from "@/components/RuleBuilder";
-import { ALL_VOLATILITY_SYMBOLS } from "@/lib/symbols";
+import { getValidSymbols } from "@/lib/symbols";
 
-const IT_SYMBOLS = [...ALL_VOLATILITY_SYMBOLS, "BOOM300", "BOOM500", "BOOM1000", "CRASH300", "CRASH500", "CRASH1000"];
+const IT_SYMBOLS = [...getValidSymbols(), "BOOM300", "BOOM500", "BOOM1000", "CRASH300", "CRASH500", "CRASH1000"];
 
 export default function Backtesting() {
   const { isAuthenticated } = useAuth();
@@ -156,7 +156,7 @@ export default function Backtesting() {
 
             <div>
               <label className="text-xs text-[var(--text-muted)] font-bold uppercase tracking-wider">Symbol</label>
-              <select value={symbol} onChange={e => setSymbol(e.target.value)} className="w-full mt-1 bg-[var(--card)] border border-[var(--border)] rounded-lg px-3 py-2 text-white text-sm">
+              <select value={symbol} onChange={e => setSymbol(e.target.value)} className="w-full mt-1 bg-[#1a1a2e] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-white focus:border-[var(--amber)] outline-none [&>option]:bg-[#1a1a2e] [&>option]:text-white">
                 {IT_SYMBOLS.map(s => <option key={s} value={s}>{s}</option>)}
               </select>
             </div>

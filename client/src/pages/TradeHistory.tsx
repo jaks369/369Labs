@@ -4,7 +4,7 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import { trpc } from "@/lib/trpc";
 import { Loader2, Download, AlertCircle } from "lucide-react";
 import { useLocation } from "wouter";
-import { STANDARD_SYMBOLS } from "@/lib/symbols";
+import { getValidSymbols } from "@/lib/symbols";
 
 export default function TradeHistory() {
   const { user, isAuthenticated } = useAuth();
@@ -109,8 +109,8 @@ export default function TradeHistory() {
           <div className="hud-panel p-6">
             <div className="flex items-center gap-3 mb-4">
               <label className="text-xs text-[var(--amber)]/60">SYMBOL</label>
-              <select value={priceSymbol} onChange={(e) => setPriceSymbol(e.target.value)} className="bg-[var(--card)] border border-[var(--amber-border)] rounded px-3 py-2 text-sm text-[var(--amber)]">
-                {STANDARD_SYMBOLS.map((s) => (
+              <select value={priceSymbol} onChange={(e) => setPriceSymbol(e.target.value)} className="bg-[#1a1a2e] border border-[var(--amber-border)] rounded-lg px-3 py-2 text-sm text-white focus:border-[var(--amber)] outline-none [&>option]:bg-[#1a1a2e] [&>option]:text-white">
+                {getValidSymbols().map((s) => (
                   <option key={s} value={s}>{s}</option>
                 ))}
               </select>

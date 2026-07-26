@@ -4,7 +4,7 @@ import { trpc } from "@/lib/trpc";
 import { useLocation } from "wouter";
 import { Workflow as WorkflowIcon, Play, GitBranch, ShieldCheck, FlaskConical, Bell, Search, Loader2, CheckCircle2, X, Radio, ChevronDown } from "lucide-react";
 import { pushTimeline } from "@/components/AITimeline";
-import { ALL_VOLATILITY_SYMBOLS } from "@/lib/symbols";
+import { getValidSymbols } from "@/lib/symbols";
 
 type StepKind = "scan" | "watch" | "backtest" | "risk" | "notify" | "build" | "draft" | "condition" | "trigger";
 
@@ -70,7 +70,7 @@ export default function Workflow() {
   const checkTrigger = (opts: { symbol: string; trigger: string }) =>
     (trpc.market.checkTrigger as any).query(opts);
 
-  const SYMBOLS = ALL_VOLATILITY_SYMBOLS;
+  const SYMBOLS = getValidSymbols();
 
   const mutateWithTimeout = <T,>(promise: Promise<T>, ms = 60000): Promise<T> =>
     Promise.race([
@@ -181,7 +181,7 @@ export default function Workflow() {
               <div className="flex items-center gap-2 mb-3">
                 <label className="text-xs text-[var(--text-muted)] shrink-0">Symbol:</label>
                 <div className="relative flex-1">
-                  <button onClick={() => setMenuOpen(menuOpen === w.id ? null : w.id)} className="w-full bg-[var(--card)] border border-[var(--border)] text-[var(--amber)] px-3 py-2 rounded-lg text-sm font-medium flex items-center justify-between hover:border-[var(--amber)]/50">
+                  <button onClick={() => setMenuOpen(menuOpen === w.id ? null : w.id)} className="w-full bg-[#1a1a2e] border border-[var(--border)] text-white px-3 py-2 rounded-lg text-sm font-medium flex items-center justify-between hover:border-[var(--amber)]/50">
                     {symbol}
                     <ChevronDown className={`w-4 h-4 transition-transform ${menuOpen === w.id ? "rotate-180" : ""}`} />
                   </button>

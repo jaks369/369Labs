@@ -1511,6 +1511,7 @@ save: protectedProcedure
           const settings = await db.saveTelegramSettings({
             userId: ctx.user.id,
             chatId: input.chatId,
+            botToken: input.botToken || null,
             isVerified: true,
           });
           return settings;
@@ -2544,6 +2545,71 @@ watch: protectedProcedure
       .query(async () => {
         return { spec: null, note: "Contract specs require Deriv WS integration" };
       }),
+    docs: router({
+      endpoints: publicProcedure.query(async () => {
+        const { ENDPOINTS } = await import("./docs");
+        return ENDPOINTS;
+      }),
+    }),
+    reports: {
+      generate: protectedProcedure
+        .input(z.object({ type: z.enum(["weekly", "monthly", "portfolio"]) }))
+        .mutation(async ({ ctx, input }) => {
+          const trades = await db.getTradesByUserId(ctx.user.id, 500);
+          const now = new Date();
+          let startDate: Date;
+          let label: string;
+          if (input.type === "weekly") {
+            startDate = new Date(now); startDate.setDate(startDate.getDate() - 7);
+            label = `Weekly Performance - ${now.toLocaleDateString("en", { month: "short", day: "numeric" })}`;
+          } else if (input.type === "monthly") {
+            startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+            label = `Monthly Report - ${now.toLocaleDateString("en", { month: "long" })}`;
+          } else {
+            startDate = new Date(now.getFullYear(), 0, 1);
+            label = `Portfolio Summary - ${now.getFullYear()}`;
+          }
+          const filtered = trades.filter(t => t.entryTime && new Date(t.entryTime) >= startDate);
+          const wins = filtered.filter(t => t.result === "win").length;
+          const losses = filtered.filter(t => t.result === "loss").length;
+          const total = wins + losses;
+          const winRate = total > 0 ? (wins / total) * 100 : 0;
+          const totalPnl = filtered.reduce((s, t) => s + parseFloat(t.profitLoss?.toString() || "0"), 0);
+          const sorted = [...filtered].sort((a, b) => new Date(a.entryTime).getTime() - new Date(b.entryTime).getTime());
+          let peak = 0, cur = 0, maxDD = 0;
+          for (const t of sorted) { cur += parseFloat(t.profitLoss?.toString() || "0"); if (cur > peak) peak = cur; maxDD = Math.max(maxDD, peak - cur); }
+          const bySymbol: Record<string, { wins: number; losses: number; pnl: number }> = {};
+          for (const t of filtered) {
+            const sym = t.symbol || "Unknown";
+            if (!bySymbol[sym]) bySymbol[sym] = { wins: 0, losses: 0, pnl: 0 };
+            if (t.result === "win") bySymbol[sym].wins++;
+            else if (t.result === "loss") bySymbol[sym].losses++;
+            bySymbol[sym].pnl += parseFloat(t.profitLoss?.toString() || "0");
+          }
+          const report = {
+            label, type: input.type, generatedAt: now.toISOString(),
+            period: { from: startDate.toISOString().slice(0, 10), to: now.toISOString().slice(0, 10) },
+            summary: { totalTrades: total, wins, losses, winRate: +winRate.toFixed(1), totalPnl: +totalPnl.toFixed(2), maxDrawdown: +maxDD.toFixed(2) },
+            bySymbol: Object.entries(bySymbol).sort((a, b) => b[1].pnl - a[1].pnl).map(([symbol, d]) => ({ symbol, ...d, pnl: +d.pnl.toFixed(2) })),
+          };
+          await db.saveAiKnowledge({ userId: ctx.user.id, knowledgeType: "report", data: report }).catch(() => {});
+          return { ...report };
+        }),
+      list: protectedProcedure.query(async ({ ctx }) => {
+        const entries = await db.getAiKnowledge(ctx.user.id, "report", 50);
+        return entries.map(e => ({
+          id: e.id, name: (e.data as any)?.label || "Report", date: e.createdAt?.toISOString().slice(0, 10) || "", type: (e.data as any)?.type || "weekly"
+        }));
+      }),
+      getById: protectedProcedure
+        .input(z.object({ id: z.number() }))
+        .query(async ({ ctx, input }) => {
+          const entries = await db.getAiKnowledge(ctx.user.id, "report", 100);
+          const entry = entries.find(e => e.id === input.id);
+          if (!entry) throw new Error("Report not found");
+          return { id: entry.id, ...(entry.data as any) };
+        }),
+    },
   }),
 });
 

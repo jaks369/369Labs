@@ -1,19 +1,31 @@
 import { useAuth } from "@/_core/hooks/useAuth";
 import { trpc } from "@/lib/trpc";
-import { BarChart4, TrendingUp, DollarSign, Activity, Loader2, ShieldAlert, Download, Camera, CalendarDays } from "lucide-react";
+import { BarChart4, TrendingUp, DollarSign, Activity, Loader2, ShieldAlert, Download, Camera, CalendarDays, Bot, User } from "lucide-react";
 import { useLocation } from "wouter";
-import { useRef } from "react";
+import { useRef, useState, useMemo } from "react";
 import { toast } from "@/components/Toast";
+
+type FilterMode = "all" | "bot" | "manual";
 
 export default function Analytics() {
   const { isAuthenticated } = useAuth();
   const [, navigate] = useLocation();
   const tradesQuery = trpc.trades.list.useQuery({ limit: 500 });
   const chartRef = useRef<HTMLDivElement>(null);
+  const [filter, setFilter] = useState<FilterMode>("all");
 
   if (!isAuthenticated) { navigate("/login"); return null; }
 
-  const trades = tradesQuery.data || [];
+  const allTrades = tradesQuery.data || [];
+  const filteredTrades = useMemo(() => {
+    if (filter === "all") return allTrades;
+    return allTrades.filter(t => filter === "bot" ? t.botRunId != null : t.botRunId == null);
+  }, [allTrades, filter]);
+
+  const botTrades = useMemo(() => allTrades.filter(t => t.botRunId != null), [allTrades]);
+  const manualTrades = useMemo(() => allTrades.filter(t => t.botRunId == null), [allTrades]);
+
+  const trades = filteredTrades;
   const totalTrades = trades.length;
   const wins = trades.filter(t => (t as any).result === "win").length;
   const losses = trades.filter(t => (t as any).result === "loss").length;
@@ -173,7 +185,7 @@ export default function Analytics() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold text-white">Analytics</h1>
-            <p className="text-[var(--text-secondary)] text-sm mt-1">Performance overview of all your trading bots</p>
+            <p className="text-[var(--text-secondary)] text-sm mt-1">Performance overview — {allTrades.length} trades ({botTrades.length} bot, {manualTrades.length} manual)</p>
           </div>
           <div className="flex gap-2">
             <button onClick={exportCsv} className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-[var(--card)] border border-[var(--border)] text-xs text-[var(--text-secondary)] hover:text-white"><Download className="w-3.5 h-3.5" /> CSV</button>
@@ -203,6 +215,25 @@ export default function Analytics() {
                   <p className={`text-2xl font-bold ${s.color}`}>{s.value}</p>
                 </div>
               ))}
+            </div>
+
+            <div className="flex gap-2 flex-wrap">
+              {(["all", "bot", "manual"] as FilterMode[]).map(m => {
+                const count = m === "all" ? allTrades.length : m === "bot" ? botTrades.length : manualTrades.length;
+                const Icon = m === "all" ? Activity : m === "bot" ? Bot : User;
+                return (
+                  <button key={m} onClick={() => setFilter(m)}
+                    className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-bold transition-colors ${
+                      filter === m
+                        ? "bg-[var(--cyan)] text-black"
+                        : "bg-[var(--card)] border border-[var(--border)] text-[var(--text-secondary)] hover:text-white"
+                    }`}>
+                    <Icon className="w-4 h-4" />
+                    {m === "all" ? "All" : m === "bot" ? "Bot" : "Manual"}
+                    <span className="opacity-60">({count})</span>
+                  </button>
+                );
+              })}
             </div>
 
             <div ref={chartRef} className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-6">

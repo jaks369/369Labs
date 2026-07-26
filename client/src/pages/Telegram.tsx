@@ -12,6 +12,7 @@ export default function TelegramSettings() {
   const [botToken, setBotToken] = useState("");
   const [chatId, setChatId] = useState("");
   const [saved, setSaved] = useState(false);
+  const [saveError, setSaveError] = useState("");
 
   const settingsQuery = trpc.telegram.getSettings.useQuery();
   const saveMutation = trpc.telegram.saveSettings.useMutation();
@@ -24,8 +25,6 @@ export default function TelegramSettings() {
   }, [settingsQuery.data]);
 
   if (!isAuthenticated) { navigate("/login"); return null; }
-
-  const [saveError, setSaveError] = useState("");
 
   const handleSave = async () => {
     setSaveError("");

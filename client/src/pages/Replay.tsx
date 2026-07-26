@@ -4,7 +4,7 @@ import { derivWS } from "@/services/derivWebSocket";
 import { useLocation } from "wouter";
 import { Play, Pause, RotateCcw, FastForward, TrendingUp, TrendingDown, Loader2, GanttChartSquare, ArrowRightLeft, Bell } from "lucide-react";
 import Sparkline from "@/components/Sparkline";
-import { STANDARD_SYMBOLS } from "@/lib/symbols";
+import { getValidSymbols } from "@/lib/symbols";
 
 type Tick = { epoch: number; price: number; lastDigit: number };
 type CondOrder = { id: string; type: "stop" | "limit" | "oco_buy" | "oco_sell"; price: number; triggered: boolean };
@@ -27,7 +27,7 @@ export default function Replay() {
   const [showOrders, setShowOrders] = useState(false);
   const timer = useRef<number | null>(null);
 
-  const SYMBOLS = STANDARD_SYMBOLS;
+  const SYMBOLS = getValidSymbols();
 
   const load = useCallback(async () => {
     setLoading(true); setError(null); setTicks([]); setIdx(0); setPlaying(false);
@@ -69,7 +69,7 @@ export default function Replay() {
     if (!trade || !cur) return;
     const win = (closeType === "rise" && cur.price > trade.entryPrice) || (closeType === "fall" && cur.price < trade.entryPrice);
     const pnl = win ? 0.95 : -1;
-    setResults((r) => [{ type: `${trade.type} → close ${closeType}`, pnl, at: new Date(cur.epoch * 1000).toLocaleTimeString() }, ...r].slice(0, 20));
+    setResults((r) => [{ type: `${trade.type} → close ${closeType}`, pnl, at: cur.epoch ? new Date(cur.epoch * 1000).toLocaleTimeString() : "—" }, ...r].slice(0, 20));
     setTrade(null);
   };
 
@@ -132,7 +132,7 @@ export default function Replay() {
             </h1>
             <p className="text-[var(--text-secondary)] text-sm mt-1">Replay historical ticks. Trade manually and let 369AI score your decision.</p>
           </div>
-          <select value={symbol} onChange={(e) => setSymbol(e.target.value)} className="bg-[var(--card)] border border-[var(--border)] rounded-lg px-3 py-2 text-white text-sm">
+          <select value={symbol} onChange={(e) => setSymbol(e.target.value)} className="bg-[#1a1a2e] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-white focus:border-[var(--amber)] outline-none [&>option]:bg-[#1a1a2e] [&>option]:text-white">
             {SYMBOLS.map((s) => <option key={s} value={s}>{s}</option>)}
           </select>
         </div>
@@ -147,7 +147,7 @@ export default function Replay() {
                 <div>
                   <p className="text-xs text-[var(--text-muted)] uppercase">Replaying</p>
                   <p className="text-3xl font-bold text-white">{cur?.price?.toFixed(4)}</p>
-                  <p className="text-xs text-[var(--text-muted)]">{cur ? new Date(cur.epoch * 1000).toLocaleString() : ""} Â· tick {idx + 1}/{ticks.length}</p>
+                  <p className="text-xs text-[var(--text-muted)]">{cur?.epoch ? new Date(cur.epoch * 1000).toLocaleString() : ""} · tick {idx + 1}/{ticks.length}</p>
                 </div>
                 <div className="text-right">
                   <p className="text-xs text-[var(--text-muted)] uppercase">Last digit</p>
