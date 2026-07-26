@@ -1886,8 +1886,12 @@ Return ONLY the JSON.`;
     aiScheduledAnalysis: protectedProcedure
       .input(z.object({ symbol: z.string(), interval: z.enum(["1h", "4h", "1d", "1w"]), prompt: z.string().optional() }))
       .mutation(async ({ input, ctx }) => {
-        await db.saveAiKnowledge({ userId: ctx.user.id, knowledgeType: "schedule", symbol: input.symbol, data: { title: `Scheduled Analysis: ${input.symbol}`, content: input.prompt || `Analyze ${input.symbol} every ${input.interval}`, symbol: input.symbol, interval: input.interval } });
-        db.saveAuditLog({ userId: ctx.user.id, action: "ai.scheduleAnalysis", detail: { symbol: input.symbol, interval: input.interval } }).catch(() => {});
+        const { getAllVolatilitySymbols } = await import('@shared/symbols');
+        const symbols = input.symbol === "all" ? getAllVolatilitySymbols() : [input.symbol];
+        for (const sym of symbols) {
+          await db.saveAiKnowledge({ userId: ctx.user.id, knowledgeType: "schedule", symbol: sym, data: { title: `Scheduled Analysis: ${sym}`, content: input.prompt || `Analyze ${sym} every ${input.interval}`, symbol: sym, interval: input.interval } });
+        }
+        db.saveAuditLog({ userId: ctx.user.id, action: "ai.scheduleAnalysis", detail: { symbol: input.symbol, interval: input.interval, symbols } }).catch(() => {});
         return { ok: true };
       }),
   }),

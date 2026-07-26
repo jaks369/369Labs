@@ -22,7 +22,7 @@ export default function Marketplace() {
   const publishedQuery = trpc.strategies.publishedList.useQuery();
   const cloneMutation = trpc.strategies.save.useMutation();
   const watchMutation = trpc.ai.aiScheduledAnalysis.useMutation({
-    onSuccess: () => { toast("Watch started — 369AI is now monitoring R_100. Signals will appear here when found.", "success"); },
+    onSuccess: () => { toast("Watch started — 369AI is now monitoring " + (symbol || "all symbols") + ". Signals will appear here when found.", "success"); },
     onError: (e) => { toast("Failed to start watch: " + e.message, "error"); },
   });
   const signalsQuery = trpc.signals.list.useQuery(
@@ -112,7 +112,7 @@ export default function Marketplace() {
             <p className="text-sm text-[var(--text-muted)] mt-1 max-w-md mx-auto">
               Tell 369AI to watch a market e.g. "Watch R_50 for 30 minutes and find repeatable patterns" or wait for the always-on scanner to surface setups here with full evidence.
             </p>
-            <Button onClick={() => watchMutation.mutate({ symbol: "R_100", interval: "1h" })} disabled={watchMutation.isPending} className="mt-4 bg-[var(--cyan)] hover:bg-[var(--cyan)] text-black text-sm px-4 py-2 rounded-lg">
+            <Button onClick={() => watchMutation.mutate({ symbol: symbol || "all", interval: "1h" })} disabled={watchMutation.isPending} className="mt-4 bg-[var(--cyan)] hover:bg-[var(--cyan)] text-black text-sm px-4 py-2 rounded-lg">
               {watchMutation.isPending ? "Starting..." : "Start a watch"}
             </Button>
           </div>

@@ -192,7 +192,7 @@ function startAlwaysOnScanner() {
       for (const u of allUsers) {
         for (const sym of SYMBOLS) {
           try {
-            await runWatch({ userId: u.id, symbol: sym, sampleSize: 600, minWinRate: 65, patternType: "any" });
+            await runWatch({ userId: u.id, symbol: sym, sampleSize: 600, minWinRate: 55, patternType: "any" });
           } catch (e) { console.error("[alwaysOnScanner] symbol", sym, e); }
         }
       }
