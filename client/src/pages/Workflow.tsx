@@ -64,7 +64,7 @@ export default function Workflow() {
   const [running, setRunning] = useState<string | null>(null);
   const [log, setLog] = useState<string[]>([]);
   const [symbol, setSymbol] = useState("R_100");
-  const [showSymbolMenu, setShowSymbolMenu] = useState(false);
+  const [menuOpen, setMenuOpen] = useState<string | null>(null);
   const watchMutation = trpc.signals.watch.useMutation();
   const notifyMutation = trpc.telegram.send.useMutation();
 
@@ -140,14 +140,14 @@ export default function Workflow() {
               <div className="flex items-center gap-2 mb-3">
                 <label className="text-xs text-[var(--text-muted)] shrink-0">Symbol:</label>
                 <div className="relative flex-1">
-                  <button onClick={() => setShowSymbolMenu(!showSymbolMenu)} className="w-full bg-[var(--card)] border border-[var(--border)] text-[var(--amber)] px-3 py-2 rounded-lg text-sm font-medium flex items-center justify-between hover:border-[var(--amber)]/50">
+                  <button onClick={() => setMenuOpen(menuOpen === w.id ? null : w.id)} className="w-full bg-[var(--card)] border border-[var(--border)] text-[var(--amber)] px-3 py-2 rounded-lg text-sm font-medium flex items-center justify-between hover:border-[var(--amber)]/50">
                     {symbol}
-                    <ChevronDown className={`w-4 h-4 transition-transform ${showSymbolMenu ? "rotate-180" : ""}`} />
+                    <ChevronDown className={`w-4 h-4 transition-transform ${menuOpen === w.id ? "rotate-180" : ""}`} />
                   </button>
-                  {showSymbolMenu && (
-                    <div className="absolute bottom-full left-0 right-0 mb-1 bg-[var(--card)] border border-[var(--border)] rounded-lg shadow-lg z-10 max-h-60 overflow-y-auto">
+                  {menuOpen === w.id && (
+                    <div className="absolute bottom-full left-0 right-0 mb-1 bg-[#1a1a2e] border border-[var(--border)] rounded-lg shadow-xl z-10 max-h-60 overflow-y-auto">
                       {SYMBOLS.map((s) => (
-                        <button key={s} onClick={() => { setSymbol(s); setShowSymbolMenu(false); }} className={`w-full px-3 py-2 text-left text-sm ${symbol === s ? "bg-[var(--amber-soft)] text-[var(--amber)]" : "text-[var(--text-secondary)] hover:text-white hover:bg-white/5"}`}>
+                        <button key={s} onClick={() => { setSymbol(s); setMenuOpen(null); }} className={`w-full px-3 py-2 text-left text-sm ${symbol === s ? "bg-[var(--amber-soft)] text-[var(--amber)]" : "text-white hover:bg-white/10"}`}>
                           {s}
                         </button>
                       ))}
