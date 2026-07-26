@@ -5,9 +5,7 @@ import { Button } from "@/components/ui/button";
 import { CandlestickChart, Sparkles, TrendingUp, Clock, Bot, Loader2, ChevronDown, ChevronRight, FlaskConical, Users, Code, Shield, CheckCircle2, XCircle, BookOpen, Star, ShoppingCart, Upload } from "lucide-react";
 import { useLocation } from "wouter";
 import { toast } from "@/components/Toast";
-import { STANDARD_SYMBOLS } from "@/lib/symbols";
-
-const SYMBOLS = STANDARD_SYMBOLS;
+import { getValidSymbols } from "@/lib/symbols";
 
 export default function Marketplace() {
   const { isAuthenticated } = useAuth();
@@ -88,9 +86,9 @@ export default function Marketplace() {
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <select value={symbol} onChange={(e) => setSymbol(e.target.value)} className="bg-[var(--card)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-white focus:border-[var(--amber)] outline-none">
+          <select value={symbol} onChange={(e) => setSymbol(e.target.value)} className="bg-[#1a1a2e] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-white focus:border-[var(--amber)] outline-none [&>option]:bg-[#1a1a2e] [&>option]:text-white">
             <option value="">All symbols</option>
-            {SYMBOLS.map((s) => <option key={s} value={s}>{s}</option>)}
+            {getValidSymbols().map((s) => <option key={s} value={s}>{s}</option>)}
           </select>
           <Button onClick={() => navigate("/ai-assistant")} className="bg-[var(--cyan)] hover:bg-[var(--cyan)] text-black text-xs px-4 py-2 rounded-lg flex items-center gap-1">
             <Bot className="w-4 h-4" /> Ask 369AI
