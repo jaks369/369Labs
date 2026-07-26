@@ -856,6 +856,40 @@ export async function getTickHistory(symbol: string, limit: number = 1000): Prom
   return db.select().from(tickHistory).where(eq(tickHistory.symbol, symbol)).orderBy(desc(tickHistory.epoch)).limit(limit);
 }
 
+export async function checkMAcross(symbol: string, fastPeriod = 9, slowPeriod = 21): Promise<{
+  crossed: boolean;
+  direction: "above" | "below" | null;
+  fastMA: number | null;
+  slowMA: number | null;
+  currentPrice: number | null;
+  reason: string;
+}> {
+  const rows = await getTickHistory(symbol, 500);
+  if (rows.length < slowPeriod + 2) {
+    return { crossed: false, direction: null, fastMA: null, slowMA: null, currentPrice: null, reason: `Not enough tick data for ${symbol} (have ${rows.length}, need ${slowPeriod + 2})` };
+  }
+  const sorted = [...rows].reverse();
+  const prices = sorted.map(r => parseFloat(r.price));
+  const currentPrice = prices[prices.length - 1];
+  const sma = (arr: number[], period: number) => {
+    const slice = arr.slice(-period);
+    return slice.reduce((a, b) => a + b, 0) / slice.length;
+  };
+  const prevFast = sma(prices.slice(0, -1), fastPeriod);
+  const currFast = sma(prices, fastPeriod);
+  const prevSlow = sma(prices.slice(0, -1), slowPeriod);
+  const currSlow = sma(prices, slowPeriod);
+  const fastMA = currFast;
+  const slowMA = currSlow;
+  if (prevFast <= prevSlow && currFast > currSlow) {
+    return { crossed: true, direction: "above", fastMA, slowMA, currentPrice, reason: `Fast MA (${fastMA.toFixed(4)}) crossed ABOVE slow MA (${slowMA.toFixed(4)}) — bullish crossover` };
+  }
+  if (prevFast >= prevSlow && currFast < currSlow) {
+    return { crossed: true, direction: "below", fastMA, slowMA, currentPrice, reason: `Fast MA (${fastMA.toFixed(4)}) crossed BELOW slow MA (${slowMA.toFixed(4)}) — bearish crossover` };
+  }
+  return { crossed: false, direction: null, fastMA, slowMA, currentPrice, reason: `No crossover. Fast MA (${fastMA.toFixed(4)}) / Slow MA (${slowMA.toFixed(4)})` };
+}
+
 export async function saveSignal(row: InsertSignal): Promise<Signal> {
   const db = await getDb();
   if (!db) throw new Error("DB unavailable");

@@ -67,6 +67,8 @@ export default function Workflow() {
   const [menuOpen, setMenuOpen] = useState<string | null>(null);
   const watchMutation = trpc.signals.watch.useMutation();
   const notifyMutation = trpc.telegram.send.useMutation();
+  const checkTrigger = (opts: { symbol: string; trigger: string }) =>
+    (trpc.market.checkTrigger as any).query(opts);
 
   const SYMBOLS = ALL_VOLATILITY_SYMBOLS;
 
@@ -109,9 +111,19 @@ export default function Workflow() {
             halted = true;
           }
         } else if (step.kind === "trigger") {
-          add(`  ⏳ Waiting for trigger: ${step.trigger || "price condition"}...`);
-          add(`  ⏸ No trigger detected in this run. Workflow paused.`);
-          halted = true;
+          add(`  ⏳ Checking trigger: ${step.trigger || "ma_cross"} on ${sym}...`);
+          try {
+            const res: any = await checkTrigger({ symbol: sym, trigger: step.trigger || "ma_cross" });
+            if (res?.crossed) {
+              add(`  ✅ ${res.reason}`);
+            } else {
+              add(`  ⏸ No trigger detected. ${res?.reason || ""}`);
+              halted = true;
+            }
+          } catch {
+            add(`  ⚠ Trigger check failed (market data may be unavailable).`);
+            halted = true;
+          }
         } else if (step.kind === "notify") {
           try {
             await mutateWithTimeout(notifyMutation.mutateAsync({ message: `369Labs workflow "${w.name}" finished on ${sym}.` }));

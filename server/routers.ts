@@ -2009,6 +2009,14 @@ watch: protectedProcedure
           return { ticks: [] };
         }
       }),
+    checkTrigger: protectedProcedure
+      .input(z.object({ symbol: z.string(), trigger: z.string(), fastPeriod: z.number().default(9), slowPeriod: z.number().default(21) }))
+      .query(async ({ input }) => {
+        if (input.trigger === "ma_cross") {
+          return db.checkMAcross(input.symbol, input.fastPeriod, input.slowPeriod);
+        }
+        return { crossed: false, direction: null, fastMA: null, slowMA: null, currentPrice: null, reason: `Unknown trigger: ${input.trigger}` };
+      }),
   }),
   memory: router({
     get: protectedProcedure.query(async ({ ctx }) => {
