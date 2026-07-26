@@ -15,14 +15,13 @@ export default function Coding() {
   const askMutation = (trpc.ai.ask as any).useMutation();
   const templatesQuery = (trpc.coding.templates as any).useQuery();
   const validateMutation = (trpc.coding.validate as any).useMutation();
+  const [selected, setSelected] = useState<string | null>(null);
   const saveVersionMutation = (trpc.coding.saveVersion as any).useMutation();
   const versionsQuery = (trpc.coding.listVersions as any).useQuery(
     { path: selected || "" },
     { enabled: !!selected }
   );
   const restoreMutation = (trpc.coding.restoreVersion as any).useMutation();
-
-  const [selected, setSelected] = useState<string | null>(null);
   const [content, setContent] = useState("");
   const [dirty, setDirty] = useState(false);
   const [prompt, setPrompt] = useState("");
