@@ -22,8 +22,8 @@ export default function Marketplace() {
   const publishedQuery = trpc.strategies.publishedList.useQuery();
   const cloneMutation = trpc.strategies.save.useMutation();
   const watchMutation = trpc.ai.aiScheduledAnalysis.useMutation({
-    onSuccess: () => { toast({ title: "Watch started", description: "369AI is now monitoring R_100. Signals will appear here when found." }); },
-    onError: (e) => { toast({ title: "Failed to start watch", description: e.message, variant: "error" }); },
+    onSuccess: () => { toast("Watch started — 369AI is now monitoring R_100. Signals will appear here when found.", "success"); },
+    onError: (e) => { toast("Failed to start watch: " + e.message, "error"); },
   });
   const signalsQuery = trpc.signals.list.useQuery(
     symbol ? { symbol } : {},
