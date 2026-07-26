@@ -21,10 +21,9 @@ export default function Marketplace() {
   const [sentId, setSentId] = useState<number | null>(null);
   const publishedQuery = trpc.strategies.publishedList.useQuery();
   const cloneMutation = trpc.strategies.save.useMutation();
-  const watchMutation = trpc.ai.aiScheduledAnalysis.useMutation({
-    onSuccess: () => { toast("Watch started — 369AI is now monitoring " + (symbol || "all symbols") + ". Signals will appear here when found.", "success"); },
-    onError: (e) => { toast("Failed to start watch: " + e.message, "error"); },
-  });
+  const watchMutation = trpc.ai.aiScheduledAnalysis.useMutation();
+  const scanMutation = trpc.signals.watch.useMutation();
+  const [scanning, setScanning] = useState(false);
   const signalsQuery = trpc.signals.list.useQuery(
     symbol ? { symbol } : {},
     { refetchInterval: 30000 }
@@ -112,8 +111,26 @@ export default function Marketplace() {
             <p className="text-sm text-[var(--text-muted)] mt-1 max-w-md mx-auto">
               Tell 369AI to watch a market e.g. "Watch R_50 for 30 minutes and find repeatable patterns" or wait for the always-on scanner to surface setups here with full evidence.
             </p>
-            <Button onClick={() => watchMutation.mutate({ symbol: symbol || "all", interval: "1h" })} disabled={watchMutation.isPending} className="mt-4 bg-[var(--cyan)] hover:bg-[var(--cyan)] text-black text-sm px-4 py-2 rounded-lg">
-              {watchMutation.isPending ? "Starting..." : "Start a watch"}
+            <Button onClick={async () => { 
+                const syms = symbol ? [symbol] : getValidSymbols();
+                setScanning(true);
+                let total = 0;
+                for (const s of syms) {
+                  try {
+                    const res: any = await scanMutation.mutateAsync({ symbol: s, durationMinutes: 30, minWinRate: 55, patternType: "any" });
+                    total += res?.signalsFound ?? 0;
+                  } catch {}
+                }
+                watchMutation.mutate({ symbol: symbol || "all", interval: "1h" });
+                setScanning(false);
+                if (total > 0) {
+                  toast("Scan complete — " + total + " pattern" + (total === 1 ? "" : "s") + " found across " + syms.length + " symbol" + (syms.length === 1 ? "" : "s") + ".", "success");
+                } else {
+                  toast("Scan done — no patterns found. Try a longer watch or different symbol.", "info");
+                }
+                signalsQuery.refetch();
+              }} disabled={scanning} className="mt-4 bg-[var(--cyan)] hover:bg-[var(--cyan)] text-black text-sm px-4 py-2 rounded-lg">
+              {scanning ? "Scanning..." : "Start a watch"}
             </Button>
           </div>
         ) : (
