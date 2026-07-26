@@ -736,6 +736,13 @@ export async function updateStrategy(id: number, userId: number, updates: Partia
   return result[0];
 }
 
+export async function deleteStrategy(id: number, userId: number): Promise<boolean> {
+  const db = await getDb();
+  if (!db) return false;
+  const result = await db.delete(strategies).where(and(eq(strategies.id, id), eq(strategies.userId, userId)));
+  return (result as any)?.affectedRows > 0;
+}
+
 export async function getAiKnowledgeByRelatedTradeId(userId: number, tradeId: number): Promise<AiKnowledgeResult[]> {
   const db = await getDb();
   if (!db) return [];
