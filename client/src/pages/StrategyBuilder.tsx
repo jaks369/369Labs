@@ -84,11 +84,14 @@ export function StrategyBuilderContent({ embedded = false, onClose, onSaved }: S
 
   useEffect(() => {
     if (editQuery.data) {
-      setStrategyName(editQuery.data.name);
-      setDescription(editQuery.data.description || "");
-      const config = editQuery.data.config as any;
-      if (config?.rule) { setRule(config.rule); setBuilderMode("visual"); }
-      if (Array.isArray(config?.versions)) setVersions(config.versions);
+      try {
+        setStrategyName(editQuery.data.name);
+        setDescription(editQuery.data.description || "");
+        let config = (editQuery.data as any).config;
+        if (typeof config === "string") { try { config = JSON.parse(config); } catch { config = {}; } }
+        if (config?.rule) { setRule(config.rule); setBuilderMode("visual"); }
+        if (Array.isArray(config?.versions)) setVersions(config.versions);
+      } catch { /* ignore malformed config */ }
     }
   }, [editQuery.data]);
   useEffect(() => {
@@ -315,7 +318,7 @@ export function StrategyBuilderContent({ embedded = false, onClose, onSaved }: S
                   </div>
                 ) : strategiesQuery.isError ? (
                   <p className="text-xs text-[var(--red)] italic">Failed to load strategies.</p>
-                ) : strategiesQuery.data?.slice(0, 5).map(s => (
+                ) : (Array.isArray(strategiesQuery.data) ? strategiesQuery.data.slice(0, 5) : []).map(s => (
                   <div key={s.id} className="p-3 rounded-lg bg-black/20 border border-white/5 hover:border-[var(--amber)]/50 transition-all">
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0 flex-1">
@@ -524,10 +527,10 @@ export function StrategyBuilderContent({ embedded = false, onClose, onSaved }: S
             <div className="p-4 space-y-3">
               {templatesQuery.isLoading ? (
                 <div className="flex items-center justify-center py-8"><Loader2 className="w-5 h-5 animate-spin text-[var(--amber)]" /></div>
-              ) : (templatesQuery.data || []).length === 0 ? (
+              ) : !Array.isArray(templatesQuery.data) || templatesQuery.data.length === 0 ? (
                 <p className="text-sm text-[var(--text-muted)]">No templates available.</p>
               ) : (
-                (templatesQuery.data || []).map((t: any, i: number) => (
+                templatesQuery.data.slice(0, 10).map((t: any, i: number) => (
                   <div key={i} className="p-4 rounded-xl bg-[var(--card)] border border-[var(--border)] hover:border-[var(--amber)]/50 transition-all cursor-pointer" onClick={() => loadTemplate(t)}>
                     <h4 className="text-sm font-bold text-white mb-1">{t.name}</h4>
                     <p className="text-xs text-[var(--text-secondary)]">{t.description}</p>
@@ -547,7 +550,7 @@ export function StrategyBuilderContent({ embedded = false, onClose, onSaved }: S
             </div>
             <div className="p-4 space-y-2">
               {(() => {
-                const versions: any[] = (editQuery.data?.config as any)?.versions || [];
+                let cfg: any = (editQuery.data as any)?.config; if (typeof cfg === "string") { try { cfg = JSON.parse(cfg); } catch { cfg = {}; } }; const versions: any[] = cfg?.versions || [];
                 if (!versions.length) return <p className="text-sm text-[var(--text-muted)]">No saved versions yet. Save the strategy to start tracking history.</p>;
                 const a = diffA != null ? versions[diffA] : null;
                 const b = diffB != null ? versions[diffB] : null;
@@ -571,7 +574,7 @@ export function StrategyBuilderContent({ embedded = false, onClose, onSaved }: S
                       {versions.map((v, i) => (
                         <div key={i} className="flex items-center gap-3 p-2 bg-black/20 rounded-lg">
                           <span className="text-xs text-[var(--text-secondary)] w-24 shrink-0">{new Date(v.savedAt).toLocaleString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}</span>
-                          <code className="text-[11px] text-[var(--text-muted)] flex-1 truncate">{summarizeRule(v.rule)}</code>
+                          <code className="text-[11px] text-[var(--text-muted)] flex-1 truncate">{summarizeRuleSafe(v.rule)}</code>
                           <button onClick={() => setDiffA(i)} className={`text-[10px] px-2 py-0.5 rounded ${diffA === i ? "bg-[var(--amber)] text-white" : "bg-white/5 text-[var(--text-secondary)]"}`}>A</button>
                           <button onClick={() => setDiffB(i)} className={`text-[10px] px-2 py-0.5 rounded ${diffB === i ? "bg-[var(--amber)] text-white" : "bg-white/5 text-[var(--text-secondary)]"}`}>B</button>
                         </div>
