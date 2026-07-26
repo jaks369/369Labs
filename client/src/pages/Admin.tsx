@@ -7,9 +7,10 @@ import { Shield, Activity, Clock, HardDrive, Database, Cpu, Loader2, ScrollText,
 export default function Admin() {
   const { user } = useAuth();
   const utils = trpc.useUtils();
-  const listQuery = trpc.admin.listUsers.useQuery();
-  const auditLogsQuery = trpc.admin.auditLogs.useQuery({ limit: 100 });
-  const healthQuery = trpc.admin.systemHealth.useQuery();
+  const isAdmin = user?.role === "admin";
+  const listQuery = trpc.admin.listUsers.useQuery(undefined, { enabled: isAdmin });
+  const auditLogsQuery = trpc.admin.auditLogs.useQuery({ limit: 100 }, { enabled: isAdmin });
+  const healthQuery = trpc.admin.systemHealth.useQuery(undefined, { enabled: isAdmin });
   const promoteMutation = trpc.admin.promoteToAdmin.useMutation({ onSuccess: () => listQuery.refetch() });
   const demoteMutation = trpc.admin.demoteToUser.useMutation({ onSuccess: () => listQuery.refetch() });
   const deleteMutation = trpc.admin.deleteUser.useMutation({ onSuccess: () => listQuery.refetch() });

@@ -999,6 +999,7 @@ export const appRouter = router({
         }).catch(() => {});
         return strategy;
         } catch (error) {
+          console.error("[strategies.save] FAILED", error instanceof Error ? error.message : error, "input:", JSON.stringify({ name: input.name, description: input.description, config: input.config, published: input.published }));
           throw new TRPCError({
             code: "INTERNAL_SERVER_ERROR",
             message: "Failed to save strategy",

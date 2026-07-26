@@ -427,16 +427,22 @@ export async function saveStrategy(strategy: InsertStrategy): Promise<Strategy> 
     const result = await db.insert(strategies).values(strategy);
     const id = result[0].insertId;
     return (await db.select().from(strategies).where(eq(strategies.id, id as number)).limit(1))[0];
-  } catch {
+  } catch (e1: any) {
+    console.error("[saveStrategy] Drizzle insert failed, trying raw fallback. Error:", e1?.message || e1, "userId:", strategy.userId, "name:", strategy.name);
     const pool = getRawPool();
     if (!pool) throw new Error("Pool not available");
-    const [r] = await pool.execute(
-      "INSERT INTO strategies (userId, name, description, config, isActive, published) VALUES (?, ?, ?, ?, ?, ?)",
-      [strategy.userId, strategy.name, strategy.description ?? null, JSON.stringify(strategy.config), strategy.isActive ?? true, strategy.published ?? false]
-    );
-    const id = (r as any).insertId;
-    const [rows] = await pool.execute("SELECT * FROM strategies WHERE id=?", [id]);
-    return (rows as any[])[0];
+    try {
+      const [r] = await pool.execute(
+        "INSERT INTO strategies (userId, name, description, config, isActive, published) VALUES (?, ?, ?, ?, ?, ?)",
+        [strategy.userId, strategy.name, strategy.description ?? null, JSON.stringify(strategy.config), strategy.isActive ?? true, strategy.published ?? false]
+      );
+      const id = (r as any).insertId;
+      const [rows] = await pool.execute("SELECT * FROM strategies WHERE id=?", [id]);
+      return (rows as any[])[0];
+    } catch (e2: any) {
+      console.error("[saveStrategy] Raw fallback also failed", e2?.message || e2);
+      throw new Error("Failed to save strategy: " + (e2?.message || e2));
+    }
   }
 }
 
@@ -1210,6 +1216,9 @@ export async function ensureStrategiesTable(): Promise<void> {
     console.log("[ensureStrategiesTable] created strategies table");
     for (const col of [
       "ADD COLUMN config json NOT NULL",
+      "ADD COLUMN description text",
+      "ADD COLUMN isActive boolean NOT NULL DEFAULT true",
+      "ADD COLUMN published boolean NOT NULL DEFAULT false",
     ]) {
       try {
         await pool.execute(`ALTER TABLE strategies ${col}`);
