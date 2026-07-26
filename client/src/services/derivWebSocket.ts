@@ -55,6 +55,8 @@ const DERIV_WS_V3 = "wss://ws.derivws.com/websockets/v3?app_id=1089";
 
 class DerivWebSocketService {
   private ws: WebSocket | null = null;
+  private tickWs: WebSocket | null = null;
+  private tickWsReady = false;
   private listeners: Set<TickStreamListener> = new Set();
   private reconnectAttempts = 0;
   private maxReconnectAttempts = 5;
@@ -164,6 +166,7 @@ class DerivWebSocketService {
     this.intentionallyDisconnected = false;
     try {
       this.ws = new WebSocket(url);
+      if (authenticated) this.ensureTickWs();
       this.ws.onopen = () => {
         console.log(`[Deriv WS] Connected (${authenticated ? "authenticated" : "public"})`);
         this.reconnectAttempts = 0;
@@ -290,7 +293,7 @@ class DerivWebSocketService {
     }
     if (data.error) {
       const msg = data.error.message || JSON.stringify(data.error);
-      console.error("[Deriv WS] API Error:", msg);
+      if (!msg.includes("subscribe")) console.error("[Deriv WS] API Error:", msg);
       const isTokenError = /token|authoriz|session/i.test(msg);
       if (isTokenError) return;
       const reqId = data.req_id;
@@ -298,11 +301,12 @@ class DerivWebSocketService {
       if (sym) {
         this.subErrors.set(sym, msg);
         this.subscribedSymbols.delete(sym);
-        if (!this.pendingSubscriptionSymbols.includes(sym)) {
-          this.pendingSubscriptionSymbols.push(sym);
-        }
-        if (this.authorized) {
-          setTimeout(() => this.processPendingSubscriptions(), 1000);
+        if (this.authorized && msg.includes("Input validation")) {
+          this.ensureTickWs();
+          if (!this.pendingSubscriptionSymbols.includes(sym)) {
+            this.pendingSubscriptionSymbols.push(sym);
+          }
+          if (this.tickWsReady) this.processPendingSubscriptions();
         }
         this.listeners.forEach(l => { try { l.onError?.(new Error(msg), sym); } catch {} });
       } else if (data.msg_type === "proposal_open_contract") {
@@ -320,12 +324,40 @@ class DerivWebSocketService {
     catch (error) { console.error("[Deriv WS] Failed to fetch active symbols:", error); }
   }
 
+  private ensureTickWs() {
+    if (this.tickWs && this.tickWs.readyState === WebSocket.OPEN) return;
+    if (this.tickWs) { this.tickWs.close(); this.tickWs = null; }
+    try {
+      this.tickWs = new WebSocket(DERIV_WS_PUBLIC);
+      this.tickWs.onopen = () => { this.tickWsReady = true; this.processPendingSubscriptions(); };
+      this.tickWs.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          if (data.tick) {
+            this.notifyTick({
+              symbol: data.tick.symbol || "UNKNOWN",
+              price: data.tick.quote || 0,
+              timestamp: (data.tick.epoch || Date.now() / 1000) * 1000,
+              bid: data.tick.bid,
+              ask: data.tick.ask,
+            });
+          }
+        } catch {}
+      };
+      this.tickWs.onerror = () => {};
+      this.tickWs.onclose = () => { this.tickWsReady = false; this.tickWs = null; };
+    } catch (e) { console.error("[Deriv WS] Tick WS setup failed:", e); }
+  }
+
   private processPendingSubscriptions() {
     const pending = [...this.pendingSubscriptionSymbols];
     this.pendingSubscriptionSymbols = [];
     for (const symbol of pending) {
       if (!symbol || typeof symbol !== "string") continue;
-      try { this.ws?.send(JSON.stringify({ ticks: symbol, subscribe: 1, req_id: this.msgId++ })); }
+      try {
+        const target = this.authorized ? (this.tickWsReady ? this.tickWs : this.ws) : this.ws;
+        target?.send(JSON.stringify({ ticks: symbol, subscribe: 1, req_id: this.msgId++ }));
+      }
       catch (error) { console.error("[Deriv WS] Failed to subscribe:", error); }
     }
   }
@@ -542,14 +574,20 @@ class DerivWebSocketService {
     }
   }
 
+  private wsForTicks(): WebSocket | null {
+    return (this.authorized && this.tickWsReady) ? this.tickWs : this.ws;
+  }
+
   public subscribe(symbol: string): number {
     const subId = this.msgId++;
     if (this.subscribedSymbols.has(symbol)) return subId;
+    if (this.authorized) this.ensureTickWs();
     this.subSymbolById.set(subId, symbol);
     this.subscribedSymbols.add(symbol);
     this.subErrors.delete(symbol);
-    if (!this.ws || this.ws.readyState !== WebSocket.OPEN) { this.pendingSubscriptionSymbols.push(symbol); return subId; }
-    try { this.ws!.send(JSON.stringify({ ticks: symbol, subscribe: 1, req_id: this.msgId++ })); }
+    const target = this.wsForTicks();
+    if (!target || target.readyState !== WebSocket.OPEN) { this.pendingSubscriptionSymbols.push(symbol); return subId; }
+    try { target.send(JSON.stringify({ ticks: symbol, subscribe: 1, req_id: this.msgId++ })); }
     catch (error) { console.error("[Deriv WS] Failed to subscribe:", error); this.subscribedSymbols.delete(symbol); }
     return subId;
   }
@@ -557,11 +595,13 @@ class DerivWebSocketService {
   private doSubscribe(symbol: string) {
     if (!symbol) return;
     if (this.subscribedSymbols.has(symbol)) return;
+    if (this.authorized) this.ensureTickWs();
     this.subscribedSymbols.add(symbol);
     this.subErrors.delete(symbol);
     const reqId = this.msgId++;
     this.subSymbolById.set(reqId, symbol);
-    try { this.ws!.send(JSON.stringify({ ticks: symbol, subscribe: 1, req_id: reqId })); }
+    const target = this.wsForTicks();
+    try { target?.send(JSON.stringify({ ticks: symbol, subscribe: 1, req_id: reqId })); }
     catch (error) { console.error("[Deriv WS] Failed to subscribe:", error); this.subscribedSymbols.delete(symbol); this.subSymbolById.delete(reqId); }
   }
 
@@ -570,8 +610,9 @@ class DerivWebSocketService {
     this.subSymbolById.delete(subscriptionId);
     if (!symbol) return;
     this.subscribedSymbols.delete(symbol);
-    if (this.ws && this.ws.readyState === WebSocket.OPEN) {
-      try { this.ws.send(JSON.stringify({ ticks: symbol, subscribe: 0, req_id: this.msgId++ })); }
+    const target = this.wsForTicks();
+    if (target && target.readyState === WebSocket.OPEN) {
+      try { target.send(JSON.stringify({ ticks: symbol, subscribe: 0, req_id: this.msgId++ })); }
       catch (error) { console.error("[Deriv WS] Failed to unsubscribe:", error); }
     }
   }
@@ -607,7 +648,7 @@ class DerivWebSocketService {
   public decimalPlacesFor(symbol: string): number { return this.getSymbol(symbol)?.decimalPlaces ?? 3; }
   private notifyBalance(b: any): void { this.balanceListeners.forEach(cb => { try { cb(b); } catch {} }); }
   private notifyTokenError(msg: string): void { this.tokenListeners.forEach(cb => { try { cb(msg); } catch {} }); }
-  public disconnect(): void { this.intentionallyDisconnected = true; if (this.ws) { this.ws.close(); this.ws = null; } this.authorized = false; this.contractListeners.clear(); this.pendingRequests.forEach(p => p.reject(new Error("Connection closed"))); this.pendingRequests.clear(); }
+  public disconnect(): void { this.intentionallyDisconnected = true; if (this.ws) { this.ws.close(); this.ws = null; } if (this.tickWs) { this.tickWs.close(); this.tickWs = null; this.tickWsReady = false; } this.authorized = false; this.contractListeners.clear(); this.pendingRequests.forEach(p => p.reject(new Error("Connection closed"))); this.pendingRequests.clear(); }
 
   public async setApiToken(token: string): Promise<void> {
     const changed = this.apiToken !== token;
