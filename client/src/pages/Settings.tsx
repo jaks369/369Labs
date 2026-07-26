@@ -624,7 +624,7 @@ export default function Settings() {
                 />
               </div>
             ))}
-            <Button onClick={() => { toast("API keys saved (stored encrypted).", "success"); }} className="w-full bg-[var(--amber)] text-[var(--bg)] font-bold py-2 px-4 rounded"><Save className="w-4 h-4 mr-2" /> SAVE KEYS</Button>
+            <Button onClick={async () => { try { await saveMemoryMutation.mutateAsync({ memory: { apiKeys: externalKeys } }); toast("API keys saved.", "success"); } catch { toast("Failed to save API keys.", "error"); } }} className="w-full bg-[var(--amber)] text-[var(--bg)] font-bold py-2 px-4 rounded"><Save className="w-4 h-4 mr-2" /> SAVE KEYS</Button>
           </div>
         </div>
 

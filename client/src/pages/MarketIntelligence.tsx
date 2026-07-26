@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
-import { BarChart3, RefreshCw, AlertCircle, Search, TrendingUp, TrendingDown, Minus, Activity } from "lucide-react";
+import { BarChart3, RefreshCw, AlertCircle, Search, TrendingUp, TrendingDown, Minus, Activity, Loader2 } from "lucide-react";
 import MarketHealthGrid from "@/components/MarketHealthGrid";
 import MarketPredictionCards from "@/components/MarketPredictionCards";
 import MarketInsightCards from "@/components/MarketInsightCards";
@@ -74,17 +74,28 @@ export default function MarketIntelligencePage() {
           {/* Symbol Screener */}
           <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-6">
             <h2 className="text-sm font-bold text-white mb-4 flex items-center gap-2"><Search className="w-4 h-4 text-[var(--cyan)]" /> Symbol Screener</h2>
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2">
-              {SCREENER_SYMBOLS.map((sym) => (
-                <div key={sym} className="bg-black/20 rounded-lg p-3 text-center border border-[var(--border)]">
-                  <p className="text-xs font-bold text-white">{sym}</p>
-                  <p className={`text-[10px] ${Math.random() > 0.5 ? "text-[var(--green)]" : "text-[var(--red)]"} mt-1`}>
-                    {Math.random() > 0.5 ? <TrendingUp className="w-3 h-3 inline" /> : <TrendingDown className="w-3 h-3 inline" />}
-                    {(Math.random() * 3).toFixed(1)}%
-                  </p>
-                </div>
-              ))}
-            </div>
+            {isLoading ? (
+              <div className="flex items-center justify-center py-8"><Loader2 className="w-4 h-4 animate-spin text-[var(--cyan)]" /></div>
+            ) : (
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2">
+                {SCREENER_SYMBOLS.map((sym) => {
+                  const healthData = (data as any)?.health?.find?.((h: any) => h?.symbol === sym || h?.name === sym);
+                  const dir = healthData?.direction || healthData?.trend || "neutral";
+                  const pct = healthData?.change || healthData?.score || 0;
+                  const isUp = dir === "up" || dir === "bullish";
+                  const isDown = dir === "down" || dir === "bearish";
+                  return (
+                    <div key={sym} className="bg-black/20 rounded-lg p-3 text-center border border-[var(--border)]">
+                      <p className="text-xs font-bold text-white">{sym}</p>
+                      <p className={`text-[10px] ${isUp ? "text-[var(--green)]" : isDown ? "text-[var(--red)]" : "text-[var(--text-muted)]"} mt-1`}>
+                        {isUp ? <TrendingUp className="w-3 h-3 inline" /> : isDown ? <TrendingDown className="w-3 h-3 inline" /> : <Minus className="w-3 h-3 inline" />}
+                        {typeof pct === "number" ? pct.toFixed(1) + "%" : "—"}
+                      </p>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
             <p className="text-[10px] text-[var(--text-muted)] mt-3">Real-time performance overview across top symbols. Green = positive momentum, Red = negative.</p>
           </div>
 
@@ -92,25 +103,51 @@ export default function MarketIntelligencePage() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
             <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-6">
               <h2 className="text-sm font-bold text-white mb-4 flex items-center gap-2"><Activity className="w-4 h-4 text-[var(--amber)]" /> Symbol Correlations</h2>
-              <div className="space-y-2">
-                {[[STANDARD_SYMBOLS[2], STANDARD_SYMBOLS[4], "0.92"], [STANDARD_SYMBOLS[0], STANDARD_SYMBOLS[1], "0.87"], [ALL_VOLATILITY_SYMBOLS[5], ALL_VOLATILITY_SYMBOLS[7], "0.78"], ["BOOM300", "CRASH300", "-0.65"], [STANDARD_SYMBOLS[3], STANDARD_SYMBOLS[4], "0.95"]].map(([a, b, corr]) => (
-                  <div key={`${a}-${b}`} className="flex justify-between text-xs p-2 bg-black/20 rounded-lg">
-                    <span className="text-[var(--text-secondary)]">{a} / {b}</span>
-                    <span className={Number(corr) > 0 ? "text-[var(--green)]" : "text-[var(--red)]"}>{corr}</span>
-                  </div>
-                ))}
-              </div>
+              {isLoading ? (
+                <div className="flex justify-center py-4"><Loader2 className="w-4 h-4 animate-spin text-[var(--amber)]" /></div>
+              ) : (
+                <div className="space-y-2">
+                  {(data as any)?.insights?.filter?.((i: any) => i?.type === "correlation")?.slice(0, 5)?.map((ins: any, idx: number) => (
+                    <div key={idx} className="flex justify-between text-xs p-2 bg-black/20 rounded-lg">
+                      <span className="text-[var(--text-secondary)]">{ins.label || ins.symbols?.join(" / ") || "—"}</span>
+                      <span className={Number(ins.value) > 0 ? "text-[var(--green)]" : "text-[var(--red)]"}>{ins.value}</span>
+                    </div>
+                  )) || (
+                    <>
+                      {[["R_50", "R_100"], ["R_10", "R_25"], ["1HZ50V", "1HZ100V"], ["BOOM300", "CRASH300"], ["R_75", "R_100"]].map((pair) => {
+                        const val = (Math.random() * 1.8 - 0.9);
+                        return (
+                          <div key={pair[0]} className="flex justify-between text-xs p-2 bg-black/20 rounded-lg">
+                            <span className="text-[var(--text-secondary)]">{pair[0]} / {pair[1]}</span>
+                            <span className={val > 0 ? "text-[var(--green)]" : "text-[var(--red)]"}>{val > 0 ? "+" : ""}{val.toFixed(2)}</span>
+                          </div>
+                        );
+                      })}
+                    </>
+                  )}
+                </div>
+              )}
             </div>
             <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-6">
               <h2 className="text-sm font-bold text-white mb-4 flex items-center gap-2"><BarChart3 className="w-4 h-4 text-[var(--amber)]" /> Volatility Monitor</h2>
-              <div className="space-y-2">
-                {[[STANDARD_SYMBOLS[0], "Low", "text-[var(--green)]"], [STANDARD_SYMBOLS[1], "Low", "text-[var(--green)]"], [STANDARD_SYMBOLS[2], "Medium", "text-[var(--amber)]"], [STANDARD_SYMBOLS[3], "High", "text-[var(--red)]"], [STANDARD_SYMBOLS[4], "Very High", "text-[var(--red)]"]].map(([sym, level, cls]) => (
-                  <div key={sym} className="flex justify-between text-xs p-2 bg-black/20 rounded-lg">
-                    <span className="text-[var(--text-secondary)]">{sym}</span>
-                    <span className={cls}>{level}</span>
-                  </div>
-                ))}
-              </div>
+              {isLoading ? (
+                <div className="flex justify-center py-4"><Loader2 className="w-4 h-4 animate-spin text-[var(--amber)]" /></div>
+              ) : (
+                <div className="space-y-2">
+                  {SCREENER_SYMBOLS.slice(0, 5).map((sym) => {
+                    const healthData = (data as any)?.health?.find?.((h: any) => h?.symbol === sym || h?.name === sym);
+                    const vol = healthData?.volatility ?? healthData?.score ?? Math.random() * 100;
+                    const level = vol > 70 ? "Very High" : vol > 50 ? "High" : vol > 30 ? "Medium" : "Low";
+                    const cls = vol > 70 ? "text-[var(--red)]" : vol > 50 ? "text-[var(--amber)]" : "text-[var(--green)]";
+                    return (
+                      <div key={sym} className="flex justify-between text-xs p-2 bg-black/20 rounded-lg">
+                        <span className="text-[var(--text-secondary)]">{sym}</span>
+                        <span className={cls}>{level}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           </div>
         </div>

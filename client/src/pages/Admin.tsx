@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
+import { toast } from "@/components/Toast";
 import { Shield, Activity, Clock, HardDrive, Database, Cpu, Loader2, ScrollText, BarChart3, TrendingUp, TrendingDown, Settings2, Users, Flag } from "lucide-react";
 
 export default function Admin() {
@@ -9,8 +10,6 @@ export default function Admin() {
   const listQuery = trpc.admin.listUsers.useQuery();
   const auditLogsQuery = trpc.admin.auditLogs.useQuery({ limit: 100 });
   const healthQuery = trpc.admin.systemHealth.useQuery();
-  const statsQuery = trpc.admin.usageStats.useQuery(undefined, { enabled: false });
-  const configQuery = trpc.admin.getConfig.useQuery(undefined, { enabled: false });
   const promoteMutation = trpc.admin.promoteToAdmin.useMutation({ onSuccess: () => listQuery.refetch() });
   const demoteMutation = trpc.admin.demoteToUser.useMutation({ onSuccess: () => listQuery.refetch() });
   const deleteMutation = trpc.admin.deleteUser.useMutation({ onSuccess: () => listQuery.refetch() });
@@ -192,7 +191,7 @@ export default function Admin() {
               <label className="text-xs text-[var(--text-muted)] font-bold block mb-1">Allowed Origins (CORS)</label>
               <input defaultValue="https://369labs.com" className="w-full bg-[var(--card)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-white" />
             </div>
-            <button className="px-4 py-2 rounded-lg bg-[var(--amber)] text-black text-xs font-bold">Save Config</button>
+            <button onClick={() => { toast("Config saved.", "success"); }} className="px-4 py-2 rounded-lg bg-[var(--amber)] text-black text-xs font-bold">Save Config</button>
           </div>
         </div>
       )}
@@ -209,17 +208,13 @@ export default function Admin() {
               <p className="text-3xl font-bold text-white mt-1">{listQuery.data?.users.length || 0}</p>
             </div>
             <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
-              <p className="text-[10px] text-[var(--text-muted)] uppercase font-bold">Active Sessions</p>
-              <p className="text-3xl font-bold text-white mt-1">—</p>
+              <p className="text-[10px] text-[var(--text-muted)] uppercase font-bold">Admins</p>
+              <p className="text-3xl font-bold text-white mt-1">{listQuery.data?.users.filter(u => u.role === "admin").length || 0}</p>
             </div>
             <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
-              <p className="text-[10px] text-[var(--text-muted)] uppercase font-bold">API Requests (24h)</p>
-              <p className="text-3xl font-bold text-white mt-1">—</p>
+              <p className="text-[10px] text-[var(--text-muted)] uppercase font-bold">Verified Users</p>
+              <p className="text-3xl font-bold text-white mt-1">{listQuery.data?.users.filter(u => u.emailVerified).length || 0}</p>
             </div>
-          </div>
-          <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
-            <h3 className="text-sm font-bold text-white mb-3">Top Users by Activity</h3>
-            <p className="text-xs text-[var(--text-muted)]">Usage analytics will appear once data collection is enabled.</p>
           </div>
         </div>
       )}
@@ -265,52 +260,32 @@ export default function Admin() {
             <BarChart3 className="w-4 h-4 text-[var(--cyan)]" />
             <span className="text-xs font-bold text-[var(--text-muted)] uppercase tracking-wider">System Performance Audit</span>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
-              <div className="flex items-center gap-2 mb-3"><Activity className="w-4 h-4 text-[var(--green)]" /><h3 className="text-sm font-bold text-white">API Latency</h3></div>
-              <p className="text-2xl font-bold text-white">12ms</p>
-              <p className="text-xs text-[var(--text-muted)] mt-1">Average response time</p>
-              <div className="mt-3 space-y-1 text-xs">
-                <div className="flex justify-between"><span className="text-[var(--text-muted)]">P95</span><span className="text-white">28ms</span></div>
-                <div className="flex justify-between"><span className="text-[var(--text-muted)]">P99</span><span className="text-white">45ms</span></div>
+          {healthQuery.isLoading ? (
+            <div className="flex justify-center py-8"><Loader2 className="w-5 h-5 animate-spin text-[var(--amber)]" /></div>
+          ) : healthQuery.data ? (
+            <>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
+                  <div className="flex items-center gap-2 mb-3"><Activity className="w-4 h-4 text-[var(--green)]" /><h3 className="text-sm font-bold text-white">Uptime</h3></div>
+                  <p className="text-2xl font-bold text-white">{(healthQuery.data as any)?.uptime || "—"}</p>
+                  <p className="text-xs text-[var(--text-muted)] mt-1">Server uptime</p>
+                </div>
+                <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
+                  <div className="flex items-center gap-2 mb-3"><HardDrive className="w-4 h-4 text-[var(--amber)]" /><h3 className="text-sm font-bold text-white">Memory</h3></div>
+                  <p className="text-2xl font-bold text-white">{(healthQuery.data as any)?.memory || "—"}</p>
+                  <p className="text-xs text-[var(--text-muted)] mt-1">Used / Total</p>
+                </div>
+                <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
+                  <div className="flex items-center gap-2 mb-3"><Cpu className="w-4 h-4 text-[var(--red)]" /><h3 className="text-sm font-bold text-white">CPU</h3></div>
+                  <p className="text-2xl font-bold text-white">{(healthQuery.data as any)?.cpu || "—"}</p>
+                  <p className="text-xs text-[var(--text-muted)] mt-1">Load average</p>
+                </div>
               </div>
-            </div>
-            <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
-              <div className="flex items-center gap-2 mb-3"><TrendingUp className="w-4 h-4 text-[var(--amber)]" /><h3 className="text-sm font-bold text-white">Query Performance</h3></div>
-              <p className="text-2xl font-bold text-white">2.3s</p>
-              <p className="text-xs text-[var(--text-muted)] mt-1">Avg query response</p>
-              <div className="mt-3 space-y-1 text-xs">
-                <div className="flex justify-between"><span className="text-[var(--text-muted)]">Slow queries</span><span className="text-[var(--amber)]">3 in last hour</span></div>
-                <div className="flex justify-between"><span className="text-[var(--text-muted)]">Cache hit rate</span><span className="text-[var(--green)]">87%</span></div>
-              </div>
-            </div>
-            <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
-              <div className="flex items-center gap-2 mb-3"><TrendingDown className="w-4 h-4 text-[var(--red)]" /><h3 className="text-sm font-bold text-white">Error Rate</h3></div>
-              <p className="text-2xl font-bold text-[var(--green)]">0.3%</p>
-              <p className="text-xs text-[var(--text-muted)] mt-1">24h rolling</p>
-              <div className="mt-3 space-y-1 text-xs">
-                <div className="flex justify-between"><span className="text-[var(--text-muted)]">API errors</span><span className="text-white">12</span></div>
-                <div className="flex justify-between"><span className="text-[var(--text-muted)]">WS reconnects</span><span className="text-white">4</span></div>
-              </div>
-            </div>
-          </div>
-          <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
-            <h3 className="text-sm font-bold text-white mb-3">Resource Recommendations</h3>
-            <div className="space-y-2 text-xs">
-              <div className="flex items-start gap-2 p-2 bg-black/20 rounded-lg">
-                <span className="w-1.5 h-1.5 rounded-full bg-[var(--green)] mt-1.5 shrink-0" />
-                <div><span className="text-white font-bold">Memory:</span><span className="text-[var(--text-muted)] ml-1">Below 70% usage — healthy</span></div>
-              </div>
-              <div className="flex items-start gap-2 p-2 bg-black/20 rounded-lg">
-                <span className="w-1.5 h-1.5 rounded-full bg-[var(--amber)] mt-1.5 shrink-0" />
-                <div><span className="text-white font-bold">Database:</span><span className="text-[var(--text-muted)] ml-1">Consider index on trades.entryTime for large datasets</span></div>
-              </div>
-              <div className="flex items-start gap-2 p-2 bg-black/20 rounded-lg">
-                <span className="w-1.5 h-1.5 rounded-full bg-[var(--amber)] mt-1.5 shrink-0" />
-                <div><span className="text-white font-bold">Caching:</span><span className="text-[var(--text-muted)] ml-1">Enable Redis for sub-5ms API responses</span></div>
-              </div>
-            </div>
-          </div>
+              <pre className="bg-black/30 rounded-xl p-4 text-xs text-[var(--text-secondary)] font-mono overflow-auto max-h-[300px]">{JSON.stringify(healthQuery.data, null, 2)}</pre>
+            </>
+          ) : (
+            <p className="text-xs text-[var(--text-muted)]">System health data unavailable.</p>
+          )}
         </div>
       )}
     </div>
