@@ -166,6 +166,10 @@ export async function createApp() {
         const { settlementTracker } = await import("../SettlementTracker");
         settlementTracker.start();
       } catch (e) { console.error("[startup] SettlementTracker failed", e); }
+      try {
+        const { startExecutionEngine } = await import("../executionEngine");
+        startExecutionEngine();
+      } catch (e) { console.error("[startup] ExecutionEngine failed", e); }
     })();
   }
 

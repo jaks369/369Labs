@@ -12,6 +12,14 @@ let subscribedSymbolsOnServer = new Set<string>();
 const lastTickEpoch: Record<string, number> = {};
 let lastAnyTickEpoch = 0;
 let feedStale = false;
+// In-memory tick buffer: symbol -> latest 500 ticks (for strategy evaluation)
+const tickBuffer = new Map<string, { price: number; epoch: number; lastDigit: number }[]>();
+const MAX_TICKS_PER_SYMBOL = 500;
+export function getRecentTicks(symbol: string, count: number = 100): { price: number; epoch: number; lastDigit: number }[] {
+  const buf = tickBuffer.get(symbol);
+  if (!buf) return [];
+  return buf.slice(-count);
+}
 export function isFeedStale(): boolean { return feedStale; }
 export function getFeedHealth(): { stale: boolean; lastTickEpoch: number } { return { stale: feedStale, lastTickEpoch: lastAnyTickEpoch }; }
 let msgId = 1;
@@ -83,6 +91,11 @@ export function startTickCollector() {
           lastDigit,
           epoch,
         }).catch(() => {});
+        // maintain in-memory buffer for strategy execution
+        if (!tickBuffer.has(symbol)) tickBuffer.set(symbol, []);
+        const buf = tickBuffer.get(symbol)!;
+        buf.push({ price: parseFloat(quote), epoch, lastDigit });
+        if (buf.length > MAX_TICKS_PER_SYMBOL) buf.splice(0, buf.length - MAX_TICKS_PER_SYMBOL);
       } catch {}
     });
     ws.on("error", (e: any) => console.warn("[tickCollector] error:", e?.message || e));
