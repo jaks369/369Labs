@@ -6,16 +6,17 @@ import { parse as parseCookieHeader } from "cookie";
 import { COOKIE_NAME, ONE_YEAR_MS } from "@shared/const";
 import { ForbiddenError } from "@shared/_core/errors";
 import type { User } from "../../drizzle/schema";
+import type { SanitizedUser } from "./context";
 import * as db from "../db";
 import { ENV } from "./env";
 
 const scrypt = promisify(scryptCallback);
 const SCRYPT_KEYLEN = 64;
 
-export function sanitizeUser(u: any): any {
+export function sanitizeUser(u: User | null | undefined): SanitizedUser | null | undefined {
   if (!u) return u;
   const { passwordHash, twoFASecret, ...rest } = u;
-  return rest;
+  return rest as SanitizedUser;
 }
 /** Hash a plaintext password for storage. Format: "salt:derivedKeyHex". */
 export async function hashPassword(password: string): Promise<string> {
@@ -77,7 +78,7 @@ function parseCookies(cookieHeader: string | undefined) {
 }
 
 /** Authenticate an incoming request via session cookie (or Bearer header fallback). Returns user and sessionId. */
-export async function authenticateRequest(req: Request): Promise<{ user: User; sessionId: string | null }> {
+export async function authenticateRequest(req: Request): Promise<{ user: SanitizedUser; sessionId: string | null }> {
   const cookies = parseCookies(req.headers.cookie);
   const cookieVal = cookies.get(COOKIE_NAME);
   let sessionToken = cookieVal;
@@ -89,14 +90,11 @@ export async function authenticateRequest(req: Request): Promise<{ user: User; s
     }
   }
 
-  console.log(`[auth] cookie=${cookieVal ? "found" : "missing"}, bearer=${req.headers.authorization?.startsWith("Bearer ") ? "found" : "missing"}, token=${sessionToken ? sessionToken.slice(0,15)+"..." : "null"}`);
-
   const payload = await verifySessionToken(sessionToken);
   if (!payload) {
-    console.log(`[auth] FAIL verifySessionToken returned null`);
+    console.log(`[auth] FAIL verifySessionToken — token=${sessionToken ? sessionToken.slice(0,15)+"..." : "null"}`);
     throw ForbiddenError("Invalid session cookie");
   }
-  console.log(`[auth] OK payload userId=${payload.userId}, hasSessionId=${!!payload.sessionId}`);
 
   // Check if session was revoked
   if (payload.sessionId) {
@@ -104,14 +102,13 @@ export async function authenticateRequest(req: Request): Promise<{ user: User; s
     try {
       session = await db.getSessionBySessionId(payload.sessionId);
     } catch (e: any) {
-      console.log(`[auth] FAIL getSessionBySessionId threw: ${e?.message || e}`);
+      console.log(`[auth] FAIL getSessionBySessionId: ${e?.message || e}`);
       throw ForbiddenError("Session revoked");
     }
     if (!session || session.revokedAt) {
       console.log(`[auth] FAIL session ${session ? "revoked" : "not found"}`);
       throw ForbiddenError("Session revoked");
     }
-    // Touch lastActiveAt periodically (once per minute per session)
     const now = Date.now();
     const lastActive = new Date(session.lastActiveAt).getTime();
     if (now - lastActive > 60000) {
@@ -123,21 +120,20 @@ export async function authenticateRequest(req: Request): Promise<{ user: User; s
   try {
     user = await db.getUserById(payload.userId);
   } catch (e: any) {
-    console.log(`[auth] FAIL getUserById threw: ${e?.message || e}`);
+    console.log(`[auth] FAIL getUserById: ${e?.message || e}`);
     throw ForbiddenError("User not found");
   }
   if (!user) {
-    console.log(`[auth] FAIL user not found for userId=${payload.userId}`);
+    console.log(`[auth] FAIL user not found userId=${payload.userId}`);
     throw ForbiddenError("User not found");
   }
-  console.log(`[auth] OK user found id=${user.id}`);
 
   // IP whitelist check
   let whitelist: any[] = [];
   try {
     whitelist = await db.getIpWhitelist(payload.userId);
-  } catch (e: any) {
-    console.log(`[auth] getIpWhitelist threw (table may not exist): ${e?.message || e}`);
+  } catch {
+    // table may not exist
   }
   if (whitelist.length > 0) {
     const clientIp = req.headers["x-forwarded-for"]?.toString().split(",")[0]?.trim() || req.socket?.remoteAddress || "";
@@ -148,6 +144,5 @@ export async function authenticateRequest(req: Request): Promise<{ user: User; s
     }
   }
 
-  console.log(`[auth] SUCCESS authenticated userId=${user.id}`);
   return { user: sanitizeUser(user), sessionId: payload.sessionId || null };
 }

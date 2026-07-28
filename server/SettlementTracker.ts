@@ -56,7 +56,15 @@ export class SettlementTracker {
       const pending = await db.getPendingTrades();
       for (const trade of pending) {
         const tradeId = trade.id;
-        if ((this.retryCount.get(tradeId) || 0) >= MAX_RETRIES) continue;
+        if ((this.retryCount.get(tradeId) || 0) >= MAX_RETRIES) {
+          try {
+            const { getDb, trades, eq } = await import("./db");
+            const db = await getDb();
+            if (db) await db.update(trades).set({ result: "loss", profitLoss: "0", exitTime: new Date() }).where(eq(trades.id, tradeId));
+          } catch {}
+          console.warn(`[SettlementTracker] Trade #${tradeId} marked stuck after ${MAX_RETRIES} retries`);
+          continue;
+        }
         stats.processed++;
         try {
           await this.reconcile(trade);

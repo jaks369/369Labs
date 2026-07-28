@@ -146,8 +146,11 @@ export async function deleteUser(userId: number): Promise<void> {
   await db.delete(passwordResetTokens).where(eq(passwordResetTokens.userId, userId));
   await db.delete(verificationTokens).where(eq(verificationTokens.userId, userId));
   await db.delete(pluginInstalls).where(eq(pluginInstalls.userId, userId));
+  await db.delete(priceAlerts).where(eq(priceAlerts.userId, userId));
   await db.delete(sessions).where(eq(sessions.userId, userId));
   await db.delete(ipWhitelist).where(eq(ipWhitelist.userId, userId));
+  // webhooks table uses raw SQL (no drizzle schema entry)
+  if (db) await db.execute(sql`DELETE FROM webhooks WHERE userId = ${userId}`);
   await db.delete(users).where(eq(users.id, userId));
 }
 

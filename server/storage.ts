@@ -10,7 +10,7 @@ function getForgeConfig() {
 
   if (!forgeUrl || !forgeKey) {
     throw new Error(
-      "Storage config missing: set BUILT_IN_FORGE_API_URL and BUILT_IN_FORGE_API_KEY",
+      "Storage config missing: set AI_API_BASE_URL and AI_API_KEY (or OPENAI_API_BASE_URL / OPENAI_API_KEY)",
     );
   }
 
