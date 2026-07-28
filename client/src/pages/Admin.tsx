@@ -2,7 +2,7 @@ import { useState } from "react";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { toast } from "@/components/Toast";
-import { Shield, Activity, Clock, HardDrive, Database, Cpu, Loader2, ScrollText, BarChart3, TrendingUp, TrendingDown, Settings2, Users, Flag } from "lucide-react";
+import { Shield, Activity, Clock, HardDrive, Database, Cpu, Loader2, ScrollText, BarChart3, Settings2, Users, Flag } from "lucide-react";
 
 export default function Admin() {
   const { user } = useAuth();

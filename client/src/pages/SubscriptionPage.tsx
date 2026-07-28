@@ -3,7 +3,7 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import { trpc } from "@/lib/trpc";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
-import { Crown, CheckCircle2, Zap, Shield, BarChart3, Users, Bot, Sparkles, CreditCard, Loader2 } from "lucide-react";
+import { Crown, CheckCircle2, Zap, Shield, BarChart3, Bot, Sparkles, CreditCard, Loader2 } from "lucide-react";
 
 const plans = [
   { name: "Starter", price: "$0", period: "free", features: ["1 bot", "Basic backtesting", "Paper trading", "3-day history"], cta: "Current Plan", popular: false },

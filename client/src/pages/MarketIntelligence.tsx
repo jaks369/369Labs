@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
@@ -7,8 +7,7 @@ import MarketHealthGrid from "@/components/MarketHealthGrid";
 import MarketPredictionCards from "@/components/MarketPredictionCards";
 import MarketInsightCards from "@/components/MarketInsightCards";
 import MarketRiskPanel from "@/components/MarketRiskPanel";
-import { derivWS } from "@/services/derivWebSocket";
-import { STANDARD_SYMBOLS, ALL_VOLATILITY_SYMBOLS } from "@/lib/symbols";
+
 import { getAllSymbols } from "@shared/symbols";
 
 const SCREENER_SYMBOLS = getAllSymbols();

@@ -1,7 +1,7 @@
 import { useAuth } from "@/_core/hooks/useAuth";
 import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
-import { Bot, TrendingUp, TrendingDown, Activity, BarChart3, BrainCircuit, Loader2, Sparkles } from "lucide-react";
+import { Bot, TrendingUp, Activity, BarChart3, BrainCircuit, Loader2, Sparkles } from "lucide-react";
 import AIChatWindow from "@/components/AIChatWindow";
 import { useState, useEffect, useMemo } from "react";
 import { derivWS } from "@/services/derivWebSocket";

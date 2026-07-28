@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { trpc } from "@/lib/trpc";
 import { useLocation } from "wouter";
-import { Loader2, Webhook, Plus, Trash2, X } from "lucide-react";
+import { Loader2, Webhook, Plus, Trash2 } from "lucide-react";
 import { toast } from "@/components/Toast";
 
 const EVENT_OPTIONS = [

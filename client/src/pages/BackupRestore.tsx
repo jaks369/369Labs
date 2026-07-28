@@ -2,7 +2,7 @@ import { useState, useRef } from "react";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
-import { Shield, Download, Upload, Loader2, CheckCircle2, AlertCircle, HardDrive } from "lucide-react";
+import { Download, Upload, Loader2, CheckCircle2, AlertCircle, HardDrive } from "lucide-react";
 import { toast } from "@/components/Toast";
 
 export default function BackupRestore() {

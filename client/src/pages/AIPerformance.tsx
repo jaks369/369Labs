@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { trpc } from "@/lib/trpc";
 import { useLocation } from "wouter";
-import { BarChart3, TrendingUp, TrendingDown, Target, Brain, ShieldCheck, Zap, Award, AlertCircle, Loader2 } from "lucide-react";
+import { BarChart3, Target, Brain, ShieldCheck, Zap, Award, AlertCircle, Loader2 } from "lucide-react";
 
 export default function AIPerformance() {
   const { isAuthenticated } = useAuth();

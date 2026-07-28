@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { trpc } from "@/lib/trpc";
 import { useLocation } from "wouter";
-import { Workflow as WorkflowIcon, Play, GitBranch, ShieldCheck, FlaskConical, Bell, Search, Loader2, CheckCircle2, X, Radio, ChevronDown } from "lucide-react";
+import { Workflow as WorkflowIcon, Play, GitBranch, ShieldCheck, FlaskConical, Bell, Search, Loader2, CheckCircle2, Radio, ChevronDown } from "lucide-react";
 import { pushTimeline } from "@/components/AITimeline";
 import { getValidSymbols } from "@/lib/symbols";
 

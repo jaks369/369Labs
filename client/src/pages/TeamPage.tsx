@@ -4,7 +4,7 @@ import { trpc } from "@/lib/trpc";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/components/Toast";
-import { Users, UserPlus, Share2, Copy, CheckCircle2, XCircle, Loader2 } from "lucide-react";
+import { Users, UserPlus, Share2, Copy, XCircle, Loader2 } from "lucide-react";
 
 export default function TeamPage() {
   const { isAuthenticated, user } = useAuth();

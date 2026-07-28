@@ -1,4 +1,4 @@
-import { BookOpen, Activity, Bot, BarChart3, Sparkles, Shield, Share2, Download, Search, Eye, Play, Settings, TrendingUp, TrendingDown, DollarSign, GitBranch, FlaskConical, Bell, Radio, AlertTriangle, FileText, MessageSquare, BrainCircuit, Cog, MousePointerClick, GanttChartSquare } from "lucide-react";
+import { BookOpen, Activity, Bot, BarChart3, Sparkles, Shield, Share2, Download, Eye, TrendingUp, GitBranch, FlaskConical, BrainCircuit, Cog } from "lucide-react";
 
 const SECTIONS = [
   {

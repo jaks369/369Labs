@@ -12,17 +12,14 @@ import {
   ChevronDown,
   Wallet,
   Sparkles,
-  RotateCcw,
   AlertCircle,
   Bell,
   BellOff,
   Plus,
   X,
-  Gauge,
   BookOpen,
   BarChart3,
   Bot,
-  MessageSquare,
   Brain,
 } from "lucide-react";
 import { useLocation } from "wouter";

@@ -4,7 +4,6 @@ import { trpc } from "@/lib/trpc";
 import { toast } from "@/components/Toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import {
   Loader2,
   Plus,
@@ -24,7 +23,6 @@ import {
   ArrowDown,
   Download,
   Upload,
-  FileJson,
   LayoutTemplate
 } from "lucide-react";
 import { useLocation, useSearch } from "wouter";
