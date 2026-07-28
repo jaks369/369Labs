@@ -221,7 +221,7 @@ class DerivWebSocketService {
       const c = data.proposal_open_contract;
       const isSold = c.is_sold === 1 || c.status === "sold" || c.status === "won" || c.status === "lost";
       const cb = this.contractListeners.get(c.contract_id);
-      cb?.({ contract_id: c.contract_id, is_sold: isSold, profit: c.profit, buy_price: c.buy_price, sell_price: c.sell_price, status: c.status, entry_tick: c.entry_tick, exit_tick: c.exit_tick });
+      cb?.({ contract_id: c.contract_id, is_sold: isSold ? 1 : 0, profit: c.profit, buy_price: c.buy_price, sell_price: c.sell_price, status: c.status, entry_tick: c.entry_tick, exit_tick: c.exit_tick });
       if (isSold) {
         this.contractListeners.delete(c.contract_id);
         this.clearContractMeta(c.contract_id);

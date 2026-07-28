@@ -102,7 +102,7 @@ export default function Workflow() {
           try {
             if (condLabel.startsWith("winRate")) {
               const trades = await utils.client.trades.list.query({ limit: 100 });
-              const all = trades?.trades || [];
+              const all = (trades as any[]) || [];
               const wins = all.filter((t: any) => t.result === "win").length;
               const total = all.filter((t: any) => t.result === "win" || t.result === "loss").length;
               const rate = total > 0 ? (wins / total) * 100 : 0;

@@ -283,7 +283,7 @@ export default function AIAssistant() {
             <div className="space-y-4">
               <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-6">
                 <h3 className="text-sm font-bold text-white mb-3 flex items-center gap-2"><Clock className="w-4 h-4 text-[var(--cyan)]" /> Scheduled Analysis</h3>
-                <button onClick={() => scheduleMutation.mutateAsync({ interval: "hourly", query: "Market overview" }).then(() => { toast("Scheduled analysis created", "success"); scheduleListQuery.refetch(); }).catch(() => toast("Failed", "error"))} disabled={scheduleMutation.isPending} className="px-4 py-2 rounded-lg bg-[var(--cyan)] text-black text-xs font-bold">
+                <button onClick={() => scheduleMutation.mutateAsync({ symbol: "R_100", interval: "1h", prompt: "Market overview" }).then(() => { toast("Scheduled analysis created", "success"); scheduleListQuery.refetch(); }).catch(() => toast("Failed", "error"))} disabled={scheduleMutation.isPending} className="px-4 py-2 rounded-lg bg-[var(--cyan)] text-black text-xs font-bold">
                   {scheduleMutation.isPending ? <><Loader2 className="w-3 h-3 animate-spin inline mr-1" /> Creating...</> : "Schedule Hourly Analysis"}
                 </button>
               </div>

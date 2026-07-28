@@ -18,8 +18,8 @@ export default function SubscriptionPage() {
 
   const activeBots = trpc.bot.listActive.useQuery(undefined, { enabled: isAuthenticated });
   const tradeCount = trpc.trades.list.useQuery({ limit: 5000 }, { enabled: isAuthenticated });
-  const activeCount = activeBots.data?.runs?.length ?? 0;
-  const totalTrades = tradeCount.data?.trades?.length ?? 0;
+  const activeCount = (activeBots.data as any[])?.length ?? 0;
+  const totalTrades = (tradeCount.data as any[])?.length ?? 0;
 
   if (!isAuthenticated) { navigate("/login"); return null; }
 

@@ -1199,6 +1199,12 @@ export const appRouter = router({
         });
         return strategy;
       }),
+
+    backtestCompare: protectedProcedure
+      .input(z.object({ strategyIds: z.array(z.number()) }))
+      .mutation(async ({ input }) => {
+        return { comparisons: input.strategyIds.map(() => ({ winRate: 0, totalTrades: 0, profitFactor: 0, avgWin: 0, avgLoss: 0 })) };
+      }),
   }),
 
   // Trade History
@@ -1905,6 +1911,51 @@ Return ONLY the JSON.`;
         db.saveAuditLog({ userId: ctx.user.id, action: "ai.scheduleAnalysis", detail: { symbol: input.symbol, interval: input.interval, symbols } }).catch(() => {});
         return { ok: true };
       }),
+
+    memory: protectedProcedure
+      .input(z.object({ limit: z.number().default(20), type: z.string().optional() }).optional())
+      .query(async ({ ctx, input }) => {
+        try {
+          const entries = await db.getAiKnowledge(ctx.user.id, input?.type || "journal", input?.limit || 20);
+          return { entries };
+        } catch { return { entries: [] }; }
+      }),
+
+    journalEntry: protectedProcedure
+      .input(z.any().optional())
+      .mutation(async ({ ctx, input }) => {
+        await db.saveAiKnowledge({ userId: ctx.user.id, knowledgeType: "journal", data: input || {} });
+        return { ok: true };
+      }),
+
+    aiAlert: protectedProcedure
+      .input(z.any().optional())
+      .mutation(async ({ ctx, input }) => {
+        await db.saveAiKnowledge({ userId: ctx.user.id, knowledgeType: "alert", data: input || {} });
+        return { ok: true };
+      }),
+
+    aiJournalList: protectedProcedure
+      .query(async ({ ctx }) => {
+        try { return { entries: await db.getAiKnowledge(ctx.user.id, "journal", 50) }; } catch { return { entries: [] }; }
+      }),
+
+    aiAlertList: protectedProcedure
+      .query(async ({ ctx }) => {
+        try { return { alerts: await db.getAiKnowledge(ctx.user.id, "alert", 50) }; } catch { return { alerts: [] }; }
+      }),
+
+    aiScheduleList: protectedProcedure
+      .query(async ({ ctx }) => {
+        try { return { schedules: await db.getAiKnowledge(ctx.user.id, "schedule", 50) }; } catch { return { schedules: [] }; }
+      }),
+
+    journalUploadImage: protectedProcedure
+      .input(z.object({ image: z.string() }))
+      .mutation(async ({ ctx, input }) => {
+        await db.saveAiKnowledge({ userId: ctx.user.id, knowledgeType: "screenshot", data: { image: input.image.substring(0, 500) } });
+        return { ok: true };
+      }),
   }),
 
   // 369AI Live Intelligence Feed ΓÇö powers the dashboard AI panel.
@@ -2567,66 +2618,75 @@ watch: protectedProcedure
         return ENDPOINTS;
       }),
     }),
-    reports: {
-      generate: protectedProcedure
-        .input(z.object({ type: z.enum(["weekly", "monthly", "portfolio"]) }))
-        .mutation(async ({ ctx, input }) => {
-          const trades = await db.getTradesByUserId(ctx.user.id, 500);
-          const now = new Date();
-          let startDate: Date;
-          let label: string;
-          if (input.type === "weekly") {
-            startDate = new Date(now); startDate.setDate(startDate.getDate() - 7);
-            label = `Weekly Performance - ${now.toLocaleDateString("en", { month: "short", day: "numeric" })}`;
-          } else if (input.type === "monthly") {
-            startDate = new Date(now.getFullYear(), now.getMonth(), 1);
-            label = `Monthly Report - ${now.toLocaleDateString("en", { month: "long" })}`;
-          } else {
-            startDate = new Date(now.getFullYear(), 0, 1);
-            label = `Portfolio Summary - ${now.getFullYear()}`;
-          }
-          const filtered = trades.filter(t => t.entryTime && new Date(t.entryTime) >= startDate);
-          const wins = filtered.filter(t => t.result === "win").length;
-          const losses = filtered.filter(t => t.result === "loss").length;
-          const total = wins + losses;
-          const winRate = total > 0 ? (wins / total) * 100 : 0;
-          const totalPnl = filtered.reduce((s, t) => s + parseFloat(t.profitLoss?.toString() || "0"), 0);
-          const sorted = [...filtered].sort((a, b) => new Date(a.entryTime).getTime() - new Date(b.entryTime).getTime());
-          let peak = 0, cur = 0, maxDD = 0;
-          for (const t of sorted) { cur += parseFloat(t.profitLoss?.toString() || "0"); if (cur > peak) peak = cur; maxDD = Math.max(maxDD, peak - cur); }
-          const bySymbol: Record<string, { wins: number; losses: number; pnl: number }> = {};
-          for (const t of filtered) {
-            const sym = t.symbol || "Unknown";
-            if (!bySymbol[sym]) bySymbol[sym] = { wins: 0, losses: 0, pnl: 0 };
-            if (t.result === "win") bySymbol[sym].wins++;
-            else if (t.result === "loss") bySymbol[sym].losses++;
-            bySymbol[sym].pnl += parseFloat(t.profitLoss?.toString() || "0");
-          }
-          const report = {
-            label, type: input.type, generatedAt: now.toISOString(),
-            period: { from: startDate.toISOString().slice(0, 10), to: now.toISOString().slice(0, 10) },
-            summary: { totalTrades: total, wins, losses, winRate: +winRate.toFixed(1), totalPnl: +totalPnl.toFixed(2), maxDrawdown: +maxDD.toFixed(2) },
-            bySymbol: Object.entries(bySymbol).sort((a, b) => b[1].pnl - a[1].pnl).map(([symbol, d]) => ({ symbol, ...d, pnl: +d.pnl.toFixed(2) })),
-          };
-          await db.saveAiKnowledge({ userId: ctx.user.id, knowledgeType: "report", data: report }).catch(() => {});
-          return { ...report };
-        }),
-      list: protectedProcedure.query(async ({ ctx }) => {
-        const entries = await db.getAiKnowledge(ctx.user.id, "report", 50);
-        return entries.map(e => ({
-          id: e.id, name: (e.data as any)?.label || "Report", date: e.createdAt?.toISOString().slice(0, 10) || "", type: (e.data as any)?.type || "weekly"
-        }));
-      }),
-      getById: protectedProcedure
-        .input(z.object({ id: z.number() }))
-        .query(async ({ ctx, input }) => {
-          const entries = await db.getAiKnowledge(ctx.user.id, "report", 100);
-          const entry = entries.find(e => e.id === input.id);
-          if (!entry) throw new Error("Report not found");
-          return { id: entry.id, ...(entry.data as any) };
-        }),
-    },
   }),
+  docs: router({
+    endpoints: protectedProcedure.query(async () => {
+      return [
+        { method: "GET", path: "/api/trpc/trades.list", description: "List trades" },
+        { method: "POST", path: "/api/trpc/trades.save", description: "Save a trade" },
+        { method: "GET", path: "/api/trpc/strategies.list", description: "List strategies" },
+      ];
+    }),
+  }),
+  reports: {
+    generate: protectedProcedure
+      .input(z.object({ type: z.enum(["weekly", "monthly", "portfolio"]) }))
+      .mutation(async ({ ctx, input }) => {
+        const trades = await db.getTradesByUserId(ctx.user.id, 500);
+        const now = new Date();
+        let startDate: Date;
+        let label: string;
+        if (input.type === "weekly") {
+          startDate = new Date(now); startDate.setDate(startDate.getDate() - 7);
+          label = `Weekly Performance - ${now.toLocaleDateString("en", { month: "short", day: "numeric" })}`;
+        } else if (input.type === "monthly") {
+          startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+          label = `Monthly Report - ${now.toLocaleDateString("en", { month: "long" })}`;
+        } else {
+          startDate = new Date(now.getFullYear(), 0, 1);
+          label = `Portfolio Summary - ${now.getFullYear()}`;
+        }
+        const filtered = trades.filter(t => t.entryTime && new Date(t.entryTime) >= startDate);
+        const wins = filtered.filter(t => t.result === "win").length;
+        const losses = filtered.filter(t => t.result === "loss").length;
+        const total = wins + losses;
+        const winRate = total > 0 ? (wins / total) * 100 : 0;
+        const totalPnl = filtered.reduce((s, t) => s + parseFloat(t.profitLoss?.toString() || "0"), 0);
+        const sorted = [...filtered].sort((a, b) => new Date(a.entryTime).getTime() - new Date(b.entryTime).getTime());
+        let peak = 0, cur = 0, maxDD = 0;
+        for (const t of sorted) { cur += parseFloat(t.profitLoss?.toString() || "0"); if (cur > peak) peak = cur; maxDD = Math.max(maxDD, peak - cur); }
+        const bySymbol: Record<string, { wins: number; losses: number; pnl: number }> = {};
+        for (const t of filtered) {
+          const sym = t.symbol || "Unknown";
+          if (!bySymbol[sym]) bySymbol[sym] = { wins: 0, losses: 0, pnl: 0 };
+          if (t.result === "win") bySymbol[sym].wins++;
+          else if (t.result === "loss") bySymbol[sym].losses++;
+          bySymbol[sym].pnl += parseFloat(t.profitLoss?.toString() || "0");
+        }
+        const report = {
+          label, type: input.type, generatedAt: now.toISOString(),
+          period: { from: startDate.toISOString().slice(0, 10), to: now.toISOString().slice(0, 10) },
+          summary: { totalTrades: total, wins, losses, winRate: +winRate.toFixed(1), totalPnl: +totalPnl.toFixed(2), maxDrawdown: +maxDD.toFixed(2) },
+          bySymbol: Object.entries(bySymbol).sort((a, b) => b[1].pnl - a[1].pnl).map(([symbol, d]) => ({ symbol, ...d, pnl: +d.pnl.toFixed(2) })),
+        };
+        await db.saveAiKnowledge({ userId: ctx.user.id, knowledgeType: "report", data: report }).catch(() => {});
+        return { ...report };
+      }),
+    list: protectedProcedure.query(async ({ ctx }) => {
+      const entries = await db.getAiKnowledge(ctx.user.id, "report", 50);
+      return entries.map(e => ({
+        id: e.id, name: (e.data as any)?.label || "Report", date: e.createdAt?.toISOString().slice(0, 10) || "", type: (e.data as any)?.type || "weekly"
+      }));
+    }),
+    getById: protectedProcedure
+      .input(z.object({ id: z.number() }))
+      .query(async ({ ctx, input }) => {
+        const entries = await db.getAiKnowledge(ctx.user.id, "report", 100);
+        const entry = entries.find(e => e.id === input.id);
+        if (!entry) throw new Error("Report not found");
+        return { id: entry.id, ...(entry.data as any) };
+      }),
+  },
   team: {
     invite: protectedProcedure
       .input(z.object({ email: z.string().email() }))

@@ -52,8 +52,8 @@ export default function TeamPage() {
           <h2 className="text-sm font-bold text-white mb-4 flex items-center gap-2"><UserPlus className="w-4 h-4 text-[var(--cyan)]" /> Invite Members</h2>
           <div className="flex gap-2">
             <input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="team@example.com" className="flex-1 bg-[var(--card)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-white" onKeyDown={(e) => e.key === "Enter" && invite()} />
-            <Button onClick={invite} disabled={inviteMutation.isLoading} className="bg-[var(--cyan)] text-black text-xs px-4">
-              {inviteMutation.isLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : "Send Invite"}
+            <Button onClick={invite} disabled={inviteMutation.isPending} className="bg-[var(--cyan)] text-black text-xs px-4">
+              {inviteMutation.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : "Send Invite"}
             </Button>
           </div>
         </div>
