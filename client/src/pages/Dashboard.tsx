@@ -1,5 +1,5 @@
 import { useAuth } from "@/_core/hooks/useAuth";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import {
@@ -76,10 +76,10 @@ export default function Dashboard() {
 
   // Live tick buffer: stream ticks from the Deriv WS so the Price History table
   // updates in real time (newest on top, pushing older rows down).
+  // Always subscribe when on prices tab, but keep buffer on tab switch.
   const [liveTicks, setLiveTicks] = useState<any[]>([]);
   useEffect(() => {
     if (historyTab !== "prices") return;
-    setLiveTicks([]);
     const subId = derivWS.subscribe(selectedSymbol);
     const listener = {
       onTick: (tick: any) => {
@@ -95,6 +95,15 @@ export default function Dashboard() {
     derivWS.addListener(listener);
     return () => { derivWS.removeListener(listener); derivWS.unsubscribe(subId); };
   }, [selectedSymbol, historyTab]);
+
+  // Clear live ticks when symbol changes (but NOT on tab switch).
+  const prevSymbolRef = useRef(selectedSymbol);
+  useEffect(() => {
+    if (prevSymbolRef.current !== selectedSymbol) {
+      setLiveTicks([]);
+      prevSymbolRef.current = selectedSymbol;
+    }
+  }, [selectedSymbol]);
 
   // Recover pending contract subscriptions after page refresh / reconnect.
   useEffect(() => {
