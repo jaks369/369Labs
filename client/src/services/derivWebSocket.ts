@@ -193,6 +193,7 @@ class DerivWebSocketService {
         console.log("[Deriv WS] Disconnected");
         this.authorized = false;
         this.subscribedSymbols.clear();
+        this.pendingSubscriptionSymbols = [];
         this.retryTimers.forEach(t => clearTimeout(t));
         this.retryTimers.clear();
         this.notifyDisconnect();
@@ -281,8 +282,19 @@ class DerivWebSocketService {
           { symbol: "R_150", displayName: "Volatility 150 Index", market: "volatility", submarket: "synthetic_index", decimalPlaces: 3 },
           { symbol: "R_200", displayName: "Volatility 200 Index", market: "volatility", submarket: "synthetic_index", decimalPlaces: 3 },
           { symbol: "1HZ10V", displayName: "Volatility 10 (1s) Index", market: "volatility", submarket: "synthetic_index", decimalPlaces: 3 },
+          { symbol: "1HZ25V", displayName: "Volatility 25 (1s) Index", market: "volatility", submarket: "synthetic_index", decimalPlaces: 3 },
           { symbol: "1HZ50V", displayName: "Volatility 50 (1s) Index", market: "volatility", submarket: "synthetic_index", decimalPlaces: 3 },
+          { symbol: "1HZ75V", displayName: "Volatility 75 (1s) Index", market: "volatility", submarket: "synthetic_index", decimalPlaces: 3 },
           { symbol: "1HZ100V", displayName: "Volatility 100 (1s) Index", market: "volatility", submarket: "synthetic_index", decimalPlaces: 3 },
+          { symbol: "1HZ15V", displayName: "Volatility 15 (1s) Index", market: "volatility", submarket: "synthetic_index", decimalPlaces: 3 },
+          { symbol: "1HZ30V", displayName: "Volatility 30 (1s) Index", market: "volatility", submarket: "synthetic_index", decimalPlaces: 3 },
+          { symbol: "1HZ90V", displayName: "Volatility 90 (1s) Index", market: "volatility", submarket: "synthetic_index", decimalPlaces: 3 },
+          { symbol: "BOOM300", displayName: "Boom 300 Index", market: "boom_crash", submarket: "synthetic_index", decimalPlaces: 3 },
+          { symbol: "BOOM500", displayName: "Boom 500 Index", market: "boom_crash", submarket: "synthetic_index", decimalPlaces: 3 },
+          { symbol: "BOOM1000", displayName: "Boom 1000 Index", market: "boom_crash", submarket: "synthetic_index", decimalPlaces: 3 },
+          { symbol: "CRASH300", displayName: "Crash 300 Index", market: "boom_crash", submarket: "synthetic_index", decimalPlaces: 3 },
+          { symbol: "CRASH500", displayName: "Crash 500 Index", market: "boom_crash", submarket: "synthetic_index", decimalPlaces: 3 },
+          { symbol: "CRASH1000", displayName: "Crash 1000 Index", market: "boom_crash", submarket: "synthetic_index", decimalPlaces: 3 },
         ];
       }
       console.log("[Deriv WS] active_symbols loaded:", symbols.length);
@@ -352,14 +364,17 @@ class DerivWebSocketService {
   private processPendingSubscriptions() {
     const pending = [...this.pendingSubscriptionSymbols];
     this.pendingSubscriptionSymbols = [];
-    for (const symbol of pending) {
-      if (!symbol || typeof symbol !== "string") continue;
-      try {
-        const target = this.authorized ? (this.tickWsReady ? this.tickWs : this.ws) : this.ws;
-        target?.send(JSON.stringify({ ticks: symbol, subscribe: 1, req_id: this.msgId++ }));
+    if (pending.length === 0) return;
+    setTimeout(() => {
+      for (const symbol of pending) {
+        if (!symbol || typeof symbol !== "string") continue;
+        try {
+          const target = this.authorized ? (this.tickWsReady ? this.tickWs : this.ws) : this.ws;
+          target?.send(JSON.stringify({ ticks: symbol, subscribe: 1, req_id: this.msgId++ }));
+        }
+        catch (error) { console.error("[Deriv WS] Failed to subscribe:", error); }
       }
-      catch (error) { console.error("[Deriv WS] Failed to subscribe:", error); }
-    }
+    }, 500);
   }
 
   public fetchBalance() {

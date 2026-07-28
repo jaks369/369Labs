@@ -7,6 +7,7 @@ const VOLATILITY_PREFIXES = getAllVolatilitySymbols();
 
 let ws: WebSocket | null = null;
 let started = false;
+let subscribedSymbolsOnServer = new Set<string>();
 // Feed integrity tracking. Bots/strategies should pause when feed is stale or out of order.
 const lastTickEpoch: Record<string, number> = {};
 let lastAnyTickEpoch = 0;
@@ -46,6 +47,8 @@ async function fetchActiveSymbols(): Promise<string[]> {
 
 function subscribeSymbol(symbol: string) {
   if (!ws) return;
+  if (subscribedSymbolsOnServer.has(symbol)) return;
+  subscribedSymbolsOnServer.add(symbol);
   ws.send(JSON.stringify({ ticks: symbol, subscribe: 1, req_id: msgId++ }));
 }
 
@@ -92,6 +95,7 @@ export function startTickCollector() {
     ws.on("close", () => {
       console.log("[tickCollector] closed, will retry in 10s");
       ws = null;
+      subscribedSymbolsOnServer.clear();
       setTimeout(() => startTickCollector(), 10000);
     });
   } catch (e) {

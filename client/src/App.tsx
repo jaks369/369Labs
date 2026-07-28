@@ -42,6 +42,7 @@ import UserGuide from "./pages/UserGuide";
 import Changelog from "./pages/Changelog";
 import ReleaseNotes from "./pages/ReleaseNotes";
 import StrategyComparison from "./pages/StrategyComparison";
+import StrategyEnginePage from "./pages/StrategyEngine";
 import AutoReports from "./pages/AutoReports";
 import ServerError from "./pages/ServerError";
 import BackupRestore from "./pages/BackupRestore";
@@ -109,6 +110,7 @@ function Router() {
       <Route path={"/changelog"}><AppLayout><Changelog /></AppLayout></Route>
       <Route path={"/release-notes"}><AppLayout><ReleaseNotes /></AppLayout></Route>
       <Route path={"/strategy-comparison"}><AppLayout><StrategyComparison /></AppLayout></Route>
+      <Route path={"/strategy-engine"}><AppLayout><StrategyEnginePage /></AppLayout></Route>
       <Route path={"/auto-reports"}><AppLayout><AutoReports /></AppLayout></Route>
       <Route path={"/backup"}><AppLayout><BackupRestore /></AppLayout></Route>
       <Route path={"/404"} component={NotFound} />

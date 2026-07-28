@@ -2708,6 +2708,59 @@ watch: protectedProcedure
         return { ok: true };
       }),
   },
+  strategyEngine: router({
+    metas: protectedProcedure.query(async () => {
+      const { StrategyRegistry } = await import("./ai/StrategyEngine");
+      const registry = StrategyRegistry.getInstance();
+      if (registry.count() === 0) {
+        const { registerDefaultStrategies } = await import("./ai/StrategyEngine/Strategies/registerStrategies");
+        registerDefaultStrategies();
+      }
+      return registry.getMetas();
+    }),
+    enable: protectedProcedure
+      .input(z.object({ id: z.string() }))
+      .mutation(async ({ input }) => {
+        const { StrategyRegistry } = await import("./ai/StrategyEngine");
+        StrategyRegistry.getInstance().enable(input.id);
+        return { ok: true };
+      }),
+    disable: protectedProcedure
+      .input(z.object({ id: z.string() }))
+      .mutation(async ({ input }) => {
+        const { StrategyRegistry } = await import("./ai/StrategyEngine");
+        StrategyRegistry.getInstance().disable(input.id);
+        return { ok: true };
+      }),
+    analyze: protectedProcedure
+      .input(z.object({ symbol: z.string() }))
+      .query(async ({ ctx, input }) => {
+        const { consensusEngine } = await import("./ai/StrategyEngine");
+        return consensusEngine.analyze(input.symbol, ctx.user.id);
+      }),
+    regime: protectedProcedure
+      .input(z.object({ symbol: z.string() }))
+      .query(async ({ input }) => {
+        const { marketRegimeDetector } = await import("./ai/StrategyEngine");
+        return marketRegimeDetector.detect(input.symbol);
+      }),
+    regimes: protectedProcedure.query(async () => {
+      const { marketRegimeDetector } = await import("./ai/StrategyEngine");
+      return marketRegimeDetector.detectAll();
+    }),
+    rankings: protectedProcedure.query(async ({ ctx }) => {
+      const { aiStrategyLearning } = await import("./ai/StrategyEngine");
+      return aiStrategyLearning.getRankings(ctx.user.id);
+    }),
+    recommendation: protectedProcedure.query(async ({ ctx }) => {
+      const { aiStrategyLearning } = await import("./ai/StrategyEngine");
+      return aiStrategyLearning.getRecommendation(ctx.user.id);
+    }),
+    performances: protectedProcedure.query(async ({ ctx }) => {
+      const { strategyPerformanceTracker } = await import("./ai/StrategyEngine");
+      return strategyPerformanceTracker.getAllPerformances(ctx.user.id);
+    }),
+  }),
 });
 
 
