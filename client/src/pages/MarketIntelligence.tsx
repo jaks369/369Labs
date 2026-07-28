@@ -10,7 +10,7 @@ import MarketRiskPanel from "@/components/MarketRiskPanel";
 
 import { getAllSymbols } from "@shared/symbols";
 
-const SCREENER_SYMBOLS = getAllSymbols();
+const SCREENER_SYMBOLS = getAllSymbols() ?? [];
 
 export default function MarketIntelligencePage() {
   const { isAuthenticated } = useAuth();

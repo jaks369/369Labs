@@ -807,15 +807,19 @@ export async function updateKnowledgeRelatedTrade(knowledgeId: number, tradeId: 
 export async function saveBotLog(data: InsertBotLog): Promise<void> {
   const db = await getDb();
   if (!db) return;
-  await db.insert(botLogs).values(data);
+  try {
+    await db.insert(botLogs).values(data);
+  } catch { /* table may not exist in production */ }
 }
 
 export async function getBotLogsByRunId(botRunId: number, userId: number, limit: number = 100): Promise<BotLog[]> {
   const db = await getDb();
   if (!db) return [];
-  return db.select().from(botLogs)
-    .where(and(eq(botLogs.botRunId, botRunId), eq(botLogs.userId, userId)))
-    .orderBy(desc(botLogs.createdAt)).limit(limit);
+  try {
+    return db.select().from(botLogs)
+      .where(and(eq(botLogs.botRunId, botRunId), eq(botLogs.userId, userId)))
+      .orderBy(desc(botLogs.createdAt)).limit(limit);
+  } catch { return []; }
 }
 
 export async function saveBotRun(botRun: InsertBotRun): Promise<BotRun> {

@@ -387,6 +387,21 @@ export default function Bots() {
               <div className="p-4 space-y-1 max-h-[60vh] overflow-y-auto font-mono text-[11px]">
                 {botLogsQuery.isLoading ? (
                   <div className="flex items-center justify-center py-8"><Loader2 className="w-5 h-5 animate-spin text-[var(--amber)]" /></div>
+                ) : botLogsQuery.isError ? (
+                  <div className="space-y-1">
+                    {(() => {
+                      const bot = runningBots.find(b => b.runId === viewLogsFor);
+                      return bot?.lastLog ? (
+                        <div className="flex items-start gap-2 py-1 text-[var(--text-secondary)]">
+                          <span className="text-[10px] text-[var(--text-muted)] shrink-0">--:--:--</span>
+                          <span className="text-[10px] font-bold uppercase shrink-0 w-10">[info]</span>
+                          <span>{bot.lastLog}</span>
+                        </div>
+                      ) : (
+                        <p className="text-sm text-[var(--text-muted)] text-center py-8">No logs yet. The database is unavailable — logs are not being persisted.</p>
+                      );
+                    })()}
+                  </div>
                 ) : (botLogsQuery.data || []).length === 0 ? (
                   <p className="text-sm text-[var(--text-muted)] text-center py-8">No logs for this bot run.</p>
                 ) : (

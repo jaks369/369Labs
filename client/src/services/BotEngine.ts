@@ -333,9 +333,9 @@ export class BotEngine {
     if (!update.is_sold) return; // still open, ignore intermediate ticks on the contract
 
     this.hasOpenTrade = false;
-    trade.pnl = update.profit.toFixed(2);
-    trade.result = update.profit >= 0 ? "win" : "loss";
-    this.totalPnl += update.profit;
+    trade.pnl = Number(update.profit).toFixed(2);
+    trade.result = Number(update.profit) >= 0 ? "win" : "loss";
+    this.totalPnl += Number(update.profit);
     this.onTrade?.(trade);
 
     const waiters = this.stopWaiters;
