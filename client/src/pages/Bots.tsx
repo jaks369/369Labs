@@ -62,6 +62,7 @@ export default function Bots() {
   const startRunMutation = trpc.bot.startRun.useMutation();
   const stopRunMutation = trpc.bot.stopRun.useMutation();
   const saveTradeMutation = trpc.trades.save.useMutation();
+  const saveLogMutation = trpc.bot.saveLog.useMutation();
   const notifyTelegram = trpc.telegram.send.useMutation();
   const botLogsQuery = trpc.bot.getLogs.useQuery(
     { botRunId: viewLogsFor ?? 0, limit: 200 },
@@ -158,12 +159,13 @@ export default function Bots() {
           });
           const decimalRegex = /^\d+(\.\d{1,8})?$/;
           if (!decimalRegex.test(trade.stake.toString())) {
+            console.warn(`Invalid stake format: ${trade.stake}`);
           }
           alertTg(`${strategy.name} [${trade.symbol}] trade ${trade.result.toUpperCase()} · stake $${trade.stake} · P&L ${parseFloat(trade.pnl) >= 0 ? "+" : ""}${trade.pnl}`);
         },
         onLog: (message) => {
           updateBot(botRun.id, { lastLog: message });
-          try { fetch("/api/trpc/bot.saveLog", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ "0": { botRunId: botRun.id, message, level: "info" } }) }).catch(() => {}); } catch {}
+          try { saveLogMutation.mutate({ botRunId: botRun.id, message, level: "info" }); } catch {}
         },
       });
 

@@ -119,7 +119,7 @@ export class AIExplainabilityEngine {
     return { trade, strategy, accuracy };
   }
 
-  async getExportReport(userId: number): Promise<ExportReport> {
+  async getExport(userId: number): Promise<ExportReport> {
     const entries = await fetchAllKnowledge(userId);
     const confidences = entries.map((e: any) => e.confidence);
     const avgConf = confidences.length > 0 ? confidences.reduce((a: number, b: number) => a + b, 0) / confidences.length : 0;

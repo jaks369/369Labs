@@ -85,7 +85,8 @@ export default function Dashboard() {
       onTick: (tick: any) => {
         if (tick.symbol !== selectedSymbol) return;
         const price = Number(tick.price);
-        const lastDigit = parseInt(String(tick.price).replace(".", "").slice(-1), 10) || 0;
+        const decimals = derivWS.decimalPlacesFor(selectedSymbol);
+        const lastDigit = parseInt(price.toFixed(decimals).slice(-1), 10) || 0;
         setLiveTicks((prev) => [{ symbol: tick.symbol, price, lastDigit, epoch: Math.floor(tick.timestamp / 1000) }, ...prev].slice(0, 50));
       },
       onError: () => {},
