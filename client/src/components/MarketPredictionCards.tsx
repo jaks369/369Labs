@@ -111,7 +111,7 @@ export default function MarketPredictionCards({ data, loading }: MarketPredictio
             {p.reasoning.length > 0 && (
               <div className="space-y-0.5 mb-2">
                 {p.reasoning.slice(0, 2).map((r, j) => (
-                  <p key={j} className="text-[8px] text-[var(--text-muted)]">ΓÇó {r}</p>
+                  <p key={j} className="text-[8px] text-[var(--text-muted)]">• {r}</p>
                 ))}
               </div>
             )}

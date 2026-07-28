@@ -300,7 +300,7 @@ async function runTool(name: string, args: any, ctxUser?: any) {
         if (!rule || !rule.symbol) return { error: "Strategy has no executable rule" };
         const { derivManager } = await import("./derivConnection");
         const conn = await derivManager.ensureConnected(ctxUser.id);
-        if (!conn) return { error: "Deriv not connected ΓÇö cannot fetch ticks for backtest" };
+        if (!conn) return { error: "Deriv not connected — cannot fetch ticks for backtest" };
         const ticks = await conn.getTickHistory(rule.symbol, Math.min(args.tickCount || 1000, 2000));
         if (!ticks.length) return { error: "No tick data available for backtest" };
         const { runBacktest } = await import("./backtest");
@@ -1816,7 +1816,7 @@ save: protectedProcedure
           const messages: any[] = [
             { role: "system", content: `${agent.persona}${memoryStr}${platformStr}
 
-When you use a tool, briefly note which specialist is acting (e.g. "[Market Analyst]"). If the platform state shows something relevant (e.g. an open position, a running bot, a live balance), reference it. Keep it real ΓÇö no robot speak.` },
+When you use a tool, briefly note which specialist is acting (e.g. "[Market Analyst]"). If the platform state shows something relevant (e.g. an open position, a running bot, a live balance), reference it. Keep it real — no robot speak.` },
             ...prior,
             { role: "user", content: input.message },
           ];
@@ -1996,7 +1996,7 @@ Return ONLY the JSON.`;
       }),
   }),
 
-  // 369AI Live Intelligence Feed ΓÇö powers the dashboard AI panel.
+  // 369AI Live Intelligence Feed — powers the dashboard AI panel.
   aiLive: router({
     feed: protectedProcedure.query(async () => {
       const { aiOrchestrator } = await import("./ai/AIOrchestrator");

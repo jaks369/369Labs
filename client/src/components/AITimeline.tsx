@@ -49,7 +49,7 @@ export default function AITimeline({ compact = false }: { compact?: boolean }) {
       </div>
       {entries.length === 0 ? (
         <p className="text-[10px] text-[var(--text-muted)] leading-relaxed">
-          Live agent activity will appear here ΓÇö scans, strategy builds, risk checks, trades.
+          Live agent activity will appear here — scans, strategy builds, risk checks, trades.
         </p>
       ) : (
         <ul className="space-y-1">

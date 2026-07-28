@@ -23,7 +23,7 @@ export default function AIEvidenceCard({ response }: AIEvidenceCardProps) {
           {response.evidence.length > 0 ? (
             <ul className="space-y-0.5">
               {response.evidence.map((item, i) => (
-                <li key={i} className="text-[9px] text-[var(--text-muted)] leading-relaxed">ΓÇó {item}</li>
+                <li key={i} className="text-[9px] text-[var(--text-muted)] leading-relaxed">• {item}</li>
               ))}
             </ul>
           ) : (

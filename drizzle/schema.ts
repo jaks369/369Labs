@@ -31,7 +31,7 @@ export type InsertUser = typeof users.$inferInsert;
 // Sessions (for session management & revocation)
 export const sessions = mysqlTable("sessions", {
   id: int("id").autoincrement().primaryKey(),
-  userId: int("userId").notNull(),
+  userId: int("userId").notNull().references(() => users.id, { onDelete: "cascade" }),
   sessionId: varchar("sessionId", { length: 64 }).notNull().unique(),
   userAgent: text("userAgent"),
   ip: varchar("ip", { length: 45 }),
@@ -46,7 +46,7 @@ export type InsertSession = typeof sessions.$inferInsert;
 // IP Whitelist (admin-managed)
 export const ipWhitelist = mysqlTable("ipWhitelist", {
   id: int("id").autoincrement().primaryKey(),
-  userId: int("userId").notNull(),
+  userId: int("userId").notNull().references(() => users.id, { onDelete: "cascade" }),
   ip: varchar("ip", { length: 45 }).notNull(),
   label: text("label"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
@@ -58,7 +58,7 @@ export type InsertIpWhitelistEntry = typeof ipWhitelist.$inferInsert;
 // Deriv API Tokens
 export const derivTokens = mysqlTable("derivTokens", {
   id: int("id").autoincrement().primaryKey(),
-  userId: int("userId").notNull(),
+  userId: int("userId").notNull().references(() => users.id, { onDelete: "cascade" }),
   token: text("token").notNull(), // Encrypted token
   accountId: varchar("accountId", { length: 64 }),
   accountType: varchar("accountType", { length: 32 }), // e.g., "demo", "real"
@@ -73,7 +73,7 @@ export type InsertDerivToken = typeof derivTokens.$inferInsert;
 // Trading Strategies
 export const strategies = mysqlTable("strategies", {
   id: int("id").autoincrement().primaryKey(),
-  userId: int("userId").notNull(),
+  userId: int("userId").notNull().references(() => users.id, { onDelete: "cascade" }),
   name: varchar("name", { length: 255 }).notNull(),
   description: text("description"),
   config: json("config").notNull(), // JSON config of the strategy blocks
@@ -89,7 +89,7 @@ export type InsertStrategy = typeof strategies.$inferInsert;
 // Trade History
 export const trades = mysqlTable("trades", {
   id: int("id").autoincrement().primaryKey(),
-  userId: int("userId").notNull(),
+  userId: int("userId").notNull().references(() => users.id, { onDelete: "cascade" }),
   botRunId: int("botRunId"),
   strategyId: int("strategyId"),
   entryTime: timestamp("entryTime").notNull(),
@@ -112,7 +112,7 @@ export type InsertTrade = typeof trades.$inferInsert;
 export const botLogs = mysqlTable("botLogs", {
   id: int("id").autoincrement().primaryKey(),
   botRunId: int("botRunId").notNull(),
-  userId: int("userId").notNull(),
+  userId: int("userId").notNull().references(() => users.id, { onDelete: "cascade" }),
   message: text("message").notNull(),
   level: mysqlEnum("level", ["info", "warn", "error"]).default("info").notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
@@ -124,7 +124,7 @@ export type InsertBotLog = typeof botLogs.$inferInsert;
 // Bot Runs (for tracking bot execution history)
 export const botRuns = mysqlTable("botRuns", {
   id: int("id").autoincrement().primaryKey(),
-  userId: int("userId").notNull(),
+  userId: int("userId").notNull().references(() => users.id, { onDelete: "cascade" }),
   strategyId: int("strategyId").notNull(),
   startTime: timestamp("startTime").defaultNow().notNull(),
   endTime: timestamp("endTime"),
@@ -142,7 +142,7 @@ export type InsertBotRun = typeof botRuns.$inferInsert;
 // Telegram Settings
 export const telegramSettings = mysqlTable("telegramSettings", {
   id: int("id").autoincrement().primaryKey(),
-  userId: int("userId").notNull().unique(),
+userId: int("userId").notNull().references(() => users.id, { onDelete: "cascade" }).unique(),
   botToken: text("botToken"), // Encrypted Telegram bot token
   chatId: varchar("chatId", { length: 64 }),
   isVerified: boolean("isVerified").default(false).notNull(),
@@ -156,7 +156,7 @@ export type InsertTelegramSettings = typeof telegramSettings.$inferInsert;
 // Notification Settings
 export const notificationSettings = mysqlTable("notificationSettings", {
   id: int("id").autoincrement().primaryKey(),
-  userId: int("userId").notNull().unique(),
+  userId: int("userId").notNull().references(() => users.id, { onDelete: "cascade" }).unique(),
   emailEnabled: boolean("emailEnabled").default(true).notNull(),
   tradeExecuted: boolean("tradeExecuted").default(true).notNull(),
   takeProfitHit: boolean("takeProfitHit").default(true).notNull(),
@@ -185,7 +185,7 @@ export type InsertTickHistory = typeof tickHistory.$inferInsert;
 // AI-discovered trading signals (the "Marketplace" / AI Insights feed)
 export const signals = mysqlTable("signals", {
   id: int("id").autoincrement().primaryKey(),
-  userId: int("userId").notNull(),
+  userId: int("userId").notNull().references(() => users.id, { onDelete: "cascade" }),
   symbol: varchar("symbol", { length: 32 }).notNull(),
   title: varchar("title", { length: 255 }).notNull(),
   description: text("description").notNull(),
@@ -210,7 +210,7 @@ export type InsertSignal = typeof signals.$inferInsert;
 // Audit log: who changed what and when (token add, strategy edit, bot start/stop, SL change).
 export const auditLogs = mysqlTable("auditLogs", {
   id: int("id").autoincrement().primaryKey(),
-  userId: int("userId").notNull(),
+  userId: int("userId").notNull().references(() => users.id, { onDelete: "cascade" }),
   action: varchar("action", { length: 48 }).notNull(), // e.g. "token.add", "strategy.create", "bot.start", "bot.stop", "strategy.edit", "sl.change"
   target: varchar("target", { length: 64 }), // strategy id, bot id, etc.
   detail: json("detail"), // before/after snapshot where relevant
@@ -224,7 +224,7 @@ export type InsertAuditLog = typeof auditLogs.$inferInsert;
 // (favorite symbols, risk %, no-martingale rule, trading style, notes). Keyed per user.
 export const userMemory = mysqlTable("userMemory", {
   id: int("id").autoincrement().primaryKey(),
-  userId: int("userId").notNull().unique(),
+  userId: int("userId").notNull().references(() => users.id, { onDelete: "cascade" }).unique(),
   // JSON blob of remembered preferences, e.g.
   // { symbols: ["R_75"], riskPct: 2, noMartingale: true, style: "volatility 1m", notes: "" }
   memory: json("memory").notNull(),
@@ -252,7 +252,7 @@ export type InsertPlugin = typeof plugins.$inferInsert;
 // Which plugins a given user has installed/enabled.
 export const pluginInstalls = mysqlTable("plugin_installs", {
   id: int("id").autoincrement().primaryKey(),
-  userId: int("userId").notNull(),
+  userId: int("userId").notNull().references(() => users.id, { onDelete: "cascade" }),
   pluginId: int("pluginId").notNull(),
   enabled: boolean("enabled").default(true).notNull(),
   installedAt: timestamp("installed_at").defaultNow().notNull(),
@@ -264,7 +264,7 @@ export type InsertPluginInstall = typeof pluginInstalls.$inferInsert;
 // One-shot scheduled task queue (used by plugins / workflows).
 export const jobs = mysqlTable("jobs", {
   id: int("id").autoincrement().primaryKey(),
-  userId: int("userId").notNull(),
+  userId: int("userId").notNull().references(() => users.id, { onDelete: "cascade" }),
   type: varchar("type", { length: 64 }).notNull(),
   payload: json("payload"),
   status: mysqlEnum("status", ["pending", "done", "failed"]).default("pending").notNull(),
@@ -278,7 +278,7 @@ export type InsertJob = typeof jobs.$inferInsert;
 // Password reset tokens (store hashed token + expiry; verified on reset)
 export const passwordResetTokens = mysqlTable("passwordResetTokens", {
   id: int("id").autoincrement().primaryKey(),
-  userId: int("userId").notNull(),
+  userId: int("userId").notNull().references(() => users.id, { onDelete: "cascade" }),
   token: varchar("token", { length: 96 }).notNull(),
   expiresAt: timestamp("expiresAt").notNull(),
   usedAt: timestamp("usedAt"),
@@ -291,7 +291,7 @@ export type InsertPasswordResetToken = typeof passwordResetTokens.$inferInsert;
 // Price alerts: user-defined triggers when a symbol reaches a target price
 export const priceAlerts = mysqlTable("priceAlerts", {
   id: int("id").autoincrement().primaryKey(),
-  userId: int("userId").notNull(),
+  userId: int("userId").notNull().references(() => users.id, { onDelete: "cascade" }),
   symbol: varchar("symbol", { length: 32 }).notNull(),
   direction: mysqlEnum("direction", ["above", "below"]).notNull(),
   targetPrice: decimal("targetPrice", { precision: 18, scale: 8 }).notNull(),
@@ -307,7 +307,7 @@ export type InsertPriceAlert = typeof priceAlerts.$inferInsert;
 // Email verification tokens (used to verify email after signup)
 export const verificationTokens = mysqlTable("verificationTokens", {
   id: int("id").autoincrement().primaryKey(),
-  userId: int("userId").notNull(),
+  userId: int("userId").notNull().references(() => users.id, { onDelete: "cascade" }),
   token: varchar("token", { length: 96 }).notNull(),
   expiresAt: timestamp("expiresAt").notNull(),
   usedAt: timestamp("usedAt"),
@@ -320,7 +320,7 @@ export type InsertVerificationToken = typeof verificationTokens.$inferInsert;
 // OAuth accounts (Google, GitHub, etc.)
 export const oauthAccounts = mysqlTable("oauthAccounts", {
   id: int("id").autoincrement().primaryKey(),
-  userId: int("userId").notNull(),
+  userId: int("userId").notNull().references(() => users.id, { onDelete: "cascade" }),
   provider: varchar("provider", { length: 32 }).notNull(),
   providerId: varchar("providerId", { length: 255 }).notNull(),
   email: varchar("email", { length: 320 }),
@@ -334,7 +334,7 @@ export type InsertOAuthAccount = typeof oauthAccounts.$inferInsert;
 // Persisted 369AI chat history per user+chat
 export const chatMessages = mysqlTable("chatMessages", {
   id: int("id").autoincrement().primaryKey(),
-  userId: int("userId").notNull(),
+  userId: int("userId").notNull().references(() => users.id, { onDelete: "cascade" }),
   chatId: varchar("chatId", { length: 64 }).notNull().default("main"),
   role: varchar("role", { length: 16 }).notNull(), // "user" | "ai"
   content: text("content").notNull(),
@@ -348,7 +348,7 @@ export type InsertChatMessage = typeof chatMessages.$inferInsert;
 // AI Knowledge: persistent storage for AI-generated insights (trade reviews, strategy reviews, accuracy logs, market patterns)
 export const aiKnowledge = mysqlTable("aiKnowledge", {
   id: int("id").autoincrement().primaryKey(),
-  userId: int("userId").notNull(),
+  userId: int("userId").notNull().references(() => users.id, { onDelete: "cascade" }),
   knowledgeType: varchar("knowledgeType", { length: 32 }).notNull(),
   symbol: varchar("symbol", { length: 32 }),
   data: json("data"),
@@ -367,7 +367,7 @@ export type AiKnowledgeResult = AiKnowledge;
 // Webhooks: external URL callbacks for notification events
 export const webhooks = mysqlTable("webhooks", {
   id: int("id").autoincrement().primaryKey(),
-  userId: int("userId").notNull(),
+  userId: int("userId").notNull().references(() => users.id, { onDelete: "cascade" }),
   url: varchar("url", { length: 512 }).notNull(),
   events: json("events").notNull(),
   label: varchar("label", { length: 64 }),

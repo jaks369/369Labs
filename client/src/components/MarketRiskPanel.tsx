@@ -123,7 +123,7 @@ export default function MarketRiskPanel({ data, loading }: MarketRiskPanelProps)
             {a.factors.length > 0 && (
               <div className="space-y-0.5 mb-1.5">
                 {a.factors.slice(0, 2).map((f, j) => (
-                  <p key={j} className="text-[8px] text-[var(--text-muted)]">ΓÇó {f}</p>
+                  <p key={j} className="text-[8px] text-[var(--text-muted)]">• {f}</p>
                 ))}
               </div>
             )}

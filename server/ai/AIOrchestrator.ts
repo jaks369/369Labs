@@ -42,7 +42,7 @@ export class AIOrchestrator {
     this.state.active = true;
     this.tick();
     this.intervalId = setInterval(() => this.tick(), POLL_INTERVAL);
-    console.log("[369AI] Orchestrator started ΓÇö polling every 15s");
+    console.log("[369AI] Orchestrator started — polling every 15s");
   }
 
   stop(): void {
@@ -110,7 +110,7 @@ export class AIOrchestrator {
             id: generateFeedId(),
             symbol: h.symbol,
             timestamp: Date.now(),
-            message: `${h.displayName} health: ${h.score}/100 ΓÇö ${h.recommendation}`,
+            message: `${h.displayName} health: ${h.score}/100 — ${h.recommendation}`,
             confidence: h.score,
             reasoning: [`Trend: ${h.trend}%`, `Momentum: ${h.momentum}%`, `Noise: ${h.noise}%`],
             type: "health",
@@ -134,7 +134,7 @@ export class AIOrchestrator {
               id: generateFeedId(),
               symbol,
               timestamp: now,
-              message: `Risk alert: ${symbol} ΓÇö ${risk.warnings[0] || "Unstable conditions"}`,
+              message: `Risk alert: ${symbol} — ${risk.warnings[0] || "Unstable conditions"}`,
               confidence: risk.confidence,
               reasoning: [`Volatility: ${risk.volatility}`, `Trend quality: ${risk.trendQuality}%`, risk.recommendation],
               type: "risk",
@@ -168,7 +168,7 @@ export class AIOrchestrator {
               id: generateFeedId(),
               symbol,
               timestamp: Date.now(),
-              message: `Risk advisory: ${symbol} ΓÇö ${advisory.recommendation}`,
+              message: `Risk advisory: ${symbol} — ${advisory.recommendation}`,
               confidence: advisory.confidence,
               reasoning: advisory.factors,
               type: "warning",

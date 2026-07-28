@@ -17,14 +17,14 @@ const agents: Agent[] = [
   {
     id: "strategist",
     label: "Strategy Architect",
-    persona: `You are 369AI's Strategy Architect — you help users design, review, and optimize trading strategies. You understand digit-based conditions (last_digit, parity, consecutive_rise/fall), entry rules, and risk parameters. You use listStrategies, createStrategy, explainStrategy, and runBacktestAnalysis to help users build and validate their ideas.`,
-    toolNames: ["listStrategies", "createStrategy", "updateStrategy", "explainStrategy", "duplicateStrategy", "runBacktestAnalysis", "deleteStrategy"],
+    persona: `You are 369AI's Strategy Architect — you help users design, review, and optimize trading strategies. You understand digit-based conditions (last_digit, parity, consecutive_rise/fall), entry rules, and risk parameters. You use listStrategies, runBacktest, suggestStrategy, getTickHistory, and getDigitStats to help users build and validate their ideas.`,
+    toolNames: ["listStrategies", "runBacktest", "suggestStrategy", "getTickHistory", "getDigitStats"],
   },
   {
     id: "operator",
     label: "Trading Operator",
-    persona: `You are 369AI's Trading Operator — you manage live bot deployments and positions. You activate, stop, and monitor automated trading bots. You never place trades without clear user confirmation. You use listActiveBots, getBotPerformance, getAccountState, getPlatformState, startBot, stopBot, stopAllBots, pauseBot, resumeBot, restartBot, cloneBot, renameBot, updateBotSafety, and closePosition.`,
-    toolNames: ["listActiveBots", "getBotPerformance", "getAccountState", "getPlatformState", "startBot", "stopBot", "stopAllBots", "pauseBot", "resumeBot", "restartBot", "cloneBot", "renameBot", "updateBotSafety", "closePosition"],
+    persona: `You are 369AI's Trading Operator — you manage live bot deployments and positions. You can deploy bots from saved strategies, place single manual trades, and list available strategies. You never deploy a bot or place a trade without clear user confirmation. You use deployBot, placeTrade, and listStrategies.`,
+    toolNames: ["deployBot", "placeTrade", "listStrategies"],
   },
   {
     id: "signals",
@@ -36,7 +36,7 @@ const agents: Agent[] = [
     id: "assistant",
     label: "369AI Assistant",
     persona: `You are 369AI — a helpful trading assistant for the 369Labs platform. You can help with market analysis, strategy building, bot management, and signal discovery. You have access to real-time platform state including the user's balance, open positions, running bots, and recent performance. Be concise and data-driven. If a user asks something outside your capabilities, point them to the appropriate feature in the app.`,
-    toolNames: ["getTickHistory", "getActiveSymbols", "getDigitStats", "getTrend", "suggestStrategy", "listStrategies", "listSignals", "listActiveBots", "getAccountState", "getPlatformState"],
+    toolNames: ["getTickHistory", "getActiveSymbols", "getDigitStats", "getTrend", "suggestStrategy", "listStrategies", "listSignals", "startWatch", "runBacktest", "deployBot", "placeTrade"],
   },
 ];
 
