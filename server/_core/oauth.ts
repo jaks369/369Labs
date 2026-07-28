@@ -1,5 +1,6 @@
 import { Router, Request, Response } from "express";
 import crypto from "crypto";
+import { parse as parseCookieHeader } from "cookie";
 import { ENV } from "./env";
 import { getSessionCookieOptions } from "./cookies";
 import { createSessionToken, hashPassword } from "./auth";
@@ -10,17 +11,36 @@ const OAUTH_REDIRECT = `${ENV.appUrl}/oauth/callback`;
 
 export const oauthRouter = Router();
 
+const OAUTH_STATE_COOKIE = "oauth_state";
+
+function generateState(): { state: string; cookieOpts: any } {
+  const state = crypto.randomBytes(16).toString("hex");
+  return {
+    state,
+    cookieOpts: {
+      httpOnly: true,
+      sameSite: "lax" as const,
+      secure: ENV.isProduction,
+      maxAge: 600_000, // 10 minutes
+      path: "/",
+    },
+  };
+}
+
 // Google OAuth
 oauthRouter.get("/google", (_req: Request, res: Response) => {
   if (!ENV.googleClientId) {
     return res.status(503).json({ error: "Google OAuth not configured" });
   }
+  const { state, cookieOpts } = generateState();
   const url = new URL("https://accounts.google.com/o/oauth2/v2/auth");
   url.searchParams.set("client_id", ENV.googleClientId);
   url.searchParams.set("redirect_uri", `${OAUTH_REDIRECT}?provider=google`);
   url.searchParams.set("response_type", "code");
   url.searchParams.set("scope", "openid email profile");
   url.searchParams.set("access_type", "offline");
+  url.searchParams.set("state", state);
+  res.cookie(OAUTH_STATE_COOKIE, state, cookieOpts);
   res.redirect(url.toString());
 });
 
@@ -28,15 +48,25 @@ oauthRouter.get("/github", (_req: Request, res: Response) => {
   if (!ENV.githubClientId) {
     return res.status(503).json({ error: "GitHub OAuth not configured" });
   }
+  const { state, cookieOpts } = generateState();
   const url = new URL("https://github.com/login/oauth/authorize");
   url.searchParams.set("client_id", ENV.githubClientId);
   url.searchParams.set("redirect_uri", `${OAUTH_REDIRECT}?provider=github`);
   url.searchParams.set("scope", "read:user user:email");
+  url.searchParams.set("state", state);
+  res.cookie(OAUTH_STATE_COOKIE, state, cookieOpts);
   res.redirect(url.toString());
 });
 
 oauthRouter.get("/callback", async (req: Request, res: Response) => {
-  const { code, provider } = req.query as { code?: string; provider?: string };
+  const { code, provider, state } = req.query as { code?: string; provider?: string; state?: string };
+  const cookies = parseCookieHeader(req.headers.cookie || "");
+  const cookieState = cookies.get(OAUTH_STATE_COOKIE);
+
+  if (!state || !cookieState || state !== cookieState) {
+    return res.redirect(`${ENV.appUrl}/login?oauth_error=invalid_state`);
+  }
+  res.clearCookie(OAUTH_STATE_COOKIE, { path: "/" });
 
   if (!code || !provider) {
     return res.redirect(`${ENV.appUrl}/login?oauth_error=missing_params`);

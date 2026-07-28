@@ -1,7 +1,6 @@
 import "dotenv/config";
 import express from "express";
 import { createExpressMiddleware } from "@trpc/server/adapters/express";
-import { registerStorageProxy } from "./storageProxy";
 import { appRouter } from "../routers";
 import { createContext } from "./context";
 import { serveStatic } from "./staticServe";
@@ -74,7 +73,6 @@ export async function createApp() {
     next();
   });
 
-  registerStorageProxy(app);
   app.use("/api/auth", oauthRouter);
 
   // Lightweight in-memory rate limiter (per-IP + per-key). Stricter caps on auth/trading/AI paths.
