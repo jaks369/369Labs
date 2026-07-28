@@ -64,13 +64,13 @@ export default function AIExplainability() {
   const memoryQuery = trpc.ai.memory.useQuery({ limit: 20 });
   const [slotIdx, setSlotIdx] = useState<Record<Slot, number>>({ prediction: 0, entry: 0, risk: 0 });
 
-  const allEntries = useMemo(() => (memoryQuery.data?.entries || []).filter(e => e.data && typeof e.data === "object"), [memoryQuery.data]);
+  const allEntries = useMemo(() => (memoryQuery.data?.entries || []).filter((e: any) => e.data && typeof e.data === "object"), [memoryQuery.data]);
 
   const preferredFor = useMemo(() => {
     const map: Record<Slot, any[]> = { prediction: [], entry: [], risk: [] };
     for (const slot of ["prediction", "entry", "risk"] as Slot[]) {
       const types = SLOT_CONFIG[slot].preferredTypes;
-      map[slot] = allEntries.filter(e => types.includes(e.knowledgeType));
+      map[slot] = allEntries.filter((e: any) => types.includes(e.knowledgeType));
     }
     return map;
   }, [allEntries]);

@@ -269,7 +269,7 @@ class DerivWebSocketService {
             return 3;
           })(),
         };
-      }).filter(s => s.symbol && s.displayName);
+      }).filter((s: any) => s.symbol && s.displayName);
       if (!symbols.length) {
         console.warn("[Deriv WS] active_symbols all filtered out, using defaults");
         symbols = [
