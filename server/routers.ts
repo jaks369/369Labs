@@ -474,6 +474,24 @@ async function runTool(name: string, args: any, ctxUser?: any) {
     }
   }, 300_000);
 
+// In-memory rate limiter for auth endpoints
+const loginAttempts = new Map<string, { count: number; resetAt: number }>();
+const RATE_LIMIT_WINDOW = 60_000; // 1 minute
+const RATE_LIMIT_MAX = 10; // 10 attempts per minute per IP
+
+function checkRateLimit(ip: string): void {
+  const now = Date.now();
+  const entry = loginAttempts.get(ip);
+  if (entry && now < entry.resetAt) {
+    if (entry.count >= RATE_LIMIT_MAX) {
+      throw new TRPCError({ code: "TOO_MANY_REQUESTS", message: "Too many attempts. Try again later." });
+    }
+    entry.count++;
+  } else {
+    loginAttempts.set(ip, { count: 1, resetAt: now + RATE_LIMIT_WINDOW });
+  }
+}
+
 export const appRouter = router({
   system: systemRouter,
 
@@ -526,6 +544,7 @@ export const appRouter = router({
         password: z.string().min(1),
       }))
       .mutation(async ({ ctx, input }) => {
+        checkRateLimit(ctx.req.ip || ctx.req.headers["x-forwarded-for"]?.toString().split(",")[0]?.trim() || "unknown");
         let user; try { user = await db.getUserByEmail(input.email); } catch { throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Authentication service unavailable" }); }
         if (!user) {
           throw new TRPCError({ code: "UNAUTHORIZED", message: "Invalid email or password" });
@@ -555,6 +574,7 @@ export const appRouter = router({
     verify2FALogin: publicProcedure
       .input(z.object({ email: z.string().email(), token: z.string().length(6) }))
       .mutation(async ({ ctx, input }) => {
+        checkRateLimit(ctx.req.ip || ctx.req.headers["x-forwarded-for"]?.toString().split(",")[0]?.trim() || "unknown");
         const user = await db.getUserByEmail(input.email);
         if (!user || !user.twoFactorEnabled || !user.twoFASecret) {
           throw new TRPCError({ code: "BAD_REQUEST", message: "2FA not enabled" });

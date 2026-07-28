@@ -52,19 +52,18 @@ class BotRunner {
     });
   }
 
-  stop(id: string, userId: number, reason: string): void {
+  stop(id: string, userId: number, status: BotRuntime["status"], reason?: string): void {
     const bot = this.bots.get(id);
     if (!bot || bot.def.userId !== userId) return;
-    const validStatuses: BotRuntime["status"][] = ["running", "paused", "stopped", "error", "restarting"];
-    bot.status = validStatuses.includes(reason as any) ? reason as BotRuntime["status"] : "stopped";
-    if (reason === "error") {
-      notifyUser(userId, "botError", "Bot Error", `Bot "${bot.def.name}" stopped due to an error.`, bot.lastError || "Unknown error");
+    bot.status = status;
+    if (status === "error") {
+      notifyUser(userId, "botError", "Bot Error", `Bot "${bot.def.name}" stopped due to an error. ${reason || ""}`, bot.lastError || reason || "Unknown error");
       try {
         const { fireWebhookEvent } = require("./webhookExecutor");
         fireWebhookEvent(userId, "bot.error", {
           botId: id,
           botName: bot.def.name,
-          error: bot.lastError,
+          error: bot.lastError || reason,
         }).catch(() => {});
       } catch {}
     }

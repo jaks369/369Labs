@@ -23,7 +23,7 @@ export async function getPortfolioSnapshot(userId: number) {
       openPositionCount: snap.openPositionCount,
       unrealizedPnl: snap.totalUnrealizedPnl,
       totalPositions: snap.positions.length,
-      totalTrades: (await db.getTradesByUserId(userId, 1)).length > 0 ? await db.getTradesByUserId(userId, 1).then(r => r.length) : 0,
+      totalTrades: (await db.getTradesByUserId(userId)).length,
     };
   } catch {
     return {

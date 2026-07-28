@@ -1,3 +1,7 @@
+// Deriv payouts vary by contract type, duration, and symbol (typically 80–97%).
+// Set to match your broker's actual rate for the contracts you trade.
+const PAYOUT_RATE = 0.95;
+
 function lastDigitOf(price: number): number {
   const s = String(price).replace(".", "");
   return parseInt(s[s.length - 1], 10) || 0;
@@ -79,7 +83,7 @@ export async function runBacktest(ticks: { price: number; timestamp: number }[],
     const entryPrice = prices[i];
     const exitPrice = prices[i + 1];
     const result = simulateOutcome(entryPrice, exitPrice, contractType, barrier);
-    const pnl = result === "win" ? stake * 0.95 : -stake;
+    const pnl = result === "win" ? stake * PAYOUT_RATE : -stake;
 
     totalTrades++;
     if (result === "win") wins++; else losses++;
@@ -92,7 +96,7 @@ export async function runBacktest(ticks: { price: number; timestamp: number }[],
   }
 
   const winRate = totalTrades > 0 ? (wins / totalTrades) * 100 : 0;
-  const profitFactor = losses > 0 ? (wins * stake * 0.95) / (losses * stake) : wins > 0 ? Infinity : 0;
+  const profitFactor = losses > 0 ? (wins * stake * PAYOUT_RATE) / (losses * stake) : wins > 0 ? Infinity : 0;
 
   return {
     totalTrades,

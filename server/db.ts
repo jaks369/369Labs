@@ -1574,6 +1574,8 @@ export async function exportUserData(userId: number): Promise<Record<string, any
   return { strategies, trades, journals, workflows, bots, exportedAt: new Date().toISOString() };
 }
 
+const SAFE_COL_RE = /^[a-zA-Z_][a-zA-Z0-9_]*$/;
+
 export async function importUserData(userId: number, data: Record<string, any>): Promise<{ imported: number }> {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
@@ -1584,7 +1586,8 @@ export async function importUserData(userId: number, data: Record<string, any>):
     for (const row of rows) {
       const { id, createdAt, updatedAt, ...rest } = row;
       try {
-        const cols = Object.keys(rest);
+        const cols = Object.keys(rest).filter(c => SAFE_COL_RE.test(c));
+        if (cols.length === 0) continue;
         const vals = cols.map(c => (rest as any)[c]);
         await db.execute(sql`INSERT INTO ${sql.raw(table)} (${sql.raw(cols.join(", "))}, userId) VALUES (${sql.raw(vals.map(() => "?").join(", "))}, ${userId})`, vals);
         imported++;

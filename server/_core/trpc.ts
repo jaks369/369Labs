@@ -45,7 +45,7 @@ const requireUser = t.middleware(async opts => {
 
 export const protectedProcedure = t.procedure.use(csrfCheck).use(requireUser);
 
-export const adminProcedure = t.procedure.use(
+export const adminProcedure = t.procedure.use(csrfCheck).use(
   t.middleware(async opts => {
     const { ctx, next } = opts;
 

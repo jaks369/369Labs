@@ -137,7 +137,7 @@ export async function authenticateRequest(req: Request): Promise<{ user: Sanitiz
   }
   if (whitelist.length > 0) {
     const clientIp = req.headers["x-forwarded-for"]?.toString().split(",")[0]?.trim() || req.socket?.remoteAddress || "";
-    const matched = whitelist.some(e => clientIp.startsWith(e.ip));
+    const matched = whitelist.some(e => clientIp === e.ip);
     if (!matched) {
       console.log(`[auth] FAIL ip not whitelisted: ${clientIp}`);
       throw ForbiddenError("Access denied: IP not whitelisted");

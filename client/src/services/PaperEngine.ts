@@ -16,8 +16,12 @@ function simulateOutcome(entryPrice: number, nextPrice: number, contractType: st
   }
 }
 
+// Deriv payouts vary by contract type, duration, and symbol (typically 80–97%).
+// Adjust this constant to match your broker's actual rate.
+const PAYOUT_RATE = 0.95;
+
 function calcPnl(result: "win" | "loss", stake: number): number {
-  return result === "win" ? stake * 0.95 : -stake;
+  return result === "win" ? stake * PAYOUT_RATE : -stake;
 }
 
 function actionToContract(action: any): { contractType: string; barrier?: number } {
@@ -100,7 +104,9 @@ export class PaperEngine {
 
     return new Promise((resolve) => {
       setTimeout(() => {
-        const exitPrice = entryPrice + (Math.random() - 0.46) * 2;
+        // Use volatility-scaled random move instead of flat ±2 range
+        const volatility = Math.max(entryPrice * 0.001, 0.1); // ~0.1% of entry price
+        const exitPrice = entryPrice + (Math.random() - 0.5) * 2 * volatility;
         result.exitPrice = exitPrice;
         result.exitTime = Date.now();
         result.result = simulateOutcome(entryPrice, exitPrice, contractType, barrier);
