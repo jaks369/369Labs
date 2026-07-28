@@ -134,6 +134,15 @@ export class SettlementTracker {
 
     console.log(`[SettlementTracker] Trade #${trade.id} settled: ${outcome} (${profit.toFixed(2)})`);
 
+    if (trade.strategyId) {
+      try {
+        const { strategyPerformanceTracker } = await import("./ai/StrategyEngine/StrategyPerformanceTracker");
+        strategyPerformanceTracker.recordOutcome(trade.userId, String(trade.strategyId), 50, 50, 1, outcome === "win", profit).catch(() => {});
+      } catch {
+        /* non-critical */
+      }
+    }
+
     try {
       const { fireWebhookEvent } = await import("./webhookExecutor");
       fireWebhookEvent(trade.userId, "trade.settled", {

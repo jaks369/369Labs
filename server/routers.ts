@@ -1288,6 +1288,12 @@ save: protectedProcedure
             ...input,
           });
           if (input.result !== "pending") {
+            const pnl = parseFloat(input.profitLoss || "0");
+            if (input.strategyId) {
+              import("./ai/StrategyEngine/StrategyPerformanceTracker").then(({ strategyPerformanceTracker }) => {
+                strategyPerformanceTracker.recordOutcome(ctx.user.id, String(input.strategyId), 50, 50, 1, input.result === "win", pnl).catch(() => {});
+              }).catch(() => {});
+            }
             import("./ai/AIIntelligenceHub").then(({ aiIntelligenceHub }) => {
               aiIntelligenceHub.processTradeCompletion({
                 id: trade.id,

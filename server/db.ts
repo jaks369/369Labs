@@ -1,4 +1,4 @@
-import { eq, and, asc, desc, gt, lte, sql } from "drizzle-orm";
+import { eq, and, asc, desc, gt, inArray, lte, sql } from "drizzle-orm";
 import * as mysql from "mysql2/promise";
 import { drizzle } from "drizzle-orm/mysql2";
 import {
@@ -696,6 +696,20 @@ export async function saveAiKnowledge(data: InsertAiKnowledge): Promise<void> {
   } catch (e: any) {
     console.error("[aiKnowledge] insert failed", e?.message || e);
   }
+}
+
+export async function pruneAiKnowledge(userId: number, knowledgeType: string, keep: number, symbol?: string): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+  try {
+    const cond = symbol ? and(eq(aiKnowledge.userId, userId), eq(aiKnowledge.knowledgeType, knowledgeType), eq(aiKnowledge.symbol, symbol))
+      : and(eq(aiKnowledge.userId, userId), eq(aiKnowledge.knowledgeType, knowledgeType));
+    const rows = await db.select({ id: aiKnowledge.id }).from(aiKnowledge).where(cond).orderBy(desc(aiKnowledge.createdAt));
+    if (rows.length > keep) {
+      const ids = rows.slice(keep).map(r => r.id);
+      await db.delete(aiKnowledge).where(inArray(aiKnowledge.id, ids));
+    }
+  } catch {}
 }
 
 export async function searchAllAiKnowledge(userId: number, query: string, limit: number = 50): Promise<AiKnowledgeResult[]> {

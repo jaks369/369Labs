@@ -91,6 +91,8 @@ export class AIMemory {
         data: input as any,
         source: "AIMemory",
       });
+      // Keep only the latest 2 snapshots per symbol to prevent unbounded growth
+      await db.pruneAiKnowledge(0, AIKnowledgeType.MARKET_PATTERN, 2, input.symbol);
     } catch {
       /* health snapshot is non-critical */
     }
