@@ -70,10 +70,44 @@ export class StrategyRegistry {
 
   enable(id: string, userId: number): void {
     this.getDisabledSet(userId).delete(id);
+    this.persist(userId).catch(() => {});
   }
 
   disable(id: string, userId: number): void {
     this.getDisabledSet(userId).add(id);
+    this.persist(userId).catch(() => {});
+  }
+
+  async loadFromDb(userId: number): Promise<void> {
+    try {
+      const { getAiKnowledge } = await import("../../db");
+      const entries = await getAiKnowledge(userId, "strategy_prefs", 1);
+      if (entries.length > 0) {
+        const data = entries[0].data as any;
+        if (data?.disabled && Array.isArray(data.disabled)) {
+          const set = new Set<string>(data.disabled);
+          this.disabled.set(userId, set);
+        }
+      }
+    } catch { /* non-critical */ }
+  }
+
+  private async persist(userId: number): Promise<void> {
+    try {
+      const { saveAiKnowledge, getAiKnowledge, deleteAiKnowledgeEntry } = await import("../../db");
+      const set = this.disabled.get(userId);
+      if (!set || set.size === 0) {
+        const existing = await getAiKnowledge(userId, "strategy_prefs", 1);
+        if (existing.length > 0) await deleteAiKnowledgeEntry(existing[0].id, userId);
+        return;
+      }
+      await saveAiKnowledge({
+        userId,
+        knowledgeType: "strategy_prefs",
+        data: { disabled: Array.from(set) },
+        source: "StrategyRegistry",
+      });
+    } catch { /* non-critical */ }
   }
 
   isEnabled(id: string, userId: number): boolean {

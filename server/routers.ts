@@ -2760,20 +2760,25 @@ watch: protectedProcedure
         const { registerDefaultStrategies } = await import("./ai/StrategyEngine/Strategies/registerStrategies");
         registerDefaultStrategies();
       }
+      await registry.loadFromDb(ctx.user.id);
       return registry.getMetas(ctx.user.id);
     }),
     enable: protectedProcedure
       .input(z.object({ id: z.string() }))
       .mutation(async ({ ctx, input }) => {
         const { StrategyRegistry } = await import("./ai/StrategyEngine");
-        StrategyRegistry.getInstance().enable(input.id, ctx.user.id);
+        const registry = StrategyRegistry.getInstance();
+        await registry.loadFromDb(ctx.user.id);
+        registry.enable(input.id, ctx.user.id);
         return { ok: true };
       }),
     disable: protectedProcedure
       .input(z.object({ id: z.string() }))
       .mutation(async ({ ctx, input }) => {
         const { StrategyRegistry } = await import("./ai/StrategyEngine");
-        StrategyRegistry.getInstance().disable(input.id, ctx.user.id);
+        const registry = StrategyRegistry.getInstance();
+        await registry.loadFromDb(ctx.user.id);
+        registry.disable(input.id, ctx.user.id);
         return { ok: true };
       }),
     analyze: protectedProcedure

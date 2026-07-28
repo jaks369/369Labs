@@ -155,7 +155,7 @@ export async function runWatch(opts: ScanOptions): Promise<any[]> {
         source: "watch",
       } as any);
       saved.push(s);
-      await notifyUser(opts.userId, "tradeExecuted", "New Signal Detected", `A ${f.patternType} pattern was found on ${f.symbol} with ${f.winRate}% win rate.`, `Symbol: ${f.symbol}\nPattern: ${f.patternType}\nWin Rate: ${f.winRate}%\nConfidence: ${f.confidence}%\nDescription: ${f.description}`);
+      await notifyUser(opts.userId, "signalDetected", "New Signal Detected", `A ${f.patternType} pattern was found on ${f.symbol} with ${f.winRate}% win rate.`, `Symbol: ${f.symbol}\nPattern: ${f.patternType}\nWin Rate: ${f.winRate}%\nConfidence: ${f.confidence}%\nDescription: ${f.description}`);
     } catch (e) { console.error("[signalScanner] save failed", e); }
   }
   return saved;

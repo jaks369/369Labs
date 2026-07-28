@@ -1119,6 +1119,7 @@ export async function ensureNotificationSettingsColumns(): Promise<void> {
   if (!pool) return;
   const cols: [string, string][] = [
     ["emailEnabled", "tinyint(1) NOT NULL DEFAULT 1"],
+    ["signalDetected", "tinyint(1) NOT NULL DEFAULT 1"],
   ];
   for (const [name, def] of cols) {
     try {

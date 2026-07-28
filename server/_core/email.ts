@@ -1,5 +1,9 @@
 import { ENV } from "./env";
 
+function esc(s: string): string {
+  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+
 type SendEmailParams = {
   to: string;
   subject: string;
@@ -84,9 +88,9 @@ export function buildNotificationEmail(title: string, body: string, details?: st
 <head><meta charset="utf-8"></head>
 <body style="font-family: system-ui, sans-serif; background: #0A0E14; padding: 24px;">
   <div style="max-width: 480px; margin: 0 auto; background: #151B23; border: 1px solid #252B35; border-radius: 8px; padding: 32px;">
-    <h1 style="color: #F5B80B; font-size: 18px; margin: 0 0 12px;">${title}</h1>
-    <p style="color: #94A3B8; font-size: 14px; line-height: 1.6; margin: 0 0 16px;">${body}</p>
-    ${details ? `<pre style="background: #0A0E14; color: #94A3B8; font-size: 12px; padding: 12px; border-radius: 4px; overflow-x: auto; margin: 0;">${details}</pre>` : ""}
+    <h1 style="color: #F5B80B; font-size: 18px; margin: 0 0 12px;">${esc(title)}</h1>
+    <p style="color: #94A3B8; font-size: 14px; line-height: 1.6; margin: 0 0 16px;">${esc(body)}</p>
+    ${details ? `<pre style="background: #0A0E14; color: #94A3B8; font-size: 12px; padding: 12px; border-radius: 4px; overflow-x: auto; margin: 0;">${esc(details)}</pre>` : ""}
     <p style="color: #64748B; font-size: 11px; margin-top: 20px;">Sent by 369Labs Trading Platform</p>
   </div>
 </body>
