@@ -31,11 +31,8 @@ export interface EvalContext {
   window?: number;
 }
 
-function lastDigitOf(price: number): number {
-  const s = String(price);
-  const frac = s.includes(".") ? s.split(".")[1] : "";
-  const body = frac.length ? frac : s;
-  return parseInt(body[body.length - 1], 10) || 0;
+function lastDigitOf(price: number, decimals: number): number {
+  return parseInt(price.toFixed(decimals).slice(-1), 10) || 0;
 }
 
 function indicatorTrue(ind: LeafCondition, ctx: EvalContext, idx: number): boolean {

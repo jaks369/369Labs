@@ -1,11 +1,8 @@
+import { lastDigitOf, getDecimalPlaces } from "@shared/lastDigit";
+
 // Deriv payouts vary by contract type, duration, and symbol (typically 80–97%).
 // Set to match your broker's actual rate for the contracts you trade.
 const PAYOUT_RATE = 0.95;
-
-function lastDigitOf(price: number): number {
-  const s = String(price).replace(".", "");
-  return parseInt(s[s.length - 1], 10) || 0;
-}
 
 function evaluateCondition(rule: any, prices: number[], digits: number[], idx: number): boolean {
   const cond = rule.condition;
@@ -44,14 +41,15 @@ function evaluateCondition(rule: any, prices: number[], digits: number[], idx: n
   return occ >= count;
 }
 
-function simulateOutcome(entryPrice: number, nextPrice: number, contractType: string, barrier?: number): "win" | "loss" {
+function simulateOutcome(entryPrice: number, nextPrice: number, contractType: string, barrier?: number, decimals?: number): "win" | "loss" {
+  const d = decimals ?? 2;
   switch (contractType) {
     case "CALL": return nextPrice > entryPrice ? "win" : "loss";
     case "PUT": return nextPrice < entryPrice ? "win" : "loss";
-    case "DIGITEVEN": return lastDigitOf(nextPrice) % 2 === 0 ? "win" : "loss";
-    case "DIGITODD": return lastDigitOf(nextPrice) % 2 === 1 ? "win" : "loss";
-    case "DIGITOVER": return lastDigitOf(nextPrice) > (barrier ?? 5) ? "win" : "loss";
-    case "DIGITUNDER": return lastDigitOf(nextPrice) < (barrier ?? 5) ? "win" : "loss";
+    case "DIGITEVEN": return lastDigitOf(nextPrice, d) % 2 === 0 ? "win" : "loss";
+    case "DIGITODD": return lastDigitOf(nextPrice, d) % 2 === 1 ? "win" : "loss";
+    case "DIGITOVER": return lastDigitOf(nextPrice, d) > (barrier ?? 5) ? "win" : "loss";
+    case "DIGITUNDER": return lastDigitOf(nextPrice, d) < (barrier ?? 5) ? "win" : "loss";
     default: return nextPrice > entryPrice ? "win" : "loss";
   }
 }
@@ -68,9 +66,10 @@ function actionToContractType(action: any): { contractType: string; barrier?: nu
   }
 }
 
-export async function runBacktest(ticks: { price: number; timestamp: number }[], rule: any, stake: number) {
+export async function runBacktest(ticks: { price: number; timestamp: number }[], rule: any, stake: number, symbol?: string) {
+  const decimals = symbol ? getDecimalPlaces(symbol) : 2;
   const prices = ticks.map(t => Number(t.price));
-  const digits = prices.map(p => lastDigitOf(p));
+  const digits = prices.map(p => lastDigitOf(p, decimals));
   const { contractType, barrier } = actionToContractType(rule.action);
 
   let totalTrades = 0, wins = 0, losses = 0, totalPnl = 0;
@@ -82,7 +81,7 @@ export async function runBacktest(ticks: { price: number; timestamp: number }[],
 
     const entryPrice = prices[i];
     const exitPrice = prices[i + 1];
-    const result = simulateOutcome(entryPrice, exitPrice, contractType, barrier);
+    const result = simulateOutcome(entryPrice, exitPrice, contractType, barrier, decimals);
     const pnl = result === "win" ? stake * PAYOUT_RATE : -stake;
 
     totalTrades++;

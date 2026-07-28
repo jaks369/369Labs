@@ -1,5 +1,6 @@
 import * as db from "../../db";
 import type { MarketData, StrategyMeta, StrategySignal } from "./StrategyTypes";
+import { lastDigitOf, getDecimalPlaces } from "@shared/lastDigit";
 
 export abstract class BaseStrategy {
   abstract meta: StrategyMeta;
@@ -7,12 +8,10 @@ export abstract class BaseStrategy {
   abstract analyze(market: MarketData): Promise<StrategySignal>;
 
   async fetchMarketData(symbol: string, count: number = 100): Promise<MarketData> {
+    const decimals = getDecimalPlaces(symbol);
     const ticks = await db.getTickHistory(symbol, count);
     const prices = ticks.map((t) => Number(t.price)).filter((p) => !isNaN(p));
-    const lastDigits = prices.map((p) => {
-      const s = String(p).replace(".", "");
-      return parseInt(s[s.length - 1], 10) || 0;
-    });
+    const lastDigits = prices.map((p) => lastDigitOf(p, decimals));
 
     return {
       symbol,

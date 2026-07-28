@@ -1,17 +1,19 @@
 import { Tick } from "./derivWebSocket";
 import { lastDigitOf } from "./conditionEval";
+import { getDecimalPlaces } from "@shared/lastDigit";
 
 const PAPER_BALANCE_KEY = "369labs_paper_balance";
 const DEFAULT_PAPER_BALANCE = 10000;
 
-function simulateOutcome(entryPrice: number, nextPrice: number, contractType: string, barrier?: number): "win" | "loss" {
+function simulateOutcome(entryPrice: number, nextPrice: number, contractType: string, barrier?: number, decimals?: number): "win" | "loss" {
+  const d = decimals ?? 2;
   switch (contractType) {
     case "CALL": return nextPrice > entryPrice ? "win" : "loss";
     case "PUT": return nextPrice < entryPrice ? "win" : "loss";
-    case "DIGITEVEN": return lastDigitOf(nextPrice) % 2 === 0 ? "win" : "loss";
-    case "DIGITODD": return lastDigitOf(nextPrice) % 2 === 1 ? "win" : "loss";
-    case "DIGITOVER": return lastDigitOf(nextPrice) > (barrier ?? 5) ? "win" : "loss";
-    case "DIGITUNDER": return lastDigitOf(nextPrice) < (barrier ?? 5) ? "win" : "loss";
+    case "DIGITEVEN": return lastDigitOf(nextPrice, d) % 2 === 0 ? "win" : "loss";
+    case "DIGITODD": return lastDigitOf(nextPrice, d) % 2 === 1 ? "win" : "loss";
+    case "DIGITOVER": return lastDigitOf(nextPrice, d) > (barrier ?? 5) ? "win" : "loss";
+    case "DIGITUNDER": return lastDigitOf(nextPrice, d) < (barrier ?? 5) ? "win" : "loss";
     default: return nextPrice > entryPrice ? "win" : "loss";
   }
 }
@@ -85,7 +87,9 @@ export class PaperEngine {
     entryTick: Tick,
     strategyAction: any,
     stake: number,
+    symbol?: string,
   ): Promise<PaperTradeResult> {
+    const decimals = symbol ? getDecimalPlaces(symbol) : 2;
     const { contractType, barrier } = actionToContract(strategyAction);
 
     const tradeId = Date.now() + Math.floor(Math.random() * 1000);
@@ -109,7 +113,7 @@ export class PaperEngine {
         const exitPrice = entryPrice + (Math.random() - 0.5) * 2 * volatility;
         result.exitPrice = exitPrice;
         result.exitTime = Date.now();
-        result.result = simulateOutcome(entryPrice, exitPrice, contractType, barrier);
+        result.result = simulateOutcome(entryPrice, exitPrice, contractType, barrier, decimals);
         result.pnl = calcPnl(result.result, stake);
 
         this.balance += result.pnl;

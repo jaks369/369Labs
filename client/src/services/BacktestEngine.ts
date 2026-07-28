@@ -1,5 +1,6 @@
 import { evaluateNode, ConditionNode, EvalContext, lastDigitOf } from "./conditionEval";
 import { Tick, DerivContractType } from "./derivWebSocket";
+import { getDecimalPlaces } from "@shared/lastDigit";
 
 export interface BacktestTrade {
   entryTime: number;
@@ -22,18 +23,13 @@ export interface BacktestResult {
   equityCurve: number[];
 }
 
-function lastDigit(price: number): number {
-  const fixed = price.toFixed(2);
-  return parseInt(fixed[fixed.length - 1], 10);
-}
-
-function evaluateCondition(rule: any, tick: Tick, history: Tick[]): boolean {
+function evaluateCondition(rule: any, tick: Tick, history: Tick[], decimals: number): boolean {
   const prices = history.map((t) => Number(t.price));
-  const digits = prices.map((p) => lastDigitOf(p));
+  const digits = prices.map((p) => lastDigitOf(p, decimals));
   const ctx: EvalContext = { prices, digits, window: 20 };
   if (rule.ensemble && rule.ensemble.rules.length > 0) {
     const en = rule.ensemble;
-    const votes = en.rules.filter((r: any) => evaluateCondition(r, tick, history)).length;
+    const votes = en.rules.filter((r: any) => evaluateCondition(r, tick, history, decimals)).length;
     if (en.vote === "all") return votes === en.rules.length;
     if (en.vote === "any") return votes >= 1;
     return votes >= Math.ceil(en.rules.length / 2);
@@ -44,11 +40,12 @@ function evaluateCondition(rule: any, tick: Tick, history: Tick[]): boolean {
   if (history.length < count) return false;
   const checkIndex = (idx: number): boolean => {
     const t = history[idx];
+    const d = lastDigitOf(t.price, decimals);
     switch (indicator) {
-      case "digit_over": return lastDigit(t.price) > (rule.condition.barrier ?? 5);
-      case "digit_under": return lastDigit(t.price) < (rule.condition.barrier ?? 5);
-      case "digit_even": return lastDigit(t.price) % 2 === 0;
-      case "digit_odd": return lastDigit(t.price) % 2 === 1;
+      case "digit_over": return d > (rule.condition.barrier ?? 5);
+      case "digit_under": return d < (rule.condition.barrier ?? 5);
+      case "digit_even": return d % 2 === 0;
+      case "digit_odd": return d % 2 === 1;
       case "consecutive_rise": return idx > 0 && t.price > history[idx - 1].price;
       case "consecutive_fall": return idx > 0 && t.price < history[idx - 1].price;
       default: return false;
@@ -68,14 +65,15 @@ function evaluateCondition(rule: any, tick: Tick, history: Tick[]): boolean {
   return occurrences >= count;
 }
 
-function simulateTradeOutcome(entryPrice: number, nextPrice: number, contractType: string, barrier?: number): "win" | "loss" {
+function simulateTradeOutcome(entryPrice: number, nextPrice: number, contractType: string, barrier?: number, decimals?: number): "win" | "loss" {
+  const d = decimals ?? 2;
   switch (contractType) {
     case "CALL": return nextPrice > entryPrice ? "win" : "loss";
     case "PUT": return nextPrice < entryPrice ? "win" : "loss";
-    case "DIGITEVEN": return lastDigit(nextPrice) % 2 === 0 ? "win" : "loss";
-    case "DIGITODD": return lastDigit(nextPrice) % 2 === 1 ? "win" : "loss";
-    case "DIGITOVER": return lastDigit(nextPrice) > (barrier ?? 5) ? "win" : "loss";
-    case "DIGITUNDER": return lastDigit(nextPrice) < (barrier ?? 5) ? "win" : "loss";
+    case "DIGITEVEN": return lastDigitOf(nextPrice, d) % 2 === 0 ? "win" : "loss";
+    case "DIGITODD": return lastDigitOf(nextPrice, d) % 2 === 1 ? "win" : "loss";
+    case "DIGITOVER": return lastDigitOf(nextPrice, d) > (barrier ?? 5) ? "win" : "loss";
+    case "DIGITUNDER": return lastDigitOf(nextPrice, d) < (barrier ?? 5) ? "win" : "loss";
     default: return nextPrice > entryPrice ? "win" : "loss";
   }
 }
@@ -96,7 +94,8 @@ function actionToContractType(action: any): { contractType: string; barrier?: nu
   }
 }
 
-export async function runBacktest(ticks: Tick[], strategy: any, stake: number): Promise<BacktestResult> {
+export async function runBacktest(ticks: Tick[], strategy: any, stake: number, symbol?: string): Promise<BacktestResult> {
+  const decimals = symbol ? getDecimalPlaces(symbol) : 2;
   const trades: BacktestTrade[] = [];
   const history: Tick[] = [];
   let balance = 0;
@@ -105,13 +104,13 @@ export async function runBacktest(ticks: Tick[], strategy: any, stake: number): 
 
   for (let i = 0; i < ticks.length; i++) {
     history.push(ticks[i]);
-    if (evaluateCondition(strategy, ticks[i], history)) {
+    if (evaluateCondition(strategy, ticks[i], history, decimals)) {
       const entryTime = ticks[i].timestamp;
       const entryPrice = ticks[i].price;
       const exitIdx = i + 1;
       if (exitIdx >= ticks.length) break;
       const exitPrice = ticks[exitIdx].price;
-      const result = simulateTradeOutcome(entryPrice, exitPrice, contractType, barrier);
+      const result = simulateTradeOutcome(entryPrice, exitPrice, contractType, barrier, decimals);
       const pnl = calcPnl(result, stake);
       balance += pnl;
       trades.push({ entryTime, entryPrice, exitTime: ticks[exitIdx].timestamp, exitPrice, contractType, result, pnl });

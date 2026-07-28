@@ -78,7 +78,7 @@ export default function Backtesting() {
       const ticks = await derivWS.fetchTickHistory(symbol, startEpoch, endEpoch);
       if (ticks.length < 20) { throw new Error(`Only ${ticks.length} ticks returned — need at least 20. Try a wider date range.`); }
 
-      const backtestResult = await runBacktest(ticks, rule, stake);
+      const backtestResult = await runBacktest(ticks, rule, stake, symbol);
       setResult(backtestResult);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Backtest failed");
@@ -122,7 +122,7 @@ export default function Backtesting() {
             // sweep only applies cleanly to flat conditions; tree kept as-is
           }
         }
-        const r = await runBacktest(ticks, sweptRule, sweptStake);
+        const r = await runBacktest(ticks, sweptRule, sweptStake, symbol);
         grid.push({ value: v, winRate: r.winRate, trades: r.totalTrades, pnl: r.totalPnl });
       }
       setSweepGrid(grid);

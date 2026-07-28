@@ -184,7 +184,8 @@ export class BotEngine {
   private evaluateStrategy(): boolean {
     if (!this.config) return false;
     const rule = this.config.strategy;
-    const digits = this.tickHistory.map((t) => lastDigitOf(Number(t.price)));
+    const decimals = this.config.decimalPlaces ?? derivWS.decimalPlacesFor(this.config.symbol ?? "R_100");
+    const digits = this.tickHistory.map((t) => lastDigitOf(Number(t.price), decimals));
     const ctx: EvalContext = {
       prices: this.tickHistory.map((t) => Number(t.price)),
       digits,
@@ -211,7 +212,8 @@ export class BotEngine {
   }
 
   private ruleTriggers(rule: StrategyRule): boolean {
-    const digits = this.tickHistory.map((t) => lastDigitOf(Number(t.price)));
+    const decimals = this.config?.decimalPlaces ?? derivWS.decimalPlacesFor(this.config?.symbol ?? "R_100");
+    const digits = this.tickHistory.map((t) => lastDigitOf(Number(t.price), decimals));
     const ctx: EvalContext = {
       prices: this.tickHistory.map((t) => Number(t.price)),
       digits,
@@ -285,7 +287,7 @@ export class BotEngine {
         this.log(`Paper trade: simulating ${contractType} for $${stake}`);
         this.trades.push(pendingTrade);
         this.onTrade?.(pendingTrade);
-        const result = await paperEngine.executeTrade(currentTick, this.config.strategy.action, stake);
+        const result = await paperEngine.executeTrade(currentTick, this.config.strategy.action, stake, this.config.symbol);
         pendingTrade.pnl = result.pnl.toFixed(2);
         pendingTrade.result = result.result;
         pendingTrade.contractType = contractType;

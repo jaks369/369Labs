@@ -1,10 +1,6 @@
 import * as db from "../db";
 import { AIInsight } from "./types";
-
-function lastDigitOf(price: number): number {
-  const s = String(price).replace(".", "");
-  return parseInt(s[s.length - 1], 10) || 0;
-}
+import { lastDigitOf, getDecimalPlaces } from "@shared/lastDigit";
 
 export class InsightEngine {
   async generateAll(): Promise<AIInsight[]> {
@@ -14,11 +10,12 @@ export class InsightEngine {
 
     for (const symbol of symbols) {
       try {
+        const decimals = getDecimalPlaces(symbol);
         const ticks = await db.getTickHistory(symbol, 100);
         if (ticks.length < 20) continue;
 
         const prices = ticks.map((t: any) => Number(t.price)).filter((p: number) => !isNaN(p));
-        const digits = prices.map(p => lastDigitOf(p));
+        const digits = prices.map(p => lastDigitOf(p, decimals));
 
         // Digit distribution analysis
         const digitCounts: Record<number, number> = {};

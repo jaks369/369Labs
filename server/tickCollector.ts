@@ -1,6 +1,7 @@
 import { WebSocket } from "ws";
 import { saveTickHistory } from "./db";
 import { getAllVolatilitySymbols } from "@shared/symbols";
+import { getDecimalPlaces } from "@shared/lastDigit";
 
 const DERIV_WS_PUBLIC = "wss://api.derivws.com/trading/v1/options/ws/public";
 const VOLATILITY_PREFIXES = getAllVolatilitySymbols();
@@ -72,10 +73,8 @@ export function startTickCollector() {
         const symbol = msg.tick.symbol;
         const quote = String(msg.tick.quote);
         const epoch = Number(msg.tick.epoch) || Math.floor(Date.now() / 1000);
-        // last digit = the FINAL decimal digit of the tick price (true Deriv "last digit").
-        // e.g. 95.2144 -> 4, 95.2279 -> 9. This is what digit strategies analyze.
-        const numStr = String(quote).replace(".", "");
-        const lastDigit = parseInt(numStr[numStr.length - 1], 10) || 0;
+        const decimals = getDecimalPlaces(symbol);
+        const lastDigit = parseInt(Number(quote).toFixed(decimals).slice(-1), 10) || 0;
         const prev = lastTickEpoch[symbol] || 0;
         const outOfOrder = prev && epoch < prev;
         const nowSec = Math.floor(Date.now() / 1000);

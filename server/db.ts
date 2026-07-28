@@ -1307,11 +1307,12 @@ export async function ensureSignalExpiryColumn(): Promise<void> {
 // the units digit before the decimal instead of the true last decimal digit).
 // Gated behind RECOMPUTE_DIGITS=1 so it does not run on every boot.
 export async function recomputeLastDigits(): Promise<number> {
-  // Runs every boot: idempotent - only updates rows whose stored lastDigit != recomputed. Self-heals after the pre-fix bug.
+  // Uses FORMAT to preserve trailing zeros before reading the last digit.
+  // 1HZ* symbols have 3 decimal places, all others (R_*, BOOM*, CRASH*) have 2.
   const db = await getDb();
   if (!db) return 0;
   try {
-    const res = await db.execute(sql`UPDATE tickHistory SET lastDigit = CAST(RIGHT(REPLACE(CAST(price AS CHAR), ".", ""), 1) AS UNSIGNED) WHERE lastDigit <> CAST(RIGHT(REPLACE(CAST(price AS CHAR), ".", ""), 1) AS UNSIGNED)`);
+    const res = await db.execute(sql`UPDATE tickHistory SET lastDigit = CAST(RIGHT(REPLACE(FORMAT(price, CASE WHEN symbol LIKE '1HZ%' THEN 3 ELSE 2 END), ',', ''), 1) AS UNSIGNED) WHERE lastDigit <> CAST(RIGHT(REPLACE(FORMAT(price, CASE WHEN symbol LIKE '1HZ%' THEN 3 ELSE 2 END), ',', ''), 1) AS UNSIGNED)`);
     console.log(`[recomputeLastDigits] updated ${(res as any)?.affectedRows ?? 0} rows`);
     return (res as any)?.affectedRows ?? 0;
   } catch (e) {

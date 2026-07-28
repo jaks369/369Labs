@@ -1,6 +1,7 @@
 import { getDb, saveSignal as dbSaveSignal } from "./db";
 import { getTickHistory, normalizeSymbol } from "./aitools";
 import { notifyUser } from "./_core/notification";
+import { lastDigitOf, getDecimalPlaces } from "@shared/lastDigit";
 
 // Signals decay: digit patterns on volatile symbols lose edge quickly.
 // A signal is considered valid for this many minutes after discovery.
@@ -17,20 +18,16 @@ interface ScanOptions {
   patternType?: PatternType | "any";
 }
 
-function lastDigitOf(price: number): number {
-  const s = String(price).replace(".", "");
-  return parseInt(s[s.length - 1], 10);
-}
-
 // Analyze a window of {price, epoch} ticks and emit candidate signals.
 export async function scanTicks(opts: ScanOptions): Promise<any[]> {
   const symbol = normalizeSymbol(opts.symbol);
+  const decimals = getDecimalPlaces(symbol);
   const sample = opts.sampleSize || 300;
   const minWin = opts.minWinRate ?? 55;
   const ticks = await getTickHistory(symbol, sample); // [{price, timestamp(ms)}]
   if (ticks.length < 30) return [];
 
-  const digits = ticks.map(t => lastDigitOf(Number(t.price)));
+  const digits = ticks.map(t => lastDigitOf(Number(t.price), decimals));
   const prices = ticks.map(t => Number(t.price));
   const found: any[] = [];
   const nowSec = Math.floor(Date.now() / 1000);
@@ -67,7 +64,7 @@ export async function scanTicks(opts: ScanOptions): Promise<any[]> {
     }
   };
 
-  const evidenceTicks = ticks.slice(-60).map(t => ({ epoch: Math.floor(t.timestamp / 1000), price: Number(t.price), lastDigit: lastDigitOf(Number(t.price)) }));
+  const evidenceTicks = ticks.slice(-60).map(t => ({ epoch: Math.floor(t.timestamp / 1000), price: Number(t.price), lastDigit: lastDigitOf(Number(t.price), decimals) }));
 
   // 1. Digit bias: a specific digit appears, next tick rises/falls
   for (let d = 0; d <= 9; d++) {

@@ -192,7 +192,7 @@ export default function Bots() {
         .fetchTickHistory(rule.symbol || DEFAULT_SYMBOL, Math.floor(Date.now() / 1000) - 7 * 24 * 3600, Math.floor(Date.now() / 1000))
         .then(async (ticks) => {
           if (!ticks || ticks.length < 20) return;
-          const res = await runBacktest(ticks, rule, stake);
+          const res = await runBacktest(ticks, rule, stake, rule.symbol);
           updateBot(botRun.id, { backtestWinRate: res.winRate });
         })
         .catch((error) => {

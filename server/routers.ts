@@ -304,7 +304,7 @@ async function runTool(name: string, args: any, ctxUser?: any) {
         const ticks = await conn.getTickHistory(rule.symbol, Math.min(args.tickCount || 1000, 2000));
         if (!ticks.length) return { error: "No tick data available for backtest" };
         const { runBacktest } = await import("./backtest");
-        const result = await runBacktest(ticks, rule, args.stake || rule.params?.stake || 1);
+        const result = await runBacktest(ticks, rule, args.stake || rule.params?.stake || 1, rule.symbol);
         return {
           data: {
             strategy: strategy.name,
@@ -2642,7 +2642,7 @@ watch: protectedProcedure
           const rows = await db.getTickHistory(rule.symbol, 1000);
           if (rows.length < 50) continue;
           const ticks = rows.map((r: any) => ({ price: Number(r.price), timestamp: Number(r.epoch) * 1000 }));
-          const res = await runBacktest(ticks, rule, Number(rule.params?.stake) || 1);
+          const res = await runBacktest(ticks, rule, Number(rule.params?.stake) || 1, rule.symbol);
           results.push({ strategyId: id, name: strat.name, ...res });
         }
         return { comparisons: results };
