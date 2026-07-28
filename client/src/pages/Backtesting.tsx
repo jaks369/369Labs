@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
@@ -50,14 +50,16 @@ export default function Backtesting() {
   if (!isAuthenticated) { navigate("/login"); return null; }
 
   // When arriving from a signal, load its rule + symbol automatically.
-  if (signalId && !loadedSignal && (signalsQuery.data as any[])?.length) {
-    const sig = (signalsQuery.data as any[]).find((s: any) => String(s.id) === String(signalId));
-    if (sig) {
-      setLoadedSignal(sig);
-      setSymbol(sig.symbol);
-      setSignalRule(sig.rule as StrategyRule);
+  useEffect(() => {
+    if (signalId && !loadedSignal && (signalsQuery.data as any[])?.length) {
+      const sig = (signalsQuery.data as any[]).find((s: any) => String(s.id) === String(signalId));
+      if (sig) {
+        setLoadedSignal(sig);
+        setSymbol(sig.symbol);
+        setSignalRule(sig.rule as StrategyRule);
+      }
     }
-  }
+  }, [signalId, loadedSignal, signalsQuery.data]);
 
   const runBacktestHandler = async () => {
     const rule = (selectedStrategyId

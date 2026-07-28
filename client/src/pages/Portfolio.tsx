@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { derivWS } from "@/services/derivWebSocket";
 import { Loader2, TrendingUp, TrendingDown, DollarSign, Activity, BarChart3, Wallet, AlertCircle, XCircle, Scale, FileText, Download } from "lucide-react";
 import { LineChart, Line, ResponsiveContainer, XAxis, YAxis, Tooltip, CartesianGrid } from "recharts";
+import { toast } from "@/components/Toast";
 
 export default function Portfolio() {
   const { isAuthenticated } = useAuth();

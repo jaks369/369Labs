@@ -1314,6 +1314,17 @@ save: protectedProcedure
         await db.saveAuditLog({ userId: ctx.user.id, action: "trades.importCsv", target: `${imported} trades` });
         return { imported };
       }),
+
+    linkToJournal: protectedProcedure
+      .input(z.object({ contractId: z.string(), knowledgeId: z.number() }))
+      .mutation(async ({ ctx, input }) => {
+        const trades = await db.getTradesByUserId(ctx.user.id, 5000);
+        const trade = trades.find((t: any) => String(t.contractId) === input.contractId);
+        if (!trade) throw new TRPCError({ code: "NOT_FOUND", message: "No trade found with that contract ID" });
+        await db.updateKnowledgeRelatedTrade(input.knowledgeId, trade.id, ctx.user.id);
+        await db.saveAuditLog({ userId: ctx.user.id, action: "trades.linkToJournal", target: String(input.knowledgeId), detail: { tradeId: trade.id, contractId: input.contractId } }).catch(() => {});
+        return { linked: true, tradeId: trade.id, symbol: trade.symbol };
+      }),
   }),
 
   // Price Alerts

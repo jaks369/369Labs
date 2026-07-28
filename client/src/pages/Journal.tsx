@@ -17,16 +17,18 @@ export default function Journal() {
   const [showScreenshot, setShowScreenshot] = useState(false);
   const [showLinkTrade, setShowLinkTrade] = useState(false);
   const [linkTradeId, setLinkTradeId] = useState("");
+  const [linkKnowledgeId, setLinkKnowledgeId] = useState<number | null>(null);
   const [screenshots, setScreenshots] = useState<string[]>([]);
   const [showStats, setShowStats] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const strategiesQuery = trpc.strategies.list.useQuery();
   const journalMutation = trpc.ai.journal.useMutation();
-  const journalSearchQuery = trpc.ai.journalSearch.useQuery({ query: searchQuery, limit: 20 }, { enabled: searchQuery.length >= 0 });
+  const journalSearchQuery = trpc.ai.journalSearch.useQuery({ query: searchQuery, limit: 20 }, { enabled: true });
   const saveManualMutation = trpc.ai.journalSaveManual.useMutation();
   const importCsvMutation = trpc.trades.importCsv.useMutation();
   const tradesQuery = trpc.trades.list.useQuery({ limit: 100 }, { enabled: showStats });
   const uploadImageMutation = trpc.ai.journalUploadImage.useMutation();
+  const linkTradeMutation = trpc.trades.linkToJournal.useMutation();
 
   if (!isAuthenticated) { navigate("/login"); return null; }
 
@@ -183,6 +185,7 @@ export default function Journal() {
                       {!isManual && d?.sampleSize && <span className="text-[10px] text-[var(--text-secondary)]">{d.sampleSize} trades · {d.wins}W / {d.losses}L</span>}
                     </div>
                     <div className="text-sm text-[var(--text-secondary)] leading-relaxed whitespace-pre-wrap line-clamp-6">{d?.analysis || ""}</div>
+                    <button onClick={() => { setLinkKnowledgeId(entry.id); setLinkTradeId(""); setShowLinkTrade(true); }} className="mt-2 text-[10px] text-[var(--cyan)] hover:text-white flex items-center gap-1"><Link2 className="w-3 h-3" /> Link Trade</button>
                   </div>
                 );
               })
@@ -247,21 +250,35 @@ export default function Journal() {
       )}
 
       {showLinkTrade && (
-        <div className="fixed inset-0 z-[90] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setShowLinkTrade(false)}>
+        <div className="fixed inset-0 z-[90] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => { setShowLinkTrade(false); setLinkKnowledgeId(null); }}>
           <div className="w-full max-w-lg bg-[var(--card)] border border-[var(--border)] rounded-xl" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between p-4 border-b border-[var(--border)]">
               <h3 className="text-sm font-bold text-white flex items-center gap-2"><Link2 className="w-4 h-4" /> Link Trade to Journal</h3>
-              <button onClick={() => setShowLinkTrade(false)} className="text-[var(--text-muted)] hover:text-white">✕</button>
+              <button onClick={() => { setShowLinkTrade(false); setLinkKnowledgeId(null); }} className="text-[var(--text-muted)] hover:text-white">✕</button>
             </div>
             <div className="p-4 space-y-3">
-              <p className="text-xs text-[var(--text-muted)]">Enter a trade ID or contract ID to link a specific trade to a journal entry.</p>
-              <input value={linkTradeId} onChange={(e) => setLinkTradeId(e.target.value)} placeholder="Trade / Contract ID" className="w-full bg-[var(--card)] border border-[var(--border)] rounded-lg px-3 py-2 text-xs text-white" />
-              <button onClick={() => {
-                if (!linkTradeId.trim()) return;
-                toast(`Trade ${linkTradeId} linked to journal`, "success");
-                setLinkTradeId("");
-                setShowLinkTrade(false);
-              }} disabled={!linkTradeId.trim()} className="w-full py-2 rounded-lg bg-[var(--cyan)] text-black text-xs font-bold disabled:opacity-40">Link Trade</button>
+              {linkKnowledgeId == null ? (
+                <p className="text-xs text-[var(--text-muted)]">Click the "Link Trade" button on a specific journal entry below to link it to a trade.</p>
+              ) : (
+                <>
+              <p className="text-xs text-[var(--text-muted)]">Enter a contract ID to link a trade to this journal entry.</p>
+              <input value={linkTradeId} onChange={(e) => setLinkTradeId(e.target.value)} placeholder="Contract ID" className="w-full bg-[var(--card)] border border-[var(--border)] rounded-lg px-3 py-2 text-xs text-white" />
+              <button onClick={async () => {
+                if (!linkTradeId.trim() || linkKnowledgeId == null) return;
+                try {
+                  await linkTradeMutation.mutateAsync({ contractId: linkTradeId.trim(), knowledgeId: linkKnowledgeId });
+                  toast(`Linked trade to journal entry`, "success");
+                  setLinkTradeId("");
+                  setShowLinkTrade(false);
+                  setLinkKnowledgeId(null);
+                } catch (err: any) {
+                  toast(err?.message || "Failed to link trade", "error");
+                }
+              }} disabled={linkTradeMutation.isPending || !linkTradeId.trim() || linkKnowledgeId == null} className="w-full py-2 rounded-lg bg-[var(--cyan)] text-black text-xs font-bold disabled:opacity-40">
+                {linkTradeMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : "Link Trade"}
+              </button>
+                </>
+              )}
             </div>
           </div>
         </div>

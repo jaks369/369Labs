@@ -778,6 +778,14 @@ export async function deleteAiKnowledgeEntry(id: number, userId: number): Promis
   await db.delete(aiKnowledge).where(and(eq(aiKnowledge.id, id), eq(aiKnowledge.userId, userId)));
 }
 
+export async function updateKnowledgeRelatedTrade(knowledgeId: number, tradeId: number, userId: number): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(aiKnowledge)
+    .set({ relatedTradeId: tradeId })
+    .where(and(eq(aiKnowledge.id, knowledgeId), eq(aiKnowledge.userId, userId)));
+}
+
 export async function saveBotLog(data: InsertBotLog): Promise<void> {
   const db = await getDb();
   if (!db) return;
