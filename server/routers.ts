@@ -1332,12 +1332,31 @@ save: protectedProcedure
       .mutation(async ({ ctx, input }) => {
         const lines = input.csv.split("\n").map(l => l.trim()).filter(l => l.length > 0);
         if (lines.length < 2) throw new TRPCError({ code: "BAD_REQUEST", message: "CSV must have a header row and at least one data row" });
-        const header = lines[0].split(",").map(h => h.replace(/^"|"$/g, "").trim().toLowerCase());
+        const parseCsvLine = (line: string): string[] => {
+          const result: string[] = [];
+          let current = "";
+          let inQuotes = false;
+          for (let i = 0; i < line.length; i++) {
+            const ch = line[i];
+            if (inQuotes) {
+              if (ch === '"' && line[i + 1] === '"') { current += '"'; i++; }
+              else if (ch === '"') { inQuotes = false; }
+              else { current += ch; }
+            } else {
+              if (ch === '"') { inQuotes = true; }
+              else if (ch === ",") { result.push(current.trim()); current = ""; }
+              else { current += ch; }
+            }
+          }
+          result.push(current.trim());
+          return result;
+        };
+        const header = parseCsvLine(lines[0]).map(h => h.toLowerCase());
         const required = ["symbol", "result", "stake"];
         for (const r of required) { if (!header.includes(r)) throw new TRPCError({ code: "BAD_REQUEST", message: `CSV missing required column: ${r}. Found: ${header.join(", ")}` }); }
         let imported = 0;
         for (let i = 1; i < lines.length; i++) {
-          const vals = lines[i].split(",").map(v => v.replace(/^"|"$/g, "").trim());
+          const vals = parseCsvLine(lines[i]);
           const row: Record<string, string> = {};
           header.forEach((h, idx) => { row[h] = vals[idx] || ""; });
           try {

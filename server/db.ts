@@ -1,4 +1,4 @@
-import { eq, and, asc, desc, gt, sql } from "drizzle-orm";
+import { eq, and, asc, desc, gt, lte, sql } from "drizzle-orm";
 import * as mysql from "mysql2/promise";
 import { drizzle } from "drizzle-orm/mysql2";
 import {
@@ -897,10 +897,11 @@ export async function saveTickHistory(row: InsertTickHistory): Promise<void> {
   }
 }
 
-export async function getTickHistory(symbol: string, limit: number = 1000): Promise<TickHistoryRow[]> {
+export async function getTickHistory(symbol: string, limit: number = 1000, beforeEpoch?: number): Promise<TickHistoryRow[]> {
   const db = await getDb();
   if (!db) return [];
-  return db.select().from(tickHistory).where(eq(tickHistory.symbol, symbol)).orderBy(desc(tickHistory.epoch)).limit(limit);
+  const cond = beforeEpoch ? and(eq(tickHistory.symbol, symbol), lte(tickHistory.epoch, beforeEpoch)) : eq(tickHistory.symbol, symbol);
+  return db.select().from(tickHistory).where(cond).orderBy(desc(tickHistory.epoch)).limit(limit);
 }
 
 export async function checkMAcross(symbol: string, fastPeriod = 9, slowPeriod = 21): Promise<{

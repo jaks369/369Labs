@@ -145,7 +145,8 @@ export class TradeReviewEngine {
     let recentPrediction: { prediction: string; confidence: number } | undefined;
 
     try {
-      const ticks = await db.getTickHistory(trade.symbol, 60);
+      const beforeEpoch = trade.entryTime ? Math.floor(new Date(trade.entryTime).getTime() / 1000) + 3600 : undefined;
+      const ticks = await db.getTickHistory(trade.symbol, 60, beforeEpoch);
       if (ticks.length > 0) {
         const prices = ticks.map((t: any) => Number(t.price)).filter((p: number) => !isNaN(p));
         recentTicks = prices.length;
