@@ -599,9 +599,17 @@ export const appRouter = router({
           await db.createPasswordResetToken(user.id, resetToken, expiresAt);
           const isDev = process.env.NODE_ENV !== "production";
           const result: any = { success: true, emailSent: false };
-          if (isDev && !ENV.resendApiKey) {
-            // Dev mode with no email configured — return the link directly
-            result.resetUrl = `${ctx.req.protocol}://${ctx.req.get("host")}/reset?token=${resetToken}`;
+          if (!ENV.resendApiKey) {
+            const resetUrl = `${ctx.req.protocol}://${ctx.req.get("host")}/reset?token=${resetToken}`;
+            if (isDev) {
+              // Dev mode with no email configured — return the link directly
+              result.resetUrl = resetUrl;
+            } else {
+              // Production without Resend — still return link so the flow works
+              result.resetUrl = resetUrl;
+              result.emailSent = false;
+              result._note = "Email service not configured; reset link shown inline instead";
+            }
           } else {
             // Try to send via Resend
             const resetUrl = `${ENV.appUrl}/reset?token=${resetToken}`;
@@ -1279,6 +1287,16 @@ save: protectedProcedure
               }).catch(() => {});
             }).catch(() => {});
           }
+          import("./_core/notification").then(({ notifyUser, notifyUserTelegram }) => {
+            if (input.result === "pending") {
+              notifyUser(ctx.user.id, "tradeExecuted", "Trade Executed", `Trade #${trade.id} opened on ${input.symbol} for $${input.stake}`, `Symbol: ${input.symbol}\nStake: $${input.stake}\nContract: ${input.contractType || "—"}`).catch(() => {});
+              notifyUserTelegram(ctx.user.id, `🤖 Trade Opened\nSymbol: ${input.symbol}\nStake: $${input.stake}\nContract: ${input.contractType || "—"}`).catch(() => {});
+            } else {
+              const emoji = input.result === "win" ? "✅" : "❌";
+              notifyUser(ctx.user.id, "tradeExecuted", `Trade ${input.result === "win" ? "Won" : "Lost"}`, `Trade #${trade.id} on ${input.symbol} ${input.result === "win" ? "won" : "lost"} $${input.profitLoss || "0"}`, `Symbol: ${input.symbol}\nResult: ${input.result}\nP&L: $${input.profitLoss || "0"}`).catch(() => {});
+              notifyUserTelegram(ctx.user.id, `${emoji} Trade ${input.result === "win" ? "Won" : "Lost"}\nSymbol: ${input.symbol}\nP&L: $${input.profitLoss || "0"}`).catch(() => {});
+            }
+          }).catch(() => {});
           return trade;
         } catch (error: any) {
           console.error("[trades.save] FAILED input:", JSON.stringify({ ...input, userId: ctx.user.id }), "error:", error?.message || error, "stack:", error?.stack?.split("\n").slice(0, 3).join("|"));
@@ -2447,6 +2465,7 @@ watch: protectedProcedure
     demoteToUser: adminProcedure
       .input(z.object({ userId: z.number() }))
       .mutation(async ({ input, ctx }) => {
+        if (input.userId === ctx.user.id) throw new TRPCError({ code: "BAD_REQUEST", message: "Cannot demote yourself" });
         await db.updateUserRole(input.userId, "user");
         db.saveAuditLog({ userId: ctx.user.id, action: "admin.demote", target: String(input.userId) }).catch(() => {});
         return { ok: true };
@@ -2454,6 +2473,7 @@ watch: protectedProcedure
     deleteUser: adminProcedure
       .input(z.object({ userId: z.number() }))
       .mutation(async ({ input, ctx }) => {
+        if (input.userId === ctx.user.id) throw new TRPCError({ code: "BAD_REQUEST", message: "Cannot delete yourself" });
         await db.deleteUser(input.userId);
         db.saveAuditLog({ userId: ctx.user.id, action: "admin.deleteUser", target: String(input.userId) }).catch(() => {});
         return { ok: true };
@@ -2693,6 +2713,10 @@ watch: protectedProcedure
       .mutation(async ({ ctx, input }) => {
         await db.saveAiKnowledge({ userId: ctx.user.id, knowledgeType: "team_invite", data: { email: input.email, status: "pending", invitedBy: ctx.user.id, invitedAt: new Date().toISOString() } });
         await db.saveAuditLog({ userId: ctx.user.id, action: "team.invite", target: input.email }).catch(() => {});
+        try {
+          const { sendEmail, buildNotificationEmail } = await import("./_core/email");
+          await sendEmail({ to: input.email, subject: "You've been invited to 369Labs", html: buildNotificationEmail("Team Invitation", `You've been invited to join 369Labs by user #${ctx.user.id}. Register at ${process.env.BASE_URL || window?.location?.origin || "https://369labs.com"}/register to accept.`) });
+        } catch {}
         return { ok: true };
       }),
     list: protectedProcedure.query(async ({ ctx }) => {
@@ -2709,27 +2733,27 @@ watch: protectedProcedure
       }),
   },
   strategyEngine: router({
-    metas: protectedProcedure.query(async () => {
+    metas: protectedProcedure.query(async ({ ctx }) => {
       const { StrategyRegistry } = await import("./ai/StrategyEngine");
       const registry = StrategyRegistry.getInstance();
       if (registry.count() === 0) {
         const { registerDefaultStrategies } = await import("./ai/StrategyEngine/Strategies/registerStrategies");
         registerDefaultStrategies();
       }
-      return registry.getMetas();
+      return registry.getMetas(ctx.user.id);
     }),
     enable: protectedProcedure
       .input(z.object({ id: z.string() }))
-      .mutation(async ({ input }) => {
+      .mutation(async ({ ctx, input }) => {
         const { StrategyRegistry } = await import("./ai/StrategyEngine");
-        StrategyRegistry.getInstance().enable(input.id);
+        StrategyRegistry.getInstance().enable(input.id, ctx.user.id);
         return { ok: true };
       }),
     disable: protectedProcedure
       .input(z.object({ id: z.string() }))
-      .mutation(async ({ input }) => {
+      .mutation(async ({ ctx, input }) => {
         const { StrategyRegistry } = await import("./ai/StrategyEngine");
-        StrategyRegistry.getInstance().disable(input.id);
+        StrategyRegistry.getInstance().disable(input.id, ctx.user.id);
         return { ok: true };
       }),
     analyze: protectedProcedure

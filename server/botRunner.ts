@@ -59,6 +59,14 @@ class BotRunner {
     bot.status = validStatuses.includes(reason as any) ? reason as BotRuntime["status"] : "stopped";
     if (reason === "error") {
       notifyUser(userId, "botError", "Bot Error", `Bot "${bot.def.name}" stopped due to an error.`, bot.lastError || "Unknown error");
+      try {
+        const { fireWebhookEvent } = require("./webhookExecutor");
+        fireWebhookEvent(userId, "bot.error", {
+          botId: id,
+          botName: bot.def.name,
+          error: bot.lastError,
+        }).catch(() => {});
+      } catch {}
     }
   }
 

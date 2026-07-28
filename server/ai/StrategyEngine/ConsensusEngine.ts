@@ -13,7 +13,7 @@ export class ConsensusEngine {
       const { registerDefaultStrategies } = await import("./Strategies/registerStrategies");
       registerDefaultStrategies();
     }
-    const strategies = registry.getEnabled().filter((s) => s.meta.id !== "ensemble_voting");
+    const strategies = registry.getEnabled(userId).filter((s) => s.meta.id !== "ensemble_voting");
 
     if (strategies.length === 0) {
       return this.emptyConsensus(symbol, "No strategies registered");

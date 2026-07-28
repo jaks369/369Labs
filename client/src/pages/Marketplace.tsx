@@ -16,6 +16,7 @@ export default function Marketplace() {
   const [uploadName, setUploadName] = useState("");
   const [uploadDesc, setUploadDesc] = useState("");
   const [uploadPrice, setUploadPrice] = useState("");
+  const [uploadConfig, setUploadConfig] = useState("");
 
   const createBotMutation = trpc.strategies.save.useMutation();
   const [sentId, setSentId] = useState<number | null>(null);
@@ -339,7 +340,11 @@ export default function Marketplace() {
                   <label className="text-xs text-[var(--text-muted)] font-bold block mb-1">Price (credits)</label>
                   <input type="number" value={uploadPrice} onChange={(e) => setUploadPrice(e.target.value)} className="w-full bg-[var(--card)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-white" placeholder="0 (free)" />
                 </div>
-                <Button onClick={async () => { if (!uploadName.trim()) { toast("Strategy name required", "error"); return; } try { await cloneMutation.mutateAsync({ name: uploadName, description: uploadDesc || "Published from Marketplace", config: {}, published: true }); toast("Strategy published to community!", "success"); setShowUpload(false); setUploadName(""); setUploadDesc(""); setUploadPrice(""); publishedQuery.refetch(); } catch (e: any) { toast(e?.message || "Failed to publish", "error"); } }} className="w-full bg-[var(--cyan)] text-black text-xs font-bold py-2 rounded-lg">Submit for Review</Button>
+                <div>
+                  <label className="text-xs text-[var(--text-muted)] font-bold block mb-1">Config (JSON)</label>
+                  <textarea value={uploadConfig} onChange={(e) => setUploadConfig(e.target.value)} className="w-full bg-[var(--card)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-white font-mono resize-none" rows={4} placeholder='{"rule":{"conditions":[...],"actions":[...]}}' />
+                </div>
+                <Button onClick={async () => { if (!uploadName.trim()) { toast("Strategy name required", "error"); return; } let config: any = {}; if (uploadConfig.trim()) { try { config = JSON.parse(uploadConfig); } catch { toast("Invalid JSON config", "error"); return; } } try { await cloneMutation.mutateAsync({ name: uploadName, description: uploadDesc || "Published from Marketplace", config, published: true }); toast("Strategy published to community!", "success"); setShowUpload(false); setUploadName(""); setUploadDesc(""); setUploadPrice(""); setUploadConfig(""); publishedQuery.refetch(); } catch (e: any) { toast(e?.message || "Failed to publish", "error"); } }} className="w-full bg-[var(--cyan)] text-black text-xs font-bold py-2 rounded-lg">Submit for Review</Button>
               </div>
             </div>
           </div>

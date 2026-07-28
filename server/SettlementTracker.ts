@@ -125,6 +125,31 @@ export class SettlementTracker {
     }
 
     console.log(`[SettlementTracker] Trade #${trade.id} settled: ${outcome} (${profit.toFixed(2)})`);
+
+    try {
+      const { fireWebhookEvent } = await import("./webhookExecutor");
+      fireWebhookEvent(trade.userId, "trade.settled", {
+        tradeId: trade.id,
+        symbol: trade.symbol,
+        contractType: trade.contractType,
+        stake: trade.stake,
+        profitLoss: profit,
+        result: outcome,
+        contractId: trade.contractId,
+      }).catch(() => {});
+    } catch {
+      /* non-critical */
+    }
+
+    try {
+      const { notifyUser, notifyUserTelegram } = await import("./_core/notification");
+      const emoji = outcome === "win" ? "✅" : "❌";
+      const msg = `Trade #${trade.id} settled: ${outcome} (${profit >= 0 ? "+" : ""}$${profit.toFixed(2)}) on ${trade.symbol}`;
+      notifyUser(trade.userId, "tradeExecuted", `Trade ${outcome === "win" ? "Won" : "Lost"}`, msg, `Symbol: ${trade.symbol}\nResult: ${outcome}\nP&L: $${profit.toFixed(2)}`).catch(() => {});
+      notifyUserTelegram(trade.userId, `${emoji} Trade Settled\n${msg}`).catch(() => {});
+    } catch {
+      /* non-critical */
+    }
   }
 }
 

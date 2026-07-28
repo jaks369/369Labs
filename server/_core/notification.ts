@@ -129,6 +129,16 @@ export async function notifyUser(userId: number, event: NotificationEvent, title
       html: buildNotificationEmail(title, body, details),
     });
   } catch (e) {
-    console.error("[notifyUser] failed:", e);
+    console.error("[notifyUser] email failed:", e);
+  }
+}
+
+export async function notifyUserTelegram(userId: number, text: string): Promise<void> {
+  try {
+    const tg = await db.getTelegramSettingsByUserId(userId);
+    if (!tg || !tg.botToken || !tg.chatId) return;
+    await db.sendTelegramMessage(tg.botToken, tg.chatId, text);
+  } catch (e) {
+    console.error("[notifyUserTelegram] failed:", e);
   }
 }

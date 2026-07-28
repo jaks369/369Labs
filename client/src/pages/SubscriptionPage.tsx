@@ -4,6 +4,7 @@ import { trpc } from "@/lib/trpc";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Crown, CheckCircle2, Zap, Shield, BarChart3, Bot, Sparkles, CreditCard, Loader2 } from "lucide-react";
+import { toast } from "@/components/Toast";
 
 const plans = [
   { name: "Starter", price: "$0", period: "free", features: ["1 bot", "Basic backtesting", "Paper trading", "3-day history"], cta: "Current Plan", popular: false },
@@ -52,7 +53,7 @@ export default function SubscriptionPage() {
                 ))}
               </div>
               <Button
-                onClick={() => setSelected(i)}
+                onClick={() => { setSelected(i); if (i !== 0) toast("Payment integration coming soon. No charges will be made yet.", "info"); }}
                 className={`mt-6 w-full text-xs font-bold py-2 rounded-lg ${i === selected ? "bg-[var(--amber)] text-black" : "bg-white/5 text-[var(--text-secondary)] border border-[var(--border)] hover:bg-white/10"}`}
               >
                 {i === selected ? (plan.cta === "Current Plan" ? "Current Plan" : "Selected") : plan.cta}

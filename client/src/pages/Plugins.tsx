@@ -2,8 +2,8 @@ import { useState } from "react";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { trpc } from "@/lib/trpc";
 import { useLocation } from "wouter";
-import { Plug, Check, Plus, Loader2, ShieldCheck, Bell, Activity, Zap } from "lucide-react";
-import { pushTimeline } from "@/components/AITimeline";
+import { Plug, Check, Plus, Loader2, ShieldCheck, Bell, Activity, Zap, ShieldOff } from "lucide-react";
+import { toast } from "@/components/Toast";
 
 const HOOK_ICON: Record<string, any> = {
   onTrade: ShieldCheck,
@@ -13,7 +13,7 @@ const HOOK_ICON: Record<string, any> = {
 };
 
 export default function Plugins() {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
   const [, navigate] = useLocation();
   const marketplace = trpc.plugins.marketplace.useQuery();
   const my = trpc.plugins.my.useQuery();
@@ -22,6 +22,19 @@ export default function Plugins() {
   const [busy, setBusy] = useState<number | null>(null);
 
   if (!isAuthenticated) { navigate("/login"); return null; }
+
+  const isAdmin = user?.role === "admin";
+  if (!isAdmin) {
+    return (
+      <div className="min-h-screen bg-[var(--card)] p-6">
+        <div className="max-w-4xl mx-auto text-center py-16">
+          <ShieldOff className="w-12 h-12 text-[var(--amber)] mx-auto mb-4" />
+          <h1 className="text-2xl font-bold text-white mb-2">Admin Only</h1>
+          <p className="text-[var(--text-secondary)] text-sm">Plugin management is restricted to administrators.</p>
+        </div>
+      </div>
+    );
+  }
 
   const installed = new Map((my.data?.plugins || []).map((p: any) => [p.id, p]));
 
@@ -32,9 +45,9 @@ export default function Plugins() {
     try {
       await install.mutateAsync({ pluginId: p.id, enabled: !currentlyOn });
       await my.refetch();
-      pushTimeline({ icon: "ai", text: `${!currentlyOn ? "Enabled" : "Disabled"} plugin ${p.name}` });
-    } catch {
-      // Silent — plugin state unaffected on failure
+      toast(`${!currentlyOn ? "Enabled" : "Disabled"} plugin ${p.name}`, "success");
+    } catch (e) {
+      toast(e instanceof Error ? e.message : "Failed to toggle plugin", "error");
     }
     setBusy(null);
   };
@@ -46,7 +59,7 @@ export default function Plugins() {
           <h1 className="text-3xl font-bold text-white flex items-center gap-3">
             <Plug className="w-7 h-7 text-[var(--amber-hover)]" /> Plugins
           </h1>
-          <p className="text-[var(--text-secondary)] text-sm mt-1">Extend 369Labs with safety, signal and automation hooks. Installed plugins run inside the OS event bus.</p>
+          <p className="text-[var(--text-secondary)] text-sm mt-1">Extend 369Labs with safety, signal and automation hooks.</p>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

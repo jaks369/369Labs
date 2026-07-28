@@ -4,7 +4,7 @@ import type { StrategyMeta } from "./StrategyTypes";
 export class StrategyRegistry {
   private static instance: StrategyRegistry;
   private strategies = new Map<string, BaseStrategy>();
-  private disabled = new Set<string>();
+  private disabled = new Map<number, Set<string>>();
   private initialized = false;
 
   private constructor() {}
@@ -14,6 +14,13 @@ export class StrategyRegistry {
       StrategyRegistry.instance = new StrategyRegistry();
     }
     return StrategyRegistry.instance;
+  }
+
+  private getDisabledSet(userId: number): Set<string> {
+    if (!this.disabled.has(userId)) {
+      this.disabled.set(userId, new Set());
+    }
+    return this.disabled.get(userId)!;
   }
 
   ensureInitialized(): void {
@@ -44,27 +51,33 @@ export class StrategyRegistry {
     return Array.from(this.strategies.values());
   }
 
-  getEnabled(): BaseStrategy[] {
-    return this.getAll().filter((s) => !this.disabled.has(s.meta.id));
+  getEnabled(): BaseStrategy[];
+  getEnabled(userId: number): BaseStrategy[];
+  getEnabled(userId?: number): BaseStrategy[] {
+    if (userId == null) return this.getAll();
+    const disabledSet = this.disabled.get(userId);
+    if (!disabledSet) return this.getAll();
+    return this.getAll().filter((s) => !disabledSet.has(s.meta.id));
   }
 
-  getMetas(): StrategyMeta[] {
+  getMetas(userId?: number): StrategyMeta[] {
+    const disabledSet = userId ? this.disabled.get(userId) : undefined;
     return this.getAll().map((s) => ({
       ...s.meta,
-      enabled: !this.disabled.has(s.meta.id),
+      enabled: disabledSet ? !disabledSet.has(s.meta.id) : true,
     }));
   }
 
-  enable(id: string): void {
-    this.disabled.delete(id);
+  enable(id: string, userId: number): void {
+    this.getDisabledSet(userId).delete(id);
   }
 
-  disable(id: string): void {
-    this.disabled.add(id);
+  disable(id: string, userId: number): void {
+    this.getDisabledSet(userId).add(id);
   }
 
-  isEnabled(id: string): boolean {
-    return !this.disabled.has(id);
+  isEnabled(id: string, userId: number): boolean {
+    return !this.getDisabledSet(userId).has(id);
   }
 
   getByCategory(category: string): BaseStrategy[] {

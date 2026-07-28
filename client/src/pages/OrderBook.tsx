@@ -71,7 +71,7 @@ export default function OrderBook() {
             <Book className="w-7 h-7 text-[var(--cyan)]" />
             <div>
               <h1 className="text-2xl font-bold text-white">Order Book</h1>
-              <p className="text-xs text-[var(--text-muted)]">Live market depth from tick distribution{!connected && <span className="text-[var(--amber)]"> (connecting...)</span>}</p>
+              <p className="text-xs text-[var(--text-muted)]">Theoretical depth estimate from tick distribution{!connected && <span className="text-[var(--amber)]"> (connecting...)</span>}</p>
             </div>
           </div>
           <select value={symbol} onChange={(e) => setSymbol(e.target.value)} className="bg-[#1a1a2e] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-white focus:border-[var(--amber)] outline-none [&>option]:bg-[#1a1a2e] [&>option]:text-white">

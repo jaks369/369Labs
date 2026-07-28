@@ -16,12 +16,6 @@ export function isFeedStale(): boolean { return feedStale; }
 export function getFeedHealth(): { stale: boolean; lastTickEpoch: number } { return { stale: feedStale, lastTickEpoch: lastAnyTickEpoch }; }
 let msgId = 1;
 
-function decimalPlacesFor(symbol: string): number {
-  // Volatility indices use 3 decimals; R_100/R_200 historically 2, but Deriv serves 3-4.
-  // We compute the last digit from the raw quoted string to stay accurate.
-  return 3;
-}
-
 async function fetchActiveSymbols(): Promise<string[]> {
   return new Promise((resolve) => {
     if (!ws) return resolve([]);
@@ -77,7 +71,7 @@ export function startTickCollector() {
         const prev = lastTickEpoch[symbol] || 0;
         const outOfOrder = prev && epoch < prev;
         const nowSec = Math.floor(Date.now() / 1000);
-        if (nowSec - lastAnyTickEpoch > 30) feedStale = true; // no tick across all symbols for 30s
+        if (nowSec - lastAnyTickEpoch > 30) { feedStale = true; } else { feedStale = false; }
         lastAnyTickEpoch = nowSec;
         lastTickEpoch[symbol] = epoch;
         if (outOfOrder) {
@@ -96,6 +90,7 @@ export function startTickCollector() {
       console.log("[tickCollector] closed, will retry in 10s");
       ws = null;
       subscribedSymbolsOnServer.clear();
+      started = false; // allow reconnection
       setTimeout(() => startTickCollector(), 10000);
     });
   } catch (e) {
