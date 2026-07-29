@@ -63,10 +63,10 @@ export async function createApp() {
     res.setHeader("Content-Security-Policy",
       "default-src 'self'; " +
       "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.deriv.com https://*.tradingview.com https://apis.google.com; " +
-      "style-src 'self' 'unsafe-inline'; " +
+      "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; " +
       "img-src 'self' data: https: blob:; " +
       "connect-src 'self' https: wss:; " +
-      "font-src 'self' data:; " +
+      "font-src 'self' data: https://fonts.gstatic.com; " +
       "frame-src https://*.deriv.com https://*.tradingview.com https://accounts.google.com; " +
       "object-src 'none'"
     );

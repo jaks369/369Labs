@@ -457,9 +457,6 @@ export default function Dashboard() {
               </div>
             ) : (
               <div className="chart-plot" style={{ minHeight: "520px" }}>
-                <div className="chart-workspace-header">
-                  <span className="text-caption">{selectedDisplay}</span>
-                </div>
                 <TickChart symbol={selectedSymbol} maxDataPoints={50} decimalPlaces={decimalPlaces} />
               </div>
             )}

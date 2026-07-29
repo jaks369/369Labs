@@ -42,12 +42,12 @@ export default function ContractTypeSelector({ selection, onChange }: ContractTy
 
   return (
     <div className="space-y-4">
-      <div className="flex rounded-lg bg-[var(--card)] p-0.5">
+      <div className="grid grid-cols-5 gap-1 bg-[var(--card)] p-1 rounded-lg">
         {CATEGORIES.map((c) => (
           <button
             key={c.id}
             onClick={() => setCat(c.id)}
-            className={`flex flex-1 flex-col items-center gap-0.5 py-2 rounded-md text-micro font-bold transition-all ${
+            className={`flex flex-col items-center gap-0.5 py-2 rounded-md text-micro font-bold transition-all ${
               selection.category === c.id
                 ? "bg-[var(--amber)] text-white shadow-sm"
                 : "text-[var(--text-secondary)] hover:text-white"
