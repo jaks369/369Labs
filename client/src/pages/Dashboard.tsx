@@ -26,7 +26,7 @@ import {
 } from "lucide-react";
 import { useLocation } from "wouter";
 import TickChart from "@/components/TickChart";
-import DigitStats from "@/components/DigitStats";
+import DigitProbability from "@/components/DigitProbability";
 import { derivWS, DerivSymbol } from "@/services/derivWebSocket";
 import { useDerivStatus } from "@/hooks/useDerivStatus";
 import DerivTokenModal from "@/components/DerivTokenModal";
@@ -564,14 +564,28 @@ export default function Dashboard() {
                         <tr><th>#</th><th>TIME</th><th className="text-right">PRICE</th><th className="text-right">LAST DIGIT</th></tr>
                       </thead>
                       <tbody>
-                        {displayTicks.map((t: any, i: number) => (
-                          <tr key={i}>
+                        {displayTicks.map((t: any, i: number) => {
+                          const prevPrice = i < displayTicks.length - 1 ? displayTicks[i + 1]?.price : t.price;
+                          const dir = t.price > prevPrice ? "up" : t.price < prevPrice ? "down" : null;
+                          const isLatest = i === 0;
+                          return (
+                          <tr
+                            key={`${t.epoch}-${i}`}
+                            className="transition-colors duration-300"
+                            style={{
+                              background: isLatest && dir === "up" ? "rgba(16,185,129,0.06)" : isLatest && dir === "down" ? "rgba(239,68,68,0.06)" : "transparent",
+                            }}
+                          >
                             <td className="text-[var(--text-muted)] font-mono">{i + 1}</td>
-                            <td>{new Date((t.epoch || 0) * 1000).toLocaleTimeString()}</td>
-                            <td className="text-right text-white font-mono">{Number(t.price).toFixed(decimalPlaces)}</td>
-                            <td className="text-right font-mono">{t.lastDigit}</td>
+                            <td className="tabular-nums">{new Date((t.epoch || 0) * 1000).toLocaleTimeString()}</td>
+                            <td className="text-right text-white font-mono tabular-nums">
+                              {dir === "up" ? <span className="text-[var(--green)]">▲ </span> : dir === "down" ? <span className="text-[var(--red)]">▼ </span> : null}
+                              {Number(t.price).toFixed(decimalPlaces)}
+                            </td>
+                            <td className="text-right font-mono" style={{ color: t.lastDigit >= 5 ? "var(--green)" : "var(--red)" }}>{t.lastDigit}</td>
                           </tr>
-                        ))}
+                          );
+                        })}
                       </tbody>
                     </table>
                   </div>
@@ -684,7 +698,7 @@ export default function Dashboard() {
               )}
             </div>
             <div className="mt-6 pt-6 border-t border-[var(--border)]">
-              <DigitStats symbol={selectedSymbol} decimalPlaces={decimalPlaces} />
+              <DigitProbability symbol={selectedSymbol} decimalPlaces={decimalPlaces} />
             </div>
           </div>
 

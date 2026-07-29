@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+﻿import { useEffect } from "react";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
@@ -69,6 +69,7 @@ export default function MarketIntelligencePage() {
           </div>
         </PageSection>
         )}
+        {!isLoading && !overviewQuery.isError && (
         <PageSection>
         <div className="space-y-5">
           <MarketHealthGrid data={(data as any)?.health} loading={isLoading} />
@@ -98,7 +99,7 @@ export default function MarketIntelligencePage() {
                       <p className="text-xs font-bold text-white">{sym}</p>
                       <p className={`text-[10px] ${isUp ? "text-[var(--green)]" : isDown ? "text-[var(--red)]" : "text-[var(--text-muted)]"} mt-1`}>
                         {isUp ? <TrendingUp className="w-3 h-3 inline" /> : isDown ? <TrendingDown className="w-3 h-3 inline" /> : <Minus className="w-3 h-3 inline" />}
-                        {typeof pct === "number" ? <><IntegerStat value={pct} variant={isUp ? "always-positive" : isDown ? "always-negative" : "neutral"} />%</> : "—"}
+                        {typeof pct === "number" ? <><IntegerStat value={pct} variant={isUp ? "always-positive" : isDown ? "always-negative" : "neutral"} />%</> : "-"}
                       </p>
                     </div>
                   );
@@ -118,7 +119,7 @@ export default function MarketIntelligencePage() {
                 <div className="space-y-2">
                   {(data as any)?.insights?.filter?.((i: any) => i?.type === "correlation")?.slice(0, 5)?.map((ins: any, idx: number) => (
                     <div key={idx} className="flex justify-between text-xs p-2 bg-black/20 rounded-lg">
-                      <span className="text-[var(--text-secondary)]">{ins.label || ins.symbols?.join(" / ") || "—"}</span>
+                      <span className="text-[var(--text-secondary)]">{ins.label || ins.symbols?.join(" / ") || "-"}</span>
                       <span className={Number(ins.value) > 0 ? "text-[var(--green)]" : "text-[var(--red)]"}>{ins.value}</span>
                     </div>
                   )) || (
@@ -136,7 +137,7 @@ export default function MarketIntelligencePage() {
                   {SCREENER_SYMBOLS.slice(0, 5).map((sym) => {
                     const healthData = (data as any)?.health?.find?.((h: any) => h?.symbol === sym || h?.name === sym);
                     const vol = healthData?.volatility ?? healthData?.score;
-                    const level = vol != null ? (vol > 70 ? "Very High" : vol > 50 ? "High" : vol > 30 ? "Medium" : "Low") : "—";
+                    const level = vol != null ? (vol > 70 ? "Very High" : vol > 50 ? "High" : vol > 30 ? "Medium" : "Low") : "-";
                     const cls = vol != null ? (vol > 70 ? "text-[var(--red)]" : vol > 50 ? "text-[var(--amber)]" : "text-[var(--green)]") : "text-[var(--text-muted)]";
                     return (
                       <div key={sym} className="flex justify-between text-xs p-2 bg-black/20 rounded-lg">
@@ -151,6 +152,7 @@ export default function MarketIntelligencePage() {
           </div>
         </div>
         </PageSection>
+        )}
       </div>
     </PageContainer>
   );
