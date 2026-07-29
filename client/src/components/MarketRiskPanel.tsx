@@ -52,7 +52,7 @@ export default function MarketRiskPanel({ data, loading }: MarketRiskPanelProps)
       <div className="surface-elevated p-5">
         <div className="flex items-center gap-2 mb-4">
           <Shield className="w-4 h-4 text-[var(--cyan)]" />
-          <h3 className="section-title text-[11px]">Risk Advisories</h3>
+          <h3 className="section-title text-caption">Risk Advisories</h3>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           {[...Array(2)].map((_, i) => (
@@ -72,9 +72,9 @@ export default function MarketRiskPanel({ data, loading }: MarketRiskPanelProps)
       <div className="surface-elevated p-5">
         <div className="flex items-center gap-2 mb-4">
           <Shield className="w-4 h-4 text-[var(--cyan)]" />
-          <h3 className="section-title text-[11px]">Risk Advisories</h3>
+          <h3 className="section-title text-caption">Risk Advisories</h3>
         </div>
-        <p className="text-[10px] text-[var(--text-muted)] italic text-center py-6">No risk advisories. All markets operating within normal parameters.</p>
+        <p className="text-micro text-[var(--text-muted)] italic text-center py-6">No risk advisories. All markets operating within normal parameters.</p>
       </div>
     );
   }
@@ -88,7 +88,7 @@ export default function MarketRiskPanel({ data, loading }: MarketRiskPanelProps)
     <div className="surface-elevated p-5">
       <div className="flex items-center gap-2 mb-4">
         <Shield className="w-4 h-4 text-[var(--cyan)]" />
-        <h3 className="section-title text-[11px]">Risk Advisories</h3>
+        <h3 className="section-title text-caption">Risk Advisories</h3>
         <span className="text-[9px] text-[var(--text-muted)] ml-auto">{data.length} advisories{highCount > 0 ? `, ${highCount} critical/high` : ""}</span>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -103,7 +103,7 @@ export default function MarketRiskPanel({ data, loading }: MarketRiskPanelProps)
             </div>
 
             <div className="flex items-center gap-2 mb-2">
-              <span className="text-[11px] font-bold text-white">{a.symbol}</span>
+              <span className="text-caption font-bold text-white">{a.symbol}</span>
               <span className="text-[8px] text-[var(--text-secondary)]">Risk score: <IntegerStat value={a.riskScore} />/100</span>
             </div>
 

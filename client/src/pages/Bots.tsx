@@ -289,9 +289,9 @@ export default function Bots() {
         <div className="lg:col-span-2 space-y-6">
           <div className="panel">
             <div className="p-4 border-b border-[var(--border)] flex items-center justify-between bg-black/20">
-              <h2 className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-widest">Running Instances</h2>
+              <h2 className="text-micro">Running Instances</h2>
               <div className="flex items-center gap-2">
-                <span className="text-[10px] font-bold text-[var(--green)]">{runningBots.length} Active</span>
+                <span className="text-caption text-price-up font-bold">{runningBots.length} Active</span>
               </div>
             </div>
 
@@ -320,15 +320,15 @@ export default function Bots() {
                         </div>
                         <div>
                           <h3 className="text-sm font-bold text-white">{bot.name}</h3>
-                          <p className="text-[10px] text-[var(--text-muted)] uppercase font-bold tracking-wider">
+                          <p className="text-micro">
                             {bot.symbol} • {bot.trades} trades • {bot.status}
                           </p>
-                          {bot.lastLog && <p className="text-[10px] text-[var(--text-muted)] mt-1">{bot.lastLog}</p>}
+                          {bot.lastLog && <p className="text-caption mt-1">{bot.lastLog}</p>}
                         </div>
                       </div>
                       <div className="flex items-center gap-8">
                         <div className="text-right">
-                          <p className="text-[10px] font-bold text-[var(--text-muted)] uppercase mb-1">Profit/Loss</p>
+                          <p className="text-micro mb-1">Profit/Loss</p>
                           <p className={`text-sm font-bold ${bot.pnl >= 0 ? "text-[var(--green)]" : "text-[var(--red)]"}`}>
                             {bot.pnl >= 0 ? "+" : ""}${Number(bot.pnl).toFixed(2)}
                           </p>
@@ -342,10 +342,10 @@ export default function Bots() {
                           if (!mismatch) return null;
                           return (
                             <div className="max-w-[180px] text-left bg-[var(--red-soft)] border border-[var(--red)]/30 rounded px-2 py-1">
-                              <div className="flex items-center gap-1 text-[10px] font-bold text-[var(--red)] uppercase">
+                              <div className="flex items-center gap-1 text-caption text-price-down font-bold uppercase">
                                 <AlertTriangle className="w-3 h-3" /> Regime mismatch
                               </div>
-                              <p className="text-[10px] text-[var(--red)]/80 leading-tight mt-0.5">
+                              <p className="text-caption text-[var(--red)]/80 leading-tight mt-0.5">
                                 Live {liveWinRate.toFixed(0)}% vs backtest {Number(bot.backtestWinRate).toFixed(0)}%
                               </p>
                             </div>
@@ -354,7 +354,7 @@ export default function Bots() {
                         <Button
                           size="sm"
                           variant="ghost"
-                          className="text-[var(--text-muted)] hover:text-[var(--cyan)] border border-[var(--border)] hover:border-[var(--cyan)]/30"
+                          className="text-[var(--text-muted)] hover:text-[var(--amber)] border border-[var(--border)] hover:border-[var(--amber)]/30"
                           onClick={() => setViewLogsFor(bot.runId)}
                         >
                           <FileText className="w-3 h-3 mr-1" /> Logs
@@ -384,7 +384,7 @@ export default function Bots() {
                 <h3 className="text-sm font-bold text-white flex items-center gap-2"><FileText className="w-4 h-4" /> Bot Execution Logs</h3>
                 <button onClick={() => setViewLogsFor(null)} className="text-[var(--text-muted)] hover:text-white"><X className="w-4 h-4" /></button>
               </div>
-              <div className="p-4 space-y-1 max-h-[60vh] overflow-y-auto font-mono text-[11px]">
+              <div className="p-4 space-y-1 max-h-[60vh] overflow-y-auto font-mono text-caption">
                 {botLogsQuery.isLoading ? (
                   <div className="flex items-center justify-center py-8"><Loader2 className="w-5 h-5 animate-spin text-[var(--amber)]" /></div>
                 ) : botLogsQuery.isError ? (
@@ -393,8 +393,8 @@ export default function Bots() {
                       const bot = runningBots.find(b => b.runId === viewLogsFor);
                       return bot?.lastLog ? (
                         <div className="flex items-start gap-2 py-1 text-[var(--text-secondary)]">
-                          <span className="text-[10px] text-[var(--text-muted)] shrink-0">--:--:--</span>
-                          <span className="text-[10px] font-bold uppercase shrink-0 w-10">[info]</span>
+                          <span className="text-caption shrink-0">--:--:--</span>
+                          <span className="text-caption font-bold uppercase shrink-0 w-10">[info]</span>
                           <span>{bot.lastLog}</span>
                         </div>
                       ) : (
@@ -407,8 +407,8 @@ export default function Bots() {
                 ) : (
                   (botLogsQuery.data || []).map((log: any) => (
                     <div key={log.id} className={`flex items-start gap-2 py-1 ${log.level === "error" ? "text-[var(--red)]" : log.level === "warn" ? "text-[var(--amber)]" : "text-[var(--text-secondary)]"}`}>
-                      <span className="text-[10px] text-[var(--text-muted)] shrink-0 w-16">{log.createdAt ? new Date(log.createdAt).toLocaleTimeString() : ""}</span>
-                      <span className="text-[10px] font-bold uppercase shrink-0 w-10">[{log.level}]</span>
+                      <span className="text-caption shrink-0 w-16">{log.createdAt ? new Date(log.createdAt).toLocaleTimeString() : ""}</span>
+                      <span className="text-caption font-bold uppercase shrink-0 w-10">[{log.level}]</span>
                       <span>{log.message}</span>
                     </div>
                   ))
@@ -421,32 +421,32 @@ export default function Bots() {
         {/* Sidebar - Quick Stats & Available Strategies */}
         <div className="space-y-8">
           <div className="panel p-6">
-            <h3 className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-widest mb-6">System Health</h3>
+            <h3 className="text-micro mb-6">System Health</h3>
             <div className="space-y-3">
               <div className="flex justify-between items-center">
                 <span className="text-xs text-[var(--text-secondary)]">Active Bots</span>
-                <span className={`text-[10px] font-bold ${runningBots.length > 0 ? "text-[var(--green)]" : "text-[var(--text-muted)]"}`}>{runningBots.length}</span>
+                <span className={`text-caption font-bold ${runningBots.length > 0 ? "text-[var(--green)]" : "text-[var(--text-muted)]"}`}>{runningBots.length}</span>
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-xs text-[var(--text-secondary)]">Idle Bots</span>
-                <span className="text-[10px] font-bold text-[var(--text-secondary)]">{idleBots.length}</span>
+                <span className="text-caption font-bold text-[var(--text-secondary)]">{idleBots.length}</span>
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-xs text-[var(--text-secondary)]">Errors</span>
-                <span className={`text-[10px] font-bold ${errorBots.length > 0 ? "text-[var(--red)]" : "text-[var(--green)]"}`}>{errorBots.length > 0 ? `${errorBots.length} bot(s)` : "None"}</span>
+                <span className={`text-caption font-bold ${errorBots.length > 0 ? "text-[var(--red)]" : "text-[var(--green)]"}`}>{errorBots.length > 0 ? `${errorBots.length} bot(s)` : "None"}</span>
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-xs text-[var(--text-secondary)]">Deriv WS</span>
-                <span className={`text-[10px] font-bold ${derivWS.isAuthorized() ? "text-[var(--green)]" : "text-[var(--red)]"}`}>{derivWS.isAuthorized() ? "Connected" : "Disconnected"}</span>
+                <span className={`text-caption font-bold ${derivWS.isAuthorized() ? "text-[var(--green)]" : "text-[var(--red)]"}`}>{derivWS.isAuthorized() ? "Connected" : "Disconnected"}</span>
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-xs text-[var(--text-secondary)]">Total Trades</span>
-                <span className="text-[10px] font-bold text-[var(--text-secondary)]">{runningBots.reduce((s, b) => s + (b.trades || 0), 0)}</span>
+                <span className="text-caption font-bold text-[var(--text-secondary)]">{runningBots.reduce((s, b) => s + (b.trades || 0), 0)}</span>
               </div>
               {runningBots.length > 0 && (
                 <div className="flex justify-between items-center">
                   <span className="text-xs text-[var(--text-secondary)]">Avg. Win Rate</span>
-                  <span className="text-[10px] font-bold text-[var(--text-secondary)]">
+                  <span className="text-caption font-bold text-[var(--text-secondary)]">
                     {(() => {
                       const withWR = runningBots.filter(b => b.backtestWinRate != null);
                       return withWR.length > 0 ? (withWR.reduce((s, b) => s + (b.backtestWinRate || 0), 0) / withWR.length).toFixed(0) + "%" : "—";
@@ -459,9 +459,9 @@ export default function Bots() {
 
           <div className="panel p-6">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-widest">Ready to Deploy</h3>
+              <h3 className="text-micro">Ready to Deploy</h3>
               {selectedMulti.length > 1 && (
-                <Button onClick={handleMultiDeploy} className="text-[10px] font-bold bg-[var(--cyan)] text-black px-3 py-1 rounded-lg flex items-center gap-1">
+                <Button onClick={handleMultiDeploy} className="text-caption font-bold bg-[var(--amber)] text-[var(--bg)] px-3 py-1 rounded-lg flex items-center gap-1">
                   <Play className="w-3 h-3" /> Deploy {selectedMulti.length} Strategies
                 </Button>
               )}
@@ -477,17 +477,17 @@ export default function Bots() {
                 const isSelected = selectedMulti.includes(s.id);
                 const isRunning = runningBots.some((b) => b.strategyId === s.id);
                 return (
-                <div key={s.id} className={`p-4 rounded-xl bg-[var(--card)] border transition-all group ${isSelected ? "border-[var(--cyan)]" : "border-[var(--border)] hover:border-[var(--amber)]/50"}`}>
+                <div key={s.id} className={`p-4 rounded-xl bg-[var(--card)] border transition-all group ${isSelected ? "border-[var(--amber)]" : "border-[var(--border)] hover:border-[var(--amber)]/50"}`}>
                   <div className="flex justify-between items-start mb-3">
                     <div className="flex items-center gap-2">
-                      <input type="checkbox" checked={isSelected} onChange={() => setSelectedMulti((p) => p.includes(s.id) ? p.filter((id) => id !== s.id) : [...p, s.id])} className="accent-[var(--cyan)] w-3.5 h-3.5" />
+                      <input type="checkbox" checked={isSelected} onChange={() => setSelectedMulti((p) => p.includes(s.id) ? p.filter((id) => id !== s.id) : [...p, s.id])} className="accent-[var(--amber)] w-3.5 h-3.5" />
                       <h4 className="text-xs font-bold text-white">{s.name}</h4>
                     </div>
                     <Zap className="w-3 h-3 text-[var(--amber)]" />
                   </div>
                   <div className="flex gap-2">
                     <Button
-                      className="flex-1 h-8 text-[10px] font-bold bg-[var(--amber-soft)] text-[var(--amber)] hover:bg-[var(--amber)] hover:text-white border border-[var(--amber-border)]"
+                      className="flex-1 h-8 text-caption font-bold bg-[var(--amber-soft)] text-[var(--amber)] hover:bg-[var(--amber)] hover:text-white border border-[var(--amber-border)]"
                       disabled={deployingId === s.id || isRunning}
                       onClick={() => handleDeploy(s)}
                     >
@@ -498,7 +498,7 @@ export default function Bots() {
                 </div>
               );})}
               {(!strategiesQuery.data || strategiesQuery.data.length === 0) && (
-                <p className="text-xs text-[var(--text-muted)] italic text-center py-4">No strategies found.</p>
+                <div className="empty-state"><p className="empty-state-desc">No strategies found.</p></div>
               )}
             </div>
           </div>

@@ -35,7 +35,7 @@ function ReportViewer({ report, onClose }: { report: any; onClose: () => void })
         <div className="flex items-center justify-between p-4 border-b border-[var(--border)]">
           <div>
             <h3 className="text-sm font-bold text-white">{report.label}</h3>
-            <p className="text-[10px] text-[var(--text-muted)]">{report.period?.from} → {report.period?.to}</p>
+            <p className="text-caption">{report.period?.from} → {report.period?.to}</p>
           </div>
           <div className="flex items-center gap-2">
             <button onClick={() => { exportCsv(report); toast("CSV exported", "success"); }} className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-[var(--amber)]/20 text-[var(--amber)] text-xs font-bold hover:bg-[var(--amber)]/30">
@@ -48,26 +48,26 @@ function ReportViewer({ report, onClose }: { report: any; onClose: () => void })
           {/* Summary cards */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             <div className="bg-black/20 rounded-lg p-3 text-center">
-              <p className="text-[9px] text-[var(--text-muted)] uppercase font-bold">Trades</p>
+              <p className="text-caption">Trades</p>
               <p className="text-lg font-bold text-white">{s.totalTrades}</p>
             </div>
             <div className="bg-black/20 rounded-lg p-3 text-center">
-              <p className="text-[9px] text-[var(--text-muted)] uppercase font-bold">Win Rate</p>
+              <p className="text-caption">Win Rate</p>
               <p className="text-lg font-bold text-[var(--green)]">{s.winRate}%</p>
             </div>
             <div className="bg-black/20 rounded-lg p-3 text-center">
-              <p className="text-[9px] text-[var(--text-muted)] uppercase font-bold">Net P&L</p>
+              <p className="text-caption">Net P&L</p>
               <p className={`text-lg font-bold ${s.totalPnl >= 0 ? "text-[var(--green)]" : "text-[var(--red)]"}`}>${s.totalPnl}</p>
             </div>
             <div className="bg-black/20 rounded-lg p-3 text-center">
-              <p className="text-[9px] text-[var(--text-muted)] uppercase font-bold">Max DD</p>
+              <p className="text-caption">Max DD</p>
               <p className="text-lg font-bold text-[var(--red)]">${s.maxDrawdown}</p>
             </div>
           </div>
 
           {/* W/L breakdown */}
           <div className="bg-black/20 rounded-lg p-4">
-            <p className="text-[10px] text-[var(--text-muted)] font-bold uppercase mb-3">Win / Loss Breakdown</p>
+            <p className="text-micro mb-3">Win / Loss Breakdown</p>
             <div className="flex items-center gap-4">
               <div className="flex-1">
                 <div className="flex justify-between text-xs mb-1">
@@ -93,7 +93,7 @@ function ReportViewer({ report, onClose }: { report: any; onClose: () => void })
           {/* By Symbol */}
           {report.bySymbol && report.bySymbol.length > 0 && (
             <div>
-              <p className="text-[10px] text-[var(--text-muted)] font-bold uppercase mb-2">Performance by Symbol</p>
+              <p className="text-micro mb-2">Performance by Symbol</p>
               <div className="space-y-1.5">
                 {report.bySymbol.map((sym: any) => (
                   <div key={sym.symbol} className="flex items-center justify-between px-3 py-2 bg-black/20 rounded-lg text-xs">
@@ -187,7 +187,7 @@ export default function AutoReports() {
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
-                    <button onClick={() => openReport(r.id)} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[var(--cyan)]/20 text-[var(--cyan)] text-xs font-bold hover:bg-[var(--cyan)]/30">
+                    <button onClick={() => openReport(r.id)} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[var(--amber)]/20 text-[var(--amber)] text-xs font-bold hover:bg-[var(--amber)]/30">
                       <Eye className="w-3.5 h-3.5" /> View
                     </button>
                   </div>

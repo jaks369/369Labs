@@ -80,7 +80,7 @@ export default function AIPerformance() {
             <pre className="bg-black/30 rounded-xl p-4 text-xs text-[var(--text-secondary)] font-mono overflow-auto max-h-[400px]">{JSON.stringify(data, null, 2)}</pre>
           </div>
         ) : (
-          <div className="text-center py-20 text-[var(--text-muted)] text-sm">No data available. AI performance metrics will populate as the AI analyzes trades.</div>
+          <div className="empty-state"><p className="empty-state-desc">No data available. AI performance metrics will populate as the AI analyzes trades.</p></div>
         )}
       </div>
     </div>

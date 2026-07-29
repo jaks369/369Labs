@@ -52,7 +52,7 @@ export default function TradingCopilot() {
             </div>
           </div>
           <select value={symbol} onChange={e => setSymbol(e.target.value)}
-            className="bg-[#1a1a2e] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-white focus:border-[var(--amber)] outline-none [&>option]:bg-[#1a1a2e] [&>option]:text-white">
+            className="bg-[var(--surface-secondary)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-white focus:border-[var(--amber)] outline-none [&>option]:bg-[var(--surface-secondary)] [&>option]:text-white">
             {getValidSymbols().map(s => <option key={s} value={s}>{s}</option>)}
           </select>
         </div>
@@ -61,23 +61,23 @@ export default function TradingCopilot() {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4 md:col-span-2">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-[10px] text-[var(--text-muted)] font-bold uppercase tracking-wider">{symbol} Live</span>
-              {tick && <span className={`text-[10px] font-bold ${tick.change >= 0 ? "text-[var(--green)]" : "text-[var(--red)]}"}`}>{tick.change >= 0 ? "+" : ""}{Number(tick.change).toFixed(2)}%</span>}
+              <span className="text-micro">{symbol} Live</span>
+              {tick && <span className={`text-caption font-bold ${tick.change >= 0 ? "text-[var(--green)]" : "text-[var(--red)]}"}`}>{tick.change >= 0 ? "+" : ""}{Number(tick.change).toFixed(2)}%</span>}
             </div>
             <p className="text-3xl font-bold text-white font-mono">
               {tick ? Number(tick.price).toFixed(dp) : <Loader2 className="w-5 h-5 animate-spin text-[var(--text-muted)] inline" />}
             </p>
           </div>
           <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4">
-            <span className="text-[10px] text-[var(--text-muted)] font-bold uppercase tracking-wider">Total P&L</span>
+            <span className="text-micro">Total P&L</span>
             <p className={`text-xl font-bold mt-1 font-mono ${stats.pnl >= 0 ? "text-[var(--green)]" : "text-[var(--red)]}"}`}>
               {stats.pnl >= 0 ? "+" : ""}${Number(stats.pnl).toFixed(2)}
             </p>
           </div>
           <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4">
-            <span className="text-[10px] text-[var(--text-muted)] font-bold uppercase tracking-wider">Win Rate</span>
+            <span className="text-micro">Win Rate</span>
             <p className="text-xl font-bold mt-1 font-mono text-[var(--green)]">{Number(stats.winRate).toFixed(1)}%</p>
-            <p className="text-[10px] text-[var(--text-muted)] mt-0.5">{stats.wins}/{stats.total} trades</p>
+            <p className="text-caption mt-0.5">{stats.wins}/{stats.total} trades</p>
           </div>
         </div>
 
@@ -111,11 +111,11 @@ export default function TradingCopilot() {
 
             {/* Active Strategies summary */}
             <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4">
-              <h3 className="text-xs font-bold text-white mb-3 flex items-center gap-2"><Bot className="w-3.5 h-3.5 text-[var(--cyan)]" /> Strategies ({strategiesQuery.data?.length || 0})</h3>
+              <h3 className="text-xs font-bold text-white mb-3 flex items-center gap-2"><Bot className="w-3.5 h-3.5 text-[var(--amber)]" /> Strategies ({strategiesQuery.data?.length || 0})</h3>
               {strategiesQuery.isLoading ? (
                 <Loader2 className="w-4 h-4 animate-spin text-[var(--text-muted)]" />
               ) : (strategiesQuery.data || []).length === 0 ? (
-                <p className="text-[10px] text-[var(--text-muted)]">No strategies yet. Create one in Strategy Builder.</p>
+                <div className="empty-state"><p className="empty-state-desc">No strategies yet.</p></div>
               ) : (
                 <div className="space-y-1.5 max-h-40 overflow-y-auto">
                   {(strategiesQuery.data || []).slice(0, 5).map(s => (

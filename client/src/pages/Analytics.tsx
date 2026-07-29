@@ -135,15 +135,15 @@ export default function Analytics() {
     return `${i === 0 ? "M" : "L"}${x.toFixed(1)},${y.toFixed(1)}`;
   }).join(" ");
   const eqColor = totalPnl >= 0 ? "var(--green)" : "var(--red)";
-  const eqFillColor = totalPnl >= 0 ? "rgba(34,197,94,0.08)" : "rgba(239,68,68,0.08)";
+  const eqFillColor = totalPnl >= 0 ? "rgba(var(--green-rgb), 0.08)" : "rgba(var(--red-rgb), 0.08)";
 
   const riskStats = [
-    { label: "Current Drawdown", value: `$${currentDD.toFixed(2)}`, sub: "peak-to-now", color: currentDD > 0 ? "text-[var(--cyan)]" : "text-[var(--text-secondary)]" },
+    { label: "Current Drawdown", value: `$${currentDD.toFixed(2)}`, sub: "peak-to-now", color: currentDD > 0 ? "text-[var(--amber)]" : "text-[var(--text-secondary)]" },
     { label: "Max Drawdown", value: `$${maxDD.toFixed(2)}`, sub: "all-time", color: maxDD > 0 ? "text-[var(--red)]" : "text-[var(--text-secondary)]" },
     { label: "Daily Drawdown", value: `$${dailyDD.toFixed(2)}`, sub: "worst day", color: dailyDD < 0 ? "text-[var(--red)]" : "text-[var(--text-secondary)]" },
     { label: "Weekly Drawdown", value: `$${weeklyDD.toFixed(2)}`, sub: "worst week", color: weeklyDD < 0 ? "text-[var(--red)]" : "text-[var(--text-secondary)]" },
     { label: "Largest Loss", value: `$${largestLoss.toFixed(2)}`, sub: "single trade", color: largestLoss < 0 ? "text-[var(--red)]" : "text-[var(--text-secondary)]" },
-    { label: "Risk : Reward", value: rr.toFixed(2), sub: "gross win/loss", color: rr >= 1 ? "text-[var(--green)]" : "text-[var(--cyan)]" },
+    { label: "Risk : Reward", value: rr.toFixed(2), sub: "gross win/loss", color: rr >= 1 ? "text-[var(--green)]" : "text-[var(--amber)]" },
     { label: "Avg Exposure", value: `$${exposure.toFixed(2)}`, sub: "per trade stake", color: "text-[var(--text-secondary)]" },
     { label: "Open Risk", value: "—", sub: "live bots", color: "text-[var(--text-muted)]" },
     { label: "Sharpe Ratio", value: sharpeRatio.toFixed(2), sub: "risk-adjusted return", color: sharpeRatio >= 1 ? "text-[var(--green)]" : sharpeRatio >= 0 ? "text-[var(--amber)]" : "text-[var(--red)]" },
@@ -154,7 +154,7 @@ export default function Analytics() {
   const stats = [
     { label: "Total P&L", value: `$${totalPnl.toFixed(2)}`, icon: DollarSign, color: totalPnl >= 0 ? "text-[var(--green)]" : "text-[var(--red)]" },
     { label: "Win Rate", value: `${winRate}%`, icon: TrendingUp, color: "text-[var(--green)]" },
-    { label: "Total Trades", value: totalTrades.toString(), icon: Activity, color: "text-[var(--cyan)]" },
+    { label: "Total Trades", value: totalTrades.toString(), icon: Activity, color: "text-[var(--amber)]" },
     { label: "Avg. Trade", value: `${avgTrade >= 0 ? "+" : ""}$${avgTrade.toFixed(2)}`, icon: BarChart4, color: avgTrade >= 0 ? "text-[var(--green)]" : "text-[var(--red)]" },
   ];
 
@@ -194,7 +194,7 @@ export default function Analytics() {
         </div>
 
         {tradesQuery.isLoading ? (
-          <div className="flex items-center justify-center h-64"><Loader2 className="w-8 h-8 animate-spin text-[var(--cyan)]" /></div>
+          <div className="flex items-center justify-center h-64"><Loader2 className="w-8 h-8 animate-spin text-[var(--amber)]" /></div>
         ) : tradesQuery.isError ? (
           <div className="flex items-center justify-center h-64">
             <div className="text-center">
@@ -225,7 +225,7 @@ export default function Analytics() {
                   <button key={m} onClick={() => setFilter(m)}
                     className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-bold transition-colors ${
                       filter === m
-                        ? "bg-[var(--cyan)] text-black"
+                        ? "bg-[var(--amber)] text-[var(--bg)]"
                         : "bg-[var(--card)] border border-[var(--border)] text-[var(--text-secondary)] hover:text-white"
                     }`}>
                     <Icon className="w-4 h-4" />
@@ -262,15 +262,15 @@ export default function Analytics() {
 
             <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-6">
               <h2 className="text-lg font-bold text-white mb-1 flex items-center gap-2">
-                <ShieldAlert className="w-5 h-5 text-[var(--cyan)]" /> Risk Dashboard
+                <ShieldAlert className="w-5 h-5 text-[var(--amber)]" /> Risk Dashboard
               </h2>
               <p className="text-xs text-[var(--text-muted)] mb-4">Drawdown, exposure and risk:reward across all closed trades.</p>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 {riskStats.map(s => (
                   <div key={s.label} className="bg-black/20 border border-[var(--border)] rounded-lg p-4">
-                    <p className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-wider">{s.label}</p>
+                    <p className="text-micro">{s.label}</p>
                     <p className={`text-xl font-bold mt-1 ${s.color}`}>{s.value}</p>
-                    <p className="text-[10px] text-[var(--text-muted)] mt-0.5">{s.sub}</p>
+                    <p className="text-caption mt-0.5">{s.sub}</p>
                   </div>
                 ))}
               </div>
@@ -299,7 +299,7 @@ export default function Analytics() {
                             {months.map(m => {
                               const val = monthlyPnl[year]?.[m] || 0;
                               const intensity = Math.abs(val) / maxMonthly;
-                              const bg = val > 0 ? `rgba(34,197,94,${Math.min(intensity, 0.8)})` : val < 0 ? `rgba(239,68,68,${Math.min(intensity, 0.8)})` : "transparent";
+                              const bg = val > 0 ? `rgba(var(--green-rgb), ${Math.min(intensity, 0.8)})` : val < 0 ? `rgba(var(--red-rgb), ${Math.min(intensity, 0.8)})` : "transparent";
                               return (
                                 <td key={m} className="p-2 text-center rounded" style={{ background: bg }}>
                                   <span className={`font-bold ${val > 0 ? "text-[var(--green)]" : val < 0 ? "text-[var(--red)]" : "text-[var(--text-muted)]"}`}>
@@ -378,7 +378,7 @@ export default function Analytics() {
                     ))}
                   </div>
                 ) : (
-                  <div className="flex items-center justify-center h-48 text-[var(--text-muted)]">No trades yet — deploy a bot</div>
+                  <div className="empty-state"><p className="empty-state-desc">No trades yet — deploy a bot.</p></div>
                 )}
               </div>
               <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-6">

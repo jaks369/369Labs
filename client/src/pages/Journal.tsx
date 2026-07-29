@@ -68,7 +68,7 @@ export default function Journal() {
           <button onClick={() => setShowImport(true)} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[var(--card)] border border-[var(--border)] text-xs text-[var(--text-secondary)] hover:text-white"><Upload className="w-3.5 h-3.5" /> Import Trades</button>
           <button onClick={() => { setShowScreenshot(true); setTimeout(() => fileInputRef.current?.click(), 100); }} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[var(--card)] border border-[var(--border)] text-xs text-[var(--text-secondary)] hover:text-white"><Image className="w-3.5 h-3.5" /> Screenshot</button>
           <button onClick={() => setShowLinkTrade(true)} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[var(--card)] border border-[var(--border)] text-xs text-[var(--text-secondary)] hover:text-white"><Link2 className="w-3.5 h-3.5" /> Link Trade</button>
-          <button onClick={() => setShowStats(!showStats)} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs transition-all ${showStats ? "bg-[var(--cyan)]/20 text-[var(--cyan)] border-[var(--cyan)]/30" : "bg-[var(--card)] text-[var(--text-secondary)] border-[var(--border)] hover:text-white"}`}><BarChart3 className="w-3.5 h-3.5" /> Stats</button>
+          <button onClick={() => setShowStats(!showStats)} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs transition-all ${showStats ? "bg-[var(--amber)]/20 text-[var(--amber)] border-[var(--amber)]/30" : "bg-[var(--card)] text-[var(--text-secondary)] border-[var(--border)] hover:text-white"}`}><BarChart3 className="w-3.5 h-3.5" /> Stats</button>
         </div>
 
         <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-6 space-y-4">
@@ -98,7 +98,7 @@ export default function Journal() {
 
         {showStats && (
           <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-6">
-            <h2 className="text-sm font-bold text-white mb-4 flex items-center gap-2"><BarChart3 className="w-4 h-4 text-[var(--cyan)]" /> Trade Statistics</h2>
+            <h2 className="text-sm font-bold text-white mb-4 flex items-center gap-2"><BarChart3 className="w-4 h-4 text-[var(--amber)]" /> Trade Statistics</h2>
             {(() => {
               const allTrades = (tradesQuery.data || []) as any[];
               const wins = allTrades.filter((t) => t.result === "win").length;
@@ -121,19 +121,19 @@ export default function Journal() {
                 <div className="space-y-4">
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                     <div className="bg-black/20 rounded-lg p-3 text-center">
-                      <p className="text-[10px] text-[var(--text-muted)] uppercase">Total Trades</p>
+                      <p className="text-micro">Total Trades</p>
                       <p className="text-lg font-bold text-white">{total}</p>
                     </div>
                     <div className="bg-black/20 rounded-lg p-3 text-center">
-                      <p className="text-[10px] text-[var(--text-muted)] uppercase">Win Rate</p>
+                      <p className="text-micro">Win Rate</p>
                       <p className="text-lg font-bold text-[var(--green)]">{winRate}%</p>
                     </div>
                     <div className="bg-black/20 rounded-lg p-3 text-center">
-                      <p className="text-[10px] text-[var(--text-muted)] uppercase">Net P&L</p>
+                      <p className="text-micro">Net P&L</p>
                       <p className={`text-lg font-bold ${totalPnl >= 0 ? "text-[var(--green)]" : "text-[var(--red)]"}`}>${totalPnl.toFixed(2)}</p>
                     </div>
                     <div className="bg-black/20 rounded-lg p-3 text-center">
-                      <p className="text-[10px] text-[var(--text-muted)] uppercase">Profit Factor</p>
+                      <p className="text-micro">Profit Factor</p>
                       <p className={`text-lg font-bold ${profitFactor >= 1.5 ? "text-[var(--green)]" : profitFactor >= 1 ? "text-[var(--amber)]" : "text-[var(--red)]"}`}>{profitFactor.toFixed(2)}</p>
                     </div>
                   </div>
@@ -178,14 +178,14 @@ export default function Journal() {
                 const d = entry.data as any;
                 const isManual = d?.manual;
                 return (
-                  <div key={entry.id} className={`bg-[var(--card)] border ${isManual ? "border-[var(--cyan)]/30" : "border-[var(--border)]"} rounded-xl p-4`}>
+                  <div key={entry.id} className={`bg-[var(--card)] border ${isManual ? "border-[var(--amber)]/30" : "border-[var(--border)]"} rounded-xl p-4`}>
                     <div className="flex items-center gap-2 mb-2">
-                      {isManual && <span className="text-[9px] px-1.5 py-0.5 rounded bg-[var(--cyan-soft)] text-[var(--cyan)] font-bold">NOTE</span>}
-                      <span className="text-[10px] font-bold text-[var(--text-muted)] uppercase">{entry.createdAt ? new Date(entry.createdAt).toLocaleString() : ""}</span>
-                      {!isManual && d?.sampleSize && <span className="text-[10px] text-[var(--text-secondary)]">{d.sampleSize} trades · {d.wins}W / {d.losses}L</span>}
+                      {isManual && <span className="text-[9px] px-1.5 py-0.5 rounded bg-[var(--amber-soft)] text-[var(--amber)] font-bold">NOTE</span>}
+                      <span className="text-micro">{entry.createdAt ? new Date(entry.createdAt).toLocaleString() : ""}</span>
+                      {!isManual && d?.sampleSize && <span className="text-body">{d.sampleSize} trades · {d.wins}W / {d.losses}L</span>}
                     </div>
                     <div className="text-sm text-[var(--text-secondary)] leading-relaxed whitespace-pre-wrap line-clamp-6">{d?.analysis || ""}</div>
-                    <button onClick={() => { setLinkKnowledgeId(entry.id); setLinkTradeId(""); setShowLinkTrade(true); }} className="mt-2 text-[10px] text-[var(--cyan)] hover:text-white flex items-center gap-1"><Link2 className="w-3 h-3" /> Link Trade</button>
+                    <button onClick={() => { setLinkKnowledgeId(entry.id); setLinkTradeId(""); setShowLinkTrade(true); }} className="mt-2 text-caption text-[var(--amber)] hover:text-white flex items-center gap-1"><Link2 className="w-3 h-3" /> Link Trade</button>
                   </div>
                 );
               })
@@ -203,7 +203,7 @@ export default function Journal() {
             </div>
             <div className="p-4 space-y-3">
               <textarea value={manualNote} onChange={(e) => setManualNote(e.target.value)} placeholder="Write your observations, thoughts on recent trades..." rows={5} className="w-full bg-[var(--card)] border border-[var(--border)] rounded-lg p-3 text-sm text-white placeholder-[var(--text-muted)] outline-none resize-none" />
-              <button onClick={saveManual} disabled={saveManualMutation.isPending || !manualNote.trim()} className="w-full py-2 rounded-lg bg-[var(--cyan)] text-black text-xs font-bold hover:bg-[var(--cyan)] disabled:opacity-40">
+              <button onClick={saveManual} disabled={saveManualMutation.isPending || !manualNote.trim()} className="w-full py-2 rounded-lg bg-[var(--amber)] text-[var(--bg)] text-xs font-bold hover:bg-[var(--amber)] disabled:opacity-40">
                 {saveManualMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : "Save Note"}
               </button>
             </div>
@@ -274,7 +274,7 @@ export default function Journal() {
                 } catch (err: any) {
                   toast(err?.message || "Failed to link trade", "error");
                 }
-              }} disabled={linkTradeMutation.isPending || !linkTradeId.trim() || linkKnowledgeId == null} className="w-full py-2 rounded-lg bg-[var(--cyan)] text-black text-xs font-bold disabled:opacity-40">
+              }} disabled={linkTradeMutation.isPending || !linkTradeId.trim() || linkKnowledgeId == null} className="w-full py-2 rounded-lg bg-[var(--amber)] text-[var(--bg)] text-xs font-bold disabled:opacity-40">
                 {linkTradeMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : "Link Trade"}
               </button>
                 </>
@@ -292,7 +292,7 @@ export default function Journal() {
               <button onClick={() => setShowImport(false)} className="text-[var(--text-muted)] hover:text-white">✕</button>
             </div>
             <div className="p-4 space-y-3">
-              <p className="text-[10px] text-[var(--text-muted)]">CSV must have at least: <code className="text-[var(--amber)]">symbol, result (win/loss), stake</code>. Optional: <code className="text-[var(--text-secondary)]">profitLoss, entryTime, exitTime, contractType, contractId</code>.</p>
+              <p className="text-caption">CSV must have at least: <code className="text-[var(--amber)]">symbol, result (win/loss), stake</code>. Optional: <code className="text-[var(--text-secondary)]">profitLoss, entryTime, exitTime, contractType, contractId</code>.</p>
               <textarea value={csvText} onChange={(e) => setCsvText(e.target.value)} placeholder={`symbol,result,stake,profitLoss,entryTime\nR_100,win,10,5.2,2024-01-01\nR_100,loss,10,-3.1,2024-01-02`} rows={6} className="w-full bg-[var(--card)] border border-[var(--border)] rounded-lg p-3 text-xs font-mono text-white placeholder-[var(--text-muted)] outline-none resize-none" />
               <button onClick={importCsv} disabled={importCsvMutation.isPending || !csvText.trim()} className="w-full py-2 rounded-lg bg-[var(--amber)] text-black text-xs font-bold hover:bg-[var(--amber)] disabled:opacity-40">
                 {importCsvMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : `Import Trades`}

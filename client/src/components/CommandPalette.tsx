@@ -118,7 +118,7 @@ export default function CommandPalette() {
             placeholder="Type a command or search…  (navigate, deploy, backtest, ask 369AI)"
             className="flex-1 bg-transparent py-3.5 text-sm text-white outline-none placeholder:text-[var(--text-muted)]"
           />
-          <kbd className="text-[10px] text-[var(--text-muted)] border border-[var(--border)] rounded px-1.5 py-0.5">ESC</kbd>
+          <kbd className="text-micro text-[var(--text-muted)] border border-[var(--border)] rounded px-1.5 py-0.5">ESC</kbd>
         </div>
         <div className="max-h-80 overflow-y-auto py-2">
           {filtered.length === 0 && (
@@ -137,12 +137,12 @@ export default function CommandPalette() {
               >
                 <Icon className="w-4 h-4 text-[var(--text-secondary)]" />
                 <span className="flex-1">{c.label}</span>
-                <span className="text-[10px] uppercase tracking-wider text-[var(--text-muted)]">{c.group}</span>
+                <span className="text-micro uppercase tracking-wider text-[var(--text-muted)]">{c.group}</span>
               </button>
             );
           })}
         </div>
-        <div className="px-4 py-2 border-t border-[var(--border)] text-[10px] text-[var(--text-muted)] flex items-center gap-2">
+        <div className="px-4 py-2 border-t border-[var(--border)] text-micro text-[var(--text-muted)] flex items-center gap-2">
           <kbd className="border border-[var(--border)] rounded px-1">↑</kbd>
           <kbd className="border border-[var(--border)] rounded px-1">↓</kbd>
           to navigate · <kbd className="border border-[var(--border)] rounded px-1">↵</kbd> to run · 369Labs Command Center

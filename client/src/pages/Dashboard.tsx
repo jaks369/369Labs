@@ -308,12 +308,8 @@ export default function Dashboard() {
   return (
     <PageContainer className="page-container">
       <PageSection>
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
-        <div>
-          <h1 className="text-2xl font-semibold text-white mb-1">Market Overview</h1>
-          <p className="text-[var(--text-muted)] text-sm font-medium">Volatility Indices &middot; Live Trading</p>
-        </div>
-        <div className="flex flex-wrap items-center gap-3">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 mb-6">
+        <div className="flex items-center gap-3">
           <div className="flex items-center gap-2 px-3 py-2 rounded-lg panel-secondary">
             <Wallet className="w-4 h-4 text-[var(--green)]" />
             <span className="text-sm font-bold text-white">
@@ -331,51 +327,36 @@ export default function Dashboard() {
               <span className="badge badge-green">connected</span>
             )}
           </div>
-
           <Button onClick={() => setShowTokenModal(true)} className="btn btn-primary gap-2 w-full sm:w-auto">
-            <Zap className="w-4 h-4 shrink-0" /> <span className="sm:inline">Connect Deriv</span>
+            <Zap className="w-4 h-4 shrink-0" /> <span className="sm:inline">Connect</span>
           </Button>
           <Button onClick={() => setShowSymbolPicker(s => !s)} className="btn btn-outline gap-2 w-full sm:w-auto">
-            <Activity className="w-4 h-4 shrink-0" /> <span className="truncate max-w-[120px] sm:max-w-none">{selectedDisplay}</span>
+            <Activity className="w-4 h-4 shrink-0" /> <span className="truncate max-w-[100px] sm:max-w-none">{selectedDisplay}</span>
             <ChevronDown className={`w-4 h-4 shrink-0 transition-transform ${showSymbolPicker ? "rotate-180" : ""}`} />
           </Button>
+        </div>
+        <div className="flex items-center gap-2">
+          <button onClick={() => navigate("/bots")} className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-[var(--card)] border border-[var(--border)] hover:border-[var(--amber)]/40 hover-lift transition-all text-caption text-[var(--text-secondary)] hover:text-white">
+            <Bot className="w-3.5 h-3.5 text-[var(--amber)]" />
+            <span className="hidden sm:inline">Bots</span>
+          </button>
+          <button onClick={() => navigate("/backtesting")} className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-[var(--card)] border border-[var(--border)] hover:border-[var(--amber)]/40 hover-lift transition-all text-caption text-[var(--text-secondary)] hover:text-white">
+            <BarChart3 className="w-3.5 h-3.5 text-[var(--amber)]" />
+            <span className="hidden sm:inline">Backtest</span>
+          </button>
+          <button onClick={() => navigate("/journal")} className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-[var(--card)] border border-[var(--border)] hover:border-[var(--green)]/40 hover-lift transition-all text-caption text-[var(--text-secondary)] hover:text-white">
+            <BookOpen className="w-3.5 h-3.5 text-[var(--green)]" />
+            <span className="hidden sm:inline">Journal</span>
+          </button>
+          <button onClick={() => navigate("/ai-assistant")} className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-[var(--card)] border border-[var(--border)] hover:border-[var(--cyan)]/40 hover-lift transition-all text-caption text-[var(--text-secondary)] hover:text-white">
+            <Brain className="w-3.5 h-3.5 text-[var(--cyan)]" />
+            <span className="hidden sm:inline">AI</span>
+          </button>
         </div>
       </div>
       </PageSection>
 
-      <PageSection>
-      {/* Quick Actions */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
-        <button onClick={() => navigate("/bots")} className="flex items-center gap-3 p-4 rounded-xl bg-[var(--card)] border border-[var(--border)] hover:border-[var(--cyan)]/40 transition-all">
-          <Bot className="w-5 h-5 text-[var(--cyan)]" />
-          <div className="text-left">
-            <p className="text-xs font-bold text-white">Bots</p>
-            <p className="text-[10px] text-[var(--text-muted)]">Manage automations</p>
-          </div>
-        </button>
-        <button onClick={() => navigate("/backtesting")} className="flex items-center gap-3 p-4 rounded-xl bg-[var(--card)] border border-[var(--border)] hover:border-[var(--amber)]/40 transition-all">
-          <BarChart3 className="w-5 h-5 text-[var(--amber)]" />
-          <div className="text-left">
-            <p className="text-xs font-bold text-white">Backtest</p>
-            <p className="text-[10px] text-[var(--text-muted)]">Test a strategy</p>
-          </div>
-        </button>
-        <button onClick={() => navigate("/journal")} className="flex items-center gap-3 p-4 rounded-xl bg-[var(--card)] border border-[var(--border)] hover:border-[var(--green)]/40 transition-all">
-          <BookOpen className="w-5 h-5 text-[var(--green)]" />
-          <div className="text-left">
-            <p className="text-xs font-bold text-white">Journal</p>
-            <p className="text-[10px] text-[var(--text-muted)]">AI trade analysis</p>
-          </div>
-        </button>
-        <button onClick={() => navigate("/ai-assistant")} className="flex items-center gap-3 p-4 rounded-xl bg-[var(--card)] border border-[var(--border)] hover:border-[var(--cyan)]/40 transition-all">
-          <Brain className="w-5 h-5 text-[var(--cyan)]" />
-          <div className="text-left">
-            <p className="text-xs font-bold text-white">AI Assistant</p>
-            <p className="text-[10px] text-[var(--text-muted)]">AI-powered trading help</p>
-          </div>
-        </button>
-      </div>
-      </PageSection>
+
 
       {tokenError && (
       <PageSection>
@@ -398,14 +379,11 @@ export default function Dashboard() {
         {/* Left column - Chart & History */}
         <div className="xl:col-span-2 space-y-8">
 
-          {/* Chart container */}
-          <div className="chart-container">
-            <div className="chart-header">
-              <h2 className="card-title text-sm">Live Chart &mdash; {selectedDisplay}</h2>
-            </div>
+          {/* Chart workspace — the heart of the OS */}
+          <div className={showSymbolPicker ? "bg-[var(--card)] rounded-xl p-4 elevation-1" : "chart-workspace"}>
             {showSymbolPicker ? (
-              <div className="max-h-[300px] md:max-h-[420px] overflow-y-auto space-y-5 p-4">
-                <div className="sticky top-0 z-10 bg-[var(--card)] pb-2 -mt-2 pt-2">
+              <div className="max-h-[300px] md:max-h-[420px] overflow-y-auto space-y-5">
+                <div className="sticky top-0 z-10 pb-2 -mt-2 pt-2">
                   <input
                     type="text"
                     value={symbolSearch}
@@ -478,7 +456,10 @@ export default function Dashboard() {
                 })()}
               </div>
             ) : (
-              <div className="chart-plot min-h-[400px]">
+              <div className="chart-plot" style={{ minHeight: "520px" }}>
+                <div className="chart-workspace-header">
+                  <span className="text-caption">{selectedDisplay}</span>
+                </div>
                 <TickChart symbol={selectedSymbol} maxDataPoints={50} decimalPlaces={decimalPlaces} />
               </div>
             )}
@@ -487,7 +468,7 @@ export default function Dashboard() {
           {/* History panel */}
           <div className="panel">
             <div className="panel-header">
-              <h2 className="card-title text-sm">History</h2>
+              <h2 className="text-display">History</h2>
               <div className="tabs">
                 <button onClick={() => setHistoryTab("trades")} className={`tab ${historyTab === "trades" ? "active" : ""}`}>Trades</button>
                 <button onClick={() => setHistoryTab("prices")} className={`tab ${historyTab === "prices" ? "active" : ""}`}>Price History</button>
@@ -574,7 +555,7 @@ export default function Dashboard() {
                             key={`${t.epoch}-${i}`}
                             className="transition-colors duration-300"
                             style={{
-                              background: isLatest && dir === "up" ? "rgba(16,185,129,0.06)" : isLatest && dir === "down" ? "rgba(239,68,68,0.06)" : "transparent",
+                              background: isLatest && dir === "up" ? "rgba(var(--green-rgb), 0.06)" : isLatest && dir === "down" ? "rgba(var(--red-rgb), 0.06)" : "transparent",
                             }}
                           >
                             <td className="text-[var(--text-muted)] font-mono">{i + 1}</td>
@@ -598,48 +579,13 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Right column - Trade Studio & AI Insight */}
-        <div className="space-y-8">
-
-          {/* Widget Customization */}
-          {(widgets.length > 0 || true) && (
-            <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4">
-              <div className="flex items-center justify-between mb-3">
-                <h3 className="section-title text-[10px]">Dashboard Widgets</h3>
-                <button onClick={() => setShowWidgetConfig(!showWidgetConfig)} className="text-[10px] text-[var(--cyan)] hover:text-[var(--cyan)]/80 transition-colors">
-                  {showWidgetConfig ? "Done" : "Customize"}
-                </button>
-              </div>
-              {showWidgetConfig && (
-                <div className="space-y-2">
-                  {[
-                    { key: "trades", label: "Recent Trades" },
-                    { key: "signals", label: "AI Signals" },
-                    { key: "chart", label: "Live Chart" },
-                    { key: "history", label: "Trade History" },
-                    { key: "alerts", label: "Price Alerts" },
-                  ].map((w) => (
-                    <label key={w.key} className="flex items-center gap-2 text-xs text-[var(--text-secondary)] cursor-pointer py-1">
-                      <input
-                        type="checkbox"
-                        checked={widgets.includes(w.key)}
-                        onChange={() => {
-                          setWidgets((prev) => prev.includes(w.key) ? prev.filter((k) => k !== w.key) : [...prev, w.key]);
-                        }}
-                        className="accent-[var(--cyan)]"
-                      />
-                      {w.label}
-                    </label>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
+        {/* Right column - Trade Studio, AI, Alerts */}
+        <div className="space-y-6 xl:sticky xl:top-6 xl:self-start">
 
           {/* Trade Studio */}
           <div className="trade-studio p-6">
             <div className="flex items-center justify-between mb-5">
-              <h3 className="section-title text-[11px]">Trade Studio</h3>
+              <h3 className="text-caption font-semibold">Trade Studio</h3>
               <span className={`badge ${accountType === "real" ? "badge-red" : accountType === "demo" ? "badge-amber" : tokenStatus === "invalid" ? "badge-red" : "badge-gray"}`}>
                 {accountType === "real" ? "REAL" : accountType === "demo" ? "DEMO" : tokenStatus === "invalid" ? "UNAUTHORIZED" : "NO TOKEN"}
               </span>
@@ -703,12 +649,42 @@ export default function Dashboard() {
             </div>
           </div>
 
+          {/* 369AI Insight */}
+          <div className="ai-panel p-6 ai-alive">
+            <div className="flex items-center gap-2 mb-4">
+              <Sparkles className="w-4 h-4 text-[var(--cyan)] animate-breathe" />
+              <h3 className="text-caption font-semibold">369AI Insight</h3>
+            </div>
+            {(() => {
+              const sigs = Array.isArray(signalsQuery.data) ? signalsQuery.data : [];
+              const latest = sigs[0];
+              if (!latest) {
+                return <div className="empty-state py-6"><p className="empty-state-desc">No signals yet. Ask 369AI to watch a market, or wait for the always-on scanner to surface a pattern.</p></div>;
+              }
+              return (
+                <div>
+                  <p className="text-sm text-[var(--text-secondary)] leading-relaxed">{latest.description}</p>
+                  <div className="flex items-center gap-3 mt-3 text-xs">
+                    <span className="ai-badge">{latest.symbol}</span>
+                    <span className="text-[var(--text-muted)]">win rate <b className="text-[var(--green)]">{latest.winRate}%</b></span>
+                    <span className="text-[var(--text-muted)]">{new Date((latest.discoveredAt || 0) * 1000).toLocaleString()}</span>
+                  </div>
+                  <button onClick={() => navigate("/marketplace")} className="mt-3 text-xs text-[var(--amber)] hover:text-[var(--amber)]/80 transition-colors flex items-center gap-1">
+                    View all signals <ArrowRight className="w-3 h-3" />
+                  </button>
+                </div>
+              );
+            })()}
+          </div>
+
+          <SymbolInsights symbol={selectedSymbol} ticks={displayTicks} trades={tradesQuery.data || []} decimalPlaces={decimalPlaces} />
+
           {/* Price Alerts */}
           <div className="panel">
             <div className="panel-header flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Bell className="w-3.5 h-3.5 text-[var(--amber)]" />
-                <h3 className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-widest">Price Alerts</h3>
+                <h3 className="text-micro">Price Alerts</h3>
               </div>
               <button onClick={() => setAlertsOpen(!alertsOpen)} className="text-[var(--text-muted)] hover:text-[var(--amber)] transition-colors">
                 {alertsOpen ? <X className="w-3.5 h-3.5" /> : <Plus className="w-3.5 h-3.5" />}
@@ -720,9 +696,9 @@ export default function Dashboard() {
                   type="text" value={newAlertSym || selectedSymbol} onChange={(e) => setNewAlertSym(e.target.value)}
                   placeholder="Symbol (e.g. R_100)" className="w-full bg-[var(--card)] border border-[var(--border)] rounded-lg px-3 py-2 text-xs text-white"
                 />
-                <div className="flex gap-2">
-                  <button onClick={() => setNewAlertDir("above")} className={`flex-1 text-xs font-bold py-1.5 rounded ${newAlertDir === "above" ? "bg-[var(--green)]/20 text-[var(--green)] border border-[var(--green)]/30" : "bg-[var(--card)] text-[var(--text-muted)] border border-[var(--border)]"}`}>Above</button>
-                  <button onClick={() => setNewAlertDir("below")} className={`flex-1 text-xs font-bold py-1.5 rounded ${newAlertDir === "below" ? "bg-[var(--red)]/20 text-[var(--red)] border border-[var(--red)]/30" : "bg-[var(--card)] text-[var(--text-muted)] border border-[var(--border)]"}`}>Below</button>
+                <div className="flex rounded-lg bg-[var(--card)] p-0.5">
+                  <button onClick={() => setNewAlertDir("above")} className={`flex-1 py-1.5 text-center text-xs font-bold rounded-md transition-all ${newAlertDir === "above" ? "bg-[var(--green)]/20 text-[var(--green)]" : "text-[var(--text-muted)] hover:text-white"}`}>Above</button>
+                  <button onClick={() => setNewAlertDir("below")} className={`flex-1 py-1.5 text-center text-xs font-bold rounded-md transition-all ${newAlertDir === "below" ? "bg-[var(--red)]/20 text-[var(--red)]" : "text-[var(--text-muted)] hover:text-white"}`}>Below</button>
                 </div>
                 <input
                   type="number" value={newAlertPrice} onChange={(e) => setNewAlertPrice(e.target.value)}
@@ -740,16 +716,16 @@ export default function Dashboard() {
               {alertsQuery.isLoading ? (
                 <Loader2 className="w-4 h-4 animate-spin text-[var(--amber)]" />
               ) : (alertsQuery.data || []).length === 0 ? (
-                <p className="text-xs text-[var(--text-muted)] italic text-center py-3">No price alerts set.</p>
+                <div className="empty-state"><p className="empty-state-desc">No price alerts set.</p></div>
               ) : (
                 (alertsQuery.data || []).slice(0, 5).map((a: any) => (
                   <div key={a.id} className="flex items-center justify-between py-2 border-b border-[var(--border)] last:border-0">
                     <div>
                       <span className="text-xs font-bold text-white">{a.symbol}</span>
-                      <span className={`text-[10px] ml-2 ${a.direction === "above" ? "text-[var(--green)]" : "text-[var(--red)]"}`}>
+                      <span className={`text-caption ml-2 ${a.direction === "above" ? "text-[var(--green)]" : "text-[var(--red)]"}`}>
                         {a.direction === "above" ? "↑" : "↓"} {a.targetPrice}
                       </span>
-                      <span className={`text-[10px] ml-2 ${a.status === "triggered" ? "text-[var(--amber)]" : "text-[var(--text-muted)]"}`}>
+                      <span className={`text-caption ml-2 ${a.status === "triggered" ? "text-[var(--amber)]" : "text-[var(--text-muted)]"}`}>
                         {a.status}
                       </span>
                     </div>
@@ -763,36 +739,6 @@ export default function Dashboard() {
               )}
             </div>
           </div>
-
-          {/* AI Insight */}
-          <div className="ai-panel p-6">
-            <div className="flex items-center gap-2 mb-4">
-              <Sparkles className="w-4 h-4 text-[var(--cyan)]" />
-              <h3 className="section-title text-[11px]">369AI Insight</h3>
-            </div>
-            {(() => {
-              const sigs = Array.isArray(signalsQuery.data) ? signalsQuery.data : [];
-              const latest = sigs[0];
-              if (!latest) {
-                return <div className="empty-state py-6"><p className="empty-state-desc">No signals yet. Ask 369AI to watch a market, or wait for the always-on scanner to surface a pattern.</p></div>;
-              }
-              return (
-                <div>
-                  <p className="text-sm text-[var(--text-secondary)] leading-relaxed">{latest.description}</p>
-                  <div className="flex items-center gap-3 mt-3 text-xs">
-                    <span className="ai-badge">{latest.symbol}</span>
-                    <span className="text-[var(--text-muted)]">win rate <b className="text-[var(--green)]">{latest.winRate}%</b></span>
-                    <span className="text-[var(--text-muted)]">{new Date((latest.discoveredAt || 0) * 1000).toLocaleString()}</span>
-                  </div>
-                  <button onClick={() => navigate("/marketplace")} className="mt-3 text-xs text-[var(--cyan)] hover:text-[var(--cyan)]/80 transition-colors flex items-center gap-1">
-                    View all signals <ArrowRight className="w-3 h-3" />
-                  </button>
-                </div>
-              );
-            })()}
-          </div>
-
-          <SymbolInsights symbol={selectedSymbol} ticks={displayTicks} trades={tradesQuery.data || []} decimalPlaces={decimalPlaces} />
         </div>
       </div>
       </PageSection>

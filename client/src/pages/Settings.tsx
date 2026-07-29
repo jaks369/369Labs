@@ -325,10 +325,10 @@ export default function Settings() {
                     reader.onload = (ev) => { const url = ev.target?.result as string; setAvatarUrl(url); setAvatarPreview(url); };
                     reader.readAsDataURL(file);
                   }} />
-                  <button onClick={() => fileInputRef.current?.click()} className="flex items-center gap-1 text-[10px] px-2 py-1 rounded bg-[var(--card)] border border-[var(--border)] text-[var(--text-secondary)] hover:text-white">
+                  <button onClick={() => fileInputRef.current?.click()} className="flex items-center gap-1 text-caption px-2 py-1 rounded bg-[var(--card)] border border-[var(--border)] text-[var(--text-secondary)] hover:text-white">
                     <Upload className="w-3 h-3" /> Upload File
                   </button>
-                  <span className="text-[10px] text-[var(--text-muted)]">or paste a URL above</span>
+                  <span className="text-caption">or paste a URL above</span>
                 </div>
               </div>
             </div>
@@ -374,9 +374,9 @@ export default function Settings() {
             </div>
             <div>
               <label className="text-sm text-[var(--text-secondary)] block mb-2">Account Type</label>
-              <div className="flex gap-2">
-                <button onClick={() => setAccountType("demo")} className={`flex-1 py-2 px-4 rounded text-sm font-bold transition-colors ${accountType === "demo" ? "bg-[var(--amber)] text-[var(--bg)]" : "bg-[var(--card)] text-[var(--text-muted)] border border-[var(--border)]"}`}>DEMO</button>
-                <button onClick={() => setAccountType("real")} className={`flex-1 py-2 px-4 rounded text-sm font-bold transition-colors ${accountType === "real" ? "bg-[var(--red)] text-white" : "bg-[var(--card)] text-[var(--text-muted)] border border-[var(--border)]"}`}>REAL</button>
+              <div className="flex rounded-lg bg-[var(--card)] p-0.5">
+                <button onClick={() => setAccountType("demo")} className={`flex-1 py-2 text-center text-sm font-bold rounded-md transition-all ${accountType === "demo" ? "bg-[var(--amber)] text-[var(--bg)] shadow-sm" : "text-[var(--text-muted)] hover:text-white"}`}>DEMO</button>
+                <button onClick={() => setAccountType("real")} className={`flex-1 py-2 text-center text-sm font-bold rounded-md transition-all ${accountType === "real" ? "bg-[var(--red)] text-white shadow-sm" : "text-[var(--text-muted)] hover:text-white"}`}>REAL</button>
               </div>
             </div>
             <Button
@@ -556,7 +556,7 @@ export default function Settings() {
                   onChange={(e) => setMemDailyLoss(e.target.value)}
                   className="border-[var(--red)]/40 text-[var(--red)]"
                 />
-                <p className="text-[10px] text-[var(--text-muted)] mt-1">Trades will be blocked if today&#39;s losses exceed this amount</p>
+                <p className="text-caption mt-1">Trades will be blocked if today&#39;s losses exceed this amount</p>
               </div>
               <div className="flex items-end">
                 <label className="flex items-center gap-2 text-sm text-[var(--text-secondary)] cursor-pointer">
@@ -785,8 +785,8 @@ export default function Settings() {
               {(Array.isArray(sessionsQuery.data) ? sessionsQuery.data : []).map(s => (
                 <div key={s.id} className="flex items-center justify-between py-2 border-b border-[var(--border)]/50 last:border-0">
                   <div className="min-w-0 flex-1">
-                    <p className="text-sm text-white truncate">{s.userAgent || "Unknown device"} {s.isCurrent && <span className="text-[10px] text-[var(--green)] ml-1">(current)</span>}</p>
-                    <p className="text-[10px] text-[var(--text-muted)]">{s.ip ? `${s.ip} · ` : ""}Last active {new Date(s.lastActiveAt).toLocaleString()}</p>
+                    <p className="text-sm text-white truncate">{s.userAgent || "Unknown device"} {s.isCurrent && <span className="text-caption text-price-up ml-1">(current)</span>}</p>
+                    <p className="text-caption">{s.ip ? `${s.ip} · ` : ""}Last active {new Date(s.lastActiveAt).toLocaleString()}</p>
                   </div>
                   {!s.isCurrent && (
                     <button
@@ -798,13 +798,13 @@ export default function Settings() {
                   )}
                 </div>
               ))}
-              {sessionsQuery.data?.length === 0 && <p className="text-xs text-[var(--text-muted)] text-center py-4">No active sessions.</p>}
+              {sessionsQuery.data?.length === 0 && <div className="empty-state"><p className="empty-state-desc">No active sessions.</p></div>}
             </div>
           )}
         </SpotlightCard>
 
         <SpotlightCard className="mb-6">
-          <h2 className="text-lg font-bold text-[var(--cyan)] mb-4 flex items-center gap-2"><Database className="w-5 h-5" /> DATA MANAGEMENT</h2>
+          <h2 className="text-lg font-bold text-[var(--amber)] mb-4 flex items-center gap-2"><Database className="w-5 h-5" /> DATA MANAGEMENT</h2>
           <div className="space-y-4">
             <div>
               <p className="text-sm text-[var(--text-muted)] mb-2">Data retention controls how long your trade history, bot logs, and AI knowledge are kept.</p>

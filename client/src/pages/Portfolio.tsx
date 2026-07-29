@@ -104,8 +104,7 @@ export default function Portfolio() {
         <PageSection>
           <div className="flex flex-col items-center justify-center py-20 text-center">
             <BarChart3 className="w-12 h-12 text-[var(--border)] mx-auto mb-4" />
-            <p className="text-[var(--text-muted)] text-sm mb-2">No trades yet</p>
-            <p className="text-[var(--text-muted)] text-xs">Deploy a bot or make a trade to see your portfolio.</p>
+            <div className="empty-state"><p className="empty-state-desc">No trades yet.</p></div>
           </div>
           </PageSection>
         ) : (
@@ -114,7 +113,7 @@ export default function Portfolio() {
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
               <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
                 <div className="flex items-center justify-between mb-3">
-                  <span className="text-[10px] text-[var(--text-muted)] font-bold uppercase tracking-wider">Total P&L</span>
+                  <span className="text-micro">Total P&L</span>
                   <DollarSign className={`w-5 h-5 ${totalPnl >= 0 ? "text-[var(--green)]" : "text-[var(--red)]"}`} />
                 </div>
                 <p className={`text-2xl font-bold ${totalPnl >= 0 ? "text-[var(--green)]" : "text-[var(--red)]"}`}>
@@ -123,21 +122,21 @@ export default function Portfolio() {
               </div>
               <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
                 <div className="flex items-center justify-between mb-3">
-                  <span className="text-[10px] text-[var(--text-muted)] font-bold uppercase tracking-wider">Win Rate</span>
+                  <span className="text-micro">Win Rate</span>
                   <TrendingUp className="w-5 h-5 text-[var(--green)]" />
                 </div>
                 <p className="text-2xl font-bold text-[var(--green)]"><PercentStat value={parseFloat(winRate)} /></p>
               </div>
               <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
                 <div className="flex items-center justify-between mb-3">
-                  <span className="text-[10px] text-[var(--text-muted)] font-bold uppercase tracking-wider">Total Trades</span>
+                  <span className="text-micro">Total Trades</span>
                   <Activity className="w-5 h-5 text-[var(--amber)]" />
                 </div>
                 <p className="text-2xl font-bold text-[var(--amber)]"><IntegerStat value={totalTrades} /></p>
               </div>
               <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
                 <div className="flex items-center justify-between mb-3">
-                  <span className="text-[10px] text-[var(--text-muted)] font-bold uppercase tracking-wider">Avg Trade</span>
+                  <span className="text-micro">Avg Trade</span>
                   <BarChart3 className={`w-5 h-5 ${avgTrade >= 0 ? "text-[var(--green)]" : "text-[var(--red)]"}`} />
                 </div>
                 <p className={`text-2xl font-bold ${avgTrade >= 0 ? "text-[var(--green)]" : "text-[var(--red)]"}`}>
@@ -148,11 +147,11 @@ export default function Portfolio() {
 
             <div className="grid grid-cols-2 gap-4">
               <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
-                <span className="text-[10px] text-[var(--text-muted)] font-bold uppercase tracking-wider">Best Trade</span>
+                <span className="text-micro">Best Trade</span>
                 <p className="text-lg font-bold text-[var(--green)] mt-1"><SignedCurrencyStat value={bestTrade} /></p>
               </div>
               <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
-                <span className="text-[10px] text-[var(--text-muted)] font-bold uppercase tracking-wider">Worst Trade</span>
+                <span className="text-micro">Worst Trade</span>
                 <p className="text-lg font-bold text-[var(--red)] mt-1"><SignedCurrencyStat value={worstTrade} /></p>
               </div>
             </div>
@@ -187,13 +186,13 @@ export default function Portfolio() {
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="border-b border-[var(--border)]">
-                        <th className="text-left py-3 px-4 text-[10px] text-[var(--text-muted)] font-bold uppercase tracking-wider">Symbol</th>
-                        <th className="text-right py-3 px-4 text-[10px] text-[var(--text-muted)] font-bold uppercase tracking-wider">Type</th>
-                        <th className="text-right py-3 px-4 text-[10px] text-[var(--text-muted)] font-bold uppercase tracking-wider">Stake</th>
-                        <th className="text-right py-3 px-4 text-[10px] text-[var(--text-muted)] font-bold uppercase tracking-wider">Buy Price</th>
-                        <th className="text-right py-3 px-4 text-[10px] text-[var(--text-muted)] font-bold uppercase tracking-wider">Current</th>
-                        <th className="text-right py-3 px-4 text-[10px] text-[var(--text-muted)] font-bold uppercase tracking-wider">P&L</th>
-                        <th className="text-center py-3 px-4 text-[10px] text-[var(--text-muted)] font-bold uppercase tracking-wider">Action</th>
+                        <th className="text-left py-3 px-4 text-micro">Symbol</th>
+                        <th className="text-right py-3 px-4 text-micro">Type</th>
+                        <th className="text-right py-3 px-4 text-micro">Stake</th>
+                        <th className="text-right py-3 px-4 text-micro">Buy Price</th>
+                        <th className="text-right py-3 px-4 text-micro">Current</th>
+                        <th className="text-right py-3 px-4 text-micro">P&L</th>
+                        <th className="text-center py-3 px-4 text-micro">Action</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -218,7 +217,7 @@ export default function Portfolio() {
                                   } catch (e: any) { toast(e?.message || "Failed to close position", "error"); }
                                 }}
                                 disabled={closePositionMutation.isPending}
-                                className="px-2 py-1 rounded text-[10px] font-bold bg-[var(--red)]/20 text-[var(--red)] border border-[var(--red)]/40 hover:bg-[var(--red)]/30 disabled:opacity-50"
+                                className="px-2 py-1 rounded text-caption font-bold bg-[var(--red)]/20 text-[var(--red)] border border-[var(--red)]/40 hover:bg-[var(--red)]/30 disabled:opacity-50"
                               >
                                 <XCircle className="w-3 h-3 inline mr-1" />
                                 CLOSE
@@ -236,17 +235,17 @@ export default function Portfolio() {
             <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-6">
               <h2 className="text-sm font-bold text-white mb-4">Performance by Symbol</h2>
               {Object.keys(bySymbol).length === 0 ? (
-                <p className="text-sm text-[var(--text-muted)]">No trades yet.</p>
+                <div className="empty-state"><p className="empty-state-desc">No trades yet.</p></div>
               ) : (
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="border-b border-[var(--border)]">
-                        <th className="text-left py-3 px-4 text-[10px] text-[var(--text-muted)] font-bold uppercase tracking-wider">Symbol</th>
-                        <th className="text-right py-3 px-4 text-[10px] text-[var(--text-muted)] font-bold uppercase tracking-wider">Trades</th>
-                        <th className="text-right py-3 px-4 text-[10px] text-[var(--text-muted)] font-bold uppercase tracking-wider">Wins</th>
-                        <th className="text-right py-3 px-4 text-[10px] text-[var(--text-muted)] font-bold uppercase tracking-wider">Win Rate</th>
-                        <th className="text-right py-3 px-4 text-[10px] text-[var(--text-muted)] font-bold uppercase tracking-wider">P&L</th>
+                        <th className="text-left py-3 px-4 text-micro">Symbol</th>
+                        <th className="text-right py-3 px-4 text-micro">Trades</th>
+                        <th className="text-right py-3 px-4 text-micro">Wins</th>
+                        <th className="text-right py-3 px-4 text-micro">Win Rate</th>
+                        <th className="text-right py-3 px-4 text-micro">P&L</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -268,8 +267,8 @@ export default function Portfolio() {
             </div>
 
             {Object.keys(bySymbol).length > 1 && (
-              <div className="bg-[var(--card)] border border-[var(--cyan)]/30 rounded-xl p-6">
-                <h2 className="text-sm font-bold text-white mb-4 flex items-center gap-2"><Scale className="w-4 h-4 text-[var(--cyan)]" /> Rebalancing Proposal</h2>
+              <div className="bg-[var(--card)] border border-[var(--amber)]/30 rounded-xl p-6">
+                <h2 className="text-sm font-bold text-white mb-4 flex items-center gap-2"><Scale className="w-4 h-4 text-[var(--amber)]" /> Rebalancing Proposal</h2>
                 <p className="text-xs text-[var(--text-muted)] mb-3">Suggested allocation to equal-weight across symbols:</p>
                 <div className="space-y-2">
                   {Object.entries(bySymbol).map(([sym, stats]) => {
@@ -294,19 +293,19 @@ export default function Portfolio() {
                 <h2 className="text-sm font-bold text-white mb-4 flex items-center gap-2"><FileText className="w-4 h-4 text-[var(--amber)]" /> Tax Report</h2>
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
                   <div className="bg-black/20 rounded-lg p-3">
-                    <p className="text-[10px] text-[var(--text-muted)] uppercase">Total Trades</p>
+                    <p className="text-caption text-[var(--text-muted)] uppercase">Total Trades</p>
                     <p className="text-lg font-bold text-white"><IntegerStat value={totalTrades} /></p>
                   </div>
                   <div className="bg-black/20 rounded-lg p-3">
-                    <p className="text-[10px] text-[var(--text-muted)] uppercase">Realized P&L</p>
+                    <p className="text-caption text-[var(--text-muted)] uppercase">Realized P&L</p>
                     <p className={`text-lg font-bold ${totalPnl >= 0 ? "text-[var(--green)]" : "text-[var(--red)]"}`}><SignedCurrencyStat value={totalPnl} /></p>
                   </div>
                   <div className="bg-black/20 rounded-lg p-3">
-                    <p className="text-[10px] text-[var(--text-muted)] uppercase">Wins / Losses</p>
+                    <p className="text-caption text-[var(--text-muted)] uppercase">Wins / Losses</p>
                     <p className="text-lg font-bold text-white"><IntegerStat value={wins} variant="always-positive" />W / <IntegerStat value={losses} variant="always-negative" />L</p>
                   </div>
                   <div className="bg-black/20 rounded-lg p-3">
-                    <p className="text-[10px] text-[var(--text-muted)] uppercase">Tax Lots</p>
+                    <p className="text-caption text-[var(--text-muted)] uppercase">Tax Lots</p>
                     <p className="text-lg font-bold text-white"><IntegerStat value={totalTrades} /></p>
                   </div>
                 </div>
@@ -319,17 +318,17 @@ export default function Portfolio() {
             <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-6">
               <h2 className="text-sm font-bold text-white mb-4">Recent Trades</h2>
               {trades.length === 0 ? (
-                <p className="text-sm text-[var(--text-muted)]">No trades yet.</p>
+                <div className="empty-state"><p className="empty-state-desc">No trades yet.</p></div>
               ) : (
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="border-b border-[var(--border)]">
-                        <th className="text-left py-3 px-4 text-[10px] text-[var(--text-muted)] font-bold uppercase tracking-wider">Time</th>
-                        <th className="text-left py-3 px-4 text-[10px] text-[var(--text-muted)] font-bold uppercase tracking-wider">Symbol</th>
-                        <th className="text-right py-3 px-4 text-[10px] text-[var(--text-muted)] font-bold uppercase tracking-wider">Stake</th>
-                        <th className="text-right py-3 px-4 text-[10px] text-[var(--text-muted)] font-bold uppercase tracking-wider">P&L</th>
-                        <th className="text-center py-3 px-4 text-[10px] text-[var(--text-muted)] font-bold uppercase tracking-wider">Result</th>
+                        <th className="text-left py-3 px-4 text-micro">Time</th>
+                        <th className="text-left py-3 px-4 text-micro">Symbol</th>
+                        <th className="text-right py-3 px-4 text-micro">Stake</th>
+                        <th className="text-right py-3 px-4 text-micro">P&L</th>
+                        <th className="text-center py-3 px-4 text-micro">Result</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -342,7 +341,7 @@ export default function Portfolio() {
                             <SignedCurrencyStat value={parseFloat(t.profitLoss?.toString() || "0")} />
                           </td>
                           <td className="py-3 px-4 text-center">
-                            <span className={`px-2 py-1 rounded text-[10px] font-bold ${
+                            <span className={`px-2 py-1 rounded text-caption font-bold ${
                               t.result === "win" ? "bg-[var(--green)]/20 text-[var(--green)]" :
                               t.result === "loss" ? "bg-[var(--red)]/20 text-[var(--red)]" :
                               "bg-[var(--amber)]/20 text-[var(--amber)]"

@@ -54,7 +54,7 @@ export default function MarketHealthGrid({ data, loading }: MarketHealthGridProp
       <div className="surface-elevated p-5">
         <div className="flex items-center gap-2 mb-4">
           <Activity className="w-4 h-4 text-[var(--cyan)]" />
-          <h3 className="section-title text-[11px]">Market Health</h3>
+          <h3 className="section-title text-caption">Market Health</h3>
         </div>
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
           {[...Array(5)].map((_, i) => (
@@ -74,9 +74,9 @@ export default function MarketHealthGrid({ data, loading }: MarketHealthGridProp
       <div className="surface-elevated p-5">
         <div className="flex items-center gap-2 mb-4">
           <Activity className="w-4 h-4 text-[var(--cyan)]" />
-          <h3 className="section-title text-[11px]">Market Health</h3>
+          <h3 className="section-title text-caption">Market Health</h3>
         </div>
-        <p className="text-[10px] text-[var(--text-muted)] italic text-center py-6">No market health data available yet. The orchestrator will begin polling shortly.</p>
+        <div className="empty-state"><p className="empty-state-desc">No market health data available yet. The orchestrator will begin polling shortly.</p></div>
       </div>
     );
   }
@@ -87,14 +87,14 @@ export default function MarketHealthGrid({ data, loading }: MarketHealthGridProp
     <div className="surface-elevated p-5">
       <div className="flex items-center gap-2 mb-4">
         <Activity className="w-4 h-4 text-[var(--cyan)]" />
-        <h3 className="section-title text-[11px]">Market Health</h3>
+        <h3 className="section-title text-caption">Market Health</h3>
         <span className="text-[9px] text-[var(--text-muted)] ml-auto">{data.length} symbols</span>
       </div>
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
         {sorted.map((h) => (
           <div key={h.symbol} className={`rounded-lg p-3 border ${scoreBg(h.score)}`}>
             <div className="flex items-center justify-between mb-1.5">
-              <span className="text-[10px] font-bold text-white">{h.symbol}</span>
+              <span className="text-micro font-bold text-white">{h.symbol}</span>
               <span className={`text-[8px] font-bold px-1.5 py-0.5 rounded ${volBg(h.volatility)} ${volColor(h.volatility)}`}>
                 {h.volatility}
               </span>

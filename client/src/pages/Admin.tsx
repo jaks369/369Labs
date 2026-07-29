@@ -90,7 +90,7 @@ export default function Admin() {
           <div className="flex items-center gap-2 mb-4">
             <ScrollText className="w-4 h-4 text-[var(--amber)]" />
             <span className="text-xs font-bold text-[var(--text-muted)] uppercase tracking-wider">Security Audit Log</span>
-            <span className="text-[10px] text-[var(--text-muted)] ml-auto">{(auditLogsQuery.data?.logs || []).length} entries</span>
+            <span className="text-caption ml-auto">{(auditLogsQuery.data?.logs || []).length} entries</span>
           </div>
           {auditLogsQuery.isLoading ? (
             <Loader2 className="w-5 h-5 animate-spin text-[var(--amber)]" />
@@ -128,7 +128,7 @@ export default function Admin() {
           ) : healthQuery.data ? (
             <>
               <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
-                <div className="flex items-center gap-2 mb-3"><HardDrive className="w-4 h-4 text-[var(--cyan)]" /><h3 className="text-sm font-bold text-white">Memory</h3></div>
+                <div className="flex items-center gap-2 mb-3"><HardDrive className="w-4 h-4 text-[var(--amber)]" /><h3 className="text-sm font-bold text-white">Memory</h3></div>
                 <div className="space-y-2 text-xs">
                   <div className="flex justify-between"><span className="text-[var(--text-muted)]">Total</span><span className="text-white">{formatBytes(healthQuery.data.memory.total)}</span></div>
                   <div className="flex justify-between"><span className="text-[var(--text-muted)]">Used</span><span className="text-[var(--amber)]">{formatBytes(healthQuery.data.memory.used)}</span></div>
@@ -139,7 +139,7 @@ export default function Admin() {
                 </div>
               </div>
               <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
-                <div className="flex items-center gap-2 mb-3"><Cpu className="w-4 h-4 text-[var(--cyan)]" /><h3 className="text-sm font-bold text-white">CPU</h3></div>
+                <div className="flex items-center gap-2 mb-3"><Cpu className="w-4 h-4 text-[var(--amber)]" /><h3 className="text-sm font-bold text-white">CPU</h3></div>
                 <div className="space-y-2 text-xs">
                   <div className="flex justify-between"><span className="text-[var(--text-muted)]">Load Avg (1m)</span><span className="text-white">{Number(healthQuery.data.cpu.loadAvg1).toFixed(2)}</span></div>
                   <div className="flex justify-between"><span className="text-[var(--text-muted)]">Load Avg (5m)</span><span className="text-white">{Number(healthQuery.data.cpu.loadAvg5).toFixed(2)}</span></div>
@@ -147,14 +147,14 @@ export default function Admin() {
                 </div>
               </div>
               <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
-                <div className="flex items-center gap-2 mb-3"><Database className="w-4 h-4 text-[var(--cyan)]" /><h3 className="text-sm font-bold text-white">Database</h3></div>
+                <div className="flex items-center gap-2 mb-3"><Database className="w-4 h-4 text-[var(--amber)]" /><h3 className="text-sm font-bold text-white">Database</h3></div>
                 <div className="flex items-center gap-2 text-xs">
                   <span className={`w-2 h-2 rounded-full ${healthQuery.data.database === "connected" ? "bg-[var(--green)]" : "bg-[var(--red)]"}`} />
                   <span className="text-white">{healthQuery.data.database}</span>
                 </div>
               </div>
               <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
-                <div className="flex items-center gap-2 mb-3"><Clock className="w-4 h-4 text-[var(--cyan)]" /><h3 className="text-sm font-bold text-white">System</h3></div>
+                <div className="flex items-center gap-2 mb-3"><Clock className="w-4 h-4 text-[var(--amber)]" /><h3 className="text-sm font-bold text-white">System</h3></div>
                 <div className="space-y-2 text-xs">
                   <div className="flex justify-between"><span className="text-[var(--text-muted)]">Node</span><span className="text-white">{healthQuery.data.node}</span></div>
                   <div className="flex justify-between"><span className="text-[var(--text-muted)]">Platform</span><span className="text-white">{healthQuery.data.platform}</span></div>
@@ -200,20 +200,20 @@ export default function Admin() {
       {tab === "stats" && (
         <div className="space-y-4">
           <div className="flex items-center gap-2 mb-4">
-            <Users className="w-4 h-4 text-[var(--cyan)]" />
+            <Users className="w-4 h-4 text-[var(--amber)]" />
             <span className="text-xs font-bold text-[var(--text-muted)] uppercase tracking-wider">Usage Statistics</span>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
-              <p className="text-[10px] text-[var(--text-muted)] uppercase font-bold">Total Users</p>
+              <p className="text-micro">Total Users</p>
               <p className="text-3xl font-bold text-white mt-1">{listQuery.data?.users.length || 0}</p>
             </div>
             <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
-              <p className="text-[10px] text-[var(--text-muted)] uppercase font-bold">Admins</p>
+              <p className="text-micro">Admins</p>
               <p className="text-3xl font-bold text-white mt-1">{listQuery.data?.users.filter(u => u.role === "admin").length || 0}</p>
             </div>
             <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
-              <p className="text-[10px] text-[var(--text-muted)] uppercase font-bold">Verified Users</p>
+              <p className="text-micro">Verified Users</p>
               <p className="text-3xl font-bold text-white mt-1">{listQuery.data?.users.filter(u => u.emailVerified).length || 0}</p>
             </div>
           </div>
@@ -243,7 +243,7 @@ export default function Admin() {
               <div key={f.key} className="flex items-center justify-between p-4">
                 <div>
                   <span className="text-sm text-white font-bold">{f.label}</span>
-                  <p className="text-[10px] text-[var(--text-muted)]">/{f.key}</p>
+                  <p className="text-caption">/{f.key}</p>
                 </div>
                 <label className="relative inline-flex items-center cursor-pointer">
                   <input type="checkbox" defaultChecked={f.enabled} className="sr-only peer" />
@@ -258,7 +258,7 @@ export default function Admin() {
       {tab === "perf" && (
         <div className="space-y-4">
           <div className="flex items-center gap-2 mb-4">
-            <BarChart3 className="w-4 h-4 text-[var(--cyan)]" />
+            <BarChart3 className="w-4 h-4 text-[var(--amber)]" />
             <span className="text-xs font-bold text-[var(--text-muted)] uppercase tracking-wider">System Performance Audit</span>
           </div>
           {healthQuery.isLoading ? (

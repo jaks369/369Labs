@@ -92,7 +92,7 @@ export default function BackupRestore() {
                 </div>
               ))}
             </div>
-            <p className="text-[10px] text-[var(--text-muted)] mt-3">Exported: {new Date(backupData.exportedAt).toLocaleString()}</p>
+            <p className="text-caption mt-3">Exported: {new Date(backupData.exportedAt).toLocaleString()}</p>
           </div>
         )}
 

@@ -37,7 +37,7 @@ export default function PortfolioHealthCard({ data, loading }: PortfolioHealthCa
   if (loading) {
     return (
       <div className="surface-elevated p-5">
-        <h3 className="section-title mb-4 text-[11px]">Portfolio Health</h3>
+        <h3 className="section-title mb-4 text-caption">Portfolio Health</h3>
         <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
           {[...Array(6)].map((_, i) => (
             <div key={i} className="bg-[var(--bg)] rounded-lg p-3 animate-pulse">
@@ -53,8 +53,8 @@ export default function PortfolioHealthCard({ data, loading }: PortfolioHealthCa
   if (!data) {
     return (
       <div className="surface-elevated p-5">
-        <h3 className="section-title mb-4 text-[11px]">Portfolio Health</h3>
-        <p className="text-[10px] text-[var(--text-muted)] italic text-center py-4">No portfolio data available yet.</p>
+        <h3 className="section-title mb-4 text-caption">Portfolio Health</h3>
+        <p className="text-micro text-[var(--text-muted)] italic text-center py-4">No portfolio data available yet.</p>
       </div>
     );
   }
@@ -82,7 +82,7 @@ export default function PortfolioHealthCard({ data, loading }: PortfolioHealthCa
       label: "Avg Confidence",
       value: `${data.avgConfidence}%`,
       icon: Target,
-      color: "text-[var(--cyan)]",
+      color: "text-[var(--amber)]",
     },
     {
       label: "Risk Rating",
@@ -101,7 +101,7 @@ export default function PortfolioHealthCard({ data, loading }: PortfolioHealthCa
 
   return (
     <div className="surface-elevated p-5">
-      <h3 className="section-title mb-4 text-[11px]">Portfolio Health</h3>
+      <h3 className="section-title mb-4 text-caption">Portfolio Health</h3>
       <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
         {metrics.map((m) => (
           <div key={m.label} className="bg-[var(--bg)] rounded-lg p-3">

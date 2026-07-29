@@ -92,7 +92,7 @@ export default function AIChatWindow() {
         {messages.length === 0 && !loading && (
           <div className="flex flex-col items-center justify-center h-full text-center py-8">
             <MessageSquare className="w-8 h-8 text-[var(--border)] mb-2" />
-            <p className="text-[10px] text-[var(--text-muted)] max-w-xs">
+            <p className="text-micro text-[var(--text-muted)] max-w-xs">
               Ask me anything about your trading — trades, strategies, market conditions, AI performance, or your current session.
             </p>
           </div>
@@ -124,20 +124,20 @@ export default function AIChatWindow() {
               <button onClick={() => setShowMemory(false)} className="text-[var(--text-muted)] hover:text-white">✕</button>
             </div>
             <div className="p-3 border-b border-[var(--border)] flex gap-2">
-              <select value={memoryType} onChange={(e) => setMemoryType(e.target.value)} className="bg-[var(--card)] border border-[var(--border)] rounded px-2 py-1 text-[10px] text-white outline-none">
+              <select value={memoryType} onChange={(e) => setMemoryType(e.target.value)} className="bg-[var(--card)] border border-[var(--border)] rounded px-2 py-1 text-micro text-white outline-none">
                 <option value="">All Types</option>
                 {(knowledgeTypesQuery.data?.types || []).map((t: any) => <option key={t.id} value={t.id}>{t.label}</option>)}
               </select>
-              <input value={memorySearch} onChange={(e) => setMemorySearch(e.target.value)} placeholder="Search memory..." className="flex-1 bg-[var(--card)] border border-[var(--border)] rounded px-2 py-1 text-[10px] text-white outline-none placeholder-[var(--text-muted)]" />
+              <input value={memorySearch} onChange={(e) => setMemorySearch(e.target.value)} placeholder="Search memory..." className="flex-1 bg-[var(--card)] border border-[var(--border)] rounded px-2 py-1 text-micro text-white outline-none placeholder-[var(--text-muted)]" />
             </div>
             <div className="flex-1 overflow-y-auto p-4 space-y-2">
               {memorySearchQuery.isLoading ? (
                 <div className="flex justify-center py-4"><Sparkles className="w-4 h-4 text-[var(--amber)] animate-spin" /></div>
               ) : (memorySearchQuery.data?.entries || []).length === 0 ? (
-                <p className="text-xs text-[var(--text-muted)] text-center py-4">No memory entries found.</p>
+                <div className="empty-state"><p className="empty-state-desc">No memory entries found.</p></div>
               ) : (
                 (memorySearchQuery.data?.entries || []).map((entry: any) => (
-                  <div key={entry.id} className="p-3 rounded-lg bg-[var(--card)] border border-[var(--border)] text-[10px]">
+                  <div key={entry.id} className="p-3 rounded-lg bg-[var(--card)] border border-[var(--border)] text-micro">
                     <div className="flex items-center gap-2 mb-1">
                       <span className="text-[9px] uppercase tracking-wider text-[var(--amber)] font-bold">{entry.knowledgeType}</span>
                       {entry.symbol && <span className="text-[var(--cyan)]">{entry.symbol}</span>}
@@ -161,7 +161,7 @@ export default function AIChatWindow() {
             </div>
             <div className="p-4 space-y-3">
               <div>
-                <label className="text-[10px] text-[var(--text-muted)] font-bold uppercase">Provider</label>
+                <label className="text-micro text-[var(--text-muted)] font-bold uppercase">Provider</label>
                 <select value={modelProvider} onChange={(e) => setModelProvider(e.target.value)} className="w-full bg-[var(--card)] border border-[var(--border)] rounded-lg px-3 py-2 text-xs text-white mt-1 outline-none">
                   <option value="openai">OpenAI</option>
                   <option value="anthropic">Anthropic</option>
@@ -172,7 +172,7 @@ export default function AIChatWindow() {
                 </select>
               </div>
               <div>
-                <label className="text-[10px] text-[var(--text-muted)] font-bold uppercase">Model Name</label>
+                <label className="text-micro text-[var(--text-muted)] font-bold uppercase">Model Name</label>
                 <input value={modelName} onChange={(e) => setModelName(e.target.value)} placeholder="e.g. gpt-4o-mini, claude-3-haiku" className="w-full bg-[var(--card)] border border-[var(--border)] rounded-lg px-3 py-2 text-xs text-white mt-1 outline-none" />
               </div>
               <p className="text-[9px] text-[var(--text-muted)]">Set AI_API_KEY and AI_API_BASE_URL in your environment. Model config is saved per-user.</p>

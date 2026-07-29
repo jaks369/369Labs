@@ -202,7 +202,7 @@ export default function RuleBuilder({ rule, onChange }: RuleBuilderProps) {
         {nlMsg && (
           <div className={`mt-2 text-xs ${nlMsg.kind === "ok" ? "text-[var(--green)]" : "text-[var(--red)]"}`}>{nlMsg.text}</div>
         )}
-        <p className="mt-2 text-[10px] text-[var(--text-muted)]">Type a condition in plain English and press Build (or Enter). The dropdowns below still work for fine-tuning.</p>
+        <p className="mt-2 text-micro text-[var(--text-muted)]">Type a condition in plain English and press Build (or Enter). The dropdowns below still work for fine-tuning.</p>
       </div>
 
 
@@ -212,7 +212,7 @@ export default function RuleBuilder({ rule, onChange }: RuleBuilderProps) {
           SYMBOL
         </div>
         <div className="mt-2">
-          <label className="text-[10px] text-[var(--amber-hover)]/70 uppercase tracking-wider block mb-1">
+          <label className="text-micro text-[var(--amber-hover)]/70 uppercase tracking-wider block mb-1">
             Instrument
           </label>
           <Select
@@ -240,7 +240,7 @@ export default function RuleBuilder({ rule, onChange }: RuleBuilderProps) {
         </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mt-2">
           <div>
-            <label className="text-[10px] text-[var(--amber)]/70 uppercase tracking-wider block mb-1">
+            <label className="text-micro text-[var(--amber)]/70 uppercase tracking-wider block mb-1">
               Indicator
             </label>
             <Select
@@ -262,7 +262,7 @@ export default function RuleBuilder({ rule, onChange }: RuleBuilderProps) {
             </Select>
           </div>
           <div>
-            <label className="text-[10px] text-[var(--amber)]/70 uppercase tracking-wider block mb-1">
+            <label className="text-micro text-[var(--amber)]/70 uppercase tracking-wider block mb-1">
               Comparison
             </label>
             <Select
@@ -284,7 +284,7 @@ export default function RuleBuilder({ rule, onChange }: RuleBuilderProps) {
             </Select>
           </div>
           <div>
-            <label className="text-[10px] text-[var(--amber)]/70 uppercase tracking-wider block mb-1">
+            <label className="text-micro text-[var(--amber)]/70 uppercase tracking-wider block mb-1">
               Times
             </label>
             <Input
@@ -304,7 +304,7 @@ export default function RuleBuilder({ rule, onChange }: RuleBuilderProps) {
         </div>
         {(rule.condition.indicator === "digit_over" || rule.condition.indicator === "digit_under") && (
           <div className="mt-3 max-w-[200px]">
-            <label className="text-[10px] text-[var(--amber)]/70 uppercase tracking-wider block mb-1">
+            <label className="text-micro text-[var(--amber)]/70 uppercase tracking-wider block mb-1">
               Barrier Digit (0-9)
             </label>
             <Input
@@ -349,7 +349,7 @@ export default function RuleBuilder({ rule, onChange }: RuleBuilderProps) {
               value={rule.conditions ?? legacyConditionToNode(rule.condition as LeafCondition)}
               onChange={(node) => onChange({ ...rule, conditions: node })}
             />
-            <p className="mt-2 text-[10px] text-[var(--text-muted)]">
+            <p className="mt-2 text-micro text-[var(--text-muted)]">
               Composable logic overrides the simple condition above when saved. The engine evaluates the whole tree.
             </p>
           </div>
@@ -367,7 +367,7 @@ export default function RuleBuilder({ rule, onChange }: RuleBuilderProps) {
           THEN
         </div>
         <div className="mt-2">
-          <label className="text-[10px] text-[var(--amber-hover)]/70 uppercase tracking-wider block mb-1">
+          <label className="text-micro text-[var(--amber-hover)]/70 uppercase tracking-wider block mb-1">
             Trade Action
           </label>
           <Select
@@ -395,7 +395,7 @@ export default function RuleBuilder({ rule, onChange }: RuleBuilderProps) {
         </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mt-2">
           <div>
-            <label className="text-[10px] text-[var(--green)]/70 uppercase tracking-wider block mb-1">
+            <label className="text-micro text-[var(--green)]/70 uppercase tracking-wider block mb-1">
               Stake ($)
             </label>
             <Input
@@ -423,12 +423,12 @@ export default function RuleBuilder({ rule, onChange }: RuleBuilderProps) {
                 {stakeError}
               </div>
             )}
-            <p className="text-[10px] text-[var(--text-muted)] mt-1 leading-tight">
+            <p className="text-micro text-[var(--text-muted)] mt-1 leading-tight">
               ⚠ Trading involves risk. Never stake more than you can afford to lose. New users are advised to start at the $0.35 minimum and scale only after verified live results.
             </p>
           </div>
           <div>
-            <label className="text-[10px] text-[var(--red)]/70 uppercase tracking-wider block mb-1">
+            <label className="text-micro text-[var(--red)]/70 uppercase tracking-wider block mb-1">
               Stop Loss ($)
             </label>
             <Input
@@ -446,7 +446,7 @@ export default function RuleBuilder({ rule, onChange }: RuleBuilderProps) {
             />
           </div>
           <div>
-            <label className="text-[10px] text-[var(--green)]/70 uppercase tracking-wider block mb-1">
+            <label className="text-micro text-[var(--green)]/70 uppercase tracking-wider block mb-1">
               Take Profit ($)
             </label>
             <Input

@@ -38,9 +38,9 @@ export default function SubscriptionPage() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {plans.map((plan, i) => (
             <div key={plan.name} className={`relative bg-[var(--card)] border rounded-xl p-6 flex flex-col ${plan.popular ? "border-[var(--amber)] ring-1 ring-[var(--amber)]/30" : "border-[var(--border)]"}`}>
-              {plan.popular && <span className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-0.5 bg-[var(--amber)] text-black text-[10px] font-bold rounded-full">Most Popular</span>}
+              {plan.popular && <span className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-0.5 bg-[var(--amber)] text-black text-caption font-bold rounded-full">Most Popular</span>}
               <div className="flex items-center gap-2 mb-4">
-                {i === 1 ? <Zap className="w-5 h-5 text-[var(--amber)]" /> : i === 2 ? <Shield className="w-5 h-5 text-[var(--cyan)]" /> : <BarChart3 className="w-5 h-5 text-[var(--text-muted)]" />}
+                {i === 1 ? <Zap className="w-5 h-5 text-[var(--amber)]" /> : i === 2 ? <Shield className="w-5 h-5 text-[var(--amber)]" /> : <BarChart3 className="w-5 h-5 text-[var(--text-muted)]" />}
                 <h2 className="text-lg font-bold text-white">{plan.name}</h2>
               </div>
               <p className="text-3xl font-bold text-white mb-1">{plan.price}<span className="text-sm text-[var(--text-muted)] font-normal">{plan.period}</span></p>

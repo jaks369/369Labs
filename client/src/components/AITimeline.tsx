@@ -49,7 +49,7 @@ export default function AITimeline({ compact = false }: { compact?: boolean }) {
         <span className="text-[9px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">AI Timeline</span>
       </div>
       {entries.length === 0 ? (
-        <p className="text-[10px] text-[var(--text-muted)] leading-relaxed">
+        <p className="text-micro text-[var(--text-muted)] leading-relaxed">
           Live agent activity will appear here — scans, strategy builds, risk checks, trades.
         </p>
       ) : (
@@ -67,7 +67,7 @@ export default function AITimeline({ compact = false }: { compact?: boolean }) {
                   className="flex items-start gap-1.5"
                 >
                   <Icon className={`w-3 h-3 mt-0.5 shrink-0 ${COLORS[e.icon]}`} />
-                  <span className="text-[10px] text-[var(--text-secondary)] leading-tight flex-1">{e.text}</span>
+                  <span className="text-micro text-[var(--text-secondary)] leading-tight flex-1">{e.text}</span>
                   <span className="text-[9px] text-[var(--text-muted)] tabular-nums shrink-0">{fmt(e.ts)}</span>
                 </motion.li>
               );

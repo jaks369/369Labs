@@ -150,7 +150,7 @@ export default function AIExplainability() {
                       <span className="text-xs font-bold text-white w-8 text-right">{confidence}%</span>
                     </div>
                   </div>
-                  {entry.symbol && <p className="text-[10px] text-[var(--text-muted)] mb-2">Symbol: {entry.symbol}</p>}
+                  {entry.symbol && <p className="text-caption mb-2">Symbol: {entry.symbol}</p>}
                   {factors.length > 0 ? (
                     <ul className="space-y-2">
                       {factors.map((f, i) => (

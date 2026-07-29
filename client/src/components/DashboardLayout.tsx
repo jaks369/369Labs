@@ -185,10 +185,10 @@ export default function DashboardLayout({
             <div className="w-10 h-10 bg-[var(--amber)] rounded-lg flex items-center justify-center">
               <Activity className="w-6 h-6 text-[var(--bg)]" />
             </div>
-            <h1 className="text-xl font-bold tracking-tight text-center text-[#E8ECF1]">
+            <h1 className="text-xl font-bold tracking-tight text-center text-[var(--text-primary)]">
               369Labs Access
             </h1>
-            <p className="text-[13px] text-[#8896A8] text-center max-w-sm">
+            <p className="text-[13px] text-[var(--text-secondary)] text-center max-w-sm">
               Please sign in to access your trading dashboard and automated bots.
             </p>
           </div>
@@ -291,10 +291,10 @@ function DashboardLayoutContent({
       <div className="relative" ref={sidebarRef}>
         <Sidebar
           collapsible="icon"
-          className="border-r border-[#1E2A38] bg-[var(--bg)]"
+          className="border-r border-[var(--border)] bg-[var(--bg)]"
           disableTransition={isResizing}
         >
-          <SidebarHeader className="h-14 justify-center border-b border-[#1E2A38]">
+          <SidebarHeader className="h-14 justify-center border-b border-[var(--border)]">
             <div className="flex items-center gap-1 px-3">
               <button onClick={() => setLocation("/dashboard")} className="flex items-center gap-2.5 transition-all cursor-pointer group flex-1 text-left">
                 <div className="w-7 h-7 bg-[var(--amber)] rounded-md flex items-center justify-center shrink-0">
@@ -302,10 +302,13 @@ function DashboardLayoutContent({
                 </div>
                 {!isCollapsed && (
                   <div className="flex flex-col">
-                    <span className="font-semibold text-sm tracking-tight text-[#E8ECF1]">
+                    <span className="font-semibold text-sm tracking-tight text-[var(--text-primary)]">
                       369Labs
                     </span>
-                    <span className="text-[8px] font-medium text-[#5A6878] tracking-wider uppercase">Trading Terminal</span>
+                    <span className="text-[8px] font-medium text-[var(--text-muted)] tracking-wider uppercase flex items-center gap-1">
+                      <span className="w-1.5 h-1.5 rounded-full bg-[var(--green)] animate-live-pulse" />
+                      Trading Terminal
+                    </span>
                   </div>
                 )}
               </button>
@@ -319,7 +322,7 @@ function DashboardLayoutContent({
 
           <SidebarContent className="py-2">
             {navGroups.map((group) => {
-              const sectionColor = group.title === "Build" ? "text-[var(--amber)]" : group.title === "Trade" ? "text-[var(--green)]" : group.title === "Intelligence" || group.title === "369AI" ? "text-[var(--cyan)]" : "text-[#5A6878]";
+              const sectionColor = group.title === "Build" ? "text-[var(--amber)]" : group.title === "Trade" ? "text-[var(--green)]" : group.title === "Intelligence" || group.title === "369AI" ? "text-[var(--cyan)]" : "text-[var(--text-muted)]";
               const dotColor = group.title === "Build" ? "accent-dot-amber" : group.title === "Trade" ? "accent-dot-green" : group.title === "Intelligence" || group.title === "369AI" ? "accent-dot-cyan" : "accent-dot-green";
               return (
               <div key={group.title} className="mb-1.5">
@@ -383,50 +386,50 @@ function DashboardLayoutContent({
           )}
           </SidebarContent>
 
-          <SidebarFooter className="p-2 border-t border-[#1E2A38] space-y-1.5">
+          <SidebarFooter className="p-2 border-t border-[var(--border)] space-y-1.5">
             <button
               onClick={() => openCommandPalette()}
-              className="w-full flex items-center gap-2 rounded-md border border-[#1E2A38] bg-[#111820] px-2.5 py-1.5 text-[11px] text-[#8896A8] hover:text-[#E8ECF1] hover:border-[#2A3A4A] transition-all duration-150 group cursor-pointer"
+              className="w-full flex items-center gap-2 rounded-md border border-[var(--border)] bg-[var(--surface-secondary)] px-2.5 py-1.5 text-caption text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:border-[var(--border)] transition-all duration-150 group cursor-pointer"
             >
-              <Command className="w-3.5 h-3.5 text-[#5A6878] group-hover:text-[var(--amber)] transition-colors" />
+              <Command className="w-3.5 h-3.5 text-[var(--text-muted)] group-hover:text-[var(--amber)] transition-colors" />
               <span className="flex-1 text-left">Quick Command</span>
-              <kbd className="text-[9px] text-[#5A6878] border border-[#1E2A38] rounded px-1 py-0.5">⌘K</kbd>
+              <kbd className="text-[9px] text-[var(--text-muted)] border border-[var(--border)] rounded px-1 py-0.5">⌘K</kbd>
             </button>
 
             <button
               onClick={() => (voice.listening ? voice.stop() : voice.start())}
-              className={`w-full flex items-center gap-2 rounded-md border px-2.5 py-1.5 text-[11px] transition-all duration-150 cursor-pointer ${
+              className={`w-full flex items-center gap-2 rounded-md border px-2.5 py-1.5 text-caption transition-all duration-150 cursor-pointer ${
                 voice.listening
                   ? "border-[var(--red)]/40 bg-[var(--red)]/8 text-[var(--red)]"
-                  : "border-[#1E2A38] bg-[#111820] text-[#8896A8] hover:text-[#E8ECF1] hover:border-[#2A3A4A] transition-all"
+                  : "border-[var(--border)] bg-[var(--surface-secondary)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:border-[var(--border)] transition-all"
               }`}
             >
-              {voice.listening ? <Square className="w-3.5 h-3.5" /> : <Mic className="w-3.5 h-3.5 text-[#5A6878] group-hover:text-[var(--amber)] transition-colors" />}
+              {voice.listening ? <Square className="w-3.5 h-3.5" /> : <Mic className="w-3.5 h-3.5 text-[var(--text-muted)] group-hover:text-[var(--amber)] transition-colors" />}
               <span className="flex-1 text-left">{voice.listening ? "Listening…" : "Voice Commands"}</span>
               {voice.listening && <span className="w-1.5 h-1.5 rounded-full bg-[var(--red)] animate-pulse-dot" />}
             </button>
             {voice.listening && voice.transcript && (
-              <p className="text-[10px] text-[var(--amber)] px-1 truncate">"{voice.transcript}"</p>
+              <p className="text-micro text-[var(--amber)] px-1 truncate">"{voice.transcript}"</p>
             )}
 
             {!isCollapsed && (
-              <div className="rounded-md border border-[#1E2A38] bg-[#111820] p-2">
+              <div className="rounded-md border border-[var(--border)] bg-[var(--surface-secondary)] p-2">
                 <AITimeline compact />
               </div>
             )}
 
             {!isCollapsed && (
-              <button onClick={() => setShortcutsOpen(true)} className="w-full flex items-center gap-2 rounded-md border border-[#1E2A38] bg-[#111820] px-2.5 py-1.5 text-[11px] text-[#5A6878] hover:text-[#E8ECF1] hover:border-[#2A3A4A] transition-all duration-150 group cursor-pointer">
+              <button onClick={() => setShortcutsOpen(true)} className="w-full flex items-center gap-2 rounded-md border border-[var(--border)] bg-[var(--surface-secondary)] px-2.5 py-1.5 text-caption text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:border-[var(--border)] transition-all duration-150 group cursor-pointer">
                 <Command className="w-3.5 h-3.5 group-hover:text-[var(--amber)] transition-colors" />
                 <span className="flex-1 text-left">Keyboard Shortcuts</span>
-                <kbd className="text-[9px] text-[#5A6878] border border-[#1E2A38] rounded px-1 py-0.5">?</kbd>
+                <kbd className="text-[9px] text-[var(--text-muted)] border border-[var(--border)] rounded px-1 py-0.5">?</kbd>
               </button>
             )}
 
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <button className="flex items-center gap-2.5 rounded-md px-2 py-1.5 hover:bg-white/[0.03] transition-all duration-150 w-full text-left group-data-[collapsible=icon]:justify-center focus:outline-none cursor-pointer focus-visible:ring-2 focus-visible:ring-[var(--amber)] focus-visible:outline-none">
-                  <Avatar className="h-6 w-6 border border-[#1E2A38] shrink-0">
+                  <Avatar className="h-6 w-6 border border-[var(--border)] shrink-0">
                     {(user as any)?.avatarUrl ? (
                       <AvatarImage src={(user as any).avatarUrl} alt="Avatar" className="object-cover" />
                     ) : null}
@@ -436,17 +439,17 @@ function DashboardLayoutContent({
                   </Avatar>
                   {!isCollapsed && (
                     <div className="flex-1 min-w-0">
-                      <p className="text-[13px] font-medium text-[#E8ECF1] truncate leading-none">
+                      <p className="text-[13px] font-medium text-[var(--text-primary)] truncate leading-none">
                         {user?.name || "Trader"}
                       </p>
-                      <p className="text-[10px] text-[#5A6878] truncate mt-0.5">
+                      <p className="text-micro text-[var(--text-muted)] truncate mt-0.5">
                         {user?.email || "Connected"}
                       </p>
                     </div>
                   )}
                 </button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-52 bg-[#111820] border-[#1E2A38] text-[#E8ECF1] shadow-lg">
+              <DropdownMenuContent align="end" className="w-52 bg-[var(--surface-secondary)] border-[var(--border)] text-[var(--text-primary)] shadow-lg">
                 <DropdownMenuItem
                   onClick={async () => { await logout(); setLocation("/"); }}
                   className="cursor-pointer text-[var(--red)] focus:text-[var(--red)] focus:bg-[var(--red)]/10"
@@ -462,10 +465,10 @@ function DashboardLayoutContent({
 
       <SidebarInset className="bg-[var(--bg)] flex flex-col">
         {isMobile && (
-          <div className="flex border-b border-[#1E2A38] h-12 items-center justify-between bg-[var(--bg)] px-4 sticky top-0 z-40">
+          <div className="flex border-b border-[var(--border)] h-12 items-center justify-between bg-[var(--bg)] px-4 sticky top-0 z-40">
             <div className="flex items-center gap-2.5">
-              <SidebarTrigger className="text-[#8896A8]" />
-              <span className="font-semibold text-[#E8ECF1] text-[13px]">
+              <SidebarTrigger className="text-[var(--text-secondary)]" />
+              <span className="font-semibold text-[var(--text-primary)] text-[13px]">
                 {activeMenuItem?.label ?? "Menu"}
               </span>
             </div>
@@ -473,12 +476,12 @@ function DashboardLayoutContent({
         )}
         <main className="flex-1 overflow-y-auto">
           {!riskDismissed && (
-            <div className="flex items-center gap-3 bg-[var(--bg)] border-b border-[#1E2A38] px-4 py-1.5 text-[10px] leading-snug text-[#5A6878]">
-              <span className="font-semibold uppercase tracking-wider text-[#5A6878]/60 shrink-0 text-[9px]">Risk</span>
+            <div className="flex items-center gap-3 bg-[var(--bg)] border-b border-[var(--border)] px-4 py-1.5 text-micro leading-snug text-[var(--text-muted)]">
+              <span className="font-semibold uppercase tracking-wider text-[var(--text-muted)]/60 shrink-0 text-[9px]">Risk</span>
               <span className="flex-1">
                 Trading involves substantial risk. 369Labs is an analysis tool, not financial advice.
               </span>
-              <button onClick={() => setRiskDismissed(true)} className="text-[#5A6878] hover:text-[#E8ECF1] transition-colors font-semibold px-2 shrink-0 text-xs cursor-pointer">✕</button>
+              <button onClick={() => setRiskDismissed(true)} className="text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors font-semibold px-2 shrink-0 text-xs cursor-pointer">✕</button>
             </div>
           )}
           {children}

@@ -88,7 +88,7 @@ export default function Marketplace() {
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <select value={symbol} onChange={(e) => setSymbol(e.target.value)} className="bg-[#1a1a2e] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-white focus:border-[var(--amber)] outline-none [&>option]:bg-[#1a1a2e] [&>option]:text-white">
+          <select value={symbol} onChange={(e) => setSymbol(e.target.value)} className="bg-[var(--surface-secondary)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-white focus:border-[var(--amber)] outline-none [&>option]:bg-[var(--surface-secondary)] [&>option]:text-white">
             <option value="">All symbols</option>
             {getValidSymbols().map((s) => <option key={s} value={s}>{s}</option>)}
           </select>
@@ -145,9 +145,9 @@ export default function Marketplace() {
                   <div className="p-4 flex items-start justify-between gap-4">
                     <div className="flex-1">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <span className="px-2 py-0.5 rounded bg-[var(--amber-soft)] border border-[var(--amber-border)] text-[var(--amber)] text-[10px] font-bold uppercase">{sig.symbol}</span>
-                        <span className="px-2 py-0.5 rounded bg-white/5 text-[var(--text-secondary)] text-[10px] font-bold uppercase">{sig.patternType}</span>
-                        <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${sig.source === "always-on" ? "bg-[var(--amber-soft)] text-[var(--amber-hover)]" : "bg-[var(--amber-soft)] text-[var(--amber-hover)]"}`}>{sig.source}</span>
+                        <span className="px-2 py-0.5 rounded bg-[var(--amber-soft)] border border-[var(--amber-border)] text-[var(--amber)] text-micro">{sig.symbol}</span>
+                        <span className="px-2 py-0.5 rounded bg-white/5 text-[var(--text-secondary)] text-micro">{sig.patternType}</span>
+                        <span className={`px-2 py-0.5 rounded text-micro ${sig.source === "always-on" ? "bg-[var(--amber-soft)] text-[var(--amber-hover)]" : "bg-[var(--amber-soft)] text-[var(--amber-hover)]"}`}>{sig.source}</span>
                       </div>
                       <h3 className="font-bold text-white mt-2">{sig.title}</h3>
                       <p className="text-sm text-[var(--text-secondary)] mt-1">{sig.description}</p>
@@ -166,14 +166,14 @@ export default function Marketplace() {
                       <Button onClick={() => sendToBot(sig)} className="bg-[var(--green)]/20 text-[var(--green)] border border-[var(--green)]/30 text-xs px-3 py-1.5 rounded-lg flex items-center gap-1">
                         <Bot className="w-3.5 h-3.5" /> Deploy Bot
                       </Button>
-                      <button onClick={() => setExpanded(isOpen ? null : sig.id)} className="text-[11px] text-[var(--text-secondary)] hover:text-[var(--amber)] flex items-center gap-1 justify-center">
+                      <button onClick={() => setExpanded(isOpen ? null : sig.id)} className="text-body hover:text-[var(--amber)] flex items-center gap-1 justify-center">
                         {isOpen ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />} Evidence
                       </button>
                     </div>
                   </div>
                   {isOpen && (
                     <div className="border-t border-[var(--border)] bg-[var(--bg)] p-4">
-                      <div className="text-[10px] uppercase tracking-widest text-[var(--text-muted)] font-bold mb-2">Raw evidence (tick window)</div>
+                      <div className="text-micro mb-2">Raw evidence (tick window)</div>
                       <div className="overflow-x-auto">
                         <table className="w-full text-left text-xs font-mono">
                           <thead>
@@ -193,7 +193,7 @@ export default function Marketplace() {
                           </tbody>
                         </table>
                       </div>
-                      <pre className="mt-3 text-[11px] text-[var(--text-secondary)] bg-black/40 rounded-lg p-3 overflow-x-auto">{JSON.stringify(sig.rule, null, 2)}</pre>
+                      <pre className="mt-3 text-body bg-black/40 rounded-lg p-3 overflow-x-auto">{JSON.stringify(sig.rule, null, 2)}</pre>
                     </div>
                   )}
                 </div>
@@ -204,12 +204,12 @@ export default function Marketplace() {
 
         <div className="mt-10">
           <h2 className="text-xl font-bold text-white mb-1 flex items-center gap-2">
-            <Code className="w-5 h-5 text-[var(--cyan)]" /> Plugin SDK
+            <Code className="w-5 h-5 text-[var(--amber)]" /> Plugin SDK
           </h2>
           <p className="text-sm text-[var(--text-muted)] mb-4">Build your own plugins with the 369Labs Plugin SDK.</p>
           <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5 space-y-3">
             <div className="flex items-start gap-3">
-              <BookOpen className="w-5 h-5 text-[var(--cyan)] mt-0.5" />
+              <BookOpen className="w-5 h-5 text-[var(--amber)] mt-0.5" />
               <div>
                 <p className="text-sm font-bold text-white">Getting Started</p>
                 <p className="text-xs text-[var(--text-secondary)] mt-1">Plugins are JavaScript modules that export a <code className="text-[var(--amber)]">createPlugin</code> function. They receive a context with trade/bot/alert hooks.</p>
@@ -228,11 +228,11 @@ export default function Marketplace() {
               <div className="bg-black/20 rounded-lg p-3">
                 <p className="text-white font-bold mb-1">Available Hooks</p>
                 <ul className="text-[var(--text-muted)] space-y-1">
-                  <li><code className="text-[var(--cyan)]">onTrade</code> — trade executed</li>
-                  <li><code className="text-[var(--cyan)]">onTick</code> — price tick</li>
-                  <li><code className="text-[var(--cyan)]">onAlert</code> — alert triggered</li>
-                  <li><code className="text-[var(--cyan)]">onBotStart</code> — bot started</li>
-                  <li><code className="text-[var(--cyan)]">onBotStop</code> — bot stopped</li>
+                  <li><code className="text-[var(--amber)]">onTrade</code> — trade executed</li>
+                  <li><code className="text-[var(--amber)]">onTick</code> — price tick</li>
+                  <li><code className="text-[var(--amber)]">onAlert</code> — alert triggered</li>
+                  <li><code className="text-[var(--amber)]">onBotStart</code> — bot started</li>
+                  <li><code className="text-[var(--amber)]">onBotStop</code> — bot stopped</li>
                 </ul>
               </div>
               <div className="bg-black/20 rounded-lg p-3">
@@ -251,12 +251,12 @@ export default function Marketplace() {
 
         <div className="mt-10">
           <h2 className="text-xl font-bold text-white mb-1 flex items-center gap-2">
-            <Shield className="w-5 h-5 text-[var(--cyan)]" /> Plugin Marketplace
+            <Shield className="w-5 h-5 text-[var(--amber)]" /> Plugin Marketplace
           </h2>
           <p className="text-sm text-[var(--text-muted)] mb-4">Browse available plugins for your trading bots.</p>
           <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl overflow-hidden">
             {pluginsQuery.isLoading ? (
-              <div className="flex justify-center py-6"><Loader2 className="w-5 h-5 animate-spin text-[var(--cyan)]" /></div>
+              <div className="flex justify-center py-6"><Loader2 className="w-5 h-5 animate-spin text-[var(--amber)]" /></div>
             ) : pluginList.length === 0 ? (
               <p className="text-sm text-[var(--text-muted)] p-4">No plugins available. Plugins can be created via the Plugin SDK above.</p>
             ) : (
@@ -268,8 +268,8 @@ export default function Marketplace() {
                       <span className="text-xs text-[var(--text-muted)] ml-2">v{plugin.version || "1.0.0"}</span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <span className="text-[10px] text-[var(--text-muted)]">{plugin.author || "Community"}</span>
-                      <span className="text-[10px] px-2 py-0.5 rounded bg-[var(--cyan)]/20 text-[var(--cyan)]">{plugin.hook || "general"}</span>
+                      <span className="text-caption">{plugin.author || "Community"}</span>
+                      <span className="text-caption px-2 py-0.5 rounded bg-[var(--amber)]/20 text-[var(--amber)]">{plugin.hook || "general"}</span>
                     </div>
                   </div>
                   <p className="text-xs text-[var(--text-secondary)] mt-1">{plugin.description || ""}</p>
@@ -285,7 +285,7 @@ export default function Marketplace() {
               <Users className="w-5 h-5 text-[var(--amber-hover)]" /> Community Strategies
             </h2>
             <div className="flex gap-2">
-              <Button onClick={() => setShowUpload(true)} className="bg-[var(--cyan)]/20 text-[var(--cyan)] border border-[var(--cyan)]/30 text-xs px-3 py-1.5 rounded-lg flex items-center gap-1">
+              <Button onClick={() => setShowUpload(true)} className="bg-[var(--amber)]/20 text-[var(--amber)] border border-[var(--amber)]/30 text-xs px-3 py-1.5 rounded-lg flex items-center gap-1">
                 <Upload className="w-3.5 h-3.5" /> Publish Yours
               </Button>
             </div>
@@ -304,8 +304,8 @@ export default function Marketplace() {
                       <h3 className="font-bold text-white truncate">{s.name}</h3>
                       <p className="text-xs text-[var(--text-secondary)] mt-1 truncate">{s.description || "No description"}</p>
                       <div className="flex items-center gap-2 mt-2">
-                        <span className="text-[10px] text-[var(--text-muted)]">by user #{s.userId}</span>
-                        <span className="flex items-center gap-0.5 text-[10px] text-[var(--amber)]"><Star className="w-3 h-3 fill-[var(--amber)]" /> 4.5</span>
+                        <span className="text-caption">by user #{s.userId}</span>
+                        <span className="flex items-center gap-0.5 text-caption text-[var(--amber)]"><Star className="w-3 h-3 fill-[var(--amber)]" /> 4.5</span>
                       </div>
                     </div>
                     <div className="flex flex-col gap-2 shrink-0">
@@ -324,7 +324,7 @@ export default function Marketplace() {
           <div className="fixed inset-0 z-[90] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setShowUpload(false)}>
             <div className="w-full max-w-lg bg-[var(--card)] border border-[var(--border)] rounded-xl" onClick={(e) => e.stopPropagation()}>
               <div className="flex items-center justify-between p-4 border-b border-[var(--border)]">
-                <h3 className="text-sm font-bold text-white flex items-center gap-2"><Upload className="w-4 h-4 text-[var(--cyan)]" /> Publish Strategy</h3>
+                <h3 className="text-sm font-bold text-white flex items-center gap-2"><Upload className="w-4 h-4 text-[var(--amber)]" /> Publish Strategy</h3>
                 <button onClick={() => setShowUpload(false)} className="text-[var(--text-muted)] hover:text-white">✕</button>
               </div>
               <div className="p-4 space-y-3">
@@ -344,7 +344,7 @@ export default function Marketplace() {
                   <label className="text-xs text-[var(--text-muted)] font-bold block mb-1">Config (JSON)</label>
                   <textarea value={uploadConfig} onChange={(e) => setUploadConfig(e.target.value)} className="w-full bg-[var(--card)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-white font-mono resize-none" rows={4} placeholder='{"rule":{"conditions":[...],"actions":[...]}}' />
                 </div>
-                <Button onClick={async () => { if (!uploadName.trim()) { toast("Strategy name required", "error"); return; } let config: any = {}; if (uploadConfig.trim()) { try { config = JSON.parse(uploadConfig); } catch { toast("Invalid JSON config", "error"); return; } } try { await cloneMutation.mutateAsync({ name: uploadName, description: uploadDesc || "Published from Marketplace", config, published: true }); toast("Strategy published to community!", "success"); setShowUpload(false); setUploadName(""); setUploadDesc(""); setUploadPrice(""); setUploadConfig(""); publishedQuery.refetch(); } catch (e: any) { toast(e?.message || "Failed to publish", "error"); } }} className="w-full bg-[var(--cyan)] text-black text-xs font-bold py-2 rounded-lg">Submit for Review</Button>
+                <Button onClick={async () => { if (!uploadName.trim()) { toast("Strategy name required", "error"); return; } let config: any = {}; if (uploadConfig.trim()) { try { config = JSON.parse(uploadConfig); } catch { toast("Invalid JSON config", "error"); return; } } try { await cloneMutation.mutateAsync({ name: uploadName, description: uploadDesc || "Published from Marketplace", config, published: true }); toast("Strategy published to community!", "success"); setShowUpload(false); setUploadName(""); setUploadDesc(""); setUploadPrice(""); setUploadConfig(""); publishedQuery.refetch(); } catch (e: any) { toast(e?.message || "Failed to publish", "error"); } }} className="w-full bg-[var(--amber)] text-[var(--bg)] text-xs font-bold py-2 rounded-lg">Submit for Review</Button>
               </div>
             </div>
           </div>

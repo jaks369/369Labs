@@ -291,7 +291,7 @@ export function StrategyBuilderContent({ embedded = false, onClose, onSaved }: S
           {/* Left Panel - Library */}
           <div className="space-y-6">
             <div className="panel p-6">
-              <h3 className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-widest mb-6">Execution Blocks</h3>
+              <h3 className="text-micro mb-6">Execution Blocks</h3>
               <div className="grid grid-cols-1 gap-2">
                 {blockTypes.map(bt => (
                   <button
@@ -308,7 +308,7 @@ export function StrategyBuilderContent({ embedded = false, onClose, onSaved }: S
             </div>
 
             <div className="panel p-6">
-              <h3 className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-widest mb-6">Saved Strategies</h3>
+              <h3 className="text-micro mb-6">Saved Strategies</h3>
               <div className="space-y-3">
                 {strategiesQuery.isLoading ? (
                   <div className="flex items-center justify-center py-6">
@@ -321,7 +321,7 @@ export function StrategyBuilderContent({ embedded = false, onClose, onSaved }: S
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0 flex-1">
                         <p className="text-xs font-bold text-white truncate">{s.name}</p>
-                        <p className="text-[10px] text-[var(--text-muted)] mt-1">
+                        <p className="text-caption mt-1">
                           {s.updatedAt ? new Date(s.updatedAt).toLocaleDateString() : "Not saved yet"}
                         </p>
                       </div>
@@ -337,7 +337,7 @@ export function StrategyBuilderContent({ embedded = false, onClose, onSaved }: S
                   </div>
                 ))}
                 {(!strategiesQuery.isLoading && !strategiesQuery.isError && (!strategiesQuery.data || strategiesQuery.data.length === 0)) && (
-                  <p className="text-xs text-[var(--text-muted)] italic">No strategies saved yet.</p>
+                  <div className="empty-state"><p className="empty-state-desc">No strategies saved yet.</p></div>
                 )}
               </div>
             </div>
@@ -348,7 +348,7 @@ export function StrategyBuilderContent({ embedded = false, onClose, onSaved }: S
             {/* Strategy Meta */}
             <div className="panel p-6 flex flex-col md:flex-row gap-6">
                <div className="flex-1 space-y-2">
-                 <label className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-widest">Strategy Name</label>
+                 <label className="text-micro">Strategy Name</label>
                  <Input 
                    value={strategyName}
                    onChange={e => setStrategyName(e.target.value)}
@@ -358,7 +358,7 @@ export function StrategyBuilderContent({ embedded = false, onClose, onSaved }: S
                </div>
                <div className="w-px bg-[var(--border)] hidden md:block" />
                <div className="flex-1 space-y-2">
-                 <label className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-widest">Description</label>
+                 <label className="text-micro">Description</label>
                  <Input 
                    value={description}
                    onChange={e => setDescription(e.target.value)}
@@ -373,23 +373,23 @@ export function StrategyBuilderContent({ embedded = false, onClose, onSaved }: S
               <div className="p-4 border-b border-[var(--border)] flex items-center justify-between bg-black/20">
                 <div className="flex items-center gap-2">
                   <Settings2 className="w-4 h-4 text-[var(--text-muted)]" />
-                  <span className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-widest">Workflow Canvas</span>
+                  <span className="text-micro">Workflow Canvas</span>
                 </div>
                 <div className="flex bg-[var(--card)] rounded-lg p-1">
-                   <button onClick={() => setBuilderMode("blocks")} className={`px-3 py-1 text-[10px] font-bold rounded ${builderMode === "blocks" ? "bg-[var(--amber)] text-white" : "text-[var(--text-muted)]"}`}>BLOCKS</button>
-                   <button onClick={() => setBuilderMode("visual")} className={`px-3 py-1 text-[10px] font-bold rounded ${builderMode === "visual" ? "bg-[var(--amber)] text-white" : "text-[var(--text-muted)]"}`}>IF/THEN</button>
-                   <button onClick={() => setBuilderMode("ensemble")} className={`px-3 py-1 text-[10px] font-bold rounded ${builderMode === "ensemble" ? "bg-[var(--amber)] text-white" : "text-[var(--text-muted)]"}`}>ENSEMBLE</button>
-                   <button onClick={() => setShowHistory((v) => !v)} className={`px-3 py-1 text-[10px] font-bold rounded ${showHistory ? "bg-[var(--amber)] text-white" : "text-[var(--text-muted)]"}`}><GitCompare className="w-3 h-3 inline mr-1" />HISTORY</button>
-                   <button onClick={() => critiqueMutation.mutate({ rule: buildConfig().rule })} className={`px-3 py-1 text-[10px] font-bold rounded ${critiqueMutation.isPending ? "opacity-50" : "hover:bg-[var(--green)]/20 text-[var(--green)] border border-[var(--green)]/30"}`}><ShieldCheck className="w-3 h-3 inline mr-1" />AI REVIEW</button>
+                   <button onClick={() => setBuilderMode("blocks")} className={`px-3 py-1 text-caption font-bold rounded ${builderMode === "blocks" ? "bg-[var(--amber)] text-white" : "text-[var(--text-muted)]"}`}>BLOCKS</button>
+                   <button onClick={() => setBuilderMode("visual")} className={`px-3 py-1 text-caption font-bold rounded ${builderMode === "visual" ? "bg-[var(--amber)] text-white" : "text-[var(--text-muted)]"}`}>IF/THEN</button>
+                   <button onClick={() => setBuilderMode("ensemble")} className={`px-3 py-1 text-caption font-bold rounded ${builderMode === "ensemble" ? "bg-[var(--amber)] text-white" : "text-[var(--text-muted)]"}`}>ENSEMBLE</button>
+                   <button onClick={() => setShowHistory((v) => !v)} className={`px-3 py-1 text-caption font-bold rounded ${showHistory ? "bg-[var(--amber)] text-white" : "text-[var(--text-muted)]"}`}><GitCompare className="w-3 h-3 inline mr-1" />HISTORY</button>
+                   <button onClick={() => critiqueMutation.mutate({ rule: buildConfig().rule })} className={`px-3 py-1 text-caption font-bold rounded ${critiqueMutation.isPending ? "opacity-50" : "hover:bg-[var(--green)]/20 text-[var(--green)] border border-[var(--green)]/30"}`}><ShieldCheck className="w-3 h-3 inline mr-1" />AI REVIEW</button>
                  </div>
                </div>
 
                {showHistory && (
                  <div className="border-b border-[var(--border)] p-4 bg-black/20 space-y-3">
                    <div className="flex items-center justify-between">
-                     <span className="text-[10px] font-bold text-[var(--text-secondary)] uppercase tracking-widest">Version History ({versions.length})</span>
+                     <span className="text-caption font-bold text-[var(--text-secondary)] uppercase tracking-widest">Version History ({versions.length})</span>
                      {versions.length >= 2 && compareIdx === null && (
-                       <button onClick={() => setCompareIdx([versions.length - 2, versions.length - 1])} className="text-[10px] text-[var(--amber)] hover:underline">Compare last two</button>
+                       <button onClick={() => setCompareIdx([versions.length - 2, versions.length - 1])} className="text-caption text-[var(--amber)] hover:underline">Compare last two</button>
                      )}
                    </div>
                    {versions.length === 0 && <p className="text-xs text-[var(--text-muted)]">No saved versions yet. Save this strategy to start tracking history.</p>}
@@ -404,11 +404,11 @@ export function StrategyBuilderContent({ embedded = false, onClose, onSaved }: S
                    {compareIdx && versions[compareIdx[0]] && versions[compareIdx[1]] && (
                      <div className="grid grid-cols-2 gap-4 pt-2">
                        <div className="bg-[var(--card)] border border-[var(--border)] rounded p-3">
-                         <p className="text-[10px] text-[var(--text-muted)] mb-1">{new Date(versions[compareIdx[0]].savedAt).toLocaleString()}</p>
+                         <p className="text-caption mb-1">{new Date(versions[compareIdx[0]].savedAt).toLocaleString()}</p>
                          <p className="text-xs text-white whitespace-pre-wrap">{summarizeRuleSafe(versions[compareIdx[0]].rule)}</p>
                        </div>
                        <div className="bg-[var(--card)] border border-[var(--border)] rounded p-3">
-                         <p className="text-[10px] text-[var(--text-muted)] mb-1">{new Date(versions[compareIdx[1]].savedAt).toLocaleString()}</p>
+                         <p className="text-caption mb-1">{new Date(versions[compareIdx[1]].savedAt).toLocaleString()}</p>
                          <p className="text-xs text-white whitespace-pre-wrap">{summarizeRuleSafe(versions[compareIdx[1]].rule)}</p>
                        </div>
                      </div>
@@ -420,7 +420,7 @@ export function StrategyBuilderContent({ embedded = false, onClose, onSaved }: S
                   <div className="border-b border-[var(--border)] p-4 bg-black/20">
                     <div className="flex items-center gap-2 mb-2">
                       <ShieldCheck className="w-4 h-4 text-[var(--green)]" />
-                      <span className="text-[10px] font-bold text-[var(--green)] uppercase tracking-widest">Risk Reviewer Agent</span>
+                      <span className="text-caption font-bold text-[var(--green)] uppercase tracking-widest">Risk Reviewer Agent</span>
                     </div>
                     <p className="text-xs text-[var(--text-secondary)] mb-3">{critiqueMutation.data.summary}</p>
                     <div className="space-y-2">
@@ -443,22 +443,22 @@ export function StrategyBuilderContent({ embedded = false, onClose, onSaved }: S
                   <div className="max-w-2xl mx-auto space-y-5">
                     <p className="text-xs text-[var(--text-muted)]">Combine 2–3 saved strategies into one bot. A trade fires only when the chosen number of sub-strategies agree (vote).</p>
                     <div>
-                      <label className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-widest">Vote rule</label>
+                      <label className="text-micro">Vote rule</label>
                       <div className="flex gap-2 mt-2">
                         {(["all", "majority", "any"] as const).map((v) => (
-                          <button key={v} onClick={() => setEnsembleVote(v)} className={`px-3 py-1 text-[10px] font-bold rounded ${ensembleVote === v ? "bg-[var(--amber)] text-white" : "bg-[var(--card)] text-[var(--text-muted)] border border-[var(--border)]"}`}>{v === "all" ? "ALL agree" : v === "majority" ? "MAJORITY" : "ANY"}</button>
+                          <button key={v} onClick={() => setEnsembleVote(v)} className={`px-3 py-1 text-caption font-bold rounded ${ensembleVote === v ? "bg-[var(--amber)] text-white" : "bg-[var(--card)] text-[var(--text-muted)] border border-[var(--border)]"}`}>{v === "all" ? "ALL agree" : v === "majority" ? "MAJORITY" : "ANY"}</button>
                         ))}
                       </div>
                     </div>
                     <div className="space-y-2">
-                      <label className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-widest">Select strategies</label>
+                      <label className="text-micro">Select strategies</label>
                       {((strategiesQuery.data || []) as any[]).filter((s) => s.config?.rule).map((s) => {
                         const checked = ensembleIds.includes(s.id);
                         return (
                           <label key={s.id} className="flex items-center gap-3 bg-[var(--card)] border border-[var(--border)] rounded-lg p-3 cursor-pointer hover:border-[var(--amber)]/50">
                             <input type="checkbox" checked={checked} onChange={(e) => setEnsembleIds((prev) => e.target.checked ? [...prev, s.id] : prev.filter((id) => id !== s.id))} className="rounded" />
                             <span className="text-sm text-white">{s.name}</span>
-                            <span className="text-[10px] text-[var(--text-muted)] ml-auto">{(s.config.rule.symbol) || "R_100"}</span>
+                            <span className="text-caption ml-auto">{(s.config.rule.symbol) || "R_100"}</span>
                           </label>
                         );
                       })}
@@ -487,10 +487,10 @@ export function StrategyBuilderContent({ embedded = false, onClose, onSaved }: S
                                 </div>
                                 <div className="flex-1 space-y-1">
                                   <div className="flex items-center justify-between">
-                                    <span className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-widest">{block.type}</span>
+                                    <span className="text-micro">{block.type}</span>
                                     <div className="flex items-center gap-1">
-                                      <button onClick={() => moveBlock(block.id, -1)} disabled={index === 0} className="text-[var(--text-muted)] hover:text-[var(--cyan)] disabled:opacity-25 transition-colors" aria-label="Move up"><ArrowUp className="w-3 h-3" /></button>
-                                      <button onClick={() => moveBlock(block.id, 1)} disabled={index === blocks.length - 1} className="text-[var(--text-muted)] hover:text-[var(--cyan)] disabled:opacity-25 transition-colors" aria-label="Move down"><ArrowDown className="w-3 h-3" /></button>
+                                      <button onClick={() => moveBlock(block.id, -1)} disabled={index === 0} className="text-[var(--text-muted)] hover:text-[var(--amber)] disabled:opacity-25 transition-colors" aria-label="Move up"><ArrowUp className="w-3 h-3" /></button>
+                                      <button onClick={() => moveBlock(block.id, 1)} disabled={index === blocks.length - 1} className="text-[var(--text-muted)] hover:text-[var(--amber)] disabled:opacity-25 transition-colors" aria-label="Move down"><ArrowDown className="w-3 h-3" /></button>
                                       <button onClick={() => removeBlock(block.id)} className="text-[var(--text-muted)] hover:text-[var(--red)] transition-colors"><Trash2 className="w-3 h-3" /></button>
                                     </div>
                                   </div>
@@ -572,14 +572,14 @@ export function StrategyBuilderContent({ embedded = false, onClose, onSaved }: S
                       {versions.map((v, i) => (
                         <div key={i} className="flex items-center gap-3 p-2 bg-black/20 rounded-lg">
                           <span className="text-xs text-[var(--text-secondary)] w-24 shrink-0">{new Date(v.savedAt).toLocaleString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}</span>
-                          <code className="text-[11px] text-[var(--text-muted)] flex-1 truncate">{summarizeRuleSafe(v.rule)}</code>
-                          <button onClick={() => setDiffA(i)} className={`text-[10px] px-2 py-0.5 rounded ${diffA === i ? "bg-[var(--amber)] text-white" : "bg-white/5 text-[var(--text-secondary)]"}`}>A</button>
-                          <button onClick={() => setDiffB(i)} className={`text-[10px] px-2 py-0.5 rounded ${diffB === i ? "bg-[var(--amber)] text-white" : "bg-white/5 text-[var(--text-secondary)]"}`}>B</button>
+                          <code className="text-caption flex-1 truncate">{summarizeRuleSafe(v.rule)}</code>
+                          <button onClick={() => setDiffA(i)} className={`text-caption px-2 py-0.5 rounded ${diffA === i ? "bg-[var(--amber)] text-white" : "bg-white/5 text-[var(--text-secondary)]"}`}>A</button>
+                          <button onClick={() => setDiffB(i)} className={`text-caption px-2 py-0.5 rounded ${diffB === i ? "bg-[var(--amber)] text-white" : "bg-white/5 text-[var(--text-secondary)]"}`}>B</button>
                         </div>
                       ))}
                     </div>
                     {diffLines.length > 0 && (
-                      <div className="mt-3 p-3 bg-black/40 rounded-lg font-mono text-[11px] overflow-x-auto">
+                      <div className="mt-3 p-3 bg-black/40 rounded-lg font-mono text-caption overflow-x-auto">
                         <p className="text-[var(--text-muted)] mb-2">Diff: v{(diffA ?? 0) + 1} → v{(diffB ?? 0) + 1}</p>
                         {diffLines.map((l, i) => (
                           <div key={i} className={l.kind === "add" ? "text-[var(--green)]" : l.kind === "del" ? "text-[var(--red)]" : "text-[var(--text-muted)]"}>

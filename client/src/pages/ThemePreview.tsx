@@ -120,15 +120,15 @@ function TradeSample({ p }: { p: P }) {
           <div className="flex items-center gap-2" style={{ color: p.accent }}>
             <Bot className="w-4 h-4" /><span className="text-sm font-bold text-white">Bots</span>
           </div>
-          <span className="text-[10px] font-bold px-2 py-0.5 rounded" style={{ background: "rgba(251,146,60,0.15)", color: p.accent }}>LIVE</span>
+          <span className="text-caption font-bold px-2 py-0.5 rounded" style={{ background: "rgba(251,146,60,0.15)", color: p.accent }}>LIVE</span>
         </div>
         <div className="grid grid-cols-2 gap-3">
           <div className="rounded-xl p-3 backdrop-blur" style={{ background: p.surface, border: `1px solid ${p.border}` }}>
-            <p className="text-[10px] uppercase tracking-wider" style={{ color: p.muted }}>Win rate</p>
+            <p className="text-micro" style={{ color: p.muted }}>Win rate</p>
             <p className="text-xl font-bold" style={{ color: p.profit }}>68.4%</p>
           </div>
           <div className="rounded-xl p-3 backdrop-blur" style={{ background: p.surface, border: `1px solid ${p.border}` }}>
-            <p className="text-[10px] uppercase tracking-wider" style={{ color: p.muted }}>P&L</p>
+            <p className="text-micro" style={{ color: p.muted }}>P&L</p>
             <p className="text-xl font-bold flex items-center gap-1" style={{ color: p.profit }}><TrendingUp className="w-4 h-4" />+$42.10</p>
           </div>
         </div>
@@ -159,11 +159,11 @@ function CloudSample({ p }: { p: P }) {
       <p className="text-sm" style={{ color: p.muted }}>Enterprise-grade execution and monitoring.</p>
       <div className="grid grid-cols-2 gap-3 pt-2">
         <div className="p-3" style={{ background: p.surface, border: `1px solid ${p.border}`, borderRadius: p.radius }}>
-          <p className="text-[10px] uppercase" style={{ color: p.muted }}>Uptime</p>
+          <p className="text-micro" style={{ color: p.muted }}>Uptime</p>
           <p className="text-lg font-bold" style={{ color: p.profit }}>99.9%</p>
         </div>
         <div className="p-3" style={{ background: p.surface, border: `1px solid ${p.border}`, borderRadius: p.radius }}>
-          <p className="text-[10px] uppercase" style={{ color: p.muted }}>Active bots</p>
+          <p className="text-micro" style={{ color: p.muted }}>Active bots</p>
           <p className="text-lg font-bold text-white">12</p>
         </div>
       </div>

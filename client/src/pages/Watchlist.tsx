@@ -59,7 +59,7 @@ export default function Watchlist() {
 
         {adding && (
           <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4 flex gap-2">
-            <select value={newSym} onChange={(e) => setNewSym(e.target.value)} className="flex-1 bg-[#1a1a2e] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-white focus:border-[var(--amber)] outline-none [&>option]:bg-[#1a1a2e] [&>option]:text-white">
+            <select value={newSym} onChange={(e) => setNewSym(e.target.value)} className="flex-1 bg-[var(--surface-secondary)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-white focus:border-[var(--amber)] outline-none [&>option]:bg-[var(--surface-secondary)] [&>option]:text-white">
               {VALID_SYMBOLS.filter((s) => !symbols.includes(s)).map((s) => (<option key={s} value={s}>{s}</option>))}
             </select>
             <button onClick={addSymbol} className="px-4 py-2 rounded-lg bg-[var(--amber)] text-black text-xs font-bold">Add</button>

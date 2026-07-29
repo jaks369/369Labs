@@ -36,23 +36,23 @@ export default function KeyboardShortcuts({ onClose }: { onClose: () => void }) 
         </div>
         <div className="p-5 space-y-5">
           <div>
-            <p className="text-[10px] text-[var(--text-muted)] uppercase font-bold tracking-wider mb-2">Navigation</p>
+            <p className="text-micro text-[var(--text-muted)] uppercase font-bold tracking-wider mb-2">Navigation</p>
             <div className="space-y-1.5">
               {NAV_KEYS.map(s => (
                 <div key={s.key} className="flex items-center justify-between">
                   <span className="text-sm text-[var(--text-secondary)]">{s.label}</span>
-                  <kbd className="text-[11px] px-2 py-0.5 rounded bg-black/30 border border-[var(--border)] text-[var(--text-muted)] font-mono">{s.key}</kbd>
+                  <kbd className="text-caption px-2 py-0.5 rounded bg-black/30 border border-[var(--border)] text-[var(--text-muted)] font-mono">{s.key}</kbd>
                 </div>
               ))}
             </div>
           </div>
           <div>
-            <p className="text-[10px] text-[var(--text-muted)] uppercase font-bold tracking-wider mb-2">Global</p>
+            <p className="text-micro text-[var(--text-muted)] uppercase font-bold tracking-wider mb-2">Global</p>
             <div className="space-y-1.5">
               {GLOBAL_KEYS.map(s => (
                 <div key={s.key} className="flex items-center justify-between">
                   <span className="text-sm text-[var(--text-secondary)]">{s.label}</span>
-                  <kbd className="text-[11px] px-2 py-0.5 rounded bg-black/30 border border-[var(--border)] text-[var(--text-muted)] font-mono">{s.key}</kbd>
+                  <kbd className="text-caption px-2 py-0.5 rounded bg-black/30 border border-[var(--border)] text-[var(--text-muted)] font-mono">{s.key}</kbd>
                 </div>
               ))}
             </div>

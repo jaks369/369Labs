@@ -123,17 +123,17 @@ export default function DigitProbability({ symbol, decimalPlaces, maxTicks = 100
       className="p-4 rounded-xl border transition-colors duration-300"
       style={{
         borderColor: flash === "up" ? "var(--green)" : flash === "down" ? "var(--red)" : "var(--border)",
-        background: flash === "up" ? "rgba(16,185,129,0.06)" : flash === "down" ? "rgba(239,68,68,0.06)" : "var(--card)",
+        background: flash === "up" ? "color-mix(in srgb, var(--green) 6%, transparent)" : flash === "down" ? "color-mix(in srgb, var(--red) 6%, transparent)" : "var(--card)",
       }}
     >
       <div className="flex items-center justify-between mb-3">
-        <h4 className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-widest">
+        <h4 className="text-micro font-bold text-[var(--text-muted)] uppercase tracking-widest">
           Digit Frequency (Last {digits.length || 0} ticks)
         </h4>
         <motion.span
           className="text-[9px] font-mono px-2 py-0.5 rounded"
           animate={{
-            background: flash === "up" ? "rgba(16,185,129,0.2)" : flash === "down" ? "rgba(239,68,68,0.2)" : "transparent",
+            background: flash === "up" ? "color-mix(in srgb, var(--green) 20%, transparent)" : flash === "down" ? "color-mix(in srgb, var(--red) 20%, transparent)" : "transparent",
             color: flash === "up" ? "var(--green)" : flash === "down" ? "var(--red)" : "var(--text-muted)",
           }}
         >

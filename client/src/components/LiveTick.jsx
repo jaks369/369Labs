@@ -23,10 +23,10 @@ export default function LiveTick({ symbol, price, change, changePercent, directi
   if (compact) {
     return (
       <motion.span
-        className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-mono tabular-nums"
+        className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-micro font-mono tabular-nums"
         animate={{
           color: isUp ? "var(--green)" : isDown ? "var(--red)" : "var(--text-secondary)",
-          background: isUp ? "rgba(16,185,129,0.12)" : isDown ? "rgba(239,68,68,0.12)" : "transparent",
+          background: isUp ? "color-mix(in srgb, var(--green) 12%, transparent)" : isDown ? "color-mix(in srgb, var(--red) 12%, transparent)" : "transparent",
         }}
         transition={{ duration: 0.4, ease: [0.19, 1, 0.22, 1] }}
       >
@@ -40,8 +40,8 @@ export default function LiveTick({ symbol, price, change, changePercent, directi
     <motion.div
       className="flex items-center justify-between px-3 py-2 rounded-lg border transition-colors"
       animate={{
-        borderColor: isUp ? "rgba(16,185,129,0.3)" : isDown ? "rgba(239,68,68,0.3)" : "var(--border)",
-        background: isUp ? "rgba(16,185,129,0.06)" : isDown ? "rgba(239,68,68,0.06)" : "transparent",
+        borderColor: isUp ? "rgba(var(--green-rgb), 0.3)" : isDown ? "rgba(var(--red-rgb), 0.3)" : "var(--border)",
+        background: isUp ? "rgba(var(--green-rgb), 0.06)" : isDown ? "rgba(var(--red-rgb), 0.06)" : "transparent",
       }}
       transition={{ duration: 0.4, ease: [0.19, 1, 0.22, 1] }}
     >
@@ -53,7 +53,7 @@ export default function LiveTick({ symbol, price, change, changePercent, directi
       </div>
       <div className="flex items-center gap-2">
         <motion.span
-          className="text-[10px] font-mono tabular-nums"
+          className="text-micro font-mono tabular-nums"
           animate={{ color: isUp ? "var(--green)" : isDown ? "var(--red)" : "var(--text-muted)" }}
         >
           <AnimatePresence mode="wait">
@@ -73,7 +73,7 @@ export default function LiveTick({ symbol, price, change, changePercent, directi
             className="text-[9px] px-1.5 py-0.5 rounded font-mono tabular-nums"
             animate={{
               color: isUp ? "var(--green)" : isDown ? "var(--red)" : "var(--text-muted)",
-              background: isUp ? "rgba(16,185,129,0.15)" : isDown ? "rgba(239,68,68,0.15)" : "transparent",
+              background: isUp ? "rgba(var(--green-rgb), 0.15)" : isDown ? "rgba(var(--red-rgb), 0.15)" : "transparent",
             }}
           >
             {changePercent >= 0 ? "+" : ""}{Number(changePercent).toFixed(2)}%

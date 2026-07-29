@@ -41,7 +41,7 @@ export default function MarketPredictionCards({ data, loading }: MarketPredictio
       <div className="surface-elevated p-5">
         <div className="flex items-center gap-2 mb-4">
           <Sparkles className="w-4 h-4 text-[var(--cyan)]" />
-          <h3 className="section-title text-[11px]">Predictions</h3>
+          <h3 className="section-title text-caption">Predictions</h3>
         </div>
         <div className="space-y-3">
           {[...Array(2)].map((_, i) => (
@@ -61,9 +61,9 @@ export default function MarketPredictionCards({ data, loading }: MarketPredictio
       <div className="surface-elevated p-5">
         <div className="flex items-center gap-2 mb-4">
           <Sparkles className="w-4 h-4 text-[var(--cyan)]" />
-          <h3 className="section-title text-[11px]">Predictions</h3>
+          <h3 className="section-title text-caption">Predictions</h3>
         </div>
-        <p className="text-[10px] text-[var(--text-muted)] italic text-center py-6">No active predictions. Predictions are generated when sufficient data and confidence thresholds are met.</p>
+        <p className="text-micro text-[var(--text-muted)] italic text-center py-6">No active predictions. Predictions are generated when sufficient data and confidence thresholds are met.</p>
       </div>
     );
   }
@@ -72,7 +72,7 @@ export default function MarketPredictionCards({ data, loading }: MarketPredictio
     <div className="surface-elevated p-5">
       <div className="flex items-center gap-2 mb-4">
         <Sparkles className="w-4 h-4 text-[var(--cyan)]" />
-        <h3 className="section-title text-[11px]">Predictions</h3>
+        <h3 className="section-title text-caption">Predictions</h3>
         <span className="text-[9px] text-[var(--text-muted)] ml-auto">{data.length} active</span>
       </div>
       <div className="space-y-3">
@@ -80,7 +80,7 @@ export default function MarketPredictionCards({ data, loading }: MarketPredictio
           <div key={i} className={`rounded-lg p-3 border ${riskBg(p.risk)}`}>
             <div className="flex items-center justify-between mb-2">
               <div className="flex items-center gap-2">
-                <span className="text-[10px] font-bold text-white">{p.market}</span>
+                <span className="text-micro font-bold text-white">{p.market}</span>
                 <span className="text-[8px] text-[var(--text-muted)] bg-[var(--border)] rounded px-1.5 py-0.5">{p.contractType}</span>
               </div>
               <span className={`text-[8px] font-bold ${riskColor(p.risk)}`}>{p.risk} risk</span>
@@ -93,7 +93,7 @@ export default function MarketPredictionCards({ data, loading }: MarketPredictio
                 <TrendingDown className="w-4 h-4 text-[var(--red)]" />
               )}
               <span className="text-sm font-bold font-mono text-white">{p.prediction}</span>
-              <span className="text-[10px] text-[var(--text-muted)]">{p.expectedDuration}</span>
+              <span className="text-micro text-[var(--text-muted)]">{p.expectedDuration}</span>
             </div>
 
             <div className="mb-2">

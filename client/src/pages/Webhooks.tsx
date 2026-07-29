@@ -40,11 +40,11 @@ export default function WebhooksPage() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold text-white flex items-center gap-3">
-              <Webhook className="w-7 h-7 text-[var(--cyan)]" /> Webhooks
+              <Webhook className="w-7 h-7 text-[var(--amber)]" /> Webhooks
             </h1>
             <p className="text-[var(--text-secondary)] text-sm mt-1">Send external HTTP callbacks when trading events occur</p>
           </div>
-          <button onClick={() => setShowCreate(true)} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[var(--cyan)] text-black text-xs font-bold hover:bg-[var(--cyan)]"><Plus className="w-3.5 h-3.5" /> New Webhook</button>
+          <button onClick={() => setShowCreate(true)} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[var(--amber)] text-[var(--bg)] text-xs font-bold hover:bg-[var(--amber)]"><Plus className="w-3.5 h-3.5" /> New Webhook</button>
         </div>
 
         {listQuery.isLoading ? (
@@ -86,24 +86,24 @@ export default function WebhooksPage() {
             </div>
             <div className="p-4 space-y-3">
               <div>
-                <label className="text-[10px] text-[var(--text-muted)] font-bold uppercase">URL</label>
+                <label className="text-micro">URL</label>
                 <input value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://your-server.com/webhook" className="w-full mt-1 bg-[var(--card)] border border-[var(--border)] rounded-lg px-3 py-2 text-xs text-white outline-none" />
               </div>
               <div>
-                <label className="text-[10px] text-[var(--text-muted)] font-bold uppercase">Label (optional)</label>
+                <label className="text-micro">Label (optional)</label>
                 <input value={label} onChange={(e) => setLabel(e.target.value)} placeholder="My Discord bot" className="w-full mt-1 bg-[var(--card)] border border-[var(--border)] rounded-lg px-3 py-2 text-xs text-white outline-none" />
               </div>
               <div>
-                <label className="text-[10px] text-[var(--text-muted)] font-bold uppercase">Events</label>
+                <label className="text-micro">Events</label>
                 <div className="flex flex-wrap gap-1.5 mt-1">
                   {EVENT_OPTIONS.map(e => (
-                    <button key={e} onClick={() => toggleEvent(e)} className={`text-[9px] px-2 py-1 rounded-lg border transition-all ${events.includes(e) ? "bg-[var(--cyan)] text-black border-[var(--cyan)] font-bold" : "bg-[var(--card)] text-[var(--text-secondary)] border-[var(--border)] hover:text-white"}`}>
+                    <button key={e} onClick={() => toggleEvent(e)} className={`text-[9px] px-2 py-1 rounded-lg border transition-all ${events.includes(e) ? "bg-[var(--amber)] text-[var(--bg)] border-[var(--amber)] font-bold" : "bg-[var(--card)] text-[var(--text-secondary)] border-[var(--border)] hover:text-white"}`}>
                       {e}
                     </button>
                   ))}
                 </div>
               </div>
-              <button onClick={createWebhook} disabled={createMutation.isPending || !url.trim() || events.length === 0} className="w-full py-2 rounded-lg bg-[var(--cyan)] text-black text-xs font-bold hover:bg-[var(--cyan)] disabled:opacity-40">
+              <button onClick={createWebhook} disabled={createMutation.isPending || !url.trim() || events.length === 0} className="w-full py-2 rounded-lg bg-[var(--amber)] text-[var(--bg)] text-xs font-bold hover:bg-[var(--amber)] disabled:opacity-40">
                 {createMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : "Create Webhook"}
               </button>
             </div>

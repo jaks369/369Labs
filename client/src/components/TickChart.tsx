@@ -178,9 +178,13 @@ export default function TickChart({ symbol, maxDataPoints = 100, decimalPlaces =
       ) : data.length > 1 ? (
         <svg ref={svgRef} viewBox={`0 0 ${totalW} ${totalH}`} preserveAspectRatio="none" className="w-full h-[220px]" style={{ maxHeight: "300px" }}>
           <defs>
-            <linearGradient id="lineGrad" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="var(--amber)" stopOpacity="0.18" />
-              <stop offset="100%" stopColor="var(--amber)" stopOpacity="0" />
+            <linearGradient id="lineGradUp" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="var(--green)" stopOpacity="0.15" />
+              <stop offset="100%" stopColor="var(--green)" stopOpacity="0" />
+            </linearGradient>
+            <linearGradient id="lineGradDown" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="var(--red)" stopOpacity="0.15" />
+              <stop offset="100%" stopColor="var(--red)" stopOpacity="0" />
             </linearGradient>
             <filter id="lineGlow" x="-20%" y="-20%" width="140%" height="140%">
               <feGaussianBlur stdDeviation="2.5" result="blur" />
@@ -225,7 +229,7 @@ export default function TickChart({ symbol, maxDataPoints = 100, decimalPlaces =
           {/* Area fill */}
           <polyline
             points={`0,${chartH} ${points.join(" ")} ${chartW},${chartH}`}
-            fill="url(#lineGrad)"
+            fill={`url(#lineGrad${priceColor === "up" ? "Up" : "Down"})`}
             stroke="none"
           />
 
@@ -233,13 +237,13 @@ export default function TickChart({ symbol, maxDataPoints = 100, decimalPlaces =
           <polyline
             points={points.join(" ")}
             fill="none"
-            stroke={priceColor === "up" ? "var(--amber)" : "var(--red)"}
+            stroke={priceColor === "up" ? "var(--green)" : "var(--red)"}
             strokeWidth="1.5"
             strokeLinejoin="round"
             strokeLinecap="round"
             vectorEffect="non-scaling-stroke"
             filter="url(#lineGlow)"
-            opacity="0.95"
+            opacity="0.9"
           />
 
           {/* Current price dashed line extending to right */}
@@ -262,7 +266,7 @@ export default function TickChart({ symbol, maxDataPoints = 100, decimalPlaces =
             const placeLeft = lx + tagW > chartW - 4;
             const tx = placeLeft ? lx - tagW - 6 : lx + 6;
             const ty = Math.min(Math.max(ly - 11, 2), chartH - 22);
-            const color = priceColor === "up" ? "var(--amber)" : "var(--red)";
+            const color = priceColor === "up" ? "var(--green)" : "var(--red)";
             return (
               <g>
                 <circle cx={lx} cy={ly} r="4" fill={color} />
@@ -338,22 +342,27 @@ export default function TickChart({ symbol, maxDataPoints = 100, decimalPlaces =
           <line x1="0" y1={chartH} x2={chartW} y2={chartH} stroke="var(--border)" strokeWidth="1" opacity="0.5" />
         </svg>
       ) : (
-        <div className="w-full h-64 flex items-center justify-center bg-[var(--bg)] rounded border border-[var(--border)]">
-          <p className="text-[var(--text-muted)] text-sm">Waiting for tick data...</p>
+        <div className="w-full h-64 bg-[var(--surface-dim)] rounded overflow-hidden relative">
+          <div className="empty-state h-full">
+            <div className="w-10 h-10 rounded-full bg-[var(--border-subtle)] shimmer mb-3" />
+            <div className="skeleton skeleton-title mb-2" />
+            <div className="skeleton skeleton-text w-3/4 mx-auto" />
+            <p className="text-micro text-[var(--text-muted)] mt-4 tracking-wider uppercase">Awaiting Tick Data</p>
+          </div>
         </div>
       )}
 
-      <div className="mt-3 grid grid-cols-3 gap-3 text-xs">
-        <div className="bg-[var(--bg)]/50 p-2 rounded border border-[var(--bg)]">
-          <span className="text-[var(--text-muted)] text-[10px] uppercase">High</span>
+      <div className="mt-3 grid grid-cols-3 gap-3 text-body">
+        <div className="bg-[var(--surface-secondary)]/50 p-2 rounded border border-[var(--border-subtle)]">
+          <span className="text-micro text-[var(--text-muted)]">High</span>
           <p className="text-white font-bold">{maxPrice.toFixed(decimalPlaces)}</p>
         </div>
-        <div className="bg-[var(--bg)]/50 p-2 rounded border border-[var(--bg)]">
-          <span className="text-[var(--text-muted)] text-[10px] uppercase">Low</span>
+        <div className="bg-[var(--surface-secondary)]/50 p-2 rounded border border-[var(--border-subtle)]">
+          <span className="text-micro text-[var(--text-muted)]">Low</span>
           <p className="text-white font-bold">{minPrice.toFixed(decimalPlaces)}</p>
         </div>
-        <div className="bg-[var(--bg)]/50 p-2 rounded border border-[var(--bg)]">
-          <span className="text-[var(--text-muted)] text-[10px] uppercase">Ticks</span>
+        <div className="bg-[var(--surface-secondary)]/50 p-2 rounded border border-[var(--border-subtle)]">
+          <span className="text-micro text-[var(--text-muted)]">Ticks</span>
           <p className="text-white font-bold">{data.length}</p>
         </div>
       </div>

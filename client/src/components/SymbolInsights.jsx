@@ -83,7 +83,7 @@ export default function SymbolInsights({ symbol, ticks = [], trades = [], decima
     <div className="panel p-4">
       <div className="flex items-center gap-2 mb-3">
         <BarChart3 className="w-3.5 h-3.5 text-[var(--amber)]" />
-        <h3 className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-widest">{symbol} Insights</h3>
+        <h3 className="text-micro font-bold text-[var(--text-muted)] uppercase tracking-widest">{symbol} Insights</h3>
       </div>
       <div className="space-y-2">
         {insights.map((ins, i) => (
@@ -91,10 +91,10 @@ export default function SymbolInsights({ symbol, ticks = [], trades = [], decima
             <ins.icon className="w-3.5 h-3.5 shrink-0 mt-0.5" style={{ color: ins.color }} />
             <div className="min-w-0 flex-1">
               <div className="flex items-center justify-between gap-2">
-                <span className="text-[11px] font-semibold text-white">{ins.label}</span>
-                <span className="text-[11px] font-bold font-mono" style={{ color: ins.color }}>{ins.value}</span>
+                <span className="text-caption font-semibold text-white">{ins.label}</span>
+                <span className="text-caption font-bold font-mono" style={{ color: ins.color }}>{ins.value}</span>
               </div>
-              <p className="text-[10px] text-[var(--text-muted)] mt-0.5">{ins.detail}</p>
+              <p className="text-micro text-[var(--text-muted)] mt-0.5">{ins.detail}</p>
             </div>
           </div>
         ))}

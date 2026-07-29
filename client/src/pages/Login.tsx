@@ -110,7 +110,7 @@ export default function Login() {
             <>
               <p className="text-sm text-[var(--text-muted)] text-center">Enter the 6-digit code from your authenticator app.</p>
               <div>
-                <label className="text-[10px] text-[var(--amber)]/70 uppercase tracking-wider block mb-1">Authentication Code</label>
+                <label className="text-micro text-[var(--amber)]/70 block mb-1">Authentication Code</label>
                 <Input
                   value={twoFAToken}
                   onChange={e => setTwoFAToken(e.target.value)}
@@ -142,7 +142,7 @@ export default function Login() {
             <>
           {mode === "signup" && (
             <div>
-              <label className="text-[10px] text-[var(--amber)]/70 uppercase tracking-wider block mb-1">
+              <label className="text-micro text-[var(--amber)]/70 block mb-1">
                 Name
               </label>
               <Input
@@ -155,7 +155,7 @@ export default function Login() {
           )}
 
           <div>
-            <label className="text-[10px] text-[var(--amber)]/70 uppercase tracking-wider block mb-1">
+            <label className="text-micro text-[var(--amber)]/70 block mb-1">
               Email
             </label>
             <Input
@@ -169,7 +169,7 @@ export default function Login() {
           </div>
 
           <div>
-            <label className="text-[10px] text-[var(--amber)]/70 uppercase tracking-wider block mb-1">
+            <label className="text-micro text-[var(--amber)]/70 block mb-1">
               Password
             </label>
             <PasswordInput
@@ -184,7 +184,7 @@ export default function Login() {
 
           {mode === "signup" && (
           <div>
-            <label className="text-[10px] text-[var(--amber)]/70 uppercase tracking-wider block mb-1">
+            <label className="text-micro text-[var(--amber)]/70 block mb-1">
               Confirm Password
             </label>
             <PasswordInput
@@ -198,7 +198,7 @@ export default function Login() {
           )}
 
           {mode === "signup" && (
-          <div className="text-[10px] text-[var(--text-muted)] space-y-0.5">
+          <div className="text-caption space-y-0.5">
             <p className={password.length >= 8 ? "text-[var(--green)]" : ""}>• At least 8 characters</p>
             <p className={/[A-Z]/.test(password) ? "text-[var(--green)]" : ""}>• One uppercase letter</p>
             <p className={/[a-z]/.test(password) ? "text-[var(--green)]" : ""}>• One lowercase letter</p>

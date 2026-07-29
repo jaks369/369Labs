@@ -134,7 +134,7 @@ export default function Replay() {
             </h1>
             <p className="text-[var(--text-secondary)] text-sm mt-1">Replay historical ticks. Trade manually and let 369AI score your decision.</p>
           </div>
-          <select value={symbol} onChange={(e) => setSymbol(e.target.value)} className="bg-[#1a1a2e] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-white focus:border-[var(--amber)] outline-none [&>option]:bg-[#1a1a2e] [&>option]:text-white">
+          <select value={symbol} onChange={(e) => setSymbol(e.target.value)} className="bg-[var(--surface-secondary)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-white focus:border-[var(--amber)] outline-none [&>option]:bg-[var(--surface-secondary)] [&>option]:text-white">
             {SYMBOLS.map((s) => <option key={s} value={s}>{s}</option>)}
           </select>
         </div>
@@ -220,14 +220,14 @@ export default function Replay() {
 
                 <div className="mt-3 pt-3 border-t border-[var(--border)]">
                   <label className="flex items-center gap-2 text-xs text-[var(--text-secondary)] cursor-pointer">
-                    <input type="checkbox" checked={trailing.active} onChange={(e) => setTrailing((t) => ({ ...t, active: e.target.checked, activationPrice: null }))} className="accent-[var(--cyan)]" />
-                    <Bell className="w-3 h-3 text-[var(--cyan)]" /> Trailing Stop
+                    <input type="checkbox" checked={trailing.active} onChange={(e) => setTrailing((t) => ({ ...t, active: e.target.checked, activationPrice: null }))} className="accent-[var(--amber)]" />
+                    <Bell className="w-3 h-3 text-[var(--amber)]" /> Trailing Stop
                   </label>
                   {trailing.active && (
                     <div className="mt-2 flex items-center gap-2">
                       <span className="text-xs text-[var(--text-muted)]">Distance:</span>
                       <input type="range" min={1} max={100} value={trailing.distance} onChange={(e) => setTrailing((t) => ({ ...t, distance: Number(e.target.value) }))} className="flex-1" />
-                      <span className="text-xs text-[var(--cyan)] font-bold">{trailing.distance} pts</span>
+                      <span className="text-xs text-[var(--amber)] font-bold">{trailing.distance} pts</span>
                     </div>
                   )}
                 </div>
@@ -235,7 +235,7 @@ export default function Replay() {
 
               <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-6">
                 <h2 className="text-sm font-bold text-white mb-4">Your Decisions</h2>
-                {results.length === 0 ? <p className="text-sm text-[var(--text-muted)]">No trades yet — replay and take a position.</p> : (
+                {results.length === 0 ? <div className="empty-state"><p className="empty-state-desc">No trades yet.</p></div> : (
                   <div className="space-y-1.5 max-h-64 overflow-y-auto font-mono text-xs">
                     {results.map((r, i) => (
                       <div key={i} className="flex justify-between p-2 bg-black/20 rounded-lg">

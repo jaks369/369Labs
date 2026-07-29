@@ -132,7 +132,7 @@ export default function Coding() {
 
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
           <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-3 max-h-[70vh] overflow-y-auto">
-            <p className="text-[10px] uppercase tracking-widest text-[var(--text-muted)] font-bold mb-2">Files</p>
+            <p className="text-micro mb-2">Files</p>
             {(filesQuery.data?.files || []).map((f: string) => (
               <button
                 key={f}
@@ -226,9 +226,9 @@ export default function Coding() {
                   <div key={v.id} className="flex items-center justify-between p-3 rounded-lg bg-[var(--card)] border border-[var(--border)]">
                     <div>
                       <p className="text-xs text-white font-bold">{v.label || "Unlabeled"}</p>
-                      <p className="text-[10px] text-[var(--text-muted)]">{new Date(v.createdAt).toLocaleString()}</p>
+                      <p className="text-caption">{new Date(v.createdAt).toLocaleString()}</p>
                     </div>
-                    <button onClick={() => restoreVersion(v.id)} className="text-[10px] text-[var(--cyan)] hover:underline"><RotateCcw className="w-3 h-3 inline mr-1" />Restore</button>
+                    <button onClick={() => restoreVersion(v.id)} className="text-caption text-[var(--cyan)] hover:underline"><RotateCcw className="w-3 h-3 inline mr-1" />Restore</button>
                   </div>
                 ))
               )}

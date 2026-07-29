@@ -9,11 +9,11 @@ export default function AIEvidenceCard({ response }: AIEvidenceCardProps) {
   const confidenceColor = response.confidence >= 80 ? "text-[var(--green)]" : response.confidence >= 50 ? "text-[var(--amber)]" : "text-[var(--red)]";
 
   return (
-    <div className="bg-[var(--bg)] border border-[var(--border)] rounded-lg p-3 space-y-2 mt-1">
+    <div className="bg-[var(--card)] border border-[var(--border)] rounded-lg p-3 space-y-2 mt-1">
       <div className="flex items-center gap-2">
         <CheckCircle2 className="w-3 h-3 text-[var(--cyan)]" />
         <span className="text-[9px] font-bold text-[var(--text-secondary)] uppercase tracking-wider">Confidence</span>
-        <span className={`text-[11px] font-bold font-mono ${confidenceColor} ml-auto`}>{response.confidence}%</span>
+        <span className={`text-caption font-bold font-mono ${confidenceColor} ml-auto`}>{response.confidence}%</span>
       </div>
 
       <div className="flex items-start gap-2">

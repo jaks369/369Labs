@@ -207,11 +207,11 @@ export default function Home() {
         <section className="max-w-7xl mx-auto px-6 py-20">
           <div className="bg-[var(--amber)] rounded-[calc(var(--radius)*2)] p-12 md:p-20 text-center relative overflow-hidden">
             <div className="absolute top-0 left-0 w-full h-full opacity-10" style={{ backgroundImage: 'radial-gradient(circle at 2px 2px, white 1px, transparent 0)', backgroundSize: '24px 24px' }} />
-            <h2 className="text-4xl md:text-5xl font-bold text-[#0D1016] mb-6 relative z-10">READY TO AUTOMATE YOUR SUCCESS?</h2>
-            <p className="text-[#0D1016]/80 text-lg mb-10 max-w-2xl mx-auto relative z-10">
+            <h2 className="text-4xl md:text-5xl font-bold text-[var(--bg)] mb-6 relative z-10">READY TO AUTOMATE YOUR SUCCESS?</h2>
+            <p className="text-[var(--bg)]/80 text-lg mb-10 max-w-2xl mx-auto relative z-10">
               Join the next generation of algorithmic traders. Start building your first strategy today.
             </p>
-            <button onClick={() => navigate("/login")} className="btn btn-primary inline-flex items-center gap-2 px-8 py-4 text-lg relative z-10 bg-white text-[#0D1016] hover:bg-[var(--text-primary)] shadow-lg">
+            <button onClick={() => navigate("/login")} className="btn btn-primary inline-flex items-center gap-2 px-8 py-4 text-lg relative z-10 bg-white text-[var(--bg)] hover:bg-[var(--text-primary)] shadow-lg">
               Launch Dashboard <ChevronRight className="w-5 h-5" />
             </button>
           </div>

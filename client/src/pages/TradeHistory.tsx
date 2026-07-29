@@ -109,7 +109,7 @@ export default function TradeHistory() {
           <div className="hud-panel p-6">
             <div className="flex items-center gap-3 mb-4">
               <label className="text-xs text-[var(--amber)]/60">SYMBOL</label>
-              <select value={priceSymbol} onChange={(e) => setPriceSymbol(e.target.value)} className="bg-[#1a1a2e] border border-[var(--amber-border)] rounded-lg px-3 py-2 text-sm text-white focus:border-[var(--amber)] outline-none [&>option]:bg-[#1a1a2e] [&>option]:text-white">
+              <select value={priceSymbol} onChange={(e) => setPriceSymbol(e.target.value)} className="bg-[var(--surface-secondary)] border border-[var(--amber-border)] rounded-lg px-3 py-2 text-sm text-white focus:border-[var(--amber)] outline-none [&>option]:bg-[var(--surface-secondary)] [&>option]:text-white">
                 {getValidSymbols().map((s) => (
                   <option key={s} value={s}>{s}</option>
                 ))}
@@ -204,8 +204,8 @@ export default function TradeHistory() {
               </tbody>
             </table>
           ) : (
-            <div className="text-center py-12 text-[var(--amber)]/60">
-              No trades found. Start trading to see your history here.
+            <div className="empty-state">
+              <p className="empty-state-desc">No trades found. Start trading to see your history here.</p>
             </div>
           )}
         </div>

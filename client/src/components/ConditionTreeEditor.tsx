@@ -144,7 +144,7 @@ export default function ConditionTreeEditor({ value, onChange }: { value: Condit
       </div>
 
       {isGroup && "all" in value && value.all.length === 0 && (
-        <p className="text-[10px] text-[var(--text-muted)] mt-1">Add at least one condition, or switch back to simple mode.</p>
+        <p className="text-micro text-[var(--text-muted)] mt-1">Add at least one condition, or switch back to simple mode.</p>
       )}
     </div>
   );

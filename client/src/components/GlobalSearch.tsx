@@ -52,7 +52,7 @@ export default function GlobalSearch({ open, onClose }: { open: boolean; onClose
           </div>
         )}
         {query.length < 2 && (
-          <div className="p-4 text-center text-[10px] text-[var(--text-muted)]">Type at least 2 characters to search across all your data</div>
+          <div className="p-4 text-center text-micro text-[var(--text-muted)]">Type at least 2 characters to search across all your data</div>
         )}
       </div>
     </div>

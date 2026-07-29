@@ -22,7 +22,7 @@ export default function ApiDocs() {
       <div className="max-w-5xl mx-auto space-y-6">
         <div>
           <h1 className="text-3xl font-bold text-white flex items-center gap-3">
-            <BookText className="w-7 h-7 text-[var(--cyan)]" /> API Documentation
+            <BookText className="w-7 h-7 text-[var(--amber)]" /> API Documentation
           </h1>
           <p className="text-[var(--text-secondary)] text-sm mt-1">tRPC endpoints available in the 369Labs API. All endpoints require authentication unless noted.</p>
         </div>
@@ -59,7 +59,7 @@ export default function ApiDocs() {
                     {group.items.map((ep: any) => (
                       <tr key={ep.path} className="hover:bg-white/5 transition-colors">
                         <td className="p-3">
-                          <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold ${ep.method === "query" ? "bg-[var(--cyan-soft)] text-[var(--cyan)]" : "bg-[var(--amber-soft)] text-[var(--amber)]"}`}>
+                          <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold ${ep.method === "query" ? "bg-[var(--amber-soft)] text-[var(--amber)]" : "bg-[var(--amber-soft)] text-[var(--amber)]"}`}>
                             {ep.method}
                           </span>
                         </td>

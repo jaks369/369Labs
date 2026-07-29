@@ -75,7 +75,7 @@ export default function Plugins() {
                   </div>
                   <div className="flex-1">
                     <p className="text-sm font-semibold text-white">{p.name}</p>
-                    <p className="text-[11px] text-[var(--text-muted)]">by {p.author} Â· hook: {p.hook}</p>
+                    <p className="text-caption text-[var(--text-muted)]">by {p.author} Â· hook: {p.hook}</p>
                   </div>
                 </div>
                 <p className="text-xs text-[var(--text-secondary)] leading-relaxed">{p.description}</p>

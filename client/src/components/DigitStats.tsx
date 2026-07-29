@@ -84,7 +84,7 @@ export default function DigitStats({ symbol, decimalPlaces = derivWS.decimalPlac
     <div className="space-y-4">
       <div className="grid grid-cols-2 gap-3">
         <div className="bg-[var(--card)]/50 p-3 rounded border border-[var(--card)]">
-          <div className="flex justify-between text-[10px] font-bold text-[var(--text-muted)] mb-2 uppercase">
+          <div className="flex justify-between text-micro font-bold text-[var(--text-muted)] mb-2 uppercase">
             <span>Even</span>
             <span className="text-[var(--green)]">{stats.even.toFixed(1)}%</span>
           </div>
@@ -93,7 +93,7 @@ export default function DigitStats({ symbol, decimalPlaces = derivWS.decimalPlac
           </div>
         </div>
         <div className="bg-[var(--card)]/50 p-3 rounded border border-[var(--card)]">
-          <div className="flex justify-between text-[10px] font-bold text-[var(--text-muted)] mb-2 uppercase">
+          <div className="flex justify-between text-micro font-bold text-[var(--text-muted)] mb-2 uppercase">
             <span>Odd</span>
             <span className="text-[var(--amber)]">{stats.odd.toFixed(1)}%</span>
           </div>
@@ -102,7 +102,7 @@ export default function DigitStats({ symbol, decimalPlaces = derivWS.decimalPlac
           </div>
         </div>
         <div className="bg-[var(--card)]/50 p-3 rounded border border-[var(--card)]">
-          <div className="flex justify-between text-[10px] font-bold text-[var(--text-muted)] mb-2 uppercase">
+          <div className="flex justify-between text-micro font-bold text-[var(--text-muted)] mb-2 uppercase">
             <span>Over {th !== null ? th : "—"}</span>
             <span className="text-[var(--amber)]">{overPct.toFixed(1)}%</span>
           </div>
@@ -111,7 +111,7 @@ export default function DigitStats({ symbol, decimalPlaces = derivWS.decimalPlac
           </div>
         </div>
         <div className="bg-[var(--card)]/50 p-3 rounded border border-[var(--card)]">
-          <div className="flex justify-between text-[10px] font-bold text-[var(--text-muted)] mb-2 uppercase">
+          <div className="flex justify-between text-micro font-bold text-[var(--text-muted)] mb-2 uppercase">
             <span>Under {th !== null ? th : "—"}</span>
             <span className="text-[var(--amber)]">{underPct.toFixed(1)}%</span>
           </div>
@@ -122,18 +122,18 @@ export default function DigitStats({ symbol, decimalPlaces = derivWS.decimalPlac
       </div>
 
       {th === null && (
-        <p className="text-[10px] text-[var(--text-muted)] mb-2">Click a digit above to set the Over/Under barrier.</p>
+        <p className="text-micro text-[var(--text-muted)] mb-2">Click a digit above to set the Over/Under barrier.</p>
       )}
       <div className="bg-[var(--card)]/50 p-4 rounded border border-[var(--card)]">
-        <h4 className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-widest mb-4">Digit Frequency (Last {maxTicks} Ticks)</h4>
+        <h4 className="text-micro font-bold text-[var(--text-muted)] uppercase tracking-widest mb-4">Digit Frequency (Last {maxTicks} Ticks)</h4>
         <div className="flex items-end justify-between h-28 gap-0.5 overflow-x-auto">
           {stats.counts.map((percent, i) => (
             <div key={i} onClick={() => { setSelectedDigit(i); }} className={`flex-1 flex flex-col items-center gap-2 cursor-pointer ${selectedDigit === i ? "ring-1 ring-[var(--amber)] rounded" : ""}`}>
               <span className={`text-[7px] font-bold ${hasData && i === maxIdx ? "text-[var(--green)]" : hasData && i === minIdx ? "text-[var(--red)]" : "text-[var(--text-secondary)]"}`}>{percent.toFixed(1)}%</span>
-              <div className="w-full rounded-t-sm relative group cursor-pointer" style={{ height: `${(percent / maxPercent) * 100}%`, background: hasData && i === maxIdx ? "rgba(16,185,129,0.25)" : hasData && i === minIdx ? "rgba(239,68,68,0.25)" : "rgba(37,99,235,0.2)" }}>
+              <div className="w-full rounded-t-sm relative group cursor-pointer" style={{ height: `${(percent / maxPercent) * 100}%`, background: hasData && i === maxIdx ? "rgba(var(--green-rgb), 0.25)" : hasData && i === minIdx ? "rgba(var(--red-rgb), 0.25)" : "rgba(var(--amber-rgb), 0.2)" }}>
                 <div className={`absolute inset-0 rounded-t-sm transition-opacity ${i === currentDigit ? "opacity-100" : "opacity-60 group-hover:opacity-100"}`} style={{ height: `${percent}%`, background: i === currentDigit ? "var(--amber)" : hasData && i === maxIdx ? "var(--green)" : hasData && i === minIdx ? "var(--red)" : "var(--amber)" }} />
                 {i === currentDigit && (
-                  <div className="absolute -top-3 left-1/2 -translate-x-1/2 text-[var(--amber)] text-[10px] leading-none">▼</div>
+                  <div className="absolute -top-3 left-1/2 -translate-x-1/2 text-[var(--amber)] text-micro leading-none">▼</div>
                 )}
               </div>
               <span className={`text-[9px] font-bold ${i === currentDigit ? "text-[var(--amber)]" : "text-[var(--text-secondary)]"}`}>{i}</span>

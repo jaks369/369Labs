@@ -97,7 +97,7 @@ export default function MarketIntelligencePage() {
                   return (
                     <div key={sym} className="bg-black/20 rounded-lg p-3 text-center border border-[var(--border)]">
                       <p className="text-xs font-bold text-white">{sym}</p>
-                      <p className={`text-[10px] ${isUp ? "text-[var(--green)]" : isDown ? "text-[var(--red)]" : "text-[var(--text-muted)]"} mt-1`}>
+                      <p className={`text-caption ${isUp ? "text-[var(--green)]" : isDown ? "text-[var(--red)]" : "text-[var(--text-muted)]"} mt-1`}>
                         {isUp ? <TrendingUp className="w-3 h-3 inline" /> : isDown ? <TrendingDown className="w-3 h-3 inline" /> : <Minus className="w-3 h-3 inline" />}
                         {typeof pct === "number" ? <><IntegerStat value={pct} variant={isUp ? "always-positive" : isDown ? "always-negative" : "neutral"} />%</> : "-"}
                       </p>
@@ -106,7 +106,7 @@ export default function MarketIntelligencePage() {
                 })}
               </div>
             )}
-            <p className="text-[10px] text-[var(--text-muted)] mt-3">Real-time performance overview across top symbols. Green = positive momentum, Red = negative.</p>
+            <p className="text-caption text-[var(--text-muted)] mt-3">Real-time performance overview across top symbols. Green = positive momentum, Red = negative.</p>
           </div>
 
           {/* Correlations & Volatility */}

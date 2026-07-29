@@ -107,14 +107,14 @@ export default function StrategyComparison() {
               <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4">
                 <label className="text-xs text-[var(--text-muted)] mb-1 block">Strategy A</label>
                 <select value={strategy1Id} onChange={e => setStrategy1Id(Number(e.target.value))}
-                  className="w-full bg-[#1a1a2e] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-white focus:border-[var(--amber)] outline-none [&>option]:bg-[#1a1a2e] [&>option]:text-white">
+                  className="w-full bg-[var(--surface-secondary)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-white focus:border-[var(--amber)] outline-none [&>option]:bg-[var(--surface-secondary)] [&>option]:text-white">
                   {strategies.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                 </select>
               </div>
               <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4">
                 <label className="text-xs text-[var(--text-muted)] mb-1 block">Strategy B</label>
                 <select value={strategy2Id} onChange={e => setStrategy2Id(Number(e.target.value))}
-                  className="w-full bg-[#1a1a2e] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-white focus:border-[var(--amber)] outline-none [&>option]:bg-[#1a1a2e] [&>option]:text-white">
+                  className="w-full bg-[var(--surface-secondary)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-white focus:border-[var(--amber)] outline-none [&>option]:bg-[var(--surface-secondary)] [&>option]:text-white">
                   {strategies.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                 </select>
               </div>

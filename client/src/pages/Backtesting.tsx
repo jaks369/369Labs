@@ -158,7 +158,7 @@ export default function Backtesting() {
 
             <div>
               <label className="text-xs text-[var(--text-muted)] font-bold uppercase tracking-wider">Symbol</label>
-              <select value={symbol} onChange={e => setSymbol(e.target.value)} className="w-full mt-1 bg-[#1a1a2e] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-white focus:border-[var(--amber)] outline-none [&>option]:bg-[#1a1a2e] [&>option]:text-white">
+              <select value={symbol} onChange={e => setSymbol(e.target.value)} className="w-full mt-1 bg-[var(--surface-secondary)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-white focus:border-[var(--amber)] outline-none [&>option]:bg-[var(--surface-secondary)] [&>option]:text-white">
                 {IT_SYMBOLS.map(s => <option key={s} value={s}>{s}</option>)}
               </select>
             </div>
@@ -181,7 +181,7 @@ export default function Backtesting() {
               </select>
               {strategiesQuery.isError && <p className="text-xs text-[var(--red)] mt-1">Failed to load strategies.</p>}
               {(!strategiesQuery.isLoading && !strategiesQuery.isError && (!strategiesQuery.data || strategiesQuery.data.length === 0)) && (
-                <p className="text-xs text-[var(--text-muted)] mt-1">No strategies found. Save one in Strategy Builder first.</p>
+                <div className="empty-state"><p className="empty-state-desc">No strategies found.</p></div>
               )}
             </div>
 
@@ -226,21 +226,21 @@ export default function Backtesting() {
               <>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                   <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4">
-                    <p className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-wider">Total Trades</p>
+                    <p className="text-micro">Total Trades</p>
                     <p className="text-2xl font-bold text-white mt-1">{result.totalTrades}</p>
                   </div>
                   <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4">
-                    <p className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-wider">Win Rate</p>
+                    <p className="text-micro">Win Rate</p>
                     <p className={`text-2xl font-bold mt-1 ${result.winRate >= 50 ? "text-[var(--green)]" : "text-[var(--red)]"}`}>{result.winRate.toFixed(1)}%</p>
                   </div>
                   <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4">
-                    <p className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-wider">Total P&L</p>
+                    <p className="text-micro">Total P&L</p>
                     <p className={`text-2xl font-bold mt-1 ${result.totalPnl >= 0 ? "text-[var(--green)]" : "text-[var(--red)]"}`}>
                       {result.totalPnl >= 0 ? "+" : ""}${result.totalPnl.toFixed(2)}
                     </p>
                   </div>
                   <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4">
-                    <p className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-wider">Max Drawdown</p>
+                    <p className="text-micro">Max Drawdown</p>
                     <p className="text-2xl font-bold text-[var(--red)] mt-1">-${result.maxDrawdown.toFixed(2)}</p>
                   </div>
                 </div>
@@ -255,19 +255,19 @@ export default function Backtesting() {
                     return (
                       <>
                         <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4">
-                          <p className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-wider">Avg Win</p>
+                          <p className="text-micro">Avg Win</p>
                           <p className="text-2xl font-bold text-[var(--green)] mt-1">+${avgWin.toFixed(2)}</p>
                         </div>
                         <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4">
-                          <p className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-wider">Avg Loss</p>
+                          <p className="text-micro">Avg Loss</p>
                           <p className="text-2xl font-bold text-[var(--red)] mt-1">-${avgLoss.toFixed(2)}</p>
                         </div>
                         <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4">
-                          <p className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-wider">Profit Factor</p>
+                          <p className="text-micro">Profit Factor</p>
                           <p className={`text-2xl font-bold mt-1 ${profitFactor >= 1.5 ? "text-[var(--green)]" : profitFactor >= 1 ? "text-[var(--amber)]" : "text-[var(--red)]"}`}>{profitFactor.toFixed(2)}</p>
                         </div>
                         <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4">
-                          <p className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-wider">Avg Win/Loss</p>
+                          <p className="text-micro">Avg Win/Loss</p>
                           <p className={`text-2xl font-bold mt-1 ${avgWinLoss >= 1 ? "text-[var(--green)]" : "text-[var(--red)]"}`}>{avgWinLoss.toFixed(2)}</p>
                         </div>
                       </>
@@ -338,15 +338,15 @@ export default function Backtesting() {
                 </div>
 
                 <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-6">
-                  <h3 className="text-sm font-bold text-white mb-1 flex items-center gap-2"><GitCompare className="w-4 h-4 text-[var(--cyan)]" /> Strategy Comparison</h3>
+                  <h3 className="text-sm font-bold text-white mb-1 flex items-center gap-2"><GitCompare className="w-4 h-4 text-[var(--amber)]" /> Strategy Comparison</h3>
                   <p className="text-xs text-[var(--text-muted)] mb-4">Compare up to 4 strategies side-by-side on the same tick window.</p>
                   {!compareMode ? (
-                    <Button onClick={() => setCompareMode(true)} className="bg-[var(--cyan)]/20 text-[var(--cyan)] border border-[var(--cyan)]/30 text-xs">Select Strategies</Button>
+                    <Button onClick={() => setCompareMode(true)} className="bg-[var(--amber)]/20 text-[var(--amber)] border border-[var(--amber)]/30 text-xs">Select Strategies</Button>
                   ) : (
                     <div className="space-y-3">
                       <div className="flex flex-wrap gap-2">
                         {(strategiesQuery.data || []).filter(s => (s.config as any)?.rule).map((s) => (
-                          <button key={s.id} onClick={() => setCompareIds((prev) => prev.includes(s.id) ? prev.filter((id) => id !== s.id) : prev.length < 4 ? [...prev, s.id] : prev)} className={`px-3 py-1.5 rounded-lg text-xs border transition-all ${compareIds.includes(s.id) ? "bg-[var(--cyan)]/20 text-[var(--cyan)] border-[var(--cyan)]/30" : "bg-[var(--card)] text-[var(--text-muted)] border-[var(--border)]"}`}>{s.name}</button>
+                          <button key={s.id} onClick={() => setCompareIds((prev) => prev.includes(s.id) ? prev.filter((id) => id !== s.id) : prev.length < 4 ? [...prev, s.id] : prev)} className={`px-3 py-1.5 rounded-lg text-xs border transition-all ${compareIds.includes(s.id) ? "bg-[var(--amber)]/20 text-[var(--amber)] border-[var(--amber)]/30" : "bg-[var(--card)] text-[var(--text-muted)] border-[var(--border)]"}`}>{s.name}</button>
                         ))}
                       </div>
                       {compareIds.length >= 2 && (
@@ -354,7 +354,7 @@ export default function Backtesting() {
                           setCompareRunning(true);
                           try { const res = await backtestCompareMutation.mutateAsync({ strategyIds: compareIds }); setCompareResults(res.comparisons); } catch (e: any) { toast(e?.message || "Comparison failed", "error"); }
                           setCompareRunning(false);
-                        }} disabled={compareRunning} className="bg-[var(--cyan)] text-black text-xs">
+                        }} disabled={compareRunning} className="bg-[var(--amber)] text-[var(--bg)] text-xs">
                           {compareRunning ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Running...</> : <>Compare</>}
                         </Button>
                       )}
@@ -407,7 +407,7 @@ export default function Backtesting() {
                     return (
                     <div>
                       {best && (
-                        <div className="mb-3 p-2 rounded-lg bg-[var(--green-soft)]/20 border border-[var(--green)]/20 text-[10px] text-[var(--green)] flex items-center justify-between">
+                        <div className="mb-3 p-2 rounded-lg bg-[var(--green-soft)]/20 border border-[var(--green)]/20 text-caption text-price-up flex items-center justify-between">
                           <span>Best: {sweepParam}={best.value} ({best.winRate.toFixed(1)}%, ${best.pnl.toFixed(2)} P&L)</span>
                           <button onClick={applyBest} className="px-2 py-0.5 rounded bg-[var(--green)] text-black text-[9px] font-bold">Apply</button>
                         </div>
