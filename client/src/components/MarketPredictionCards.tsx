@@ -1,4 +1,5 @@
 import { Sparkles, TrendingUp, TrendingDown, Shield, GripHorizontal } from "lucide-react";
+import { IntegerStat } from "@/components/LiveStat";
 
 interface PredictionItem {
   market: string;
@@ -98,7 +99,7 @@ export default function MarketPredictionCards({ data, loading }: MarketPredictio
             <div className="mb-2">
               <div className="flex items-center justify-between text-[8px] text-[var(--text-muted)] mb-0.5">
                 <span>Confidence</span>
-                <span className="font-bold font-mono text-white">{p.confidence}%</span>
+                <span className="font-bold font-mono text-white"><IntegerStat value={p.confidence} variant="always-positive" />%</span>
               </div>
               <div className="w-full h-1.5 bg-[var(--bg)] rounded-full overflow-hidden">
                 <div

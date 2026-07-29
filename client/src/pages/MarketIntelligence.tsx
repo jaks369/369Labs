@@ -3,6 +3,9 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { BarChart3, RefreshCw, AlertCircle, Search, TrendingUp, TrendingDown, Minus, Activity, Loader2 } from "lucide-react";
+import LiveValue from "@/components/LiveValue";
+import { IntegerStat } from "@/components/LiveStat";
+import { PageContainer, PageSection } from "@/components/PageSection";
 import MarketHealthGrid from "@/components/MarketHealthGrid";
 import MarketPredictionCards from "@/components/MarketPredictionCards";
 import MarketInsightCards from "@/components/MarketInsightCards";
@@ -27,8 +30,9 @@ export default function MarketIntelligencePage() {
   const { data, isLoading } = overviewQuery;
 
   return (
-    <div className="page-container">
+    <PageContainer className="page-container">
       <div className="max-w-7xl mx-auto">
+        <PageSection>
         <div className="flex items-center gap-2.5 mb-6">
           <BarChart3 className="w-5 h-5 text-[var(--cyan)]" />
           <h1 className="text-2xl font-bold text-white">Market <span className="text-gradient-cyan">Intelligence</span></h1>
@@ -36,7 +40,7 @@ export default function MarketIntelligencePage() {
           <div className="ml-auto flex items-center gap-2">
             {data?.lastUpdated && (
               <span className="text-[9px] text-[var(--text-muted)]">
-                Updated {new Date(data.lastUpdated).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" })}
+                Updated <LiveValue value={data.lastUpdated} format={(v) => new Date(v).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" })} springConfig={{ stiffness: 200, damping: 50 }} />
               </span>
             )}
             <button
@@ -48,18 +52,24 @@ export default function MarketIntelligencePage() {
             </button>
           </div>
         </div>
+        </PageSection>
 
         {overviewQuery.isError && (
+        <PageSection>
           <div className="mb-6 p-4 rounded-lg border border-[var(--red)]/30 bg-[var(--red)]/10 flex items-center gap-3">
             <AlertCircle className="w-4 h-4 text-[var(--red)] shrink-0" />
             <p className="text-xs text-[var(--red)]">Failed to load market intelligence. Data may be stale.</p>
           </div>
+        </PageSection>
         )}
         {!isLoading && !overviewQuery.isError && !data && (
+        <PageSection>
           <div className="mb-6 p-4 rounded-lg border border-[var(--border)] bg-[var(--card)] flex items-center justify-center">
             <p className="text-xs text-[var(--text-muted)]">No market data available yet.</p>
           </div>
+        </PageSection>
         )}
+        <PageSection>
         <div className="space-y-5">
           <MarketHealthGrid data={(data as any)?.health} loading={isLoading} />
 
@@ -88,7 +98,7 @@ export default function MarketIntelligencePage() {
                       <p className="text-xs font-bold text-white">{sym}</p>
                       <p className={`text-[10px] ${isUp ? "text-[var(--green)]" : isDown ? "text-[var(--red)]" : "text-[var(--text-muted)]"} mt-1`}>
                         {isUp ? <TrendingUp className="w-3 h-3 inline" /> : isDown ? <TrendingDown className="w-3 h-3 inline" /> : <Minus className="w-3 h-3 inline" />}
-                        {typeof pct === "number" ? pct.toFixed(1) + "%" : "—"}
+                        {typeof pct === "number" ? <><IntegerStat value={pct} variant={isUp ? "always-positive" : isDown ? "always-negative" : "neutral"} />%</> : "—"}
                       </p>
                     </div>
                   );
@@ -140,8 +150,9 @@ export default function MarketIntelligencePage() {
             </div>
           </div>
         </div>
+        </PageSection>
       </div>
-    </div>
+    </PageContainer>
   );
 }
 

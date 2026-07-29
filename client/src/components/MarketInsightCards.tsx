@@ -1,4 +1,5 @@
 import { Zap, TrendingUp, TrendingDown, Activity, Hash, GripHorizontal, AlertTriangle, Lightbulb } from "lucide-react";
+import { IntegerStat } from "@/components/LiveStat";
 
 interface InsightItem {
   id: string;
@@ -103,7 +104,7 @@ export default function MarketInsightCards({ data, loading }: MarketInsightCards
             </div>
             <div className="flex items-center justify-between mb-1.5">
               <span className="text-[10px] font-bold text-white">{insight.market}</span>
-              <span className="text-[8px] font-mono text-[var(--text-secondary)]">{insight.confidence}%</span>
+              <span className="text-[8px] font-mono text-[var(--text-secondary)]"><IntegerStat value={insight.confidence} variant="always-positive" />%</span>
             </div>
             <p className="text-[9px] text-[var(--text-secondary)] leading-relaxed mb-1.5">{insight.message}</p>
             {insight.reasoning.length > 0 && (

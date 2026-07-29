@@ -1,4 +1,5 @@
 import { AlertTriangle, Shield, ShieldAlert, ShieldCheck, Info } from "lucide-react";
+import { IntegerStat } from "@/components/LiveStat";
 
 interface AdvisoryItem {
   symbol: string;
@@ -103,13 +104,13 @@ export default function MarketRiskPanel({ data, loading }: MarketRiskPanelProps)
 
             <div className="flex items-center gap-2 mb-2">
               <span className="text-[11px] font-bold text-white">{a.symbol}</span>
-              <span className="text-[8px] text-[var(--text-secondary)]">Risk score: {a.riskScore}/100</span>
+              <span className="text-[8px] text-[var(--text-secondary)]">Risk score: <IntegerStat value={a.riskScore} />/100</span>
             </div>
 
             <div className="flex items-center gap-3 mb-2 text-[8px] text-[var(--text-muted)]">
-              <span>Market: {a.marketRisk}</span>
-              <span>User: {a.userRisk}</span>
-              <span>Confidence: {a.confidence}%</span>
+              <span>Market: <IntegerStat value={a.marketRisk} /></span>
+              <span>User: <IntegerStat value={a.userRisk} /></span>
+              <span>Confidence: <IntegerStat value={a.confidence} variant="always-positive" />%</span>
             </div>
 
             {a.warnings.length > 0 && (

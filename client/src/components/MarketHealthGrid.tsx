@@ -1,4 +1,5 @@
 import { Activity, TrendingUp, TrendingDown, Minus, BarChart3, Waves } from "lucide-react";
+import { IntegerStat } from "@/components/LiveStat";
 
 interface MarketHealthItem {
   symbol: string;
@@ -98,20 +99,20 @@ export default function MarketHealthGrid({ data, loading }: MarketHealthGridProp
                 {h.volatility}
               </span>
             </div>
-            <div className={`text-xl font-bold font-mono ${scoreColor(h.score)}`}>{h.score}</div>
+            <div className={`text-xl font-bold font-mono ${scoreColor(h.score)}`}><IntegerStat value={h.score} /></div>
             <div className="text-[8px] text-[var(--text-muted)] mb-2">{h.displayName}</div>
             <div className="flex items-center gap-2 text-[8px] text-[var(--text-muted)]">
               <span className="flex items-center gap-0.5">
                 {h.trend > 5 ? <TrendingUp className="w-2.5 h-2.5 text-[var(--green)]" /> : h.trend < -5 ? <TrendingDown className="w-2.5 h-2.5 text-[var(--red)]" /> : <Minus className="w-2.5 h-2.5 text-[var(--text-muted)]" />}
-                {h.trend}%
+                <IntegerStat value={h.trend} variant="positive" />
               </span>
               <span className="flex items-center gap-0.5">
                 <BarChart3 className="w-2.5 h-2.5" />
-                {h.momentum}%
+                <IntegerStat value={h.momentum} variant="positive" />
               </span>
               <span className="flex items-center gap-0.5">
                 <Waves className="w-2.5 h-2.5" />
-                {h.noise}%
+                <IntegerStat value={h.noise} />
               </span>
             </div>
           </div>
