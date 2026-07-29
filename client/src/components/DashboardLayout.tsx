@@ -297,15 +297,15 @@ function DashboardLayoutContent({
           <SidebarHeader className="h-14 justify-center border-b border-[var(--border)]">
             <div className="flex items-center gap-1 px-3">
               <button onClick={() => setLocation("/dashboard")} className="flex items-center gap-2.5 transition-all cursor-pointer group flex-1 text-left">
-                <div className="w-7 h-7 bg-[var(--amber)] rounded-md flex items-center justify-center shrink-0">
-                  <Activity className="w-4 h-4 text-[var(--bg)]" />
+                <div className="w-8 h-8 bg-[var(--amber)] rounded-lg flex items-center justify-center shrink-0">
+                  <Activity className="w-5 h-5 text-[#000000]" />
                 </div>
                 {!isCollapsed && (
                   <div className="flex flex-col">
-                    <span className="font-semibold text-sm tracking-tight text-[var(--text-primary)]">
+                    <span className="font-bold text-lg tracking-tight text-[var(--text-primary)]">
                       369Labs
                     </span>
-                    <span className="text-[8px] font-medium text-[var(--text-muted)] tracking-wider uppercase flex items-center gap-1">
+                    <span className="text-[10px] font-medium text-[var(--text-disabled)] tracking-wider uppercase flex items-center gap-1">
                       <span className="w-1.5 h-1.5 rounded-full bg-[var(--green)] animate-live-pulse" />
                       Trading Terminal
                     </span>
@@ -322,19 +322,19 @@ function DashboardLayoutContent({
 
           <SidebarContent className="py-2">
             {navGroups.map((group) => {
-              const sectionColor = group.title === "Build" ? "text-[var(--amber)]" : group.title === "Trade" ? "text-[var(--green)]" : group.title === "Intelligence" || group.title === "369AI" ? "text-[var(--cyan)]" : "text-[var(--text-muted)]";
+              const sectionColor = group.title === "Build" ? "text-[var(--amber)]" : group.title === "Trade" ? "text-[var(--green)]" : group.title === "Intelligence" || group.title === "369AI" ? "text-[var(--cyan)]" : "text-[var(--text-disabled)]";
               const dotColor = group.title === "Build" ? "accent-dot-amber" : group.title === "Trade" ? "accent-dot-green" : group.title === "Intelligence" || group.title === "369AI" ? "accent-dot-cyan" : "accent-dot-green";
               return (
               <div key={group.title} className="mb-1.5">
                 {!isCollapsed && (
-                  <div className="flex items-center gap-1.5 px-3 mb-1">
+                  <div className="flex items-center gap-2 px-3 mb-1">
                     <span className={`accent-dot ${dotColor}`} />
-                    <p className={`text-[9px] font-semibold uppercase tracking-[0.08em] ${sectionColor}`}>
+                    <p className={`sidebar-label ${sectionColor}`}>
                       {group.title}
                     </p>
                   </div>
                 )}
-                <SidebarMenu className="px-1.5 gap-px">
+                <SidebarMenu className="px-1 gap-px">
                   {group.items.map((item) => {
                     const isActive = location === item.path;
                     return (
@@ -343,16 +343,16 @@ function DashboardLayoutContent({
                           isActive={isActive}
                           onClick={() => setLocation(item.path)}
                           tooltip={item.label}
-                          className={`h-8 px-2.5 rounded-md transition-all duration-150 ${
+                          className={`transition-all duration-150 ${
                             isActive
                               ? "sidebar-item-active"
                               : "sidebar-item"
                           }`}
                         >
                           <item.icon
-                            className={`h-4 w-4 ${isActive ? "text-[var(--amber)]" : ""}`}
+                            className={isActive ? "text-[var(--amber)]" : ""}
                           />
-                          <span className="text-[13px]">{item.label}</span>
+                          <span>{item.label}</span>
                         </SidebarMenuButton>
                       </SidebarMenuItem>
                     );
@@ -360,52 +360,52 @@ function DashboardLayoutContent({
                 </SidebarMenu>
               </div>
             );
-          })}
-          {user?.role === "admin" && (
-            <div className="mb-1.5">
-              {!isCollapsed && (
-                <div className="flex items-center gap-1.5 px-3 mb-1">
-                  <span className="accent-dot accent-dot-amber" />
-                  <p className="text-[9px] font-semibold uppercase tracking-[0.08em] text-[var(--amber)]">Admin</p>
-                </div>
-              )}
-              <SidebarMenu className="px-1.5 gap-px">
-                <SidebarMenuItem>
-                  <SidebarMenuButton
-                    isActive={location === "/admin"}
-                    onClick={() => setLocation("/admin")}
-                    tooltip="Admin Dashboard"
-                    className="h-8 px-2.5 rounded-md transition-all duration-150 sidebar-item"
-                  >
-                    <Shield className="h-4 w-4" />
-                    <span className="text-[13px]">Admin Dashboard</span>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              </SidebarMenu>
-            </div>
-          )}
+            })}
+            {user?.role === "admin" && (
+              <div className="mb-1.5">
+                {!isCollapsed && (
+                  <div className="flex items-center gap-2 px-3 mb-1">
+                    <span className="accent-dot accent-dot-amber" />
+                    <p className="sidebar-label text-[var(--amber)]">Admin</p>
+                  </div>
+                )}
+                <SidebarMenu className="px-1 gap-px">
+                  <SidebarMenuItem>
+                    <SidebarMenuButton
+                      isActive={location === "/admin"}
+                      onClick={() => setLocation("/admin")}
+                      tooltip="Admin Dashboard"
+                      className="transition-all duration-150 sidebar-item"
+                    >
+                      <Shield />
+                      <span>Admin Dashboard</span>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                </SidebarMenu>
+              </div>
+            )}
           </SidebarContent>
 
           <SidebarFooter className="p-2 border-t border-[var(--border)] space-y-1.5">
             <button
               onClick={() => openCommandPalette()}
-              className="w-full flex items-center gap-2 rounded-md border border-[var(--border)] bg-[var(--surface-secondary)] px-2.5 py-1.5 text-caption text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:border-[var(--border)] transition-all duration-150 group cursor-pointer"
+              className="w-full flex items-center gap-2 rounded-lg border border-[var(--border)] bg-[var(--surface-elevated)] px-3 py-2 text-sm text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-all duration-150 group cursor-pointer"
             >
-              <Command className="w-3.5 h-3.5 text-[var(--text-muted)] group-hover:text-[var(--amber)] transition-colors" />
-              <span className="flex-1 text-left">Quick Command</span>
-              <kbd className="text-[9px] text-[var(--text-muted)] border border-[var(--border)] rounded px-1 py-0.5">⌘K</kbd>
+              <Command className="w-3.5 h-3.5 text-[var(--text-muted)] group-hover:text-[var(--amber)] transition-colors shrink-0" />
+              <span className="flex-1 text-left text-[13px]">Quick Command</span>
+              <kbd className="text-[9px] text-[var(--text-disabled)] border border-[var(--border)] rounded px-1 py-0.5">⌘K</kbd>
             </button>
 
             <button
               onClick={() => (voice.listening ? voice.stop() : voice.start())}
-              className={`w-full flex items-center gap-2 rounded-md border px-2.5 py-1.5 text-caption transition-all duration-150 cursor-pointer ${
+              className={`w-full flex items-center gap-2 rounded-lg border px-3 py-2 transition-all duration-150 cursor-pointer ${
                 voice.listening
-                  ? "border-[var(--red)]/40 bg-[var(--red)]/8 text-[var(--red)]"
-                  : "border-[var(--border)] bg-[var(--surface-secondary)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:border-[var(--border)] transition-all"
+                  ? "border-[var(--red)]/40 bg-[var(--red)]/10 text-[var(--red)]"
+                  : "border-[var(--border)] bg-[var(--surface-elevated)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
               }`}
             >
-              {voice.listening ? <Square className="w-3.5 h-3.5" /> : <Mic className="w-3.5 h-3.5 text-[var(--text-muted)] group-hover:text-[var(--amber)] transition-colors" />}
-              <span className="flex-1 text-left">{voice.listening ? "Listening…" : "Voice Commands"}</span>
+              {voice.listening ? <Square className="w-3.5 h-3.5 shrink-0" /> : <Mic className="w-3.5 h-3.5 text-[var(--text-muted)] shrink-0 group-hover:text-[var(--amber)] transition-colors" />}
+              <span className="flex-1 text-left text-[13px]">{voice.listening ? "Listening…" : "Voice Commands"}</span>
               {voice.listening && <span className="w-1.5 h-1.5 rounded-full bg-[var(--red)] animate-pulse-dot" />}
             </button>
             {voice.listening && voice.transcript && (
@@ -413,27 +413,27 @@ function DashboardLayoutContent({
             )}
 
             {!isCollapsed && (
-              <div className="rounded-md border border-[var(--border)] bg-[var(--surface-secondary)] p-2">
+              <div className="rounded-lg border border-[var(--border)] bg-[var(--card)] p-2">
                 <AITimeline compact />
               </div>
             )}
 
             {!isCollapsed && (
-              <button onClick={() => setShortcutsOpen(true)} className="w-full flex items-center gap-2 rounded-md border border-[var(--border)] bg-[var(--surface-secondary)] px-2.5 py-1.5 text-caption text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:border-[var(--border)] transition-all duration-150 group cursor-pointer">
-                <Command className="w-3.5 h-3.5 group-hover:text-[var(--amber)] transition-colors" />
+              <button onClick={() => setShortcutsOpen(true)} className="w-full flex items-center gap-2 rounded-lg border border-[var(--border)] bg-[var(--surface-elevated)] px-3 py-2 transition-all duration-150 group cursor-pointer text-[13px] text-[var(--text-muted)] hover:text-[var(--text-primary)]">
+                <Command className="w-3.5 h-3.5 shrink-0 group-hover:text-[var(--amber)] transition-colors" />
                 <span className="flex-1 text-left">Keyboard Shortcuts</span>
-                <kbd className="text-[9px] text-[var(--text-muted)] border border-[var(--border)] rounded px-1 py-0.5">?</kbd>
+                <kbd className="text-[9px] text-[var(--text-disabled)] border border-[var(--border)] rounded px-1 py-0.5">?</kbd>
               </button>
             )}
 
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <button className="flex items-center gap-2.5 rounded-md px-2 py-1.5 hover:bg-white/[0.03] transition-all duration-150 w-full text-left group-data-[collapsible=icon]:justify-center focus:outline-none cursor-pointer focus-visible:ring-2 focus-visible:ring-[var(--amber)] focus-visible:outline-none">
-                  <Avatar className="h-6 w-6 border border-[var(--border)] shrink-0">
+                <button className="flex items-center gap-2.5 rounded-lg px-2 py-2 hover:bg-white/[0.03] transition-all duration-150 w-full text-left group-data-[collapsible=icon]:justify-center focus:outline-none cursor-pointer focus-visible:ring-2 focus-visible:ring-[var(--amber)] focus-visible:outline-none">
+                  <Avatar className="h-8 w-8 border border-[var(--border)] shrink-0">
                     {(user as any)?.avatarUrl ? (
                       <AvatarImage src={(user as any).avatarUrl} alt="Avatar" className="object-cover" />
                     ) : null}
-                    <AvatarFallback className="bg-[var(--amber)] text-[var(--bg)] text-[9px] font-bold">
+                    <AvatarFallback className="bg-[var(--amber)] text-[#000000] text-[11px] font-bold">
                       {user?.name?.charAt(0).toUpperCase()}
                     </AvatarFallback>
                   </Avatar>
@@ -442,7 +442,7 @@ function DashboardLayoutContent({
                       <p className="text-[13px] font-medium text-[var(--text-primary)] truncate leading-none">
                         {user?.name || "Trader"}
                       </p>
-                      <p className="text-micro text-[var(--text-muted)] truncate mt-0.5">
+                      <p className="text-[11px] text-[var(--text-disabled)] truncate mt-0.5">
                         {user?.email || "Connected"}
                       </p>
                     </div>

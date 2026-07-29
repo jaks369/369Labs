@@ -1,29 +1,28 @@
 import { useState } from "react";
-import { derivWS } from "@/services/derivWebSocket";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { trpc } from "@/lib/trpc";
-import { Loader2, Download, AlertCircle } from "lucide-react";
+import { Loader2, Download, AlertCircle, BarChart3, TrendingUp, TrendingDown } from "lucide-react";
 import { useLocation } from "wouter";
-import { getValidSymbols } from "@/lib/symbols";
 
 export default function TradeHistory() {
-  const { user, isAuthenticated } = useAuth();
+  const { isAuthenticated } = useAuth();
   const [, navigate] = useLocation();
   const tradesQuery = trpc.trades.list.useQuery({ limit: 100 });
-  const [tab, setTab] = useState<"trades" | "prices">("trades");
-  const [priceSymbol, setPriceSymbol] = useState("R_100");
-  const priceQuery = trpc.market.getHistory.useQuery({ symbol: priceSymbol, limit: 200 }, { enabled: tab === "prices" });
-  const priceDecimals = derivWS.decimalPlacesFor(priceSymbol);
-  const journalMutation = trpc.ai.journal.useMutation();
 
   if (!isAuthenticated) {
     navigate("/login");
     return null;
   }
 
+  const totalTrades = tradesQuery.data?.length || 0;
+  const wins = tradesQuery.data?.filter(t => (t as any).result === "win").length || 0;
+  const losses = tradesQuery.data?.filter(t => (t as any).result === "loss").length || 0;
+  const totalPnL = tradesQuery.data?.reduce((sum, t) => sum + parseFloat(t.profitLoss?.toString() || "0"), 0) || 0;
+  const winRate = totalTrades > 0 ? (wins / totalTrades) * 100 : 0;
+  const avgTrade = totalTrades > 0 ? totalPnL / totalTrades : 0;
+
   const exportToCSV = () => {
     if (!tradesQuery.data) return;
-
     const headers = ["ID", "Entry Time", "Exit Time", "Entry Price", "Exit Price", "Stake", "P&L", "Result"];
     const rows = tradesQuery.data.map((trade) => [
       trade.id,
@@ -35,7 +34,6 @@ export default function TradeHistory() {
       trade.profitLoss || "N/A",
       (trade as any).result,
     ]);
-
     const csv = [headers, ...rows].map((row) => row.join(",")).join("\n");
     const blob = new Blob([csv], { type: "text/csv" });
     const url = window.URL.createObjectURL(blob);
@@ -46,204 +44,153 @@ export default function TradeHistory() {
   };
 
   return (
-    <div className="min-h-screen bg-[var(--bg)] text-[var(--amber)] p-8">
-      <div className="max-w-6xl mx-auto">
+    <div className="min-h-screen" style={{ background: "var(--bg)" }}>
+      <div className="page-container max-w-7xl mx-auto">
         {/* Header */}
-        <div className="mb-8 flex justify-between items-center">
+        <div className="flex items-center justify-between mb-8">
           <div>
-            <h1 className="text-3xl font-bold text-[var(--amber-hover)] mb-2">TRADE HISTORY</h1>
-            <p className="text-[var(--amber)] text-sm">View all your executed trades</p>
+            <h1 className="text-hero-sm mb-1">Trade History</h1>
+            <p className="text-body">View and analyze all your executed trades</p>
           </div>
           <button
             onClick={exportToCSV}
-            disabled={!tradesQuery.data || tradesQuery.data.length === 0}
-            className="btn-neon flex items-center gap-2"
+            disabled={!tradesQuery.data?.length}
+            className="btn btn-outline btn-sm"
           >
             <Download className="w-4 h-4" />
-            EXPORT CSV
+            Export CSV
           </button>
         </div>
 
-        {/* Tabs */}
-        <div className="flex gap-2 mb-6">
-          <button onClick={() => setTab("trades")} className={`px-4 py-2 rounded-lg text-sm font-bold ${tab === "trades" ? "bg-[var(--amber-soft)] text-[var(--amber-hover)]" : "text-[var(--amber)]/60 hover:text-[var(--amber)]"}`}>TRADES</button>
-          <button onClick={() => setTab("prices")} className={`px-4 py-2 rounded-lg text-sm font-bold ${tab === "prices" ? "bg-[var(--amber-soft)] text-[var(--amber-hover)]" : "text-[var(--amber)]/60 hover:text-[var(--amber)]"}`}>PRICE HISTORY</button>
-        </div>
-
-        {/* AI Trading Journal */}
-        <div className="hud-panel p-6 mb-6">
-          <div className="flex items-center justify-between mb-3">
-            <div>
-              <h2 className="text-lg font-bold text-[var(--cyan)]">AI TRADING JOURNAL</h2>
-              <p className="text-xs text-[var(--cyan)]/60">Automatic post-trade analysis — why you won, why you lost, and how to improve.</p>
+        {/* Stats Bar */}
+        {tradesQuery.data && tradesQuery.data.length > 0 && (
+          <div className="flex items-stretch gap-0 mb-8 bg-[var(--card)] rounded-xl border border-[var(--border)] overflow-hidden">
+            <div className="flex-1 flex flex-col items-center justify-center py-5 px-4 border-r border-[var(--border)]">
+              <span className="text-micro text-[var(--text-muted)] mb-2 tracking-widest">TRADES</span>
+              <span className="text-2xl font-bold text-[var(--text-primary)] font-mono tabular-nums">{totalTrades}</span>
             </div>
-            <button
-              onClick={() => journalMutation.mutate({})}
-              disabled={journalMutation.isPending || !tradesQuery.data?.length}
-              className="btn-neon flex items-center gap-2 text-sm"
-            >
-              {journalMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
-              ANALYZE
-            </button>
+            <div className="flex-1 flex flex-col items-center justify-center py-5 px-4 border-r border-[var(--border)]">
+              <span className="text-micro text-[var(--text-muted)] mb-2 tracking-widest">WINS</span>
+              <span className="text-2xl font-bold text-[var(--green)] font-mono tabular-nums">{wins}</span>
+            </div>
+            <div className="flex-1 flex flex-col items-center justify-center py-5 px-4 border-r border-[var(--border)]">
+              <span className="text-micro text-[var(--text-muted)] mb-2 tracking-widest">LOSSES</span>
+              <span className="text-2xl font-bold text-[var(--red)] font-mono tabular-nums">{losses}</span>
+            </div>
+            <div className="flex-1 flex flex-col items-center justify-center py-5 px-4 border-r border-[var(--border)]">
+              <span className="text-micro text-[var(--text-muted)] mb-2 tracking-widest">WIN RATE</span>
+              <span className="text-2xl font-bold text-[var(--green)] font-mono tabular-nums">
+                {winRate.toFixed(1)}
+                <span className="text-sm font-medium text-[var(--text-muted)] ml-0.5">%</span>
+              </span>
+            </div>
+            <div className="flex-1 flex flex-col items-center justify-center py-5 px-4">
+              <span className="text-micro text-[var(--text-muted)] mb-2 tracking-widest">P&L</span>
+              <span className={`text-2xl font-bold font-mono tabular-nums ${
+                totalPnL > 0 ? "text-[var(--green)]" : totalPnL < 0 ? "text-[var(--red)]" : "text-[var(--text-disabled)]"
+              }`}>
+                {totalPnL >= 0 ? "+" : ""}${totalPnL.toFixed(2)}
+              </span>
+            </div>
           </div>
-          {journalMutation.data ? (
-            <div className="space-y-3">
-              <div className="flex gap-4 text-xs">
-                <span className="text-[var(--green)]">Wins: {journalMutation.data.wins}</span>
-                <span className="text-[var(--red)]">Losses: {journalMutation.data.losses}</span>
-                <span className={(journalMutation.data.net ?? 0) >= 0 ? "text-[var(--green)]" : "text-[var(--red)]"}>Net: ${journalMutation.data.net ?? 0}</span>
-                <span className="text-[var(--text-muted)]">Sample: {journalMutation.data.sampleSize}</span>
-              </div>
-              <p className="text-sm text-[var(--cyan)]/90 whitespace-pre-wrap leading-relaxed">{journalMutation.data.analysis}</p>
-            </div>
-          ) : journalMutation.isPending ? (
-            <div className="flex items-center gap-2 text-sm text-[var(--cyan)]/60"><Loader2 className="w-4 h-4 animate-spin" /> Analyzing your trades...</div>
-          ) : journalMutation.isError ? (
-            <div className="flex items-center gap-2 text-sm text-[var(--red)]"><AlertCircle className="w-4 h-4" /> {(journalMutation.error as any)?.message || "Analysis failed"}</div>
-          ) : (
-            <p className="text-sm text-[var(--cyan)]/50">Press ANALYZE to generate an AI journal from your recent trades.</p>
-          )}
-        </div>
-
-        {tab === "prices" ? (
-          <div className="hud-panel p-6">
-            <div className="flex items-center gap-3 mb-4">
-              <label className="text-xs text-[var(--amber)]/60">SYMBOL</label>
-              <select value={priceSymbol} onChange={(e) => setPriceSymbol(e.target.value)} className="bg-[var(--surface-secondary)] border border-[var(--amber-border)] rounded-lg px-3 py-2 text-sm text-white focus:border-[var(--amber)] outline-none [&>option]:bg-[var(--surface-secondary)] [&>option]:text-white">
-                {getValidSymbols().map((s) => (
-                  <option key={s} value={s}>{s}</option>
-                ))}
-              </select>
-            </div>
-            {priceQuery.isLoading ? (
-              <div className="flex items-center justify-center py-12"><Loader2 className="w-8 h-8 animate-spin text-[var(--amber)]" /></div>
-            ) : priceQuery.isError ? (
-              <div className="flex items-center justify-center py-12 text-center">
-                <div>
-                  <AlertCircle className="w-8 h-8 text-[var(--red)] mx-auto mb-2" />
-                  <p className="text-sm text-[var(--red)]">Failed to load price history</p>
-                </div>
-              </div>
-            ) : priceQuery.data?.ticks?.length ? (
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b border-[var(--amber-border)]">
-                      <th className="text-left py-3 px-4 text-[var(--amber-hover)] font-bold">TIME</th>
-                      <th className="text-right py-3 px-4 text-[var(--amber-hover)] font-bold">PRICE</th>
-                      <th className="text-right py-3 px-4 text-[var(--amber-hover)] font-bold">LAST DIGIT</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {priceQuery.data.ticks.slice().reverse().map((t: any, i: number) => (
-                      <tr key={i} className="border-b border-[var(--amber)]/10">
-                        <td className="py-2 px-4 text-xs">{new Date((t.epoch || 0) * 1000).toLocaleString()}</td>
-                        <td className="py-2 px-4 text-right">{Number(t.price).toFixed(priceDecimals)}</td>
-                        <td className="py-2 px-4 text-right">{t.lastDigit}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            ) : (
-              <div className="text-center py-12 text-[var(--amber)]/60">No price history found.</div>
-            )}
-          </div>
-        ) : (
-        <div className="hud-panel overflow-x-auto">
-          {tradesQuery.isLoading ? (
-            <div className="flex items-center justify-center py-12">
-              <Loader2 className="w-8 h-8 animate-spin text-[var(--amber)]" />
-            </div>
-          ) : tradesQuery.isError ? (
-            <div className="flex items-center justify-center py-12 text-center">
-              <div>
-                <AlertCircle className="w-8 h-8 text-[var(--red)] mx-auto mb-2" />
-                <p className="text-sm text-[var(--red)]">Failed to load trade history</p>
-              </div>
-            </div>
-          ) : tradesQuery.data && tradesQuery.data.length > 0 ? (
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-[var(--amber-border)]">
-                  <th className="text-left py-3 px-4 text-[var(--amber-hover)] font-bold">ID</th>
-                  <th className="text-left py-3 px-4 text-[var(--amber-hover)] font-bold">ENTRY TIME</th>
-                  <th className="text-left py-3 px-4 text-[var(--amber-hover)] font-bold">EXIT TIME</th>
-                  <th className="text-right py-3 px-4 text-[var(--amber-hover)] font-bold">ENTRY PRICE</th>
-                  <th className="text-right py-3 px-4 text-[var(--amber-hover)] font-bold">EXIT PRICE</th>
-                  <th className="text-right py-3 px-4 text-[var(--amber-hover)] font-bold">STAKE</th>
-                  <th className="text-right py-3 px-4 text-[var(--amber-hover)] font-bold">P&L</th>
-                  <th className="text-center py-3 px-4 text-[var(--amber-hover)] font-bold">RESULT</th>
-                </tr>
-              </thead>
-              <tbody>
-                {tradesQuery.data.map((trade) => (
-                  <tr key={trade.id} className="border-b border-[var(--amber)]/10 hover:bg-[var(--card)]/50 transition">
-                    <td className="py-3 px-4">{trade.id}</td>
-                    <td className="py-3 px-4 text-xs">{new Date(trade.entryTime).toLocaleString()}</td>
-                    <td className="py-3 px-4 text-xs">
-                      {trade.exitTime ? new Date(trade.exitTime).toLocaleString() : "—"}
-                    </td>
-                    <td className="py-3 px-4 text-right">${trade.entryPrice}</td>
-                    <td className="py-3 px-4 text-right">${trade.exitPrice || "—"}</td>
-                    <td className="py-3 px-4 text-right">${trade.stake}</td>
-                    <td className={`py-3 px-4 text-right font-bold ${parseFloat(trade.profitLoss?.toString() || "0") >= 0 ? "text-[var(--green)]" : "text-[var(--red)]"}`}>
-                      ${trade.profitLoss || "—"}
-                    </td>
-                    <td className="py-3 px-4 text-center">
-                      <span className={`px-2 py-1 rounded text-xs font-bold ${
-                        (trade as any).result === "win" ? "bg-[var(--green)]/20 text-[var(--green)]" :
-                        (trade as any).result === "loss" ? "bg-[var(--red)]/20 text-[var(--red)]" :
-                        "bg-[var(--amber-soft)] text-[var(--amber-hover)]"
-                      }`}>
-                        {(trade as any).result.toUpperCase()}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          ) : (
-            <div className="empty-state">
-              <p className="empty-state-desc">No trades found. Start trading to see your history here.</p>
-            </div>
-          )}
-        </div>
-
         )}
 
-        {/* Summary Stats */}
+        {/* Loading state */}
+        {tradesQuery.isLoading && (
+          <div className="panel p-12">
+            <div className="empty-state">
+              <Loader2 className="w-8 h-8 animate-spin text-[var(--amber)] mb-4" />
+              <p className="text-sm text-[var(--text-muted)]">Loading trade history...</p>
+            </div>
+          </div>
+        )}
+
+        {/* Error state */}
+        {tradesQuery.isError && (
+          <div className="panel p-12">
+            <div className="empty-state">
+              <AlertCircle className="w-12 h-12 text-[var(--red)] mb-3" />
+              <p className="empty-state-title">Failed to Load</p>
+              <p className="empty-state-desc mb-4">Could not load trade history. Please try again.</p>
+              <button onClick={() => tradesQuery.refetch()} className="btn btn-primary btn-sm">
+                Retry
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Empty state */}
+        {tradesQuery.data && tradesQuery.data.length === 0 && (
+          <div className="panel p-12">
+            <div className="empty-state">
+              <BarChart3 className="w-12 h-12 text-[var(--text-disabled)] mb-3" />
+              <p className="empty-state-title">No Trades Yet</p>
+              <p className="empty-state-desc">Start trading to see your history here.</p>
+            </div>
+          </div>
+        )}
+
+        {/* Trades Table */}
         {tradesQuery.data && tradesQuery.data.length > 0 && (
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mt-8">
-            <div className="hud-card-pink">
-              <div className="text-sm text-[var(--amber-hover)] mb-2">TOTAL TRADES</div>
-              <div className="text-2xl font-bold text-[var(--amber-hover)]">{tradesQuery.data.length}</div>
-            </div>
-            <div className="hud-card">
-              <div className="text-sm text-[var(--amber)] mb-2">WIN RATE</div>
-              <div className="text-2xl font-bold text-[var(--green)]">
-                {((tradesQuery.data.filter(t => (t as any).result === "win").length / tradesQuery.data.length) * 100).toFixed(1)}%
-              </div>
-            </div>
-            <div className="hud-card">
-              <div className="text-sm text-[var(--amber)] mb-2">TOTAL P&L</div>
-              <div className={`text-2xl font-bold ${
-                tradesQuery.data.reduce((sum, t) => sum + parseFloat(t.profitLoss?.toString() || "0"), 0) >= 0
-                  ? "text-[var(--green)]"
-                  : "text-[var(--red)]"
-              }`}>
-                ${tradesQuery.data.reduce((sum, t) => sum + parseFloat(t.profitLoss?.toString() || "0"), 0).toFixed(2)}
-              </div>
-            </div>
-            <div className="hud-card">
-              <div className="text-sm text-[var(--amber)] mb-2">AVG TRADE</div>
-              <div className={`text-2xl font-bold ${
-                (tradesQuery.data.reduce((sum, t) => sum + parseFloat(t.profitLoss?.toString() || "0"), 0) / tradesQuery.data.length) >= 0
-                  ? "text-[var(--green)]"
-                  : "text-[var(--red)]"
-              }`}>
-                ${(tradesQuery.data.reduce((sum, t) => sum + parseFloat(t.profitLoss?.toString() || "0"), 0) / tradesQuery.data.length).toFixed(2)}
-              </div>
+          <div className="panel overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="table">
+                <thead>
+                  <tr>
+                    <th className="w-12 text-center">#</th>
+                    <th className="w-auto" style={{ letterSpacing: "0.06em", textTransform: "uppercase" }}>Type</th>
+                    <th className="w-32">Entry Time</th>
+                    <th className="w-32">Exit Time</th>
+                    <th className="w-28 text-right font-mono">Entry</th>
+                    <th className="w-24 text-right font-mono">Stake</th>
+                    <th className="w-28 text-right font-mono">P&L</th>
+                    <th className="w-20 text-center">Result</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {tradesQuery.data.map((trade, index) => {
+                    const pnl = parseFloat(trade.profitLoss?.toString() || "0");
+                    return (
+                      <tr key={trade.id}>
+                        <td className="text-center text-[var(--text-disabled)] font-mono tabular-nums">
+                          {tradesQuery.data.length - index}
+                        </td>
+                        <td>
+                          <span className="tag text-[10px] font-semibold tracking-wider uppercase">
+                            {trade.contractType || (trade as any).type || "—"}
+                          </span>
+                        </td>
+                        <td className="text-xs font-mono tabular-nums">
+                          {new Date(trade.entryTime).toLocaleString()}
+                        </td>
+                        <td className="text-xs font-mono tabular-nums">
+                          {trade.exitTime ? new Date(trade.exitTime).toLocaleString() : "—"}
+                        </td>
+                        <td className="text-right font-mono tabular-nums">
+                          {trade.entryPrice}
+                        </td>
+                        <td className="text-right font-mono tabular-nums">
+                          ${trade.stake}
+                        </td>
+                        <td className={`text-right font-mono tabular-nums font-semibold ${
+                          pnl > 0 ? "text-[var(--green)]" : pnl < 0 ? "text-[var(--red)]" : "text-[var(--text-disabled)]"
+                        }`}>
+                          {pnl >= 0 ? "+" : ""}${pnl.toFixed(2)}
+                        </td>
+                        <td className="text-center">
+                          <span className={
+                            (trade as any).result === "win" ? "badge-pill badge-win" :
+                            (trade as any).result === "loss" ? "badge-pill badge-loss" :
+                            "badge-pill badge-warning"
+                          }>
+                            {(trade as any).result || "—"}
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
             </div>
           </div>
         )}
@@ -251,4 +198,3 @@ export default function TradeHistory() {
     </div>
   );
 }
-

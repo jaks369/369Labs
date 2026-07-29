@@ -238,13 +238,13 @@ export function StrategyBuilderContent({ embedded = false, onClose, onSaved }: S
     input.click();
   };
 
-  const blockTypes: { type: StrategyBlock["type"]; icon: any; color: string }[] = [
-    { type: "market", icon: Database, color: "text-[var(--amber)]" },
-    { type: "condition", icon: Activity, color: "text-[var(--green)]" },
-    { type: "indicator", icon: Layers, color: "text-[var(--amber)]" },
-    { type: "risk", icon: ShieldCheck, color: "text-[var(--amber)]" },
-    { type: "trade", icon: Zap, color: "text-[var(--amber)]" },
-    { type: "exit", icon: ChevronRight, color: "text-[var(--red)]" },
+  const blockTypes: { type: StrategyBlock["type"]; icon: any; color: string; borderColor: string }[] = [
+    { type: "market", icon: Database, color: "text-[var(--cyan)]", borderColor: "border-l-[var(--cyan)]" },
+    { type: "condition", icon: Activity, color: "text-[var(--amber)]", borderColor: "border-l-[var(--amber)]" },
+    { type: "indicator", icon: Layers, color: "text-[#a78bfa]", borderColor: "border-l-[#a78bfa]" },
+    { type: "risk", icon: ShieldCheck, color: "text-[var(--amber)]", borderColor: "border-l-[var(--amber)]" },
+    { type: "trade", icon: Zap, color: "text-[var(--green)]", borderColor: "border-l-[var(--green)]" },
+    { type: "exit", icon: ChevronRight, color: "text-[var(--red)]", borderColor: "border-l-[var(--red)]" },
   ];
 
   return (
@@ -292,23 +292,25 @@ export function StrategyBuilderContent({ embedded = false, onClose, onSaved }: S
           <div className="space-y-6">
             <div className="panel p-6">
               <h3 className="text-micro mb-6">Execution Blocks</h3>
-              <div className="grid grid-cols-1 gap-2">
-                {blockTypes.map(bt => (
-                  <button
-                    key={bt.type}
-                    onClick={() => addBlock(bt.type)}
-                    className="flex items-center gap-3 p-3 rounded-lg bg-[var(--card)] border border-[var(--border)] hover:border-[var(--amber)] transition-all text-left group"
-                  >
-                    <bt.icon className={`w-4 h-4 ${bt.color}`} />
-                    <span className="text-xs font-semibold text-[var(--text-secondary)] group-hover:text-white capitalize">{bt.type}</span>
-                    <Plus className="w-3 h-3 ml-auto text-[var(--text-muted)] group-hover:text-[var(--amber)]" />
-                  </button>
-                ))}
-              </div>
+                <div className="grid grid-cols-1 gap-2">
+                  {blockTypes.map(bt => (
+                    <button
+                      key={bt.type}
+                      onClick={() => addBlock(bt.type)}
+                      className={`flex items-center gap-3 p-3 rounded-lg border border-[var(--border)] hover:border-[var(--amber)] transition-all duration-150 text-left group cursor-pointer border-l-2 ${bt.borderColor}`}
+                    >
+                      <bt.icon className={`w-4 h-4 ${bt.color}`} />
+                      <span className="text-xs font-semibold text-[var(--text-secondary)] group-hover:text-white capitalize">{bt.type}</span>
+                      <span className="w-6 h-6 rounded-md bg-transparent hover:bg-white/5 flex items-center justify-center ml-auto text-[var(--text-muted)] group-hover:text-[var(--amber)] transition-colors">
+                        <Plus className="w-3.5 h-3.5" />
+                      </span>
+                    </button>
+                  ))}
+                </div>
             </div>
 
             <div className="panel p-6">
-              <h3 className="text-micro mb-6">Saved Strategies</h3>
+              <h3 className="text-sm font-semibold tracking-wider mb-4" style={{color: "var(--text-disabled)"}}>Saved Strategies</h3>
               <div className="space-y-3">
                 {strategiesQuery.isLoading ? (
                   <div className="flex items-center justify-center py-6">
@@ -375,12 +377,12 @@ export function StrategyBuilderContent({ embedded = false, onClose, onSaved }: S
                   <Settings2 className="w-4 h-4 text-[var(--text-muted)]" />
                   <span className="text-micro">Workflow Canvas</span>
                 </div>
-                <div className="flex bg-[var(--card)] rounded-lg p-1">
-                   <button onClick={() => setBuilderMode("blocks")} className={`px-3 py-1 text-caption font-bold rounded ${builderMode === "blocks" ? "bg-[var(--amber)] text-white" : "text-[var(--text-muted)]"}`}>BLOCKS</button>
-                   <button onClick={() => setBuilderMode("visual")} className={`px-3 py-1 text-caption font-bold rounded ${builderMode === "visual" ? "bg-[var(--amber)] text-white" : "text-[var(--text-muted)]"}`}>IF/THEN</button>
-                   <button onClick={() => setBuilderMode("ensemble")} className={`px-3 py-1 text-caption font-bold rounded ${builderMode === "ensemble" ? "bg-[var(--amber)] text-white" : "text-[var(--text-muted)]"}`}>ENSEMBLE</button>
-                   <button onClick={() => setShowHistory((v) => !v)} className={`px-3 py-1 text-caption font-bold rounded ${showHistory ? "bg-[var(--amber)] text-white" : "text-[var(--text-muted)]"}`}><GitCompare className="w-3 h-3 inline mr-1" />HISTORY</button>
-                   <button onClick={() => critiqueMutation.mutate({ rule: buildConfig().rule })} className={`px-3 py-1 text-caption font-bold rounded ${critiqueMutation.isPending ? "opacity-50" : "hover:bg-[var(--green)]/20 text-[var(--green)] border border-[var(--green)]/30"}`}><ShieldCheck className="w-3 h-3 inline mr-1" />AI REVIEW</button>
+                <div className="flex gap-1">
+                   <button onClick={() => setBuilderMode("blocks")} className={`px-3 py-1.5 text-sm font-medium rounded-lg transition-colors ${builderMode === "blocks" ? "bg-[var(--amber)] text-black" : "text-[var(--text-muted)] hover:bg-[var(--surface-elevated)]"}`}>BLOCKS</button>
+                   <button onClick={() => setBuilderMode("visual")} className={`px-3 py-1.5 text-sm font-medium rounded-lg transition-colors ${builderMode === "visual" ? "bg-[var(--amber)] text-black" : "text-[var(--text-muted)] hover:bg-[var(--surface-elevated)]"}`}>IF/THEN</button>
+                   <button onClick={() => setBuilderMode("ensemble")} className={`px-3 py-1.5 text-sm font-medium rounded-lg transition-colors ${builderMode === "ensemble" ? "bg-[var(--amber)] text-black" : "text-[var(--text-muted)] hover:bg-[var(--surface-elevated)]"}`}>ENSEMBLE</button>
+                   <button onClick={() => setShowHistory((v) => !v)} className={`px-3 py-1.5 text-sm font-medium rounded-lg transition-colors ${showHistory ? "bg-[var(--amber)] text-black" : "text-[var(--text-muted)] hover:bg-[var(--surface-elevated)]"}`}><GitCompare className="w-3.5 h-3.5 inline mr-1" />HISTORY</button>
+                   <button onClick={() => critiqueMutation.mutate({ rule: buildConfig().rule })} className={`px-3 py-1.5 text-sm font-medium rounded-lg transition-colors ${critiqueMutation.isPending ? "opacity-50" : "text-[var(--green)] border border-[var(--green)]/30 hover:bg-[var(--green)]/10"}`}><ShieldCheck className="w-3.5 h-3.5 inline mr-1" />AI REVIEW</button>
                  </div>
                </div>
 
@@ -468,9 +470,9 @@ export function StrategyBuilderContent({ embedded = false, onClose, onSaved }: S
                 ) : (
                   <div className="max-w-2xl mx-auto space-y-6">
                     {blocks.length === 0 ? (
-                      <div className="flex flex-col items-center justify-center py-20 border-2 border-dashed border-[var(--border)] rounded-2xl">
-                        <Plus className="w-8 h-8 text-[var(--border)] mb-4" />
-                        <p className="text-[var(--text-muted)] text-sm">Add blocks from the library to start building your workflow.</p>
+                      <div className="flex flex-col items-center justify-center py-20 border-2 border-dashed rounded-xl" style={{borderColor: "var(--border-subtle)"}}>
+                        <Plus className="w-12 h-12 mb-4" style={{color: "var(--text-disabled)"}} />
+                        <p className="text-sm" style={{color: "var(--text-muted)"}}>Add blocks from the library to start building your workflow.</p>
                       </div>
                     ) : (
                       <div className="space-y-4 relative">

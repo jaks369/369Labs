@@ -309,22 +309,31 @@ export default function Dashboard() {
     <PageContainer className="page-container">
       <PageSection>
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 mb-6">
-        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3">
           <div className="flex items-center gap-2 px-3 py-2 rounded-lg panel-secondary">
             <Wallet className="w-4 h-4 text-[var(--green)]" />
-            <span className="text-sm font-bold text-white">
+            <span className="text-xl font-bold text-[var(--text-primary)] font-mono tabular-nums">
               <CurrencyStat value={balance} /> {balanceInfo?.currency || "USD"}
             </span>
             {balanceInfo?.accountType ? (
-              <span className={`badge ${balanceInfo.accountType === "demo" ? "badge-amber" : "badge-red"}`}>
+              <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold" style={{
+                background: balanceInfo.accountType === "demo" ? "rgba(245,158,11,0.15)" : "rgba(239,68,68,0.15)",
+                color: balanceInfo.accountType === "demo" ? "var(--amber)" : "var(--red)"
+              }}>
                 {balanceInfo.accountType}
               </span>
             ) : tokenStatus === "invalid" ? (
-              <span className="badge badge-red" title={"Click 'Connect Deriv' to fix the token issue"}>{tokenError?.includes("invalid") || tokenError?.includes("expired") ? "BAD TOKEN" : "NOT CONNECTED"}</span>
+              <span className="inline-flex items-center px-[6px] py-[2px] rounded text-xs font-semibold" style={{background: "rgba(239,68,68,0.15)", color: "var(--red)"}}>
+                {tokenError?.includes("invalid") || tokenError?.includes("expired") ? "BAD TOKEN" : "NOT CONNECTED"}
+              </span>
             ) : tokenStatus === "none" ? (
-              <span className="badge badge-gray">no token</span>
+              <span className="inline-flex items-center px-[6px] py-[2px] rounded text-xs font-semibold" style={{background: "rgba(107,114,128,0.15)", color: "var(--text-disabled)"}}>
+                no token
+              </span>
             ) : (
-              <span className="badge badge-green">connected</span>
+              <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold" style={{background: "rgba(34,197,94,0.15)", color: "var(--green)"}}>
+                connected
+              </span>
             )}
           </div>
           <Button onClick={() => setShowTokenModal(true)} className="btn btn-primary gap-2 w-full sm:w-auto">
@@ -336,21 +345,21 @@ export default function Dashboard() {
           </Button>
         </div>
         <div className="flex items-center gap-2">
-          <button onClick={() => navigate("/bots")} className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-[var(--card)] border border-[var(--border)] hover:border-[var(--amber)]/40 hover-lift transition-all text-caption text-[var(--text-secondary)] hover:text-white">
-            <Bot className="w-3.5 h-3.5 text-[var(--amber)]" />
-            <span className="hidden sm:inline">Bots</span>
+          <button onClick={() => navigate("/bots")} className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-[var(--card)] border border-[var(--border)] hover:bg-[var(--surface-elevated)] transition-all text-caption text-[var(--text-secondary)] hover:text-white cursor-pointer">
+            <Bot className="w-5 h-5 text-[var(--amber)]" />
+            <span className="hidden sm:inline text-[13px] font-medium">Bots</span>
           </button>
-          <button onClick={() => navigate("/backtesting")} className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-[var(--card)] border border-[var(--border)] hover:border-[var(--amber)]/40 hover-lift transition-all text-caption text-[var(--text-secondary)] hover:text-white">
-            <BarChart3 className="w-3.5 h-3.5 text-[var(--amber)]" />
-            <span className="hidden sm:inline">Backtest</span>
+          <button onClick={() => navigate("/backtesting")} className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-[var(--card)] border border-[var(--border)] hover:bg-[var(--surface-elevated)] transition-all text-caption text-[var(--text-secondary)] hover:text-white cursor-pointer">
+            <BarChart3 className="w-5 h-5 text-[var(--amber)]" />
+            <span className="hidden sm:inline text-[13px] font-medium">Backtest</span>
           </button>
-          <button onClick={() => navigate("/journal")} className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-[var(--card)] border border-[var(--border)] hover:border-[var(--green)]/40 hover-lift transition-all text-caption text-[var(--text-secondary)] hover:text-white">
-            <BookOpen className="w-3.5 h-3.5 text-[var(--green)]" />
-            <span className="hidden sm:inline">Journal</span>
+          <button onClick={() => navigate("/journal")} className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-[var(--card)] border border-[var(--border)] hover:bg-[var(--surface-elevated)] transition-all text-caption text-[var(--text-secondary)] hover:text-white cursor-pointer">
+            <BookOpen className="w-5 h-5 text-[var(--green)]" />
+            <span className="hidden sm:inline text-[13px] font-medium">Journal</span>
           </button>
-          <button onClick={() => navigate("/ai-assistant")} className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-[var(--card)] border border-[var(--border)] hover:border-[var(--cyan)]/40 hover-lift transition-all text-caption text-[var(--text-secondary)] hover:text-white">
-            <Brain className="w-3.5 h-3.5 text-[var(--cyan)]" />
-            <span className="hidden sm:inline">AI</span>
+          <button onClick={() => navigate("/ai-assistant")} className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-[var(--card)] border border-[var(--border)] hover:bg-[var(--surface-elevated)] transition-all text-caption text-[var(--text-secondary)] hover:text-white cursor-pointer">
+            <Brain className="w-5 h-5 text-[var(--cyan)]" />
+            <span className="hidden sm:inline text-[13px] font-medium">AI</span>
           </button>
         </div>
       </div>
