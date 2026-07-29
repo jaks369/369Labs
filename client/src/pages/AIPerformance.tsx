@@ -54,8 +54,8 @@ export default function AIPerformance() {
 
         <div className="flex gap-2 flex-wrap">
           {tabs.map(t => (
-            <button key={t.key} onClick={() => setTab(t.key)} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors ${tab === t.key ? "bg-[var(--amber)] text-black" : "bg-white/5 text-[var(--text-secondary)] hover:bg-white/10"}`}>
-              <t.icon className="w-3.5 h-3.5" /> {t.label}
+            <button key={t.key} onClick={() => setTab(t.key)} className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${tab === t.key ? "bg-[var(--amber)] text-black font-semibold" : "bg-transparent border border-[var(--border)] text-[var(--text-muted)] hover:text-white"}`}>
+              <t.icon className="w-4 h-4" /> {t.label}
             </button>
           ))}
         </div>
@@ -72,12 +72,12 @@ export default function AIPerformance() {
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               {Object.entries(data).slice(0, 8).map(([key, val]) => (
                 <div key={key} className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4">
-                  <p className="text-xs text-[var(--text-muted)] mb-1 capitalize">{key.replace(/([A-Z])/g, " $1").trim()}</p>
-                  <p className="text-lg font-bold text-white font-mono">{typeof val === "number" ? val.toLocaleString(undefined, { maximumFractionDigits: 2 }) : String(val)}</p>
+                  <p className="text-xs font-medium mb-1 capitalize" style={{color: "var(--text-muted)"}}>{key.replace(/([A-Z])/g, " $1").trim()}</p>
+                  <p className="text-xl font-bold text-white font-mono tabular-nums">{typeof val === "number" ? val.toLocaleString(undefined, { maximumFractionDigits: 2 }) : String(val)}</p>
                 </div>
               ))}
             </div>
-            <pre className="bg-black/30 rounded-xl p-4 text-xs text-[var(--text-secondary)] font-mono overflow-auto max-h-[400px]">{JSON.stringify(data, null, 2)}</pre>
+            <pre className="rounded-lg p-4 text-sm font-mono overflow-auto max-h-[400px] leading-relaxed" style={{background: "#0a0a0f", border: "1px solid var(--border)", color: "var(--text-secondary)"}}>{JSON.stringify(data, null, 2)}</pre>
           </div>
         ) : (
           <div className="empty-state"><p className="empty-state-desc">No data available. AI performance metrics will populate as the AI analyzes trades.</p></div>

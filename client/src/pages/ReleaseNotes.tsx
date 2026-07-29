@@ -21,7 +21,7 @@ export default function ReleaseNotes() {
             <div key={r.version} className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-6">
               <div className="flex items-center justify-between mb-4">
                 <span className="text-lg font-bold text-white">v{r.version}</span>
-                <span className="text-xs text-[var(--text-muted)]">{r.date}</span>
+                  <span className="text-xs font-medium" style={{color: "var(--text-disabled)"}}>{r.date}</span>
               </div>
               <p className="text-sm text-[var(--text-secondary)] mb-4">{r.notes}</p>
               <ul className="space-y-2">
