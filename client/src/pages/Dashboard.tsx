@@ -2,7 +2,8 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import { useEffect, useState, useRef } from "react";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
-import { CurrencyStat, PercentStat, IntegerStat, SignedCurrencyStat } from "@/components/AnimatedStat";
+import { CurrencyStat, PercentStat, IntegerStat, SignedCurrencyStat } from "@/components/LiveStat";
+import { PageContainer, PageSection } from "@/components/PageSection";
 import {
   Loader2,
   TrendingUp,
@@ -304,8 +305,8 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="page-container">
-      {/* Header */}
+    <PageContainer className="page-container">
+      <PageSection>
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
         <div>
           <h1 className="text-2xl font-semibold text-white mb-1">Market Overview</h1>
@@ -315,7 +316,7 @@ export default function Dashboard() {
           <div className="flex items-center gap-2 px-3 py-2 rounded-lg panel-secondary">
             <Wallet className="w-4 h-4 text-[var(--green)]" />
             <span className="text-sm font-bold text-white">
-              <CurrencyStat value={balance} currency={balanceInfo?.currency || "USD"} /> {balanceInfo?.currency || "USD"}
+              <CurrencyStat value={balance} /> {balanceInfo?.currency || "USD"}
             </span>
             {balanceInfo?.accountType ? (
               <span className={`badge ${balanceInfo.accountType === "demo" ? "badge-amber" : "badge-red"}`}>
@@ -339,7 +340,9 @@ export default function Dashboard() {
           </Button>
         </div>
       </div>
+      </PageSection>
 
+      <PageSection>
       {/* Quick Actions */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
         <button onClick={() => navigate("/bots")} className="flex items-center gap-3 p-4 rounded-xl bg-[var(--card)] border border-[var(--border)] hover:border-[var(--cyan)]/40 transition-all">
@@ -371,9 +374,10 @@ export default function Dashboard() {
           </div>
         </button>
       </div>
+      </PageSection>
 
-      {/* Token error banner */}
       {tokenError && (
+      <PageSection>
         <div className="flex items-start justify-between gap-3 bg-[var(--red-soft)] border border-[var(--red)]/30 text-[var(--red)] text-sm rounded-[var(--radius)] px-4 py-3 mb-6">
           <div className="flex items-start gap-2">
             <AlertCircle className="w-5 h-5 shrink-0 mt-0.5" />
@@ -384,8 +388,10 @@ export default function Dashboard() {
           </div>
           <Button onClick={() => setShowTokenModal(true)} className="shrink-0 bg-[var(--red)]/20 text-[var(--red)] border border-[var(--red)]/40 text-xs px-3 py-1 rounded-lg hover:bg-[var(--red)] hover:text-white transition-colors">UPDATE TOKEN</Button>
         </div>
+      </PageSection>
       )}
 
+      <PageSection>
       {/* Main grid */}
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
         {/* Left column - Chart & History */}
@@ -772,8 +778,9 @@ export default function Dashboard() {
           </div>
         </div>
       </div>
+      </PageSection>
 
       <DerivTokenModal open={showTokenModal} onClose={() => setShowTokenModal(false)} />
-    </div>
+    </PageContainer>
   );
 }
