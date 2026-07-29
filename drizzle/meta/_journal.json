@@ -22,6 +22,13 @@
       "when": 1784042884105,
       "tag": "0002_clumsy_talos",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "5",
+      "when": 1785297319094,
+      "tag": "0003_fast_hellcat",
+      "breakpoints": true
     }
   ]
 }
