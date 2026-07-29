@@ -2,6 +2,7 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import { useEffect, useState, useRef } from "react";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
+import { CurrencyStat, PercentStat, IntegerStat, SignedCurrencyStat } from "@/components/AnimatedStat";
 import {
   Loader2,
   TrendingUp,
@@ -314,7 +315,7 @@ export default function Dashboard() {
           <div className="flex items-center gap-2 px-3 py-2 rounded-lg panel-secondary">
             <Wallet className="w-4 h-4 text-[var(--green)]" />
             <span className="text-sm font-bold text-white">
-              {balance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} {balanceInfo?.currency || "USD"}
+              <CurrencyStat value={balance} currency={balanceInfo?.currency || "USD"} /> {balanceInfo?.currency || "USD"}
             </span>
             {balanceInfo?.accountType ? (
               <span className={`badge ${balanceInfo.accountType === "demo" ? "badge-amber" : "badge-red"}`}>
@@ -497,15 +498,17 @@ export default function Dashboard() {
                     <div className="p-4 grid grid-cols-2 md:grid-cols-3 gap-3 border-b border-[var(--border)]">
                       <div className="kpi-card">
                         <div className="kpi-label">Trades</div>
-                        <div className="kpi-value text-lg">{allTrades.length}</div>
+                        <div className="kpi-value text-lg"><IntegerStat value={allTrades.length} /></div>
                       </div>
                       <div className="kpi-card">
                         <div className="kpi-label">Win Rate</div>
-                        <div className="kpi-value text-lg">{winRate}%</div>
+                        <div className="kpi-value text-lg"><PercentStat value={winRate} /></div>
                       </div>
                       <div className="kpi-card">
                         <div className="kpi-label">P&L</div>
-                        <div className={`kpi-value text-lg ${net >= 0 ? "text-[var(--green)]" : "text-[var(--red)]"}`}>{net >= 0 ? "+" : ""}{Number(net).toFixed(2)}</div>
+                        <div className={`kpi-value text-lg ${net >= 0 ? "text-[var(--green)]" : "text-[var(--red)]"}`}>
+                          <SignedCurrencyStat value={net} />
+                        </div>
                       </div>
                     </div>
                   );
