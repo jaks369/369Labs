@@ -4,7 +4,7 @@ import { createExpressMiddleware } from "@trpc/server/adapters/express";
 import { appRouter } from "../routers";
 import { createContext } from "./context";
 import { serveStatic } from "./staticServe";
-import { getDb, pruneBadTicks, ensureSignalExpiryColumn, ensureSignalsTable, ensureNotificationSettingsColumns, ensureAuditLogsTable, ensureIpWhitelistTable, ensureTradesTable, ensureStrategiesTable, ensurePriceAlertsTable, ensureTickHistoryTable, recomputeLastDigits, ensureUserMemoryTable, ensurePluginsTable, ensureWebhooksTable, ensureAiKnowledgeTable, ensureUsersColumns, ensureSessionsTable, ensureVerificationTokensTable, ensurePasswordResetTokensTable } from "../db";
+import { getDb, pruneBadTicks, ensureSignalExpiryColumn, ensureSignalsTable, ensureNotificationSettingsColumns, ensureAuditLogsTable, ensureIpWhitelistTable, ensureTradesTable, ensureStrategiesTable, ensurePriceAlertsTable, ensureTickHistoryTable, recomputeLastDigits, ensureUserMemoryTable, ensurePluginsTable, ensureWebhooksTable, ensureAiKnowledgeTable, ensureUsersColumns, ensureSessionsTable, ensureVerificationTokensTable, ensurePasswordResetTokensTable, ensureBotLogsTable } from "../db";
 import { users } from "../../drizzle/schema";
 import { startTickCollector } from "../tickCollector";
 import { runWatch } from "../signalScanner";
@@ -143,6 +143,7 @@ export async function createApp() {
       try { await ensureAiKnowledgeTable(); } catch (e) { console.error("[startup] ensureAiKnowledgeTable failed", e); }
       try { await ensureVerificationTokensTable(); } catch (e) { console.error("[startup] ensureVerificationTokensTable failed", e); }
       try { await ensurePasswordResetTokensTable(); } catch (e) { console.error("[startup] ensurePasswordResetTokensTable failed", e); }
+      try { await ensureBotLogsTable(); } catch (e) { console.error("[startup] ensureBotLogsTable failed", e); }
       try {
         const { aiOrchestrator } = await import("../ai/AIOrchestrator");
         aiOrchestrator.start();

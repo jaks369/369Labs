@@ -35,8 +35,8 @@ export default function OrderBook() {
         const asks: Level[] = [];
         let max = 1;
         for (let i = 0; i < depth; i++) {
-          const bidPx = (tick.price - step * (i + 1)).toFixed(3);
-          const askPx = (tick.price + step * (i + 1)).toFixed(3);
+          const bidPx = Number(tick.price - step * (i + 1)).toFixed(3);
+          const askPx = Number(tick.price + step * (i + 1)).toFixed(3);
           const bidCount = all.filter(t => t.price > tick.price - step * (i + 1) - step / 2 && t.price <= tick.price - step * i).length;
           const askCount = all.filter(t => t.price >= tick.price + step * i && t.price < tick.price + step * (i + 1) + step / 2).length;
           const bidVol = Math.max(bidCount * 10, 1);
@@ -46,7 +46,7 @@ export default function OrderBook() {
           if (bidVol > max) max = bidVol;
           if (askVol > max) max = askVol;
         }
-        const sp = tick.ask && tick.bid ? +(tick.ask - tick.bid).toFixed(3) : +(step * 2).toFixed(3);
+        const sp = tick.ask && tick.bid ? +Number(tick.ask - tick.bid).toFixed(3) : +Number(step * 2).toFixed(3);
         setLevels({ bids, asks, maxVol: max, spread: sp });
       },
       onConnect: () => setConnected(true),
@@ -82,7 +82,7 @@ export default function OrderBook() {
         {currentPrice && (
           <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4 text-center">
             <span className="text-xs text-[var(--text-muted)]">Current Price</span>
-            <p className="text-2xl font-bold text-white font-mono">{currentPrice.toFixed(3)}</p>
+            <p className="text-2xl font-bold text-white font-mono">{Number(currentPrice).toFixed(3)}</p>
           </div>
         )}
 
@@ -126,7 +126,7 @@ export default function OrderBook() {
         <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-6">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-sm font-bold text-white">Depth Chart</h2>
-            <span className="text-xs text-[var(--text-muted)] font-mono">Spread: {levels.spread.toFixed(3)}</span>
+            <span className="text-xs text-[var(--text-muted)] font-mono">Spread: {Number(levels.spread).toFixed(3)}</span>
           </div>
           <div className="h-48 flex items-end gap-[2px]">
             {Array.from({ length: 50 }, (_, i) => {
@@ -143,8 +143,8 @@ export default function OrderBook() {
             })}
           </div>
           <div className="flex justify-between text-[10px] text-[var(--text-muted)] mt-2">
-            <span>{currentPrice ? (currentPrice - 0.5).toFixed(3) : "—"}</span>
-            <span>{currentPrice ? (currentPrice + 0.5).toFixed(3) : "—"}</span>
+            <span>{currentPrice ? Number(currentPrice - 0.5).toFixed(3) : "—"}</span>
+            <span>{currentPrice ? Number(currentPrice + 0.5).toFixed(3) : "—"}</span>
           </div>
         </div>
       </div>

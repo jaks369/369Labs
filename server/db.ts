@@ -1530,6 +1530,25 @@ export async function ensureAiKnowledgeTable(): Promise<void> {
   }
 }
 
+export async function ensureBotLogsTable(): Promise<void> {
+  const pool = getRawPool();
+  if (!pool) return;
+  try {
+    await pool.execute(`CREATE TABLE IF NOT EXISTS botLogs (
+      id int AUTO_INCREMENT NOT NULL,
+      botRunId int NOT NULL,
+      userId int NOT NULL,
+      message text NOT NULL,
+      level enum('info','warn','error') NOT NULL DEFAULT 'info',
+      createdAt timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      CONSTRAINT botLogs_id PRIMARY KEY(id)
+    )`);
+    console.log("[ensureBotLogsTable] created botLogs table");
+  } catch (e: any) {
+    console.error("[ensureBotLogsTable] create failed", e?.message || e);
+  }
+}
+
 export async function getWebhooksByUserId(userId: number): Promise<any[]> {
   const db = await getDb();
   if (!db) return [];

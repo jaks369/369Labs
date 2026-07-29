@@ -74,7 +74,7 @@ export default function PortfolioHealthCard({ data, loading }: PortfolioHealthCa
     },
     {
       label: "Total PnL",
-      value: `${data.totalPnL >= 0 ? "+" : ""}${data.totalPnL.toFixed(2)}`,
+      value: `${Number(data.totalPnL) >= 0 ? "+" : ""}${Number(data.totalPnL).toFixed(2)}`,
       icon: DollarSign,
       color: data.totalPnL >= 0 ? "text-[var(--green)]" : "text-[var(--red)]",
     },

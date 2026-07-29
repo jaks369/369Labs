@@ -505,7 +505,7 @@ export default function Dashboard() {
                       </div>
                       <div className="kpi-card">
                         <div className="kpi-label">P&L</div>
-                        <div className={`kpi-value text-lg ${net >= 0 ? "text-[var(--green)]" : "text-[var(--red)]"}`}>{net >= 0 ? "+" : ""}{net.toFixed(2)}</div>
+                        <div className={`kpi-value text-lg ${net >= 0 ? "text-[var(--green)]" : "text-[var(--red)]"}`}>{net >= 0 ? "+" : ""}{Number(net).toFixed(2)}</div>
                       </div>
                     </div>
                   );

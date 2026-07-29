@@ -141,9 +141,9 @@ export default function Admin() {
               <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
                 <div className="flex items-center gap-2 mb-3"><Cpu className="w-4 h-4 text-[var(--cyan)]" /><h3 className="text-sm font-bold text-white">CPU</h3></div>
                 <div className="space-y-2 text-xs">
-                  <div className="flex justify-between"><span className="text-[var(--text-muted)]">Load Avg (1m)</span><span className="text-white">{healthQuery.data.cpu.loadAvg1.toFixed(2)}</span></div>
-                  <div className="flex justify-between"><span className="text-[var(--text-muted)]">Load Avg (5m)</span><span className="text-white">{healthQuery.data.cpu.loadAvg5.toFixed(2)}</span></div>
-                  <div className="flex justify-between"><span className="text-[var(--text-muted)]">Load Avg (15m)</span><span className="text-white">{healthQuery.data.cpu.loadAvg15.toFixed(2)}</span></div>
+                  <div className="flex justify-between"><span className="text-[var(--text-muted)]">Load Avg (1m)</span><span className="text-white">{Number(healthQuery.data.cpu.loadAvg1).toFixed(2)}</span></div>
+                  <div className="flex justify-between"><span className="text-[var(--text-muted)]">Load Avg (5m)</span><span className="text-white">{Number(healthQuery.data.cpu.loadAvg5).toFixed(2)}</span></div>
+                  <div className="flex justify-between"><span className="text-[var(--text-muted)]">Load Avg (15m)</span><span className="text-white">{Number(healthQuery.data.cpu.loadAvg15).toFixed(2)}</span></div>
                 </div>
               </div>
               <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">

@@ -32,7 +32,7 @@ export default function DigitStats({ symbol, decimalPlaces = derivWS.decimalPlac
       onTick: (tick: Tick) => {
         if (tick.symbol !== symbol) return;
 
-        const fixed = tick.price.toFixed(decimalPlaces);
+        const fixed = Number(tick.price).toFixed(decimalPlaces);
         const lastDigit = parseInt(fixed[fixed.length - 1], 10);
         setCurrentDigit(lastDigit);
         setDigits((prev) => {

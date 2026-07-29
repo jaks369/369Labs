@@ -85,10 +85,10 @@ export default function Watchlist() {
                   <div className="flex items-center gap-4">
                     {p ? (
                       <>
-                        <span className="text-lg font-bold text-white font-mono">{p.price.toFixed(derivWS.decimalPlacesFor(sym))}</span>
+                        <span className="text-lg font-bold text-white font-mono">{Number(p.price).toFixed(derivWS.decimalPlacesFor(sym))}</span>
                         <span className={`flex items-center gap-1 text-xs font-bold ${p.change >= 0 ? "text-[var(--green)]" : "text-[var(--red)]"}`}>
                           {p.change >= 0 ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
-                          {p.change >= 0 ? "+" : ""}{p.change.toFixed(2)}%
+                          {p.change >= 0 ? "+" : ""}{Number(p.change).toFixed(2)}%
                         </span>
                       </>
                     ) : (

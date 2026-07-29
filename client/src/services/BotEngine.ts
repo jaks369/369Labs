@@ -137,7 +137,7 @@ export class BotEngine {
 
   private lastDigit(price: number): number {
     const decimals = this.config?.decimalPlaces ?? derivWS.decimalPlacesFor(this.config?.symbol ?? "R_100");
-    const fixed = price.toFixed(decimals);
+    const fixed = Number(price).toFixed(decimals);
     return parseInt(fixed[fixed.length - 1], 10);
   }
 
@@ -288,13 +288,13 @@ export class BotEngine {
         this.trades.push(pendingTrade);
         this.onTrade?.(pendingTrade);
         const result = await paperEngine.executeTrade(currentTick, this.config.strategy.action, stake, this.config.symbol);
-        pendingTrade.pnl = result.pnl.toFixed(2);
+        pendingTrade.pnl = Number(result.pnl).toFixed(2);
         pendingTrade.result = result.result;
         pendingTrade.contractType = contractType;
-        this.totalPnl += result.pnl;
+        this.totalPnl += Number(result.pnl);
         this.hasOpenTrade = false;
         this.onTrade?.(pendingTrade);
-        this.log(`Paper trade settled: ${result.result} ($${result.pnl.toFixed(2)})`);
+        this.log(`Paper trade settled: ${result.result} ($${Number(result.pnl).toFixed(2)})`);
         const { stopLoss, takeProfit } = this.config.strategy.params;
         if (stopLoss > 0 && this.totalPnl <= -Math.abs(stopLoss)) {
           this.log(`Stop loss of $${stopLoss} hit (P&L $${this.totalPnl.toFixed(2)}). Stopping bot.`);

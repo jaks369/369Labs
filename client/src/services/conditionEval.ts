@@ -32,7 +32,7 @@ export interface EvalContext {
 }
 
 function lastDigitOf(price: number, decimals: number): number {
-  return parseInt(price.toFixed(decimals).slice(-1), 10) || 0;
+  return parseInt(Number(price).toFixed(decimals).slice(-1), 10) || 0;
 }
 
 function indicatorTrue(ind: LeafCondition, ctx: EvalContext, idx: number): boolean {

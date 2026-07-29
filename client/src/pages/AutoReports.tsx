@@ -72,7 +72,7 @@ function ReportViewer({ report, onClose }: { report: any; onClose: () => void })
               <div className="flex-1">
                 <div className="flex justify-between text-xs mb-1">
                   <span className="text-[var(--green)]">Wins ({s.wins})</span>
-                  <span className="text-[var(--green)]">{s.totalTrades > 0 ? ((s.wins / s.totalTrades) * 100).toFixed(0) : 0}%</span>
+                  <span className="text-[var(--green)]">{s.totalTrades > 0 ? Number((s.wins / s.totalTrades) * 100).toFixed(0) : 0}%</span>
                 </div>
                 <div className="h-3 bg-black/40 rounded-full overflow-hidden">
                   <div className="h-full bg-[var(--green)] rounded-full" style={{ width: `${s.totalTrades > 0 ? (s.wins / s.totalTrades) * 100 : 0}%` }} />
@@ -81,7 +81,7 @@ function ReportViewer({ report, onClose }: { report: any; onClose: () => void })
               <div className="flex-1">
                 <div className="flex justify-between text-xs mb-1">
                   <span className="text-[var(--red)]">Losses ({s.losses})</span>
-                  <span className="text-[var(--red)]">{s.totalTrades > 0 ? ((s.losses / s.totalTrades) * 100).toFixed(0) : 0}%</span>
+                  <span className="text-[var(--red)]">{s.totalTrades > 0 ? Number((s.losses / s.totalTrades) * 100).toFixed(0) : 0}%</span>
                 </div>
                 <div className="h-3 bg-black/40 rounded-full overflow-hidden">
                   <div className="h-full bg-[var(--red)] rounded-full" style={{ width: `${s.totalTrades > 0 ? (s.losses / s.totalTrades) * 100 : 0}%` }} />

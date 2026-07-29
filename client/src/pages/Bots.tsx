@@ -330,7 +330,7 @@ export default function Bots() {
                         <div className="text-right">
                           <p className="text-[10px] font-bold text-[var(--text-muted)] uppercase mb-1">Profit/Loss</p>
                           <p className={`text-sm font-bold ${bot.pnl >= 0 ? "text-[var(--green)]" : "text-[var(--red)]"}`}>
-                            {bot.pnl >= 0 ? "+" : ""}${bot.pnl.toFixed(2)}
+                            {bot.pnl >= 0 ? "+" : ""}${Number(bot.pnl).toFixed(2)}
                           </p>
                         </div>
                         {(() => {
@@ -346,7 +346,7 @@ export default function Bots() {
                                 <AlertTriangle className="w-3 h-3" /> Regime mismatch
                               </div>
                               <p className="text-[10px] text-[var(--red)]/80 leading-tight mt-0.5">
-                                Live {liveWinRate.toFixed(0)}% vs backtest {bot.backtestWinRate.toFixed(0)}%
+                                Live {liveWinRate.toFixed(0)}% vs backtest {Number(bot.backtestWinRate).toFixed(0)}%
                               </p>
                             </div>
                           );

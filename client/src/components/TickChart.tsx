@@ -114,7 +114,7 @@ export default function TickChart({ symbol, maxDataPoints = 100, decimalPlaces =
       <div className="flex items-center justify-between mb-3 px-3 py-2 bg-[var(--bg)] rounded border border-[var(--border)]">
         <span className="text-xs font-bold text-white">{symbol}</span>
         <span className={`text-lg font-bold ${priceColor === "up" ? "text-[var(--green)]" : "text-[var(--red)]"}`}>
-          {currentPrice !== null ? currentPrice.toFixed(decimalPlaces) : "--"}
+          {currentPrice !== null ? Number(currentPrice).toFixed(decimalPlaces) : "--"}
         </span>
       </div>
 
@@ -160,7 +160,7 @@ export default function TickChart({ symbol, maxDataPoints = 100, decimalPlaces =
             const last = points[points.length - 1].split(",");
             const lx = parseFloat(last[0]);
             const ly = parseFloat(last[1]);
-            const label = prices[prices.length - 1].toFixed(decimalPlaces);
+            const label = Number(prices[prices.length - 1]).toFixed(decimalPlaces);
             const tagW = Math.max(48, label.length * 8 + 16);
             const placeLeft = lx + tagW > width - 4;
             const tx = placeLeft ? lx - tagW - 6 : lx + 6;

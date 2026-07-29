@@ -62,21 +62,21 @@ export default function TradingCopilot() {
           <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4 md:col-span-2">
             <div className="flex items-center justify-between mb-2">
               <span className="text-[10px] text-[var(--text-muted)] font-bold uppercase tracking-wider">{symbol} Live</span>
-              {tick && <span className={`text-[10px] font-bold ${tick.change >= 0 ? "text-[var(--green)]" : "text-[var(--red)]}"}`}>{tick.change >= 0 ? "+" : ""}{tick.change.toFixed(2)}%</span>}
+              {tick && <span className={`text-[10px] font-bold ${tick.change >= 0 ? "text-[var(--green)]" : "text-[var(--red)]}"}`}>{tick.change >= 0 ? "+" : ""}{Number(tick.change).toFixed(2)}%</span>}
             </div>
             <p className="text-3xl font-bold text-white font-mono">
-              {tick ? tick.price.toFixed(dp) : <Loader2 className="w-5 h-5 animate-spin text-[var(--text-muted)] inline" />}
+              {tick ? Number(tick.price).toFixed(dp) : <Loader2 className="w-5 h-5 animate-spin text-[var(--text-muted)] inline" />}
             </p>
           </div>
           <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4">
             <span className="text-[10px] text-[var(--text-muted)] font-bold uppercase tracking-wider">Total P&L</span>
             <p className={`text-xl font-bold mt-1 font-mono ${stats.pnl >= 0 ? "text-[var(--green)]" : "text-[var(--red)]}"}`}>
-              {stats.pnl >= 0 ? "+" : ""}${stats.pnl.toFixed(2)}
+              {stats.pnl >= 0 ? "+" : ""}${Number(stats.pnl).toFixed(2)}
             </p>
           </div>
           <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4">
             <span className="text-[10px] text-[var(--text-muted)] font-bold uppercase tracking-wider">Win Rate</span>
-            <p className="text-xl font-bold mt-1 font-mono text-[var(--green)]">{stats.winRate.toFixed(1)}%</p>
+            <p className="text-xl font-bold mt-1 font-mono text-[var(--green)]">{Number(stats.winRate).toFixed(1)}%</p>
             <p className="text-[10px] text-[var(--text-muted)] mt-0.5">{stats.wins}/{stats.total} trades</p>
           </div>
         </div>

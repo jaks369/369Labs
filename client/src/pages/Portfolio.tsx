@@ -88,7 +88,7 @@ export default function Portfolio() {
           {balanceInfo && (
             <div className="flex items-center gap-2 px-4 py-2 rounded-lg border border-[var(--border)] bg-black/20">
               <Wallet className="w-4 h-4 text-[var(--green)]" />
-              <span className="text-sm font-bold text-white">{balance.toFixed(2)} {balanceInfo.currency}</span>
+              <span className="text-sm font-bold text-white">{Number(balance).toFixed(2)} {balanceInfo.currency}</span>
               <span className={`badge ${balanceInfo.accountType === "demo" ? "badge-amber" : "badge-red"}`}>{balanceInfo.accountType}</span>
             </div>
           )}
@@ -182,7 +182,7 @@ export default function Portfolio() {
                             <td className="py-3 px-4 text-right">{p.buyPrice || p.entryPrice || "-"}</td>
                             <td className="py-3 px-4 text-right">{p.currentPrice || "-"}</td>
                             <td className={`py-3 px-4 text-right font-bold ${pnl >= 0 ? "text-[var(--green)]" : "text-[var(--red)]"}`}>
-                              {pnl >= 0 ? "+" : ""}${pnl.toFixed(2)}
+                              {pnl >= 0 ? "+" : ""}${Number(pnl).toFixed(2)}
                             </td>
                             <td className="py-3 px-4 text-center">
                               <button
@@ -232,7 +232,7 @@ export default function Portfolio() {
                           <td className="py-3 px-4 text-right text-[var(--green)]">{stats.wins}</td>
                           <td className="py-3 px-4 text-right">{stats.trades > 0 ? ((stats.wins / stats.trades) * 100).toFixed(1) : "0.0"}%</td>
                           <td className={`py-3 px-4 text-right font-bold ${stats.pnl >= 0 ? "text-[var(--green)]" : "text-[var(--red)]"}`}>
-                            {stats.pnl >= 0 ? "+" : ""}${stats.pnl.toFixed(2)}
+                            {stats.pnl >= 0 ? "+" : ""}${Number(stats.pnl).toFixed(2)}
                           </td>
                         </tr>
                       ))}
@@ -250,12 +250,12 @@ export default function Portfolio() {
                   {Object.entries(bySymbol).map(([sym, stats]) => {
                     const currentWeight = stats.pnl / totalPnl || 0;
                     const targetWeight = 1 / Object.keys(bySymbol).length;
-                    const diff = ((targetWeight - currentWeight) * 100).toFixed(1);
+                    const diff = Number((targetWeight - currentWeight) * 100).toFixed(1);
                     return (
                       <div key={sym} className="flex items-center justify-between text-xs p-2 bg-black/20 rounded-lg">
                         <span className="font-bold text-white">{sym}</span>
-                        <span className="text-[var(--text-muted)]">Current: {(currentWeight * 100).toFixed(1)}%</span>
-                        <span className="text-[var(--text-muted)]">Target: {(targetWeight * 100).toFixed(1)}%</span>
+                        <span className="text-[var(--text-muted)]">Current: {Number(currentWeight * 100).toFixed(1)}%</span>
+                        <span className="text-[var(--text-muted)]">Target: {Number(targetWeight * 100).toFixed(1)}%</span>
                         <span className={Number(diff) >= 0 ? "text-[var(--green)]" : "text-[var(--red)]"}>{diff.startsWith("-") ? "" : "+"}{diff}%</span>
                       </div>
                     );
