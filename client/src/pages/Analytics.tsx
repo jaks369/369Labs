@@ -184,12 +184,12 @@ export default function Analytics() {
       <div className="max-w-6xl mx-auto space-y-8">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-white">Analytics</h1>
-            <p className="text-[var(--text-secondary)] text-sm mt-1">Performance overview — {allTrades.length} trades ({botTrades.length} bot, {manualTrades.length} manual)</p>
+            <h1 className="text-2xl font-bold text-[var(--text-primary)]">Analytics</h1>
+            <p className="text-sm mt-1" style={{color: "var(--text-muted)", lineHeight: "1.6"}}>Performance overview — {allTrades.length} trades ({botTrades.length} bot, {manualTrades.length} manual)</p>
           </div>
           <div className="flex gap-2">
-            <button onClick={exportCsv} className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-[var(--card)] border border-[var(--border)] text-xs text-[var(--text-secondary)] hover:text-white"><Download className="w-3.5 h-3.5" /> CSV</button>
-            <button onClick={exportPng} className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-[var(--card)] border border-[var(--border)] text-xs text-[var(--text-secondary)] hover:text-white"><Camera className="w-3.5 h-3.5" /> PNG</button>
+            <button onClick={exportCsv} className="flex items-center gap-1 px-3 py-2 rounded-lg border text-sm" style={{borderColor: "var(--border)", color: "var(--text-muted)"}}><Download className="w-3.5 h-3.5" /> CSV</button>
+            <button onClick={exportPng} className="flex items-center gap-1 px-3 py-2 rounded-lg border text-sm" style={{borderColor: "var(--border)", color: "var(--text-muted)"}}><Camera className="w-3.5 h-3.5" /> PNG</button>
           </div>
         </div>
 
@@ -207,12 +207,12 @@ export default function Analytics() {
           <>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
               {stats.map(s => (
-                <div key={s.label} className="animate-cardEnter bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
+                <div key={s.label} className="animate-cardEnter bg-[var(--card)] border border-[var(--border)] rounded-xl p-5 card-hover">
                   <div className="flex items-center justify-between mb-3">
-                    <span className="text-xs text-[var(--text-muted)] font-bold uppercase tracking-wider">{s.label}</span>
-                    <s.icon className={`w-5 h-5 ${s.color}`} />
+                    <span className="text-xs font-bold uppercase tracking-wider" style={{color: "var(--text-muted)"}}>{s.label}</span>
+                    <s.icon className={`w-5 h-5 ${s.icon === DollarSign ? "text-[var(--amber)]" : s.color}`} />
                   </div>
-                  <p className={`text-2xl font-bold ${s.color}`}>{s.value}</p>
+                  <p className={`text-[28px] font-bold ${s.color}`}>{s.value}</p>
                 </div>
               ))}
             </div>
@@ -223,10 +223,10 @@ export default function Analytics() {
                 const Icon = m === "all" ? Activity : m === "bot" ? Bot : User;
                 return (
                   <button key={m} onClick={() => setFilter(m)}
-                    className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-bold transition-colors ${
+                    className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                       filter === m
-                        ? "bg-[var(--amber)] text-[var(--bg)]"
-                        : "bg-[var(--card)] border border-[var(--border)] text-[var(--text-secondary)] hover:text-white"
+                        ? "bg-[var(--amber)] text-black font-semibold"
+                        : "bg-transparent border border-[var(--border)] text-[var(--text-muted)] hover:text-white"
                     }`}>
                     <Icon className="w-4 h-4" />
                     {m === "all" ? "All" : m === "bot" ? "Bot" : "Manual"}
@@ -248,12 +248,20 @@ export default function Analytics() {
                       <stop offset="100%" stopColor={eqColor} stopOpacity="0.02" />
                     </linearGradient>
                   </defs>
+                  {[0.25, 0.5, 0.75].map(frac => (
+                    <line key={frac}
+                      x1={eqPadding} y1={eqPadding + eqInnerH * (1 - frac)}
+                      x2={eqPadding + eqInnerW} y2={eqPadding + eqInnerH * (1 - frac)}
+                      stroke="#1a1a2e" strokeWidth="1" strokeDasharray="4 4" />
+                  ))}
                   <path d={eqPath} fill="none" stroke={eqColor} strokeWidth="2" />
                   <path d={`${eqPath} L${eqPadding + eqInnerW},${eqPadding + eqInnerH} L${eqPadding},${eqPadding + eqInnerH} Z`} fill="url(#eqGrad)" />
-                  <text x={eqPadding} y={eqHeight - 5} fill="var(--text-muted)" fontSize="9">{equityCurve[0]?.date || ""}</text>
-                  <text x={eqPadding + eqInnerW - 60} y={eqHeight - 5} fill="var(--text-muted)" fontSize="9">{equityCurve[equityCurve.length - 1]?.date || ""}</text>
-                  <text x={eqPadding + eqInnerW + 4} y={eqPadding + 10} fill={eqColor} fontSize="9">${eqMax.toFixed(0)}</text>
-                  <text x={eqPadding + eqInnerW + 4} y={eqPadding + eqInnerH} fill="var(--text-muted)" fontSize="9">${eqMin.toFixed(0)}</text>
+                  <rect x={eqPadding + eqInnerW - 48} y={eqHeight - 18} width="42" height="14" rx="3" fill="var(--amber)" />
+                  <text x={eqPadding + eqInnerW - 27} y={eqHeight - 9} fill="#000" fontSize="9" textAnchor="middle" fontWeight="600">{equityCurve[equityCurve.length - 1]?.date || ""}</text>
+                  <rect x={eqPadding} y={eqPadding - 4} width="28" height="14" rx="3" fill="var(--amber)" />
+                  <text x={eqPadding + 14} y={eqPadding + 5} fill="#000" fontSize="9" textAnchor="middle" fontWeight="600">${eqMax.toFixed(0)}</text>
+                  <rect x={eqPadding + eqInnerW - 48} y={eqPadding + eqInnerH - 7} width="42" height="14" rx="3" fill="var(--amber)" />
+                  <text x={eqPadding + eqInnerW - 27} y={eqPadding + eqInnerH + 2} fill="#000" fontSize="9" textAnchor="middle" fontWeight="600">${eqMin.toFixed(0)}</text>
                 </svg>
               ) : (
                 <div className="flex items-center justify-center h-48 text-[var(--text-muted)]">Not enough data for equity curve</div>
