@@ -138,19 +138,17 @@ function App() {
     <ErrorBoundary>
       <ThemeProvider defaultTheme="dark" switchable>
         <TooltipProvider>
-          <div style={{ position: 'fixed', inset: 0, zIndex: 0, pointerEvents: 'none' }}>
-            <GhostCursor
-              trailLength={50}
-              inertia={0.5}
-              grainIntensity={0.05}
-              bloomStrength={0.1}
-              bloomRadius={1}
-              brightness={2}
-              color="#B497CF"
-              edgeIntensity={0}
-              zIndex={0}
-            />
-          </div>
+          <GhostCursor
+            trailLength={50}
+            inertia={0.5}
+            grainIntensity={0.05}
+            bloomStrength={0.1}
+            bloomRadius={1}
+            brightness={2}
+            color="#B497CF"
+            edgeIntensity={0}
+            style={{ position: 'fixed', inset: 0, zIndex: 0, pointerEvents: 'none', width: '100vw', height: '100vh' }}
+          />
           <div style={{ position: 'relative', zIndex: 1 }}>
             <Toaster />
             <Router />
