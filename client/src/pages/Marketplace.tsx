@@ -92,7 +92,7 @@ export default function Marketplace() {
             <option value="">All symbols</option>
             {getValidSymbols().map((s) => <option key={s} value={s}>{s}</option>)}
           </select>
-          <Button onClick={() => navigate("/ai-assistant")} className="bg-[var(--cyan)] hover:bg-[var(--cyan)] text-black text-xs px-4 py-2 rounded-lg flex items-center gap-1">
+          <Button onClick={() => navigate("/ai-assistant")} className="bg-[var(--cyan)] hover:brightness-110 text-black text-xs px-4 py-2 rounded-lg flex items-center gap-1">
             <Bot className="w-4 h-4" /> Ask 369AI
           </Button>
         </div>
@@ -130,7 +130,7 @@ export default function Marketplace() {
                   toast("Scan done — no patterns found. Try a longer watch or different symbol.", "info");
                 }
                 signalsQuery.refetch();
-              }} disabled={scanning} className="mt-4 bg-[var(--cyan)] hover:bg-[var(--cyan)] text-black text-sm px-4 py-2 rounded-lg">
+              }} disabled={scanning} className="mt-4 bg-[var(--cyan)] hover:brightness-110 text-black text-sm px-4 py-2 rounded-lg">
               {scanning ? "Scanning..." : "Start a watch"}
             </Button>
           </div>
@@ -147,12 +147,12 @@ export default function Marketplace() {
                       <div className="flex items-center gap-2 flex-wrap">
                         <span className="px-2 py-0.5 rounded bg-[var(--amber-soft)] border border-[var(--amber-border)] text-[var(--amber)] text-micro">{sig.symbol}</span>
                         <span className="px-2 py-0.5 rounded bg-white/5 text-[var(--text-secondary)] text-micro">{sig.patternType}</span>
-                        <span className={`px-2 py-0.5 rounded text-micro ${sig.source === "always-on" ? "bg-[var(--amber-soft)] text-[var(--amber-hover)]" : "bg-[var(--amber-soft)] text-[var(--amber-hover)]"}`}>{sig.source}</span>
+                        <span className={`px-2 py-0.5 rounded text-micro ${sig.source === "always-on" ? "bg-[var(--amber-soft)] text-[var(--amber)]" : "bg-[var(--cyan-soft)] text-[var(--cyan)]"}`}>{sig.source}</span>
                       </div>
                       <h3 className="font-bold text-white mt-2">{sig.title}</h3>
                       <p className="text-sm text-[var(--text-secondary)] mt-1">{sig.description}</p>
                       <div className="flex items-center gap-4 mt-3 text-xs">
-                        <span className="flex items-center gap-1 text-[var(--text-muted)]"><TrendingUp className="w-3 h-3" /> Win rate <b className={win >= 65 ? "text-[var(--green)]" : "text-[var(--green)]"}>{win}%</b></span>
+                        <span className="flex items-center gap-1 text-[var(--text-muted)]"><TrendingUp className="w-3 h-3" /> Win rate <b className={win >= 65 ? "text-[var(--green)]" : "text-[var(--red)]"}>{win}%</b></span>
                         <span className="text-[var(--text-muted)]">Samples <b className="text-white">{sig.sampleSize}</b></span>
                         <span className="text-[var(--text-muted)]">Confidence <b className="text-white">{sig.confidence}%</b></span>
                         <span className="text-[var(--text-muted)]">Stake <b className="text-[var(--amber)]">${(Math.max(0.35, +(2 * (Number(sig.confidence) || 50) / 100)).toFixed(2))}</b> <span className="text-[var(--text-muted)]">(scaled)</span></span>
@@ -160,7 +160,7 @@ export default function Marketplace() {
                       </div>
                     </div>
                     <div className="flex flex-col gap-2 shrink-0">
-                      <Button onClick={() => navigate("/backtesting?signal=" + sig.id)} className="bg-[var(--amber)] hover:bg-[var(--amber)] text-black text-xs px-3 py-1.5 rounded-lg flex items-center gap-1">
+                      <Button onClick={() => navigate("/backtesting?signal=" + sig.id)} className="bg-[var(--amber)] hover:brightness-110 text-black text-xs px-3 py-1.5 rounded-lg flex items-center gap-1">
                         <FlaskConical className="w-3.5 h-3.5" /> Backtest
                       </Button>
                       <Button onClick={() => sendToBot(sig)} className="bg-[var(--green)]/20 text-[var(--green)] border border-[var(--green)]/30 text-xs px-3 py-1.5 rounded-lg flex items-center gap-1">
@@ -193,7 +193,7 @@ export default function Marketplace() {
                           </tbody>
                         </table>
                       </div>
-                      <pre className="mt-3 text-body bg-black/40 rounded-lg p-3 overflow-x-auto">{JSON.stringify(sig.rule, null, 2)}</pre>
+                      <pre className="mt-3 text-body bg-[var(--surface-secondary)] rounded-lg p-3 overflow-x-auto">{JSON.stringify(sig.rule, null, 2)}</pre>
                     </div>
                   )}
                 </div>
@@ -215,7 +215,7 @@ export default function Marketplace() {
                 <p className="text-xs text-[var(--text-secondary)] mt-1">Plugins are JavaScript modules that export a <code className="text-[var(--amber)]">createPlugin</code> function. They receive a context with trade/bot/alert hooks.</p>
               </div>
             </div>
-            <div className="bg-black/30 rounded-lg p-3">
+            <div className="bg-[var(--surface-secondary)] rounded-lg p-3">
               <pre className="text-xs font-mono text-[var(--text-secondary)] leading-relaxed">{`export function createPlugin(ctx) {
   // ctx.onTrade, ctx.onTick, ctx.onAlert, ctx.botId, ctx.logger
   ctx.onTrade((trade) => {
@@ -225,7 +225,7 @@ export default function Marketplace() {
 }`}</pre>
             </div>
             <div className="grid grid-cols-2 gap-3 text-xs">
-              <div className="bg-black/20 rounded-lg p-3">
+              <div className="bg-[var(--surface-secondary)] rounded-lg p-3">
                 <p className="text-white font-bold mb-1">Available Hooks</p>
                 <ul className="text-[var(--text-muted)] space-y-1">
                   <li><code className="text-[var(--amber)]">onTrade</code> — trade executed</li>
@@ -235,7 +235,7 @@ export default function Marketplace() {
                   <li><code className="text-[var(--amber)]">onBotStop</code> — bot stopped</li>
                 </ul>
               </div>
-              <div className="bg-black/20 rounded-lg p-3">
+              <div className="bg-[var(--surface-secondary)] rounded-lg p-3">
                 <p className="text-white font-bold mb-1">Permissions</p>
                 <ul className="text-[var(--text-muted)] space-y-1">
                   <li><code className="text-[var(--amber)]">trades:read</code> — view trades</li>
@@ -258,7 +258,13 @@ export default function Marketplace() {
             {pluginsQuery.isLoading ? (
               <div className="flex justify-center py-6"><Loader2 className="w-5 h-5 animate-spin text-[var(--amber)]" /></div>
             ) : pluginList.length === 0 ? (
-              <p className="text-sm text-[var(--text-muted)] p-4">No plugins available. Plugins can be created via the Plugin SDK above.</p>
+              <div className="text-center py-8 px-4">
+                <div className="w-12 h-12 mx-auto bg-[var(--amber-soft)] rounded-2xl flex items-center justify-center border border-[var(--amber-border)] mb-3">
+                  <Shield className="w-6 h-6 text-[var(--amber)]" />
+                </div>
+                <p className="text-sm text-[var(--text-muted)]">No plugins available yet.</p>
+                <p className="text-xs text-[var(--text-disabled)] mt-1">Create one using the Plugin SDK above.</p>
+              </div>
             ) : (
               pluginList.map((plugin: any) => (
                 <div key={plugin.id || plugin.name} className="p-4 border-b border-[var(--border)] last:border-0 hover:bg-white/5">
@@ -282,7 +288,7 @@ export default function Marketplace() {
         <div className="mt-10">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-xl font-bold text-white flex items-center gap-2">
-              <Users className="w-5 h-5 text-[var(--amber-hover)]" /> Community Strategies
+              <Users className="w-5 h-5 text-[var(--amber)]" /> Community Strategies
             </h2>
             <div className="flex gap-2">
               <Button onClick={() => setShowUpload(true)} className="bg-[var(--amber)]/20 text-[var(--amber)] border border-[var(--amber)]/30 text-xs px-3 py-1.5 rounded-lg flex items-center gap-1">
@@ -292,9 +298,15 @@ export default function Marketplace() {
           </div>
           <p className="text-sm text-[var(--text-muted)] mb-4">Rate, review, and clone strategies from other traders.</p>
           {publishedQuery.isLoading ? (
-            <p className="text-sm text-[var(--text-muted)]">Loading community strategies...</p>
+            <div className="flex items-center gap-2 text-[var(--text-muted)] py-6"><Loader2 className="w-4 h-4 animate-spin" /> <span className="text-sm">Loading community strategies...</span></div>
           ) : published.length === 0 ? (
-            <p className="text-sm text-[var(--text-muted)]">No published strategies yet. Publish one from the Strategy Builder or upload here.</p>
+            <div className="text-center py-10">
+              <div className="w-12 h-12 mx-auto bg-[var(--amber-soft)] rounded-2xl flex items-center justify-center border border-[var(--amber-border)] mb-3">
+                <Users className="w-6 h-6 text-[var(--amber)]" />
+              </div>
+              <p className="text-sm text-[var(--text-muted)]">No published strategies yet.</p>
+              <p className="text-xs text-[var(--text-disabled)] mt-1">Publish one from the Strategy Builder or upload here.</p>
+            </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {published.map((s: any) => (
@@ -309,7 +321,7 @@ export default function Marketplace() {
                       </div>
                     </div>
                     <div className="flex flex-col gap-2 shrink-0">
-                      <Button onClick={() => cloneStrategy(s)} className="bg-[var(--amber)] hover:bg-[var(--amber-hover)] text-white text-xs px-3 py-1.5 rounded-lg">
+                      <Button onClick={() => cloneStrategy(s)} className="bg-[var(--amber)] hover:brightness-110 text-black text-xs px-3 py-1.5 rounded-lg">
                         Clone
                       </Button>
                     </div>
@@ -321,7 +333,7 @@ export default function Marketplace() {
         </div>
 
         {showUpload && (
-          <div className="fixed inset-0 z-[90] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setShowUpload(false)}>
+          <div className="fixed inset-0 z-[90] bg-[var(--bg)]/80 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setShowUpload(false)}>
             <div className="w-full max-w-lg bg-[var(--card)] border border-[var(--border)] rounded-xl" onClick={(e) => e.stopPropagation()}>
               <div className="flex items-center justify-between p-4 border-b border-[var(--border)]">
                 <h3 className="text-sm font-bold text-white flex items-center gap-2"><Upload className="w-4 h-4 text-[var(--amber)]" /> Publish Strategy</h3>

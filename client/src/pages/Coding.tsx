@@ -138,13 +138,14 @@ export default function Coding() {
                 key={f}
                 onClick={() => openFile(f)}
                 className={`w-full text-left text-xs px-2 py-1.5 rounded flex items-center gap-2 truncate ${
-                  selected === f ? "bg-[var(--green-soft)] text-[var(--green)]" : "text-[var(--text-secondary)] hover:bg-white/5"
+                  selected === f ? "bg-[var(--green-soft)] text-[var(--green)]" : "text-[var(--text-secondary)] hover:bg-[var(--surface-elevated)]"
                 }`}
               >
                 <FileText className="w-3 h-3 shrink-0" /> <span className="truncate">{f}</span>
               </button>
             ))}
             {filesQuery.isLoading && <p className="text-xs text-[var(--text-muted)] p-2">Loading...</p>}
+            {!filesQuery.isLoading && (filesQuery.data?.files || []).length === 0 && <p className="text-xs text-[var(--text-muted)] p-2">No files available.</p>}
           </div>
 
           <div className="lg:col-span-3 space-y-3">
@@ -153,7 +154,7 @@ export default function Coding() {
               <button
                 onClick={save}
                 disabled={!selected || !dirty || writeMutation.isPending}
-                className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[var(--green)] text-white text-xs font-bold disabled:opacity-40 hover:bg-[var(--green)]"
+                className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[var(--green)] text-white text-xs font-bold disabled:opacity-40 hover:brightness-110"
               >
                 {writeMutation.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
                 Save
@@ -179,27 +180,30 @@ export default function Coding() {
                   placeholder="e.g. extract the win-rate calc into a helper"
                   className="flex-1 bg-[var(--card)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-[var(--cyan)]"
                 />
-                <button onClick={askAI} disabled={askMutation.isPending || !selected} className="flex items-center gap-1 px-3 py-2 rounded-lg bg-[var(--cyan)] text-black text-xs font-bold disabled:opacity-40 hover:bg-[var(--cyan)]">
+                <button onClick={askAI} disabled={askMutation.isPending || !selected} className="flex items-center gap-1 px-3 py-2 rounded-lg bg-[var(--cyan)] text-black text-xs font-bold disabled:opacity-40 hover:brightness-110">
                   {askMutation.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />} Ask
                 </button>
               </div>
               {aiReply && (
-                <pre className="text-xs text-[var(--text-secondary)] bg-black/40 rounded-lg p-3 overflow-x-auto max-h-48 whitespace-pre-wrap">{aiReply}</pre>
+                <pre className="text-xs text-[var(--text-secondary)] bg-[var(--surface-secondary)] rounded-lg p-3 overflow-x-auto max-h-48 whitespace-pre-wrap">{aiReply}</pre>
               )}
+              {askMutation.isPending && !aiReply && <p className="text-xs text-[var(--text-muted)] animate-pulse mt-2">369AI is generating...</p>}
             </div>
           </div>
         </div>
       </div>
 
       {showTemplates && (
-        <div className="fixed inset-0 z-[90] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setShowTemplates(false)}>
+        <div className="fixed inset-0 z-[90] bg-[var(--bg)]/80 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setShowTemplates(false)}>
           <div className="w-full max-w-lg bg-[var(--card)] border border-[var(--border)] rounded-xl max-h-[80vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between p-4 border-b border-[var(--border)]">
               <h3 className="text-sm font-bold text-white flex items-center gap-2"><LayoutTemplate className="w-4 h-4" /> Code Templates</h3>
               <button onClick={() => setShowTemplates(false)} className="text-[var(--text-muted)] hover:text-white">✕</button>
             </div>
             <div className="p-4 space-y-2">
-              {(templatesQuery.data?.templates || []).map((t: any, i: number) => (
+              {(templatesQuery.data?.templates || []).length === 0 ? (
+                <p className="text-xs text-[var(--text-muted)] p-3 text-center">No templates available.</p>
+              ) : (templatesQuery.data?.templates || []).map((t: any, i: number) => (
                 <div key={i} onClick={() => loadTemplate(t)} className="p-3 rounded-lg bg-[var(--card)] border border-[var(--border)] hover:border-[var(--green)]/50 cursor-pointer transition-all">
                   <p className="text-xs font-bold text-white">{t.name}</p>
                 </div>
@@ -210,7 +214,7 @@ export default function Coding() {
       )}
 
       {showVersions && selected && (
-        <div className="fixed inset-0 z-[90] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setShowVersions(false)}>
+        <div className="fixed inset-0 z-[90] bg-[var(--bg)]/80 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setShowVersions(false)}>
           <div className="w-full max-w-lg bg-[var(--card)] border border-[var(--border)] rounded-xl max-h-[80vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between p-4 border-b border-[var(--border)]">
               <h3 className="text-sm font-bold text-white flex items-center gap-2"><History className="w-4 h-4" /> Version History — {selected}</h3>
@@ -228,7 +232,7 @@ export default function Coding() {
                       <p className="text-xs text-white font-bold">{v.label || "Unlabeled"}</p>
                       <p className="text-caption">{new Date(v.createdAt).toLocaleString()}</p>
                     </div>
-                    <button onClick={() => restoreVersion(v.id)} className="text-caption text-[var(--cyan)] hover:underline"><RotateCcw className="w-3 h-3 inline mr-1" />Restore</button>
+                    <button onClick={() => restoreVersion(v.id)} className="text-caption text-[var(--cyan)] hover:brightness-110"><RotateCcw className="w-3 h-3 inline mr-1" />Restore</button>
                   </div>
                 ))
               )}
