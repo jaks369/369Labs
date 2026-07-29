@@ -281,7 +281,7 @@ export default function Settings() {
   const settingsError = derivTokenQuery.isError || telegramQuery.isError || notificationsQuery.isError || memoryQuery.isError;
 
   return (
-    <div className="min-h-screen bg-[var(--bg)] text-[var(--amber)] p-4 md:p-8">
+    <div className="min-h-screen bg-[var(--bg)] text-[var(--text-primary)] p-4 md:p-8">
       <div className="max-w-2xl mx-auto">
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-[var(--amber-hover)] mb-2">SETTINGS</h1>
@@ -310,11 +310,11 @@ export default function Settings() {
                 <Camera className="w-4 h-4 text-[var(--text-muted)] absolute -bottom-1 -right-1 bg-[var(--card)] rounded-full p-0.5 border border-[var(--border)]" />
               </div>
               <div className="flex-1">
-                <label className="text-xs text-[var(--amber)]/70 uppercase tracking-wider block mb-1">Avatar URL</label>
+                <label className="text-xs text-[var(--text-muted)] uppercase tracking-wider block mb-1">Avatar URL</label>
                 <Input
                   value={avatarUrl}
                   onChange={e => { setAvatarUrl(e.target.value); setAvatarPreview(e.target.value); }}
-                  className="border-[var(--amber-border)] text-[var(--amber)] text-sm"
+                  className="border-[var(--border)] text-[var(--text-primary)] text-sm"
                   placeholder="https://example.com/avatar.jpg"
                 />
                 <div className="flex items-center gap-2 mt-2">
@@ -333,16 +333,16 @@ export default function Settings() {
               </div>
             </div>
             <div>
-              <label className="text-xs text-[var(--amber)]/70 uppercase tracking-wider block mb-1">Display Name</label>
+              <label className="text-xs text-[var(--text-muted)] uppercase tracking-wider block mb-1">Display Name</label>
               <Input
                 value={profileName}
                 onChange={e => setProfileName(e.target.value)}
-                className="border-[var(--amber-border)] text-[var(--amber)]"
+                className="border-[var(--border)] text-[var(--text-primary)]"
                 placeholder="Your name"
               />
             </div>
             <div>
-              <label className="text-xs text-[var(--amber)]/70 uppercase tracking-wider block mb-1">Email</label>
+              <label className="text-xs text-[var(--text-muted)] uppercase tracking-wider block mb-1">Email</label>
               <p className="text-sm text-[var(--text-secondary)]">{user?.email || "—"}</p>
             </div>
             {profileMsg && <p className="text-xs text-[var(--green)]">{profileMsg}</p>}
@@ -361,19 +361,19 @@ export default function Settings() {
           <h2 className="text-lg font-bold text-[var(--amber-hover)] mb-4">DERIV API TOKEN</h2>
           <div className="space-y-4">
             <div>
-              <label className="text-sm text-[var(--amber)] block mb-2">API Token</label>
+              <label className="text-sm text-[var(--text-secondary)] block mb-2">API Token</label>
               <PasswordInput
                 placeholder="Enter your Deriv API token"
                 value={derivToken}
                 onChange={(e) => { setDerivToken(e.target.value); setTokenChanged(true); }}
-                className="border-[var(--amber)]/40 text-[var(--amber)]"
+                className="border-[var(--border)] text-[var(--text-primary)]"
               />
-              <p className="text-xs text-[var(--amber)]/60 mt-2">
+              <p className="text-xs text-[var(--text-muted)] mt-2">
                 Generated from Deriv app settings. Demo recommended for testing.
               </p>
             </div>
             <div>
-              <label className="text-sm text-[var(--amber)] block mb-2">Account Type</label>
+              <label className="text-sm text-[var(--text-secondary)] block mb-2">Account Type</label>
               <div className="flex gap-2">
                 <button onClick={() => setAccountType("demo")} className={`flex-1 py-2 px-4 rounded text-sm font-bold transition-colors ${accountType === "demo" ? "bg-[var(--amber)] text-[var(--bg)]" : "bg-[var(--card)] text-[var(--text-muted)] border border-[var(--border)]"}`}>DEMO</button>
                 <button onClick={() => setAccountType("real")} className={`flex-1 py-2 px-4 rounded text-sm font-bold transition-colors ${accountType === "real" ? "bg-[var(--red)] text-white" : "bg-[var(--card)] text-[var(--text-muted)] border border-[var(--border)]"}`}>REAL</button>
@@ -397,14 +397,14 @@ export default function Settings() {
           <h2 className="text-lg font-bold text-[var(--amber-hover)] mb-4">TELEGRAM NOTIFICATIONS</h2>
           <div className="space-y-4">
             <div>
-              <label className="text-sm text-[var(--amber)] block mb-2">Chat ID</label>
+              <label className="text-sm text-[var(--text-secondary)] block mb-2">Chat ID</label>
               <Input
                 placeholder="Enter your Telegram Chat ID"
                 value={chatId}
                 onChange={(e) => setChatId(e.target.value)}
-                className="border-[var(--amber)]/40 text-[var(--amber)]"
+                className="border-[var(--border)] text-[var(--text-primary)]"
               />
-              <p className="text-xs text-[var(--amber)]/60 mt-2">
+              <p className="text-xs text-[var(--text-muted)] mt-2">
                 Get your Chat ID by messaging @userinfobot on Telegram
               </p>
             </div>
@@ -434,7 +434,7 @@ export default function Settings() {
           </h2>
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-[var(--amber)]">Theme</p>
+              <p className="text-sm text-[var(--text-secondary)]">Theme</p>
               <p className="text-xs text-[var(--text-muted)] mt-1">Switch between dark and light mode</p>
             </div>
             <button
@@ -452,7 +452,7 @@ export default function Settings() {
           <h2 className="text-lg font-bold text-[var(--amber-hover)] mb-4">NOTIFICATION PREFERENCES</h2>
           <div className="space-y-4">
             <div className="flex items-center justify-between">
-              <label className="text-sm text-[var(--amber)]">Trade Executed</label>
+              <label className="text-sm text-[var(--text-secondary)]">Trade Executed</label>
               <Switch
                 checked={notificationSettings.tradeExecuted}
                 onCheckedChange={(checked) =>
@@ -464,7 +464,7 @@ export default function Settings() {
               />
             </div>
             <div className="flex items-center justify-between">
-              <label className="text-sm text-[var(--amber)]">Take Profit Hit</label>
+              <label className="text-sm text-[var(--text-secondary)]">Take Profit Hit</label>
               <Switch
                 checked={notificationSettings.takeProfitHit}
                 onCheckedChange={(checked) =>
@@ -476,7 +476,7 @@ export default function Settings() {
               />
             </div>
             <div className="flex items-center justify-between">
-              <label className="text-sm text-[var(--amber)]">Stop Loss Hit</label>
+              <label className="text-sm text-[var(--text-secondary)]">Stop Loss Hit</label>
               <Switch
                 checked={notificationSettings.stopLossHit}
                 onCheckedChange={(checked) =>
@@ -488,7 +488,7 @@ export default function Settings() {
               />
             </div>
             <div className="flex items-center justify-between">
-              <label className="text-sm text-[var(--amber)]">Bot Error</label>
+              <label className="text-sm text-[var(--text-secondary)]">Bot Error</label>
               <Switch
                 checked={notificationSettings.botError}
                 onCheckedChange={(checked) =>
@@ -523,32 +523,32 @@ export default function Settings() {
           <h2 className="text-lg font-bold text-[var(--amber-hover)] mb-4 flex items-center gap-2">
             <Brain className="w-5 h-5" /> AI MEMORY — TRADER PROFILE
           </h2>
-          <p className="text-xs text-[var(--amber)]/70 mb-4">
+          <p className="text-xs text-[var(--text-muted)] mb-4">
             369AI remembers these so it can auto-apply them to every strategy, backtest and trade suggestion. No need to repeat yourself.
           </p>
           <div className="space-y-4">
             <div>
-              <label className="text-sm text-[var(--amber)] block mb-2">Preferred symbols (comma separated)</label>
+              <label className="text-sm text-[var(--text-secondary)] block mb-2">Preferred symbols (comma separated)</label>
               <Input
                 placeholder="R_75, R_100, 1HZ10V"
                 value={memSymbols}
                 onChange={(e) => setMemSymbols(e.target.value)}
-                className="border-[var(--amber)]/40 text-[var(--amber)]"
+                className="border-[var(--border)] text-[var(--text-primary)]"
               />
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="text-sm text-[var(--amber)] block mb-2">Risk % per trade</label>
+                <label className="text-sm text-[var(--text-secondary)] block mb-2">Risk % per trade</label>
                 <Input
                   type="number"
                   placeholder="2"
                   value={memRisk}
                   onChange={(e) => setMemRisk(e.target.value)}
-                  className="border-[var(--amber)]/40 text-[var(--amber)]"
+                  className="border-[var(--border)] text-[var(--text-primary)]"
                 />
               </div>
               <div>
-                <label className="text-sm text-[var(--amber)] block mb-2">Daily Loss Limit ($)</label>
+                <label className="text-sm text-[var(--text-secondary)] block mb-2">Daily Loss Limit ($)</label>
                 <Input
                   type="number"
                   placeholder="100"
@@ -559,28 +559,28 @@ export default function Settings() {
                 <p className="text-[10px] text-[var(--text-muted)] mt-1">Trades will be blocked if today&#39;s losses exceed this amount</p>
               </div>
               <div className="flex items-end">
-                <label className="flex items-center gap-2 text-sm text-[var(--amber)] cursor-pointer">
+                <label className="flex items-center gap-2 text-sm text-[var(--text-secondary)] cursor-pointer">
                   <Switch checked={memNoMartingale} onCheckedChange={setMemNoMartingale} />
                   No martingale / no grid averaging
                 </label>
               </div>
             </div>
             <div>
-              <label className="text-sm text-[var(--amber)] block mb-2">Trading style</label>
+              <label className="text-sm text-[var(--text-secondary)] block mb-2">Trading style</label>
               <Input
                 placeholder="e.g. volatility 75 index, 1-minute contracts, trend-follow"
                 value={memStyle}
                 onChange={(e) => setMemStyle(e.target.value)}
-                className="border-[var(--amber)]/40 text-[var(--amber)]"
+                className="border-[var(--border)] text-[var(--text-primary)]"
               />
             </div>
             <div>
-              <label className="text-sm text-[var(--amber)] block mb-2">Notes for 369AI</label>
+              <label className="text-sm text-[var(--text-secondary)] block mb-2">Notes for 369AI</label>
               <Input
                 placeholder="e.g. only trade London session; avoid news spikes"
                 value={memNotes}
                 onChange={(e) => setMemNotes(e.target.value)}
-                className="border-[var(--amber)]/40 text-[var(--amber)]"
+                className="border-[var(--border)] text-[var(--text-primary)]"
               />
             </div>
             <Button
@@ -615,11 +615,11 @@ export default function Settings() {
               { id: "telegram_bot", label: "Telegram Bot Token", placeholder: "123456:ABC-DEF..." },
             ].map((svc) => (
               <div key={svc.id}>
-                <label className="text-sm text-[var(--amber)] block mb-1">{svc.label}</label>
+                <label className="text-sm text-[var(--text-secondary)] block mb-1">{svc.label}</label>
               <PasswordInput
                 value={externalKeys[svc.id] || ""}
                 onChange={(e) => setExternalKeys((prev) => ({ ...prev, [svc.id]: e.target.value }))}
-                className="border-[var(--amber)]/40 text-[var(--amber)]"
+                className="border-[var(--border)] text-[var(--text-primary)]"
                 placeholder={svc.placeholder}
               />
               </div>
@@ -635,21 +635,21 @@ export default function Settings() {
             {emailChanged && <p className="text-xs text-[var(--green)]">Email updated! Check your new inbox for a verification link.</p>}
             {emailError && <p className="text-xs text-[var(--red)]">{emailError}</p>}
             <div>
-              <label className="text-sm text-[var(--amber)] block mb-2">New Email</label>
+              <label className="text-sm text-[var(--text-secondary)] block mb-2">New Email</label>
               <Input
                 type="email"
                 value={newEmail}
                 onChange={e => setNewEmail(e.target.value)}
-                className="border-[var(--amber)]/40 text-[var(--amber)]"
+                className="border-[var(--border)] text-[var(--text-primary)]"
                 placeholder="new@example.com"
               />
             </div>
             <div>
-              <label className="text-sm text-[var(--amber)] block mb-2">Confirm Password</label>
+              <label className="text-sm text-[var(--text-secondary)] block mb-2">Confirm Password</label>
               <PasswordInput
                 value={emailPwd}
                 onChange={e => setEmailPwd(e.target.value)}
-                className="border-[var(--amber)]/40 text-[var(--amber)]"
+                className="border-[var(--border)] text-[var(--text-primary)]"
                 placeholder="Current password"
               />
             </div>
@@ -667,20 +667,20 @@ export default function Settings() {
           <h2 className="text-lg font-bold text-[var(--amber-hover)] mb-4">SECURITY</h2>
           <div className="space-y-4">
             <div>
-              <label className="text-sm text-[var(--amber)] block mb-2">Current Password</label>
+              <label className="text-sm text-[var(--text-secondary)] block mb-2">Current Password</label>
               <PasswordInput
                 value={currentPwd}
                 onChange={e => setCurrentPwd(e.target.value)}
-                className="border-[var(--amber)]/40 text-[var(--amber)]"
+                className="border-[var(--border)] text-[var(--text-primary)]"
                 placeholder="Enter current password"
               />
             </div>
             <div>
-              <label className="text-sm text-[var(--amber)] block mb-2">New Password</label>
+              <label className="text-sm text-[var(--text-secondary)] block mb-2">New Password</label>
               <PasswordInput
                 value={newPwd}
                 onChange={e => setNewPwd(e.target.value)}
-                className="border-[var(--amber)]/40 text-[var(--amber)]"
+                className="border-[var(--border)] text-[var(--text-primary)]"
                 placeholder="At least 8 characters"
               />
             </div>
@@ -707,11 +707,11 @@ export default function Settings() {
               </div>
               <p className="text-xs text-[var(--text-muted)] text-center">Or enter this key manually: <span className="font-mono text-[var(--amber)]">{twoFASecret}</span></p>
               <div>
-                <label className="text-sm text-[var(--amber)] block mb-2">Verify Code</label>
+                <label className="text-sm text-[var(--text-secondary)] block mb-2">Verify Code</label>
                 <Input
                   value={twoFAToken}
                   onChange={e => setTwoFAToken(e.target.value)}
-                  className="border-[var(--amber)]/40 text-[var(--amber)] font-mono text-center text-lg tracking-widest"
+                  className="border-[var(--border)] text-[var(--text-primary)] font-mono text-center text-lg tracking-widest"
                   placeholder="000000"
                   maxLength={6}
                 />
@@ -730,11 +730,11 @@ export default function Settings() {
             <div className="space-y-4">
               <p className="text-sm text-[var(--green)]">Two-factor authentication is <strong>enabled</strong>.</p>
               <div>
-                <label className="text-sm text-[var(--amber)] block mb-2">Enter your password to disable 2FA</label>
+                <label className="text-sm text-[var(--text-secondary)] block mb-2">Enter your password to disable 2FA</label>
                 <PasswordInput
                   value={disablePwd}
                   onChange={e => setDisablePwd(e.target.value)}
-                  className="border-[var(--amber)]/40 text-[var(--amber)]"
+                  className="border-[var(--border)] text-[var(--text-primary)]"
                   placeholder="Current password"
                 />
               </div>
@@ -764,7 +764,7 @@ export default function Settings() {
         <SpotlightCard className="mb-6">
           <h2 className="text-lg font-bold text-[var(--amber-hover)] mb-4">ACCOUNT</h2>
           <div className="space-y-4">
-            <p className="text-sm text-[var(--amber)]/80">Signed in as <span className="text-[var(--amber)] font-semibold">{user?.email || (user as any)?.username || "user"}</span></p>
+            <p className="text-sm text-[var(--text-secondary)]">Signed in as <span className="text-[var(--amber)] font-semibold">{user?.email || (user as any)?.username || "user"}</span></p>
             <Button
               onClick={logout}
               className="w-full bg-[var(--red)]/20 text-[var(--red)] border border-[var(--red)]/40 hover:bg-[var(--red)]/30 font-bold py-2 px-4 rounded"

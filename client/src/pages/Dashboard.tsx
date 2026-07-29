@@ -27,6 +27,7 @@ import {
 import { useLocation } from "wouter";
 import TickChart from "@/components/TickChart";
 import DigitProbability from "@/components/DigitProbability";
+import SymbolInsights from "@/components/SymbolInsights";
 import { derivWS, DerivSymbol } from "@/services/derivWebSocket";
 import { useDerivStatus } from "@/hooks/useDerivStatus";
 import DerivTokenModal from "@/components/DerivTokenModal";
@@ -74,7 +75,7 @@ export default function Dashboard() {
     onSuccess: () => alertsQuery.refetch(),
   });
   const [historyTab, setHistoryTab] = useState<"trades" | "prices">("trades");
-  const priceQuery = trpc.market.getHistory.useQuery({ symbol: selectedSymbol, limit: 200 }, { enabled: historyTab === "prices", refetchInterval: historyTab === "prices" ? 3000 : false });
+  const priceQuery = trpc.market.getHistory.useQuery({ symbol: selectedSymbol, limit: 200 }, { enabled: historyTab === "prices", refetchInterval: historyTab === "prices" ? 3000 : false, staleTime: 30000, gcTime: 60000 });
 
   // Live tick buffer: stream ticks from the Deriv WS so the Price History table
   // updates in real time (newest on top, pushing older rows down).
@@ -790,6 +791,8 @@ export default function Dashboard() {
               );
             })()}
           </div>
+
+          <SymbolInsights symbol={selectedSymbol} ticks={displayTicks} trades={tradesQuery.data || []} decimalPlaces={decimalPlaces} />
         </div>
       </div>
       </PageSection>
