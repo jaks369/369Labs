@@ -6,7 +6,7 @@ import NotFound from "@/pages/NotFound";
 import { Route, Switch } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
 import CommandPalette from "./components/CommandPalette";
-import GhostCursor from "./components/GhostCursor";
+
 import DashboardLayout from "./components/DashboardLayout";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import Home from "./pages/Home";
@@ -138,23 +138,10 @@ function App() {
     <ErrorBoundary>
       <ThemeProvider defaultTheme="dark" switchable>
         <TooltipProvider>
-          <GhostCursor
-            trailLength={50}
-            inertia={0.5}
-            grainIntensity={0.05}
-            bloomStrength={0.1}
-            bloomRadius={1}
-            brightness={2}
-            color="#B497CF"
-            edgeIntensity={0}
-            style={{ position: 'fixed', inset: 0, zIndex: 0, pointerEvents: 'none', width: '100vw', height: '100vh' }}
-          />
-          <div style={{ position: 'relative', zIndex: 1 }}>
-            <Toaster />
-            <Router />
-            <CommandPalette />
-            <ToastViewport items={toasts} onDismiss={(id) => setToasts((prev) => prev.filter((x) => x.id !== id))} />
-          </div>
+          <Toaster />
+          <Router />
+          <CommandPalette />
+          <ToastViewport items={toasts} onDismiss={(id) => setToasts((prev) => prev.filter((x) => x.id !== id))} />
         </TooltipProvider>
       </ThemeProvider>
     </ErrorBoundary>
