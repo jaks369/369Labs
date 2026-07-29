@@ -3,7 +3,6 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { useLocation } from "wouter";
 import { Brain, Globe, BarChart3, ChevronRight, Activity, Star, HelpCircle, CheckCircle2 } from "lucide-react";
-import RotatingText from "@/components/RotatingText";
 
 export default function Home() {
   const { isAuthenticated } = useAuth();
@@ -55,23 +54,6 @@ export default function Home() {
             Build. Backtest.<br />
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-[var(--amber)] to-[var(--green)]">Automate.</span>
           </h1>
-          <div className="flex justify-center mb-8">
-            <RotatingText
-              texts={['React', 'Bits', 'Is', 'Cool!']}
-              mainClassName="px-2 sm:px-2 md:px-3 bg-cyan-300 text-black overflow-hidden py-0.5 sm:py-1 md:py-2 justify-center rounded-lg"
-              staggerFrom="last"
-              initial={{ y: "100%" }}
-              animate={{ y: 0 }}
-              exit={{ y: "-120%" }}
-              staggerDuration={0.025}
-              splitLevelClassName="overflow-hidden pb-0.5 sm:pb-1 md:pb-1"
-              transition={{ type: "spring", damping: 30, stiffness: 400 }}
-              rotationInterval={2000}
-              splitBy="characters"
-              auto
-              loop
-            />
-          </div>
           <p className="text-xl text-[var(--text-secondary)] mb-12 max-w-2xl mx-auto leading-relaxed">
             Professional trading automation powered by AI. Design sophisticated strategies, 
             test against historical data, and deploy to the cloud in minutes.

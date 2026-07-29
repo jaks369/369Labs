@@ -11,6 +11,7 @@ import { pushTimeline } from "@/components/AITimeline";
 import { toast } from "@/components/Toast";
 import { useTheme } from "@/contexts/ThemeContext";
 import PasswordInput from "@/components/PasswordInput";
+import SpotlightCard from "@/components/SpotlightCard";
 
 export default function Settings() {
   const { user, isAuthenticated, logout, refresh } = useAuth();
@@ -294,7 +295,7 @@ export default function Settings() {
           </div>
         )}
 
-        <div className="hud-panel mb-6">
+        <SpotlightCard className="mb-6">
           <h2 className="text-lg font-bold text-[var(--amber-hover)] mb-4">PROFILE</h2>
           <div className="space-y-4">
             <div className="flex items-center gap-4">
@@ -354,9 +355,9 @@ export default function Settings() {
               {updateProfileMutation.isPending ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />SAVING...</> : <><Save className="w-4 h-4 mr-2" />SAVE PROFILE</>}
             </Button>
           </div>
-        </div>
+        </SpotlightCard>
 
-        <div className="hud-panel mb-6">
+        <SpotlightCard className="mb-6">
           <h2 className="text-lg font-bold text-[var(--amber-hover)] mb-4">DERIV API TOKEN</h2>
           <div className="space-y-4">
             <div>
@@ -390,9 +391,9 @@ export default function Settings() {
               )}
             </Button>
           </div>
-        </div>
+        </SpotlightCard>
 
-        <div className="hud-panel mb-6">
+        <SpotlightCard className="mb-6">
           <h2 className="text-lg font-bold text-[var(--amber-hover)] mb-4">TELEGRAM NOTIFICATIONS</h2>
           <div className="space-y-4">
             <div>
@@ -425,9 +426,9 @@ export default function Settings() {
               )}
             </Button>
           </div>
-        </div>
+        </SpotlightCard>
 
-        <div className="hud-panel mb-6">
+        <SpotlightCard className="mb-6">
           <h2 className="text-lg font-bold text-[var(--amber-hover)] mb-4 flex items-center gap-2">
             {theme === "dark" ? <Moon className="w-5 h-5" /> : <Sun className="w-5 h-5" />} APPEARANCE
           </h2>
@@ -445,9 +446,9 @@ export default function Settings() {
               {theme === "dark" ? "LIGHT MODE" : "DARK MODE"}
             </button>
           </div>
-        </div>
+        </SpotlightCard>
 
-        <div className="hud-panel mb-6">
+        <SpotlightCard className="mb-6">
           <h2 className="text-lg font-bold text-[var(--amber-hover)] mb-4">NOTIFICATION PREFERENCES</h2>
           <div className="space-y-4">
             <div className="flex items-center justify-between">
@@ -516,9 +517,9 @@ export default function Settings() {
               )}
             </Button>
           </div>
-        </div>
+        </SpotlightCard>
 
-        <div className="hud-panel mb-6">
+        <SpotlightCard className="mb-6">
           <h2 className="text-lg font-bold text-[var(--amber-hover)] mb-4 flex items-center gap-2">
             <Brain className="w-5 h-5" /> AI MEMORY — TRADER PROFILE
           </h2>
@@ -600,11 +601,11 @@ export default function Settings() {
               )}
             </Button>
           </div>
-        </div>
+        </SpotlightCard>
 
 
 
-        <div className="hud-panel mb-6">
+        <SpotlightCard className="mb-6">
           <h2 className="text-lg font-bold text-[var(--amber-hover)] mb-4 flex items-center gap-2"><Key className="w-5 h-5" /> EXTERNAL API KEYS</h2>
           <p className="text-xs text-[var(--text-muted)] mb-4">Connect external services for extended features (optional).</p>
           <div className="space-y-3">
@@ -625,9 +626,9 @@ export default function Settings() {
             ))}
             <Button onClick={async () => { try { await saveMemoryMutation.mutateAsync({ memory: { apiKeys: externalKeys } }); toast("API keys saved.", "success"); } catch { toast("Failed to save API keys.", "error"); } }} className="w-full bg-[var(--amber)] text-[var(--bg)] font-bold py-2 px-4 rounded"><Save className="w-4 h-4 mr-2" /> SAVE KEYS</Button>
           </div>
-        </div>
+        </SpotlightCard>
 
-        <div className="hud-panel mb-6">
+        <SpotlightCard className="mb-6">
           <h2 className="text-lg font-bold text-[var(--amber-hover)] mb-4">EMAIL</h2>
           <div className="space-y-4">
             <p className="text-sm text-[var(--text-muted)]">Current email: <span className="text-[var(--amber)]">{user?.email}</span></p>
@@ -660,9 +661,9 @@ export default function Settings() {
               {changeEmailMutation.isPending ? "Updating..." : "CHANGE EMAIL"}
             </Button>
           </div>
-        </div>
+        </SpotlightCard>
 
-        <div className="hud-panel mb-6">
+        <SpotlightCard className="mb-6">
           <h2 className="text-lg font-bold text-[var(--amber-hover)] mb-4">SECURITY</h2>
           <div className="space-y-4">
             <div>
@@ -693,10 +694,10 @@ export default function Settings() {
               {changePwdMutation.isPending ? "Changing..." : "CHANGE PASSWORD"}
             </Button>
           </div>
-        </div>
+        </SpotlightCard>
 
         {/* Two-Factor Authentication */}
-        <div className="hud-panel mb-6">
+        <SpotlightCard className="mb-6">
           <h2 className="text-lg font-bold text-[var(--amber-hover)] mb-4">TWO-FACTOR AUTHENTICATION</h2>
           {twoFASetup && twoFASecret ? (
             <div className="space-y-4">
@@ -758,9 +759,9 @@ export default function Settings() {
               </Button>
             </div>
           )}
-        </div>
+        </SpotlightCard>
 
-        <div className="hud-panel mb-6">
+        <SpotlightCard className="mb-6">
           <h2 className="text-lg font-bold text-[var(--amber-hover)] mb-4">ACCOUNT</h2>
           <div className="space-y-4">
             <p className="text-sm text-[var(--amber)]/80">Signed in as <span className="text-[var(--amber)] font-semibold">{user?.email || (user as any)?.username || "user"}</span></p>
@@ -771,9 +772,9 @@ export default function Settings() {
               LOGOUT
             </Button>
           </div>
-        </div>
+        </SpotlightCard>
 
-        <div className="hud-panel mb-6">
+        <SpotlightCard className="mb-6">
           <h2 className="text-lg font-bold text-[var(--amber-hover)] mb-4">ACTIVE SESSIONS</h2>
           {sessionsQuery.isLoading ? (
             <div className="flex items-center justify-center py-8"><div className="h-6 w-6 border-2 border-[var(--amber)] border-t-transparent rounded-full animate-spin" /></div>
@@ -800,9 +801,9 @@ export default function Settings() {
               {sessionsQuery.data?.length === 0 && <p className="text-xs text-[var(--text-muted)] text-center py-4">No active sessions.</p>}
             </div>
           )}
-        </div>
+        </SpotlightCard>
 
-        <div className="hud-panel mb-6">
+        <SpotlightCard className="mb-6">
           <h2 className="text-lg font-bold text-[var(--cyan)] mb-4 flex items-center gap-2"><Database className="w-5 h-5" /> DATA MANAGEMENT</h2>
           <div className="space-y-4">
             <div>
@@ -827,9 +828,9 @@ export default function Settings() {
               </Button>
             </div>
           </div>
-        </div>
+        </SpotlightCard>
 
-        <div className="hud-panel mb-6 border-[var(--red)]/30">
+        <SpotlightCard className="mb-6 border-[var(--red)]/30">
           <h2 className="text-lg font-bold text-[var(--red)] mb-4">DANGER ZONE</h2>
           <div className="space-y-4">
             {deleteConfirm ? (
@@ -881,7 +882,7 @@ export default function Settings() {
               </div>
             )}
           </div>
-        </div>
+        </SpotlightCard>
       </div>
     </div>
   );
