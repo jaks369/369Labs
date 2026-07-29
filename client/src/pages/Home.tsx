@@ -43,18 +43,18 @@ export default function Home() {
 
       <main className="relative z-10">
         <section className="max-w-7xl mx-auto px-6 pt-32 pb-20 text-center">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[var(--amber-soft)] border border-[var(--amber-border)] text-[var(--amber-hover)] text-xs font-bold tracking-wider mb-8 animate-fade-in">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold tracking-wider mb-8" style={{background: "var(--amber)", color: "#000"}}>
             <span className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[var(--amber-hover)] opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-[var(--amber)]"></span>
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white/75 rounded-full"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-white"></span>
             </span>
             V1.0 NOW LIVE
           </div>
-          <h1 className="text-6xl md:text-8xl font-extrabold text-white mb-8 tracking-tighter leading-[1.1]">
+          <h1 className="text-5xl md:text-7xl font-extrabold text-white mb-8 tracking-tighter leading-[1.1]">
             Build. Backtest.<br />
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-[var(--amber)] to-[var(--green)]">Automate.</span>
           </h1>
-          <p className="text-xl text-[var(--text-secondary)] mb-12 max-w-2xl mx-auto leading-relaxed">
+          <p className="text-lg mb-12 mx-auto leading-relaxed" style={{color: "var(--text-muted)", maxWidth: "600px"}}>
             Professional trading automation powered by AI. Design sophisticated strategies, 
             test against historical data, and deploy to the cloud in minutes.
           </p>
@@ -96,32 +96,32 @@ export default function Home() {
             <p className="text-[var(--text-secondary)]">Everything you need to scale your trading operations.</p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <div onClick={() => navigate("/ai-assistant")} className="card-hover cursor-pointer group">
+            <div onClick={() => navigate("/ai-assistant")} className="card-hover cursor-pointer group border border-[var(--border)] rounded-xl p-6 bg-[var(--card)]">
               <div className="w-12 h-12 rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform bg-[var(--cyan-soft)]">
                 <Brain className="w-6 h-6 text-[var(--cyan)]" />
               </div>
-              <h3 className="text-xl font-bold mb-3 text-white">369AI Assistant</h3>
-              <p className="text-[var(--text-secondary)] leading-relaxed">
+              <h3 className="text-lg font-semibold mb-2 text-white">369AI Assistant</h3>
+              <p className="text-sm leading-relaxed" style={{color: "var(--text-muted)"}}>
                 Describe your strategy in plain English and let our AI engine generate the logic, 
                 risk parameters, and execution blocks automatically.
               </p>
             </div>
-            <div onClick={() => navigate("/analytics")} className="card-hover cursor-pointer group">
+            <div onClick={() => navigate("/analytics")} className="card-hover cursor-pointer group border border-[var(--border)] rounded-xl p-6 bg-[var(--card)]">
               <div className="w-12 h-12 rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform bg-[var(--amber-soft)]">
                 <BarChart3 className="w-6 h-6 text-[var(--amber)]" />
               </div>
-              <h3 className="text-xl font-bold mb-3 text-white">Advanced Analytics</h3>
-              <p className="text-[var(--text-secondary)] leading-relaxed">
+              <h3 className="text-lg font-semibold mb-2 text-white">Advanced Analytics</h3>
+              <p className="text-sm leading-relaxed" style={{color: "var(--text-muted)"}}>
                 Monitor ROI, Drawdown, and Profit Factor in real-time. Gain deep insights into 
                 your bot's performance with professional-grade metrics.
               </p>
             </div>
-            <div onClick={() => navigate("/cloud-bots")} className="card-hover cursor-pointer group">
+            <div onClick={() => navigate("/cloud-bots")} className="card-hover cursor-pointer group border border-[var(--border)] rounded-xl p-6 bg-[var(--card)]">
               <div className="w-12 h-12 rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform bg-[var(--amber-soft)]">
                 <Globe className="w-6 h-6 text-[var(--amber)]" />
               </div>
-              <h3 className="text-xl font-bold mb-3 text-white">Cloud Execution</h3>
-              <p className="text-[var(--text-secondary)] leading-relaxed">
+              <h3 className="text-lg font-semibold mb-2 text-white">Cloud Execution</h3>
+              <p className="text-sm leading-relaxed" style={{color: "var(--text-muted)"}}>
                 Deploy your bots to our secure cloud infrastructure. Your strategies run 24/7 
                 without needing your computer to stay online.
               </p>
@@ -168,14 +168,14 @@ export default function Home() {
               { name: "Sarah M.", role: "Quant Developer", text: "Best backtesting engine I've used. The parameter sweep is a game changer." },
               { name: "James R.", role: "Full-time Trader", text: "I've automated my entire strategy. The cloud execution is flawless." },
             ].map((t) => (
-              <div key={t.name} className="bg-[var(--card)] border border-[var(--border)] rounded-2xl p-8">
+              <div key={t.name} className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-6 transition-all hover:border-[var(--amber)] hover:border-[var(--amber)]">
                 <div className="flex gap-1 mb-4">
-                  {[1,2,3,4,5].map((s) => <Star key={s} className="w-4 h-4 fill-[var(--amber)] text-[var(--amber)]" />)}
+                  {[1,2,3,4,5].map((s) => <Star key={s} className="w-4 h-4" style={{color: "var(--amber)", fill: "var(--amber)"}} />)}
                 </div>
-                <p className="text-[var(--text-secondary)] text-sm mb-6 leading-relaxed">"{t.text}"</p>
+                <p className="text-sm mb-6 leading-relaxed italic" style={{color: "var(--text-muted)"}}>"{t.text}"</p>
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-[var(--amber)]/20 flex items-center justify-center text-sm font-bold text-[var(--amber)]">{t.name.charAt(0)}</div>
-                  <div><p className="text-sm font-bold text-white">{t.name}</p><p className="text-xs text-[var(--text-muted)]">{t.role}</p></div>
+                  <div className="w-10 h-10 rounded-full bg-[var(--amber)]/20 flex items-center justify-center text-sm font-bold" style={{color: "var(--amber)"}}>{t.name.charAt(0)}</div>
+                  <div><p className="text-sm font-semibold text-white">{t.name}</p><p className="text-xs" style={{color: "var(--text-disabled)"}}>{t.role}</p></div>
                 </div>
               </div>
             ))}
@@ -223,7 +223,7 @@ export default function Home() {
               <Activity className="w-6 h-6 text-[var(--amber)]" />
               <span className="text-lg font-bold text-white">369Labs</span>
             </div>
-            <div className="flex gap-8 text-sm text-[var(--text-muted)]">
+            <div className="flex gap-8 text-xs" style={{color: "var(--text-disabled)"}}>
               <span className="hover:text-white transition-colors">&copy; 2026 369Labs. All rights reserved.</span>
             </div>
           </div>
