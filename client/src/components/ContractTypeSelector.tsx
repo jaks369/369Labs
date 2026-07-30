@@ -27,7 +27,7 @@ const CATEGORIES: { id: ContractCategory; label: string; icon: string }[] = [
   { id: "over_under", label: "Over/Under", icon: "↑↓" },
   { id: "even_odd", label: "Even/Odd", icon: "◧" },
   { id: "digits", label: "Digits", icon: "0-9" },
-  { id: "accumulator", label: "Accumulator", icon: "∑" },
+  { id: "accumulator", label: "Accu", icon: "∑" },
 ];
 
 export default function ContractTypeSelector({ selection, onChange }: ContractTypeSelectorProps) {
@@ -47,14 +47,14 @@ export default function ContractTypeSelector({ selection, onChange }: ContractTy
           <button
             key={c.id}
             onClick={() => setCat(c.id)}
-            className={`flex flex-col items-center gap-0.5 py-2 rounded-md text-micro font-bold transition-all ${
+            className={`flex flex-col items-center gap-0.5 py-2 px-1 rounded-md text-[10px] font-bold transition-all truncate ${
               selection.category === c.id
                 ? "bg-[var(--accent)] text-white shadow-sm"
                 : "text-[var(--text-secondary)] hover:text-white"
             }`}
           >
-            <span className="text-base leading-none">{c.icon}</span>
-            {c.label}
+            <span className="text-sm leading-none">{c.icon}</span>
+            <span className="truncate w-full text-center">{c.label}</span>
           </button>
         ))}
       </div>
