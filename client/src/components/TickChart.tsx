@@ -179,15 +179,15 @@ export default function TickChart({ symbol, maxDataPoints = 100, decimalPlaces =
         <svg ref={svgRef} viewBox={`0 0 ${totalW} ${totalH}`} preserveAspectRatio="none" className="w-full h-[220px]" style={{ maxHeight: "300px" }}>
           <defs>
             <linearGradient id="lineGradUp" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="var(--green)" stopOpacity="0.15" />
-              <stop offset="100%" stopColor="var(--green)" stopOpacity="0" />
+              <stop offset="0%" stopColor="var(--green)" stopOpacity="0.22" />
+              <stop offset="85%" stopColor="var(--green)" stopOpacity="0" />
             </linearGradient>
             <linearGradient id="lineGradDown" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="var(--red)" stopOpacity="0.15" />
-              <stop offset="100%" stopColor="var(--red)" stopOpacity="0" />
+              <stop offset="0%" stopColor="var(--red)" stopOpacity="0.22" />
+              <stop offset="85%" stopColor="var(--red)" stopOpacity="0" />
             </linearGradient>
             <filter id="lineGlow" x="-20%" y="-20%" width="140%" height="140%">
-              <feGaussianBlur stdDeviation="2.5" result="blur" />
+              <feGaussianBlur stdDeviation="3" result="blur" />
               <feMerge>
                 <feMergeNode in="blur" />
                 <feMergeNode in="SourceGraphic" />
@@ -200,9 +200,8 @@ export default function TickChart({ symbol, maxDataPoints = 100, decimalPlaces =
             <g key={`grid-${i}`}>
               <line
                 x1="0" y1={gl.y} x2={chartW} y2={gl.y}
-                stroke="rgba(136,150,168,0.08)"
+                stroke="var(--border-subtle)"
                 strokeWidth="1"
-                strokeDasharray="4,4"
               />
               <text
                 x={chartW + 8} y={gl.y + 4}
@@ -213,17 +212,6 @@ export default function TickChart({ symbol, maxDataPoints = 100, decimalPlaces =
                 {gl.value.toFixed(decimalPlaces)}
               </text>
             </g>
-          ))}
-
-          {/* Vertical grid lines (time markers) */}
-          {timeLabels.map((tl, i) => (
-            <line
-              key={`vgrid-${i}`}
-              x1={tl.x} y1="0" x2={tl.x} y2={chartH}
-              stroke="rgba(136,150,168,0.05)"
-              strokeWidth="1"
-              strokeDasharray="2,4"
-            />
           ))}
 
           {/* Area fill */}
