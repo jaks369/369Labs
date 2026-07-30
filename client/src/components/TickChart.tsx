@@ -273,6 +273,22 @@ export default function TickChart({ symbol, maxDataPoints = 100, decimalPlaces =
           </div>
         )}
       </div>
+
+      {/* Stats row */}
+      <div className="mt-3 grid grid-cols-3 gap-3">
+        <div className="bg-[var(--card)] p-2.5 rounded-lg border border-[var(--border-subtle)]">
+          <span className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">High</span>
+          <p className="text-sm font-bold text-[var(--text-primary)] tabular-nums">{maxPrice.toFixed(decimalPlaces)}</p>
+        </div>
+        <div className="bg-[var(--card)] p-2.5 rounded-lg border border-[var(--border-subtle)]">
+          <span className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">Low</span>
+          <p className="text-sm font-bold text-[var(--text-primary)] tabular-nums">{minPrice.toFixed(decimalPlaces)}</p>
+        </div>
+        <div className="bg-[var(--card)] p-2.5 rounded-lg border border-[var(--border-subtle)]">
+          <span className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">Ticks</span>
+          <p className="text-sm font-bold text-[var(--text-primary)] tabular-nums">{data.length}</p>
+        </div>
+      </div>
     </div>
   );
 }
