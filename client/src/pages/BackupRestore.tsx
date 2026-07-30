@@ -52,7 +52,7 @@ export default function BackupRestore() {
     <div className="min-h-screen bg-[var(--card)] p-6">
       <div className="max-w-2xl mx-auto space-y-6">
         <div className="flex items-center gap-3">
-          <HardDrive className="w-7 h-7 text-[var(--amber)]" />
+          <HardDrive className="w-7 h-7 text-[var(--accent)]" />
           <div>
             <h1 className="text-2xl font-bold text-white">Backup & Restore</h1>
             <p className="text-xs text-[var(--text-muted)]">Export or import your trading data</p>
@@ -60,17 +60,17 @@ export default function BackupRestore() {
         </div>
 
         <div className="grid grid-cols-2 gap-4">
-          <button onClick={handleExport} disabled={exporting} className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-6 text-left hover:border-[var(--amber)]/30 transition-all disabled:opacity-50">
-            <div className="w-10 h-10 rounded-xl bg-[var(--amber-soft)] border border-[var(--amber-border)] flex items-center justify-center mb-3">
-              {exporting ? <Loader2 className="w-5 h-5 animate-spin text-[var(--amber)]" /> : <Download className="w-5 h-5 text-[var(--amber)]" />}
+          <button onClick={handleExport} disabled={exporting} className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-6 text-left hover:border-[var(--accent)]/30 transition-all disabled:opacity-50">
+            <div className="w-10 h-10 rounded-xl bg-[var(--accent-soft)] border border-[var(--accent-border)] flex items-center justify-center mb-3">
+              {exporting ? <Loader2 className="w-5 h-5 animate-spin text-[var(--accent)]" /> : <Download className="w-5 h-5 text-[var(--accent)]" />}
             </div>
             <span className="text-sm font-bold text-white">Export Backup</span>
             <p className="text-xs text-[var(--text-muted)] mt-1">Download all strategies, trades, journals, workflows, and bots as JSON</p>
           </button>
 
-          <button onClick={() => fileRef.current?.click()} disabled={importing} className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-6 text-left hover:border-[var(--amber)]/30 transition-all disabled:opacity-50">
-            <div className="w-10 h-10 rounded-xl bg-[var(--amber-soft)] border border-[var(--amber-border)] flex items-center justify-center mb-3">
-              {importing ? <Loader2 className="w-5 h-5 animate-spin text-[var(--amber)]" /> : <Upload className="w-5 h-5 text-[var(--amber)]" />}
+          <button onClick={() => fileRef.current?.click()} disabled={importing} className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-6 text-left hover:border-[var(--accent)]/30 transition-all disabled:opacity-50">
+            <div className="w-10 h-10 rounded-xl bg-[var(--accent-soft)] border border-[var(--accent-border)] flex items-center justify-center mb-3">
+              {importing ? <Loader2 className="w-5 h-5 animate-spin text-[var(--accent)]" /> : <Upload className="w-5 h-5 text-[var(--accent)]" />}
             </div>
             <span className="text-sm font-bold text-white">Restore Backup</span>
             <p className="text-xs text-[var(--text-muted)] mt-1">Import data from a previously exported backup file</p>

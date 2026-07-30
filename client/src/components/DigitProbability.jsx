@@ -10,8 +10,8 @@ function DigitCircle({ digit, percent, isCurrent, maxPercent }) {
   const arcLen = frac * circ;
   const offset = circ - arcLen;
 
-  const color = percent >= 11.5 ? "var(--green)" : percent >= 10.0 ? "var(--amber)" : "var(--red)";
-  const dotColor = isCurrent ? "var(--amber)" : percent >= 11.5 ? "var(--green)" : percent >= 10.0 ? "var(--amber)" : "var(--red)";
+  const color = percent >= 11.5 ? "var(--green)" : percent >= 10.0 ? "var(--accent)" : "var(--red)";
+  const dotColor = isCurrent ? "var(--accent)" : percent >= 11.5 ? "var(--green)" : percent >= 10.0 ? "var(--accent)" : "var(--red)";
 
   return (
     <div className="flex flex-col items-center gap-1">
@@ -44,7 +44,7 @@ function DigitCircle({ digit, percent, isCurrent, maxPercent }) {
               initial={{ opacity: 0, y: 4 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0 }}
-              className="absolute -top-1 left-1/2 -translate-x-1/2 text-[8px] text-[var(--amber)] leading-none"
+              className="absolute -top-1 left-1/2 -translate-x-1/2 text-[8px] text-[var(--accent)] leading-none"
             >
               ▼
             </motion.div>
@@ -53,7 +53,7 @@ function DigitCircle({ digit, percent, isCurrent, maxPercent }) {
       </div>
       <motion.span
         className="text-[9px] font-mono tabular-nums"
-        animate={{ color: isCurrent ? "var(--amber)" : "var(--text-secondary)" }}
+        animate={{ color: isCurrent ? "var(--accent)" : "var(--text-secondary)" }}
         transition={{ duration: 0.3 }}
       >
         {percent.toFixed(1)}%

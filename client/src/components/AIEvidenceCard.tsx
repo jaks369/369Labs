@@ -6,18 +6,18 @@ interface AIEvidenceCardProps {
 }
 
 export default function AIEvidenceCard({ response }: AIEvidenceCardProps) {
-  const confidenceColor = response.confidence >= 80 ? "text-[var(--green)]" : response.confidence >= 50 ? "text-[var(--amber)]" : "text-[var(--red)]";
+  const confidenceColor = response.confidence >= 80 ? "text-[var(--green)]" : response.confidence >= 50 ? "text-[var(--accent)]" : "text-[var(--red)]";
 
   return (
     <div className="bg-[var(--card)] border border-[var(--border)] rounded-lg p-3 space-y-2 mt-1">
       <div className="flex items-center gap-2">
-        <CheckCircle2 className="w-3 h-3 text-[var(--cyan)]" />
+        <CheckCircle2 className="w-3 h-3 text-[var(--accent)]" />
         <span className="text-[9px] font-bold text-[var(--text-secondary)] uppercase tracking-wider">Confidence</span>
         <span className={`text-caption font-bold font-mono ${confidenceColor} ml-auto`}>{response.confidence}%</span>
       </div>
 
       <div className="flex items-start gap-2">
-        <BarChart3 className="w-3 h-3 text-[var(--cyan)] mt-0.5" />
+        <BarChart3 className="w-3 h-3 text-[var(--accent)] mt-0.5" />
         <div>
           <span className="text-[9px] font-bold text-[var(--text-secondary)] uppercase tracking-wider block mb-0.5">Evidence</span>
           {response.evidence.length > 0 ? (
@@ -33,12 +33,12 @@ export default function AIEvidenceCard({ response }: AIEvidenceCardProps) {
       </div>
 
       <div className="flex items-start gap-2">
-        <Cpu className="w-3 h-3 text-[var(--cyan)] mt-0.5" />
+        <Cpu className="w-3 h-3 text-[var(--accent)] mt-0.5" />
         <div>
           <span className="text-[9px] font-bold text-[var(--text-secondary)] uppercase tracking-wider block mb-0.5">Engines Used</span>
           <div className="flex flex-wrap gap-1">
             {response.enginesUsed.map((engine, i) => (
-              <span key={i} className="text-[8px] bg-[var(--cyan-soft)] text-[var(--cyan)] border border-[var(--cyan-border)] rounded px-1.5 py-0.5">{engine}</span>
+              <span key={i} className="text-[8px] bg-[var(--accent-soft)] text-[var(--accent)] border border-[var(--accent-border)] rounded px-1.5 py-0.5">{engine}</span>
             ))}
           </div>
         </div>

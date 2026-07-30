@@ -24,7 +24,7 @@ export default function Changelog() {
     <div className="min-h-screen bg-[var(--card)] p-6">
       <div className="max-w-2xl mx-auto space-y-8">
         <div className="flex items-center gap-3">
-          <GitCommit className="w-7 h-7 text-[var(--amber)]" />
+          <GitCommit className="w-7 h-7 text-[var(--accent)]" />
           <div>
             <h1 className="text-2xl font-bold text-white">Changelog</h1>
             <p className="text-xs text-[var(--text-muted)]">Release history for 369Labs</p>
@@ -42,7 +42,7 @@ export default function Changelog() {
                   const Icon = item.icon;
                   return (
                     <li key={i} className="flex items-start gap-2 text-sm text-[var(--text-secondary)]">
-                      <Icon className={`w-4 h-4 mt-0.5 shrink-0 ${item.icon === Bug ? "text-[var(--red)]" : item.icon === Sparkles ? "text-[var(--green)]" : item.icon === RefreshCw ? "text-[var(--amber)]" : "text-[var(--blue)]"}`} />
+                      <Icon className={`w-4 h-4 mt-0.5 shrink-0 ${item.icon === Bug ? "text-[var(--red)]" : item.icon === Sparkles ? "text-[var(--green)]" : item.icon === RefreshCw ? "text-[var(--accent)]" : "text-[var(--blue)]"}`} />
                       {item.text}
                     </li>
                   );

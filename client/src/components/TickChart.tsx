@@ -173,7 +173,7 @@ export default function TickChart({ symbol, maxDataPoints = 100, decimalPlaces =
       {error ? (
         <div className="w-full h-64 flex flex-col items-center justify-center gap-3 bg-[var(--bg)] rounded border border-[var(--red)]/30 p-6">
           <p className="text-[var(--red)] text-sm text-center">Connection Error: {error}</p>
-          <p className="text-[var(--text-muted)] text-xs text-center max-w-md">The symbol <span className="font-mono text-[var(--amber)]">{symbol}</span> may not be available on your Deriv account or may have been renamed. Try selecting a different symbol from the picker.</p>
+          <p className="text-[var(--text-muted)] text-xs text-center max-w-md">The symbol <span className="font-mono text-[var(--accent)]">{symbol}</span> may not be available on your Deriv account or may have been renamed. Try selecting a different symbol from the picker.</p>
         </div>
       ) : data.length > 1 ? (
         <svg ref={svgRef} viewBox={`0 0 ${totalW} ${totalH}`} preserveAspectRatio="none" className="w-full h-[220px]" style={{ maxHeight: "300px" }}>

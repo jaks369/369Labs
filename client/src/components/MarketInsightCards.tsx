@@ -28,20 +28,20 @@ function insightIcon(type: string) {
 
 function insightColor(type: string): string {
   switch (type) {
-    case "volatility_change": return "text-[var(--amber)]";
+    case "volatility_change": return "text-[var(--accent)]";
     case "momentum_change": return "text-[var(--green)]";
-    case "digit_bias": return "text-[var(--cyan)]";
-    case "consolidation": return "text-[var(--cyan)]";
+    case "digit_bias": return "text-[var(--accent)]";
+    case "consolidation": return "text-[var(--accent)]";
     default: return "text-[var(--text-muted)]";
   }
 }
 
 function insightBg(type: string): string {
   switch (type) {
-    case "volatility_change": return "bg-[var(--amber-soft)] border-[var(--amber)]/20";
+    case "volatility_change": return "bg-[var(--accent-soft)] border-[var(--accent)]/20";
     case "momentum_change": return "bg-[var(--green-soft)] border-[var(--green)]/20";
-    case "digit_bias": return "bg-[var(--cyan-soft)] border-[var(--cyan)]/20";
-    case "consolidation": return "bg-[var(--cyan-soft)] border-[var(--cyan)]/20";
+    case "digit_bias": return "bg-[var(--accent-soft)] border-[var(--accent)]/20";
+    case "consolidation": return "bg-[var(--accent-soft)] border-[var(--accent)]/20";
     default: return "bg-[var(--card)] border-[var(--border)]";
   }
 }
@@ -55,7 +55,7 @@ export default function MarketInsightCards({ data, loading }: MarketInsightCards
     return (
       <div className="surface-elevated p-5">
         <div className="flex items-center gap-2 mb-4">
-          <Lightbulb className="w-4 h-4 text-[var(--cyan)]" />
+          <Lightbulb className="w-4 h-4 text-[var(--accent)]" />
           <h3 className="section-title text-caption">AI Insights</h3>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -75,7 +75,7 @@ export default function MarketInsightCards({ data, loading }: MarketInsightCards
     return (
       <div className="surface-elevated p-5">
         <div className="flex items-center gap-2 mb-4">
-          <Lightbulb className="w-4 h-4 text-[var(--cyan)]" />
+          <Lightbulb className="w-4 h-4 text-[var(--accent)]" />
           <h3 className="section-title text-caption">AI Insights</h3>
         </div>
         <p className="text-micro text-[var(--text-muted)] italic text-center py-6">No AI insights generated yet. Insights appear as the orchestrator detects volatility changes, momentum shifts, digit biases, or consolidations.</p>
@@ -88,7 +88,7 @@ export default function MarketInsightCards({ data, loading }: MarketInsightCards
   return (
     <div className="surface-elevated p-5">
       <div className="flex items-center gap-2 mb-4">
-        <Lightbulb className="w-4 h-4 text-[var(--cyan)]" />
+        <Lightbulb className="w-4 h-4 text-[var(--accent)]" />
         <h3 className="section-title text-caption">AI Insights</h3>
         <span className="text-[9px] text-[var(--text-muted)] ml-auto">{data.length} active</span>
       </div>

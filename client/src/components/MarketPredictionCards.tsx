@@ -20,7 +20,7 @@ interface MarketPredictionCardsProps {
 function riskColor(r: string): string {
   switch (r) {
     case "Low": return "text-[var(--green)]";
-    case "Medium": return "text-[var(--amber)]";
+    case "Medium": return "text-[var(--accent)]";
     case "High": return "text-[var(--red)]";
     default: return "text-[var(--text-muted)]";
   }
@@ -29,7 +29,7 @@ function riskColor(r: string): string {
 function riskBg(r: string): string {
   switch (r) {
     case "Low": return "bg-[var(--green-soft)] border-[var(--green)]/20";
-    case "Medium": return "bg-[var(--amber-soft)] border-[var(--amber)]/20";
+    case "Medium": return "bg-[var(--accent-soft)] border-[var(--accent)]/20";
     case "High": return "bg-[var(--red-soft)] border-[var(--red)]/20";
     default: return "bg-[var(--card)] border-[var(--border)]";
   }
@@ -40,7 +40,7 @@ export default function MarketPredictionCards({ data, loading }: MarketPredictio
     return (
       <div className="surface-elevated p-5">
         <div className="flex items-center gap-2 mb-4">
-          <Sparkles className="w-4 h-4 text-[var(--cyan)]" />
+          <Sparkles className="w-4 h-4 text-[var(--accent)]" />
           <h3 className="section-title text-caption">Predictions</h3>
         </div>
         <div className="space-y-3">
@@ -60,7 +60,7 @@ export default function MarketPredictionCards({ data, loading }: MarketPredictio
     return (
       <div className="surface-elevated p-5">
         <div className="flex items-center gap-2 mb-4">
-          <Sparkles className="w-4 h-4 text-[var(--cyan)]" />
+          <Sparkles className="w-4 h-4 text-[var(--accent)]" />
           <h3 className="section-title text-caption">Predictions</h3>
         </div>
         <p className="text-micro text-[var(--text-muted)] italic text-center py-6">No active predictions. Predictions are generated when sufficient data and confidence thresholds are met.</p>
@@ -71,7 +71,7 @@ export default function MarketPredictionCards({ data, loading }: MarketPredictio
   return (
     <div className="surface-elevated p-5">
       <div className="flex items-center gap-2 mb-4">
-        <Sparkles className="w-4 h-4 text-[var(--cyan)]" />
+        <Sparkles className="w-4 h-4 text-[var(--accent)]" />
         <h3 className="section-title text-caption">Predictions</h3>
         <span className="text-[9px] text-[var(--text-muted)] ml-auto">{data.length} active</span>
       </div>
@@ -103,7 +103,7 @@ export default function MarketPredictionCards({ data, loading }: MarketPredictio
               </div>
               <div className="w-full h-1.5 bg-[var(--bg)] rounded-full overflow-hidden">
                 <div
-                  className={`h-full rounded-full transition-all ${p.confidence >= 70 ? "bg-[var(--green)]" : p.confidence >= 50 ? "bg-[var(--amber)]" : "bg-[var(--red)]"}`}
+                  className={`h-full rounded-full transition-all ${p.confidence >= 70 ? "bg-[var(--green)]" : p.confidence >= 50 ? "bg-[var(--accent)]" : "bg-[var(--red)]"}`}
                   style={{ width: `${p.confidence}%` }}
                 />
               </div>

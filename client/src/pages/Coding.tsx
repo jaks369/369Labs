@@ -170,7 +170,7 @@ export default function Coding() {
 
             <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4 space-y-3">
               <div className="flex items-center gap-2 text-sm text-[var(--text-secondary)]">
-                <Sparkles className="w-4 h-4 text-[var(--cyan)]" /> Ask 369AI to modify this file
+                <Sparkles className="w-4 h-4 text-[var(--accent)]" /> Ask 369AI to modify this file
               </div>
               <div className="flex gap-2">
                 <input
@@ -178,9 +178,9 @@ export default function Coding() {
                   onChange={(e) => setPrompt(e.target.value)}
                   onKeyDown={(e) => { if (e.key === "Enter") askAI(); }}
                   placeholder="e.g. extract the win-rate calc into a helper"
-                  className="flex-1 bg-[var(--card)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-[var(--cyan)]"
+                  className="flex-1 bg-[var(--card)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-[var(--accent)]"
                 />
-                <button onClick={askAI} disabled={askMutation.isPending || !selected} className="flex items-center gap-1 px-3 py-2 rounded-lg bg-[var(--cyan)] text-black text-xs font-bold disabled:opacity-40 hover:brightness-110">
+                <button onClick={askAI} disabled={askMutation.isPending || !selected} className="flex items-center gap-1 px-3 py-2 rounded-lg bg-[var(--accent)] text-black text-xs font-bold disabled:opacity-40 hover:brightness-110">
                   {askMutation.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />} Ask
                 </button>
               </div>
@@ -222,7 +222,7 @@ export default function Coding() {
             </div>
             <div className="p-4 space-y-2">
               {versionsQuery.isLoading ? (
-                <Loader2 className="w-4 h-4 animate-spin text-[var(--amber)]" />
+                <Loader2 className="w-4 h-4 animate-spin text-[var(--accent)]" />
               ) : (versionsQuery.data?.versions || []).length === 0 ? (
                 <p className="text-sm text-[var(--text-muted)]">No saved versions.</p>
               ) : (
@@ -232,7 +232,7 @@ export default function Coding() {
                       <p className="text-xs text-white font-bold">{v.label || "Unlabeled"}</p>
                       <p className="text-caption">{new Date(v.createdAt).toLocaleString()}</p>
                     </div>
-                    <button onClick={() => restoreVersion(v.id)} className="text-caption text-[var(--cyan)] hover:brightness-110"><RotateCcw className="w-3 h-3 inline mr-1" />Restore</button>
+                    <button onClick={() => restoreVersion(v.id)} className="text-caption text-[var(--accent)] hover:brightness-110"><RotateCcw className="w-3 h-3 inline mr-1" />Restore</button>
                   </div>
                 ))
               )}

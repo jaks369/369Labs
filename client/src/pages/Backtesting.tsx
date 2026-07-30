@@ -137,7 +137,7 @@ export default function Backtesting() {
     // 40% red -> 60% amber -> 75%+ green
     if (wr >= 75) return "bg-[var(--green-soft)] text-white";
     if (wr >= 60) return "bg-[var(--green-soft)] text-[var(--green)]";
-    if (wr >= 50) return "bg-[var(--amber-soft)] text-[var(--amber-hover)]";
+    if (wr >= 50) return "bg-[var(--accent-soft)] text-[var(--accent-hover)]";
     if (wr >= 40) return "bg-[var(--red-soft)] text-[var(--red)]";
     return "bg-[var(--red-soft)] text-white";
   };
@@ -158,7 +158,7 @@ export default function Backtesting() {
 
             <div>
               <label className="text-xs text-[var(--text-muted)] font-bold uppercase tracking-wider">Symbol</label>
-              <select value={symbol} onChange={e => setSymbol(e.target.value)} className="w-full mt-1 bg-[var(--surface-secondary)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-white focus:border-[var(--amber)] outline-none [&>option]:bg-[var(--surface-secondary)] [&>option]:text-white">
+              <select value={symbol} onChange={e => setSymbol(e.target.value)} className="w-full mt-1 bg-[var(--surface-secondary)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-white focus:border-[var(--accent)] outline-none [&>option]:bg-[var(--surface-secondary)] [&>option]:text-white">
                 {IT_SYMBOLS.map(s => <option key={s} value={s}>{s}</option>)}
               </select>
             </div>
@@ -166,10 +166,10 @@ export default function Backtesting() {
             <div>
               <label className="text-xs text-[var(--text-muted)] font-bold uppercase tracking-wider">Strategy</label>
               {loadedSignal && (
-              <div className="mb-4 p-3 rounded-lg bg-[var(--cyan-soft)] border border-[var(--cyan-border)] flex items-start gap-2">
-                <CandlestickChart className="w-4 h-4 text-[var(--cyan)] mt-0.5" />
+              <div className="mb-4 p-3 rounded-lg bg-[var(--accent-soft)] border border-[var(--accent-border)] flex items-start gap-2">
+                <CandlestickChart className="w-4 h-4 text-[var(--accent)] mt-0.5" />
                 <div className="text-xs text-[var(--text-secondary)]">
-                  <b className="text-[var(--cyan)]">Backtesting AI signal:</b> {loadedSignal.title} (win rate {loadedSignal.winRate}%, {loadedSignal.sampleSize} samples). Rule loaded automatically.
+                  <b className="text-[var(--accent)]">Backtesting AI signal:</b> {loadedSignal.title} (win rate {loadedSignal.winRate}%, {loadedSignal.sampleSize} samples). Rule loaded automatically.
                 </div>
               </div>
             )}
@@ -200,7 +200,7 @@ export default function Backtesting() {
               <input type="number" value={stake} onChange={e => setStake(Number(e.target.value))} min={0.35} step={0.5} className="w-full mt-1 bg-[var(--card)] border border-[var(--border)] rounded-lg px-3 py-2 text-white text-sm" />
             </div>
 
-            <Button onClick={runBacktestHandler} disabled={running || !selectedStrategyId} className="w-full bg-[var(--amber)] hover:bg-[var(--amber)] text-white">
+            <Button onClick={runBacktestHandler} disabled={running || !selectedStrategyId} className="w-full bg-[var(--accent)] hover:bg-[var(--accent)] text-white">
               {running ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Fetching ticks...</> : <><Play className="w-4 h-4 mr-2" /> Run Backtest</>}
             </Button>
           </div>
@@ -216,7 +216,7 @@ export default function Backtesting() {
             {running && (
               <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-8 flex items-center justify-center">
                 <div className="text-center">
-                  <Loader2 className="w-10 h-10 animate-spin text-[var(--amber)] mx-auto mb-4" />
+                  <Loader2 className="w-10 h-10 animate-spin text-[var(--accent)] mx-auto mb-4" />
                   <p className="text-[var(--text-secondary)]">Fetching historical ticks from Deriv and running simulation...</p>
                 </div>
               </div>
@@ -264,7 +264,7 @@ export default function Backtesting() {
                         </div>
                         <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4">
                           <p className="text-micro">Profit Factor</p>
-                          <p className={`text-2xl font-bold mt-1 ${profitFactor >= 1.5 ? "text-[var(--green)]" : profitFactor >= 1 ? "text-[var(--amber)]" : "text-[var(--red)]"}`}>{profitFactor.toFixed(2)}</p>
+                          <p className={`text-2xl font-bold mt-1 ${profitFactor >= 1.5 ? "text-[var(--green)]" : profitFactor >= 1 ? "text-[var(--accent)]" : "text-[var(--red)]"}`}>{profitFactor.toFixed(2)}</p>
                         </div>
                         <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4">
                           <p className="text-micro">Avg Win/Loss</p>
@@ -338,15 +338,15 @@ export default function Backtesting() {
                 </div>
 
                 <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-6">
-                  <h3 className="text-sm font-bold text-white mb-1 flex items-center gap-2"><GitCompare className="w-4 h-4 text-[var(--amber)]" /> Strategy Comparison</h3>
+                  <h3 className="text-sm font-bold text-white mb-1 flex items-center gap-2"><GitCompare className="w-4 h-4 text-[var(--accent)]" /> Strategy Comparison</h3>
                   <p className="text-xs text-[var(--text-muted)] mb-4">Compare up to 4 strategies side-by-side on the same tick window.</p>
                   {!compareMode ? (
-                    <Button onClick={() => setCompareMode(true)} className="bg-[var(--amber)]/20 text-[var(--amber)] border border-[var(--amber)]/30 text-xs">Select Strategies</Button>
+                    <Button onClick={() => setCompareMode(true)} className="bg-[var(--accent)]/20 text-[var(--accent)] border border-[var(--accent)]/30 text-xs">Select Strategies</Button>
                   ) : (
                     <div className="space-y-3">
                       <div className="flex flex-wrap gap-2">
                         {(strategiesQuery.data || []).filter(s => (s.config as any)?.rule).map((s) => (
-                          <button key={s.id} onClick={() => setCompareIds((prev) => prev.includes(s.id) ? prev.filter((id) => id !== s.id) : prev.length < 4 ? [...prev, s.id] : prev)} className={`px-3 py-1.5 rounded-lg text-xs border transition-all ${compareIds.includes(s.id) ? "bg-[var(--amber)]/20 text-[var(--amber)] border-[var(--amber)]/30" : "bg-[var(--card)] text-[var(--text-muted)] border-[var(--border)]"}`}>{s.name}</button>
+                          <button key={s.id} onClick={() => setCompareIds((prev) => prev.includes(s.id) ? prev.filter((id) => id !== s.id) : prev.length < 4 ? [...prev, s.id] : prev)} className={`px-3 py-1.5 rounded-lg text-xs border transition-all ${compareIds.includes(s.id) ? "bg-[var(--accent)]/20 text-[var(--accent)] border-[var(--accent)]/30" : "bg-[var(--card)] text-[var(--text-muted)] border-[var(--border)]"}`}>{s.name}</button>
                         ))}
                       </div>
                       {compareIds.length >= 2 && (
@@ -354,7 +354,7 @@ export default function Backtesting() {
                           setCompareRunning(true);
                           try { const res = await backtestCompareMutation.mutateAsync({ strategyIds: compareIds }); setCompareResults(res.comparisons); } catch (e: any) { toast(e?.message || "Comparison failed", "error"); }
                           setCompareRunning(false);
-                        }} disabled={compareRunning} className="bg-[var(--amber)] text-[var(--bg)] text-xs">
+                        }} disabled={compareRunning} className="bg-[var(--accent)] text-[var(--bg)] text-xs">
                           {compareRunning ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Running...</> : <>Compare</>}
                         </Button>
                       )}
@@ -390,7 +390,7 @@ export default function Backtesting() {
                       <option value="count">Count / frequency (1-10)</option>
                       <option value="stake">Stake ($)</option>
                     </select>
-                    <Button onClick={runSweep} disabled={sweepRunning} className="bg-[var(--amber)] hover:bg-[var(--amber)] text-white">
+                    <Button onClick={runSweep} disabled={sweepRunning} className="bg-[var(--accent)] hover:bg-[var(--accent)] text-white">
                       {sweepRunning ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Sweeping...</> : <><Search className="w-4 h-4 mr-2" /> Run Sweep</>}
                     </Button>
                   </div>

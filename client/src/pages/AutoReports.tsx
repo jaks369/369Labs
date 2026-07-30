@@ -38,7 +38,7 @@ function ReportViewer({ report, onClose }: { report: any; onClose: () => void })
             <p className="text-caption">{report.period?.from} → {report.period?.to}</p>
           </div>
           <div className="flex items-center gap-2">
-            <button onClick={() => { exportCsv(report); toast("CSV exported", "success"); }} className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-[var(--amber)]/20 text-[var(--amber)] text-xs font-bold hover:bg-[var(--amber)]/30">
+            <button onClick={() => { exportCsv(report); toast("CSV exported", "success"); }} className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-[var(--accent)]/20 text-[var(--accent)] text-xs font-bold hover:bg-[var(--accent)]/30">
               <Download className="w-3.5 h-3.5" /> CSV
             </button>
             <button onClick={onClose} className="p-1.5 rounded-lg text-[var(--text-muted)] hover:text-white"><X className="w-4 h-4" /></button>
@@ -139,7 +139,7 @@ export default function AutoReports() {
     <div className="min-h-screen bg-[var(--card)] p-6">
       <div className="max-w-3xl mx-auto space-y-8">
         <div className="flex items-center gap-3">
-          <FileText className="w-7 h-7 text-[var(--amber)]" />
+          <FileText className="w-7 h-7 text-[var(--accent)]" />
           <div>
             <h1 className="text-2xl font-bold text-white">Auto Reports</h1>
             <p className="text-xs text-[var(--text-muted)]">Generate and download performance reports</p>
@@ -150,9 +150,9 @@ export default function AutoReports() {
           {REPORT_TEMPLATES.map((t) => {
             const Icon = t.icon;
             return (
-              <button key={t.id} onClick={() => generate(t.id)} disabled={generating !== null} className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5 text-left hover:border-[var(--amber)]/30 transition-all disabled:opacity-50">
-                <div className="w-10 h-10 rounded-xl bg-[var(--amber-soft)] border border-[var(--amber-border)] flex items-center justify-center mb-3">
-                  {generating === t.id ? <Loader2 className="w-5 h-5 animate-spin text-[var(--amber)]" /> : <Icon className="w-5 h-5 text-[var(--amber)]" />}
+              <button key={t.id} onClick={() => generate(t.id)} disabled={generating !== null} className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5 text-left hover:border-[var(--accent)]/30 transition-all disabled:opacity-50">
+                <div className="w-10 h-10 rounded-xl bg-[var(--accent-soft)] border border-[var(--accent-border)] flex items-center justify-center mb-3">
+                  {generating === t.id ? <Loader2 className="w-5 h-5 animate-spin text-[var(--accent)]" /> : <Icon className="w-5 h-5 text-[var(--accent)]" />}
                 </div>
                 <span className="text-sm font-bold text-white">{t.name}</span>
                 <p className="text-xs text-[var(--text-muted)] mt-1">{t.description}</p>
@@ -166,7 +166,7 @@ export default function AutoReports() {
             <h2 className="text-sm font-bold text-white">Generated Reports</h2>
           </div>
           {reportsQuery.isLoading ? (
-            <div className="p-8 text-center"><Loader2 className="w-6 h-6 animate-spin text-[var(--amber)] mx-auto" /></div>
+            <div className="p-8 text-center"><Loader2 className="w-6 h-6 animate-spin text-[var(--accent)] mx-auto" /></div>
           ) : (reportsQuery.data || []).length === 0 ? (
             <div className="p-8 text-center">
               <FileText className="w-8 h-8 text-[var(--border)] mx-auto mb-2" />
@@ -177,7 +177,7 @@ export default function AutoReports() {
               {(reportsQuery.data || []).map((r: any) => (
                 <div key={r.id} className="flex items-center justify-between p-4">
                   <div className="flex items-center gap-3">
-                    <FileText className="w-4 h-4 text-[var(--amber)]" />
+                    <FileText className="w-4 h-4 text-[var(--accent)]" />
                     <div>
                       <span className="text-sm text-white">{r.name}</span>
                       <div className="flex items-center gap-3 text-xs text-[var(--text-muted)] mt-0.5">
@@ -187,7 +187,7 @@ export default function AutoReports() {
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
-                    <button onClick={() => openReport(r.id)} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[var(--amber)]/20 text-[var(--amber)] text-xs font-bold hover:bg-[var(--amber)]/30">
+                    <button onClick={() => openReport(r.id)} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[var(--accent)]/20 text-[var(--accent)] text-xs font-bold hover:bg-[var(--accent)]/30">
                       <Eye className="w-3.5 h-3.5" /> View
                     </button>
                   </div>
@@ -201,7 +201,7 @@ export default function AutoReports() {
       {viewReportId && (
         reportDetailQuery.isLoading ? (
           <div className="fixed inset-0 z-[90] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-            <Loader2 className="w-8 h-8 animate-spin text-[var(--amber)]" />
+            <Loader2 className="w-8 h-8 animate-spin text-[var(--accent)]" />
           </div>
         ) : viewReport ? (
           <ReportViewer report={viewReport} onClose={() => setViewReportId(null)} />

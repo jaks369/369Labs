@@ -5,7 +5,7 @@ function getPulseColor(variant, current, prev) {
   if (variant === "positive") return current >= prev ? "var(--green)" : "var(--red)";
   if (variant === "always-positive") return "var(--green)";
   if (variant === "always-negative") return "var(--red)";
-  return "var(--amber)";
+  return "var(--accent)";
 }
 
 export default function LiveValue({

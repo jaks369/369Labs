@@ -70,13 +70,13 @@ export default function AIChatWindow() {
   return (
     <div className="surface-elevated flex flex-col h-[600px]">
       <div className="flex items-center gap-2 border-b border-[var(--border)] px-4 py-3">
-        <Sparkles className="w-4 h-4 text-[var(--cyan)]" />
+        <Sparkles className="w-4 h-4 text-[var(--accent)]" />
         <h3 className="text-xs font-bold text-white">369AI Chat</h3>
         <span className="text-[9px] text-[var(--text-muted)] ml-auto">Conversational Copilot</span>
-        <button onClick={() => { setShowMemory(true); memoryQuery.refetch(); }} className="flex items-center gap-1 px-2 py-1 rounded text-[9px] text-[var(--text-secondary)] hover:text-white border border-[var(--border)] hover:border-[var(--cyan)]/50 transition-all">
+        <button onClick={() => { setShowMemory(true); memoryQuery.refetch(); }} className="flex items-center gap-1 px-2 py-1 rounded text-[9px] text-[var(--text-secondary)] hover:text-white border border-[var(--border)] hover:border-[var(--accent)]/50 transition-all">
           <BrainCircuit className="w-3 h-3" /> Memory
         </button>
-        <button onClick={() => setShowModelConfig(true)} className="flex items-center gap-1 px-2 py-1 rounded text-[9px] text-[var(--text-secondary)] hover:text-white border border-[var(--border)] hover:border-[var(--cyan)]/50 transition-all">
+        <button onClick={() => setShowModelConfig(true)} className="flex items-center gap-1 px-2 py-1 rounded text-[9px] text-[var(--text-secondary)] hover:text-white border border-[var(--border)] hover:border-[var(--accent)]/50 transition-all">
           <Settings2 className="w-3 h-3" /> Model
         </button>
         {messages.length > 0 && (
@@ -100,14 +100,14 @@ export default function AIChatWindow() {
         {messages.map((msg, i) => <AIChatMessage key={i} {...msg} />)}
         {loading && (
           <div className="flex items-start gap-3">
-            <div className="w-7 h-7 rounded-full bg-[var(--cyan-soft)] border-[var(--cyan)]/30 flex items-center justify-center shrink-0">
-              <Sparkles className="w-3.5 h-3.5 text-[var(--cyan)]" />
+            <div className="w-7 h-7 rounded-full bg-[var(--accent-soft)] border-[var(--accent)]/30 flex items-center justify-center shrink-0">
+              <Sparkles className="w-3.5 h-3.5 text-[var(--accent)]" />
             </div>
             <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl rounded-tl-sm px-3.5 py-2.5">
               <div className="flex gap-1">
-                <span className="w-1.5 h-1.5 bg-[var(--cyan)] rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
-                <span className="w-1.5 h-1.5 bg-[var(--cyan)] rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
-                <span className="w-1.5 h-1.5 bg-[var(--cyan)] rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
+                <span className="w-1.5 h-1.5 bg-[var(--accent)] rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
+                <span className="w-1.5 h-1.5 bg-[var(--accent)] rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
+                <span className="w-1.5 h-1.5 bg-[var(--accent)] rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
               </div>
             </div>
           </div>
@@ -120,7 +120,7 @@ export default function AIChatWindow() {
         <div className="fixed inset-0 z-[90] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setShowMemory(false)}>
           <div className="w-full max-w-2xl bg-[var(--card)] border border-[var(--border)] rounded-xl max-h-[80vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between p-4 border-b border-[var(--border)]">
-              <h3 className="text-sm font-bold text-white flex items-center gap-2"><BrainCircuit className="w-4 h-4 text-[var(--cyan)]" /> AI Memory</h3>
+              <h3 className="text-sm font-bold text-white flex items-center gap-2"><BrainCircuit className="w-4 h-4 text-[var(--accent)]" /> AI Memory</h3>
               <button onClick={() => setShowMemory(false)} className="text-[var(--text-muted)] hover:text-white">✕</button>
             </div>
             <div className="p-3 border-b border-[var(--border)] flex gap-2">
@@ -132,15 +132,15 @@ export default function AIChatWindow() {
             </div>
             <div className="flex-1 overflow-y-auto p-4 space-y-2">
               {memorySearchQuery.isLoading ? (
-                <div className="flex justify-center py-4"><Sparkles className="w-4 h-4 text-[var(--amber)] animate-spin" /></div>
+                <div className="flex justify-center py-4"><Sparkles className="w-4 h-4 text-[var(--accent)] animate-spin" /></div>
               ) : (memorySearchQuery.data?.entries || []).length === 0 ? (
                 <div className="empty-state"><p className="empty-state-desc">No memory entries found.</p></div>
               ) : (
                 (memorySearchQuery.data?.entries || []).map((entry: any) => (
                   <div key={entry.id} className="p-3 rounded-lg bg-[var(--card)] border border-[var(--border)] text-micro">
                     <div className="flex items-center gap-2 mb-1">
-                      <span className="text-[9px] uppercase tracking-wider text-[var(--amber)] font-bold">{entry.knowledgeType}</span>
-                      {entry.symbol && <span className="text-[var(--cyan)]">{entry.symbol}</span>}
+                      <span className="text-[9px] uppercase tracking-wider text-[var(--accent)] font-bold">{entry.knowledgeType}</span>
+                      {entry.symbol && <span className="text-[var(--accent)]">{entry.symbol}</span>}
                       <span className="ml-auto text-[var(--text-muted)]">{new Date(entry.createdAt).toLocaleString()}</span>
                     </div>
                     <pre className="text-[var(--text-secondary)] whitespace-pre-wrap font-mono text-[9px]">{JSON.stringify(entry.data, null, 1).slice(0, 300)}</pre>
@@ -156,7 +156,7 @@ export default function AIChatWindow() {
         <div className="fixed inset-0 z-[90] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setShowModelConfig(false)}>
           <div className="w-full max-w-md bg-[var(--card)] border border-[var(--border)] rounded-xl" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between p-4 border-b border-[var(--border)]">
-              <h3 className="text-sm font-bold text-white flex items-center gap-2"><Settings2 className="w-4 h-4 text-[var(--cyan)]" /> AI Model Configuration</h3>
+              <h3 className="text-sm font-bold text-white flex items-center gap-2"><Settings2 className="w-4 h-4 text-[var(--accent)]" /> AI Model Configuration</h3>
               <button onClick={() => setShowModelConfig(false)} className="text-[var(--text-muted)] hover:text-white">✕</button>
             </div>
             <div className="p-4 space-y-3">
@@ -176,7 +176,7 @@ export default function AIChatWindow() {
                 <input value={modelName} onChange={(e) => setModelName(e.target.value)} placeholder="e.g. gpt-4o-mini, claude-3-haiku" className="w-full bg-[var(--card)] border border-[var(--border)] rounded-lg px-3 py-2 text-xs text-white mt-1 outline-none" />
               </div>
               <p className="text-[9px] text-[var(--text-muted)]">Set AI_API_KEY and AI_API_BASE_URL in your environment. Model config is saved per-user.</p>
-              <button onClick={saveModelConfig} className="w-full py-2 rounded-lg bg-[var(--cyan)] text-black text-xs font-bold hover:bg-[var(--cyan)]">
+              <button onClick={saveModelConfig} className="w-full py-2 rounded-lg bg-[var(--accent)] text-black text-xs font-bold hover:bg-[var(--accent)]">
                 Save Model Config
               </button>
             </div>

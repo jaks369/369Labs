@@ -46,11 +46,11 @@ export default function TelegramSettings() {
             <h1 className="text-3xl font-bold text-white">Telegram Integration</h1>
             <p className="text-[var(--text-secondary)] text-sm mt-1">Receive trade alerts and bot notifications on Telegram</p>
           </div>
-          <MessageCircle className="w-6 h-6 text-[var(--amber)]" />
+          <MessageCircle className="w-6 h-6 text-[var(--accent)]" />
         </div>
 
         {settingsQuery.isLoading ? (
-          <div className="flex items-center justify-center h-64"><Loader2 className="w-8 h-8 animate-spin text-[var(--amber)]" /></div>
+          <div className="flex items-center justify-center h-64"><Loader2 className="w-8 h-8 animate-spin text-[var(--accent)]" /></div>
         ) : (
           <>
             {settingsQuery.isError && (
@@ -60,9 +60,9 @@ export default function TelegramSettings() {
               </div>
             )}
             <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-6 space-y-6">
-            <div className="p-4 bg-[var(--amber-soft)] border border-[var(--amber)]/20 rounded-xl flex items-start gap-3">
-              <AlertCircle className="w-5 h-5 text-[var(--amber)] shrink-0 mt-0.5" />
-              <div className="text-xs text-[var(--amber)]">
+            <div className="p-4 bg-[var(--accent-soft)] border border-[var(--accent)]/20 rounded-xl flex items-start gap-3">
+              <AlertCircle className="w-5 h-5 text-[var(--accent)] shrink-0 mt-0.5" />
+              <div className="text-xs text-[var(--accent)]">
                 <p className="font-bold mb-1">How to set up:</p>
                 <ol className="list-decimal ml-4 space-y-1">
                   <li>Create a bot on Telegram via <strong>@BotFather</strong> and copy the token</li>
@@ -94,7 +94,7 @@ export default function TelegramSettings() {
             </div>
 
             <div className="flex items-center gap-4">
-              <Button onClick={handleSave} disabled={saveMutation.isPending || !botToken} className="bg-[var(--amber)] hover:bg-[var(--amber)] text-white">
+              <Button onClick={handleSave} disabled={saveMutation.isPending || !botToken} className="bg-[var(--accent)] hover:bg-[var(--accent)] text-white">
                 {saveMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Send className="w-4 h-4 mr-2" />}
                 Save & Connect
               </Button>

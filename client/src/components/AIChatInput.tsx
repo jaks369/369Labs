@@ -46,12 +46,12 @@ export default function AIChatInput({ onSend, loading, disabled }: AIChatInputPr
         placeholder="Ask about your trades, strategies, market..."
         rows={1}
         disabled={loading || disabled}
-        className="flex-1 bg-[var(--card)] border border-[var(--border)] rounded-lg px-3 py-2 text-xs text-white placeholder-[var(--text-muted)] outline-none resize-none focus:border-[var(--amber)]/40 transition-colors disabled:opacity-50"
+        className="flex-1 bg-[var(--card)] border border-[var(--border)] rounded-lg px-3 py-2 text-xs text-white placeholder-[var(--text-muted)] outline-none resize-none focus:border-[var(--accent)]/40 transition-colors disabled:opacity-50"
       />
       <button
         onClick={handleSend}
         disabled={!input.trim() || loading || disabled}
-        className="w-8 h-8 rounded-lg bg-[var(--amber)] hover:bg-[var(--amber-hover)] disabled:bg-[var(--border)] disabled:cursor-not-allowed flex items-center justify-center transition-colors shrink-0"
+        className="w-8 h-8 rounded-lg bg-[var(--accent)] hover:bg-[var(--accent-hover)] disabled:bg-[var(--border)] disabled:cursor-not-allowed flex items-center justify-center transition-colors shrink-0"
       >
         {loading ? (
           <Loader2 className="w-4 h-4 text-white animate-spin" />

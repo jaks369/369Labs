@@ -10,7 +10,7 @@ export default function ReleaseNotes() {
     <div className="min-h-screen bg-[var(--card)] p-6">
       <div className="max-w-2xl mx-auto space-y-8">
         <div className="flex items-center gap-3">
-          <Megaphone className="w-7 h-7 text-[var(--amber)]" />
+          <Megaphone className="w-7 h-7 text-[var(--accent)]" />
           <div>
             <h1 className="text-2xl font-bold text-white">Release Notes</h1>
             <p className="text-xs text-[var(--text-muted)]">Detailed descriptions of each release</p>
@@ -27,7 +27,7 @@ export default function ReleaseNotes() {
               <ul className="space-y-2">
                 {r.highlights.map((h, i) => (
                   <li key={i} className="flex items-start gap-2 text-sm text-[var(--text-secondary)]">
-                    <span className="w-1.5 h-1.5 rounded-full bg-[var(--amber)] mt-1.5 shrink-0" />
+                    <span className="w-1.5 h-1.5 rounded-full bg-[var(--accent)] mt-1.5 shrink-0" />
                     {h}
                   </li>
                 ))}

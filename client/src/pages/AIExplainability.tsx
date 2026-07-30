@@ -91,7 +91,7 @@ export default function AIExplainability() {
     <div className="min-h-screen bg-[var(--card)] p-6">
       <div className="max-w-3xl mx-auto space-y-8">
         <div className="flex items-center gap-3">
-          <Brain className="w-7 h-7 text-[var(--amber)]" />
+          <Brain className="w-7 h-7 text-[var(--accent)]" />
           <div>
             <h1 className="text-2xl font-bold text-white">AI Explainability</h1>
             <p className="text-xs text-[var(--text-muted)]">Understand how 369AI reaches its trading decisions</p>
@@ -100,7 +100,7 @@ export default function AIExplainability() {
 
         <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
           <div className="flex items-start gap-3">
-            <Lightbulb className="w-5 h-5 text-[var(--amber)] mt-0.5 shrink-0" />
+            <Lightbulb className="w-5 h-5 text-[var(--accent)] mt-0.5 shrink-0" />
             <div className="text-sm text-[var(--text-secondary)] leading-relaxed">
               Every AI trading decision includes a list of contributing factors ranked by importance. The confidence score reflects how strongly the available data supports each prediction. Low-confidence signals (below 50%) are automatically flagged for review.
             </div>
@@ -108,7 +108,7 @@ export default function AIExplainability() {
         </div>
 
         {memoryQuery.isLoading ? (
-          <div className="flex items-center justify-center h-64"><Loader2 className="w-8 h-8 animate-spin text-[var(--amber)]" /></div>
+          <div className="flex items-center justify-center h-64"><Loader2 className="w-8 h-8 animate-spin text-[var(--accent)]" /></div>
         ) : allEntries.length === 0 ? (
           <div className="flex items-center justify-center h-64 text-[var(--text-muted)] text-sm">No AI analysis data yet. Run a market scan or deploy a bot to generate explainability data.</div>
         ) : (
@@ -129,8 +129,8 @@ export default function AIExplainability() {
                 <div key={slot} className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
                   <div className="flex items-center justify-between mb-4">
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-xl bg-[var(--amber-soft)] border border-[var(--amber-border)] flex items-center justify-center">
-                        <Icon className="w-5 h-5 text-[var(--amber)]" />
+                      <div className="w-10 h-10 rounded-xl bg-[var(--accent-soft)] border border-[var(--accent-border)] flex items-center justify-center">
+                        <Icon className="w-5 h-5 text-[var(--accent)]" />
                       </div>
                       <div>
                         <h3 className="text-sm font-bold text-white">{cfg.title}</h3>
@@ -145,7 +145,7 @@ export default function AIExplainability() {
                         <RefreshCw className="w-3.5 h-3.5" />
                       </button>
                       <div className="w-16 h-2 bg-[var(--border)] rounded-full overflow-hidden">
-                        <div className={`h-full rounded-full ${confidence >= 70 ? "bg-[var(--green)]" : confidence >= 50 ? "bg-[var(--amber)]" : "bg-[var(--red)]"}`} style={{ width: `${Math.min(confidence, 100)}%` }} />
+                        <div className={`h-full rounded-full ${confidence >= 70 ? "bg-[var(--green)]" : confidence >= 50 ? "bg-[var(--accent)]" : "bg-[var(--red)]"}`} style={{ width: `${Math.min(confidence, 100)}%` }} />
                       </div>
                       <span className="text-xs font-bold text-white w-8 text-right">{confidence}%</span>
                     </div>
@@ -155,7 +155,7 @@ export default function AIExplainability() {
                     <ul className="space-y-2">
                       {factors.map((f, i) => (
                         <li key={i} className="flex items-start gap-2 text-sm text-[var(--text-secondary)]">
-                          <Lightbulb className="w-3.5 h-3.5 mt-0.5 shrink-0 text-[var(--amber)]" />
+                          <Lightbulb className="w-3.5 h-3.5 mt-0.5 shrink-0 text-[var(--accent)]" />
                           {f}
                         </li>
                       ))}

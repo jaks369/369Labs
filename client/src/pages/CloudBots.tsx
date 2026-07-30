@@ -43,7 +43,7 @@ export default function CloudBots() {
         </div>
 
         {botRunsQuery.isLoading ? (
-          <div className="flex items-center justify-center h-64"><Loader2 className="w-8 h-8 animate-spin text-[var(--amber)]" /></div>
+          <div className="flex items-center justify-center h-64"><Loader2 className="w-8 h-8 animate-spin text-[var(--accent)]" /></div>
         ) : botRunsQuery.isError ? (
           <div className="flex items-center justify-center h-64 text-center">
             <div>

@@ -272,9 +272,9 @@ export default function Bots() {
         </div>
 
         {!derivTokenQuery.data?.token && (
-          <div className="mb-6 p-4 rounded-lg border border-[var(--amber-border)] bg-[var(--amber-soft)] flex items-center gap-3">
-            <AlertCircle className="w-4 h-4 text-[var(--amber)] shrink-0" />
-            <p className="text-xs text-[var(--amber)]">
+          <div className="mb-6 p-4 rounded-lg border border-[var(--accent-border)] bg-[var(--accent-soft)] flex items-center gap-3">
+            <AlertCircle className="w-4 h-4 text-[var(--accent)] shrink-0" />
+            <p className="text-xs text-[var(--accent)]">
               No Deriv API token on file — add a token in{" "}
               <button className="underline font-bold" onClick={() => navigate("/settings")}>
                 Settings
@@ -314,9 +314,9 @@ export default function Bots() {
                         <div className={`w-10 h-10 rounded-lg flex items-center justify-center border ${
                           bot.status === "error"
                             ? "bg-[var(--red-soft)] border-[var(--red)]/20"
-                            : "bg-[var(--amber-soft)] border-[var(--amber-border)]"
+                            : "bg-[var(--accent-soft)] border-[var(--accent-border)]"
                         }`}>
-                          <Activity className={`w-5 h-5 ${bot.status === "error" ? "text-[var(--red)]" : "text-[var(--amber)] animate-pulse"}`} />
+                          <Activity className={`w-5 h-5 ${bot.status === "error" ? "text-[var(--red)]" : "text-[var(--accent)] animate-pulse"}`} />
                         </div>
                         <div>
                           <h3 className="text-sm font-bold text-white">{bot.name}</h3>
@@ -354,7 +354,7 @@ export default function Bots() {
                         <Button
                           size="sm"
                           variant="ghost"
-                          className="text-[var(--text-muted)] hover:text-[var(--amber)] border border-[var(--border)] hover:border-[var(--amber)]/30"
+                          className="text-[var(--text-muted)] hover:text-[var(--accent)] border border-[var(--border)] hover:border-[var(--accent)]/30"
                           onClick={() => setViewLogsFor(bot.runId)}
                         >
                           <FileText className="w-3 h-3 mr-1" /> Logs
@@ -386,7 +386,7 @@ export default function Bots() {
               </div>
               <div className="p-4 space-y-1 max-h-[60vh] overflow-y-auto font-mono text-caption">
                 {botLogsQuery.isLoading ? (
-                  <div className="flex items-center justify-center py-8"><Loader2 className="w-5 h-5 animate-spin text-[var(--amber)]" /></div>
+                  <div className="flex items-center justify-center py-8"><Loader2 className="w-5 h-5 animate-spin text-[var(--accent)]" /></div>
                 ) : botLogsQuery.isError ? (
                   <div className="space-y-1">
                     {(() => {
@@ -406,7 +406,7 @@ export default function Bots() {
                   <p className="text-sm text-[var(--text-muted)] text-center py-8">No logs for this bot run.</p>
                 ) : (
                   (botLogsQuery.data || []).map((log: any) => (
-                    <div key={log.id} className={`flex items-start gap-2 py-1 ${log.level === "error" ? "text-[var(--red)]" : log.level === "warn" ? "text-[var(--amber)]" : "text-[var(--text-secondary)]"}`}>
+                    <div key={log.id} className={`flex items-start gap-2 py-1 ${log.level === "error" ? "text-[var(--red)]" : log.level === "warn" ? "text-[var(--accent)]" : "text-[var(--text-secondary)]"}`}>
                       <span className="text-caption shrink-0 w-16">{log.createdAt ? new Date(log.createdAt).toLocaleTimeString() : ""}</span>
                       <span className="text-caption font-bold uppercase shrink-0 w-10">[{log.level}]</span>
                       <span>{log.message}</span>
@@ -461,7 +461,7 @@ export default function Bots() {
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-micro">Ready to Deploy</h3>
               {selectedMulti.length > 1 && (
-                <Button onClick={handleMultiDeploy} className="text-caption font-bold bg-[var(--amber)] text-[var(--bg)] px-3 py-1 rounded-lg flex items-center gap-1">
+                <Button onClick={handleMultiDeploy} className="text-caption font-bold bg-[var(--accent)] text-[var(--bg)] px-3 py-1 rounded-lg flex items-center gap-1">
                   <Play className="w-3 h-3" /> Deploy {selectedMulti.length} Strategies
                 </Button>
               )}
@@ -469,7 +469,7 @@ export default function Bots() {
             <div className="space-y-3">
               {strategiesQuery.isLoading ? (
                 <div className="flex items-center justify-center py-8">
-                  <Activity className="w-5 h-5 animate-spin text-[var(--amber)]" />
+                  <Activity className="w-5 h-5 animate-spin text-[var(--accent)]" />
                 </div>
               ) : strategiesQuery.isError ? (
                 <p className="text-xs text-[var(--red)] italic text-center py-4">Failed to load strategies. Please try again.</p>
@@ -477,17 +477,17 @@ export default function Bots() {
                 const isSelected = selectedMulti.includes(s.id);
                 const isRunning = runningBots.some((b) => b.strategyId === s.id);
                 return (
-                <div key={s.id} className={`p-4 rounded-xl bg-[var(--card)] border transition-all group ${isSelected ? "border-[var(--amber)]" : "border-[var(--border)] hover:border-[var(--amber)]/50"}`}>
+                <div key={s.id} className={`p-4 rounded-xl bg-[var(--card)] border transition-all group ${isSelected ? "border-[var(--accent)]" : "border-[var(--border)] hover:border-[var(--accent)]/50"}`}>
                   <div className="flex justify-between items-start mb-3">
                     <div className="flex items-center gap-2">
-                      <input type="checkbox" checked={isSelected} onChange={() => setSelectedMulti((p) => p.includes(s.id) ? p.filter((id) => id !== s.id) : [...p, s.id])} className="accent-[var(--amber)] w-3.5 h-3.5" />
+                      <input type="checkbox" checked={isSelected} onChange={() => setSelectedMulti((p) => p.includes(s.id) ? p.filter((id) => id !== s.id) : [...p, s.id])} className="accent-[var(--accent)] w-3.5 h-3.5" />
                       <h4 className="text-xs font-bold text-white">{s.name}</h4>
                     </div>
-                    <Zap className="w-3 h-3 text-[var(--amber)]" />
+                    <Zap className="w-3 h-3 text-[var(--accent)]" />
                   </div>
                   <div className="flex gap-2">
                     <Button
-                      className="flex-1 h-8 text-caption font-bold bg-[var(--amber-soft)] text-[var(--amber)] hover:bg-[var(--amber)] hover:text-white border border-[var(--amber-border)]"
+                      className="flex-1 h-8 text-caption font-bold bg-[var(--accent-soft)] text-[var(--accent)] hover:bg-[var(--accent)] hover:text-white border border-[var(--accent-border)]"
                       disabled={deployingId === s.id || isRunning}
                       onClick={() => handleDeploy(s)}
                     >

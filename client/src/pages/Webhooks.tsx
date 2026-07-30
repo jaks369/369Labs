@@ -40,15 +40,15 @@ export default function WebhooksPage() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold text-white flex items-center gap-3">
-              <Webhook className="w-7 h-7 text-[var(--amber)]" /> Webhooks
+              <Webhook className="w-7 h-7 text-[var(--accent)]" /> Webhooks
             </h1>
             <p className="text-[var(--text-secondary)] text-sm mt-1">Send external HTTP callbacks when trading events occur</p>
           </div>
-          <button onClick={() => setShowCreate(true)} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[var(--amber)] text-[var(--bg)] text-xs font-bold hover:bg-[var(--amber)]"><Plus className="w-3.5 h-3.5" /> New Webhook</button>
+          <button onClick={() => setShowCreate(true)} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[var(--accent)] text-[var(--bg)] text-xs font-bold hover:bg-[var(--accent)]"><Plus className="w-3.5 h-3.5" /> New Webhook</button>
         </div>
 
         {listQuery.isLoading ? (
-          <div className="flex justify-center py-8"><Loader2 className="w-5 h-5 animate-spin text-[var(--amber)]" /></div>
+          <div className="flex justify-center py-8"><Loader2 className="w-5 h-5 animate-spin text-[var(--accent)]" /></div>
         ) : (listQuery.data?.webhooks || []).length === 0 ? (
           <div className="text-center py-12">
             <Webhook className="w-12 h-12 text-[var(--border)] mx-auto mb-3" />
@@ -97,13 +97,13 @@ export default function WebhooksPage() {
                 <label className="text-micro">Events</label>
                 <div className="flex flex-wrap gap-1.5 mt-1">
                   {EVENT_OPTIONS.map(e => (
-                    <button key={e} onClick={() => toggleEvent(e)} className={`text-[9px] px-2 py-1 rounded-lg border transition-all ${events.includes(e) ? "bg-[var(--amber)] text-[var(--bg)] border-[var(--amber)] font-bold" : "bg-[var(--card)] text-[var(--text-secondary)] border-[var(--border)] hover:text-white"}`}>
+                    <button key={e} onClick={() => toggleEvent(e)} className={`text-[9px] px-2 py-1 rounded-lg border transition-all ${events.includes(e) ? "bg-[var(--accent)] text-[var(--bg)] border-[var(--accent)] font-bold" : "bg-[var(--card)] text-[var(--text-secondary)] border-[var(--border)] hover:text-white"}`}>
                       {e}
                     </button>
                   ))}
                 </div>
               </div>
-              <button onClick={createWebhook} disabled={createMutation.isPending || !url.trim() || events.length === 0} className="w-full py-2 rounded-lg bg-[var(--amber)] text-[var(--bg)] text-xs font-bold hover:bg-[var(--amber)] disabled:opacity-40">
+              <button onClick={createWebhook} disabled={createMutation.isPending || !url.trim() || events.length === 0} className="w-full py-2 rounded-lg bg-[var(--accent)] text-[var(--bg)] text-xs font-bold hover:bg-[var(--accent)] disabled:opacity-40">
                 {createMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : "Create Webhook"}
               </button>
             </div>

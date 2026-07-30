@@ -68,13 +68,13 @@ export default function OrderBook() {
       <div className="max-w-4xl mx-auto space-y-6">
         <div className="flex items-center justify-between flex-wrap gap-4">
           <div className="flex items-center gap-3">
-            <Book className="w-7 h-7 text-[var(--amber)]" />
+            <Book className="w-7 h-7 text-[var(--accent)]" />
             <div>
               <h1 className="text-2xl font-bold text-white">Order Book</h1>
-              <p className="text-xs text-[var(--text-muted)]">Theoretical depth estimate from tick distribution{!connected && <span className="text-[var(--amber)]"> (connecting...)</span>}</p>
+              <p className="text-xs text-[var(--text-muted)]">Theoretical depth estimate from tick distribution{!connected && <span className="text-[var(--accent)]"> (connecting...)</span>}</p>
             </div>
           </div>
-          <select value={symbol} onChange={(e) => setSymbol(e.target.value)} className="bg-[var(--surface-secondary)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-white focus:border-[var(--amber)] outline-none [&>option]:bg-[var(--surface-secondary)] [&>option]:text-white">
+          <select value={symbol} onChange={(e) => setSymbol(e.target.value)} className="bg-[var(--surface-secondary)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-white focus:border-[var(--accent)] outline-none [&>option]:bg-[var(--surface-secondary)] [&>option]:text-white">
             {getValidSymbols().map((s) => <option key={s} value={s}>{s}</option>)}
           </select>
         </div>

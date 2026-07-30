@@ -130,17 +130,17 @@ export default function Replay() {
         <div className="flex items-center justify-between flex-wrap gap-4">
           <div>
             <h1 className="text-3xl font-bold text-white flex items-center gap-3">
-              <RotateCcw className="w-7 h-7 text-[var(--amber-hover)]" /> Replay Mode
+              <RotateCcw className="w-7 h-7 text-[var(--accent-hover)]" /> Replay Mode
             </h1>
             <p className="text-[var(--text-secondary)] text-sm mt-1">Replay historical ticks. Trade manually and let 369AI score your decision.</p>
           </div>
-          <select value={symbol} onChange={(e) => setSymbol(e.target.value)} className="bg-[var(--surface-secondary)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-white focus:border-[var(--amber)] outline-none [&>option]:bg-[var(--surface-secondary)] [&>option]:text-white">
+          <select value={symbol} onChange={(e) => setSymbol(e.target.value)} className="bg-[var(--surface-secondary)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-white focus:border-[var(--accent)] outline-none [&>option]:bg-[var(--surface-secondary)] [&>option]:text-white">
             {SYMBOLS.map((s) => <option key={s} value={s}>{s}</option>)}
           </select>
         </div>
 
         {error && <div className="bg-[var(--red-soft)] border border-[var(--red)]/30 rounded-xl p-4 text-sm text-[var(--red)]">{error}</div>}
-        {loading && <div className="flex items-center justify-center h-64"><Loader2 className="w-8 h-8 animate-spin text-[var(--amber)]" /></div>}
+        {loading && <div className="flex items-center justify-center h-64"><Loader2 className="w-8 h-8 animate-spin text-[var(--accent)]" /></div>}
 
         {!loading && ticks.length > 0 && (
           <>
@@ -153,7 +153,7 @@ export default function Replay() {
                 </div>
                 <div className="text-right">
                   <p className="text-xs text-[var(--text-muted)] uppercase">Last digit</p>
-                  <p className="text-4xl font-bold text-[var(--amber)]">{cur?.lastDigit}</p>
+                  <p className="text-4xl font-bold text-[var(--accent)]">{cur?.lastDigit}</p>
                 </div>
               </div>
 
@@ -161,7 +161,7 @@ export default function Replay() {
 
               <div className="flex items-center gap-3 mt-4">
                 <button onClick={() => { setIdx(0); setPlaying(false); }} className="p-2 rounded-lg bg-white/5 text-[var(--text-secondary)] hover:bg-white/10"><RotateCcw className="w-4 h-4" /></button>
-                <button onClick={() => setPlaying((p) => !p)} className="p-2 rounded-lg bg-[var(--amber)] text-white hover:bg-[var(--amber)]">
+                <button onClick={() => setPlaying((p) => !p)} className="p-2 rounded-lg bg-[var(--accent)] text-white hover:bg-[var(--accent)]">
                   {playing ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
                 </button>
                 <input type="range" min={0} max={ticks.length - 1} value={idx} onChange={(e) => { setPlaying(false); setIdx(Number(e.target.value)); }} className="flex-1" />
@@ -188,7 +188,7 @@ export default function Replay() {
                 {trade && <p className="text-xs text-[var(--text-secondary)] mt-3">Open {trade.type} at {trade.entryPrice.toFixed(4)}. Press again to close and score.</p>}
 
                 <div className="mt-4 pt-4 border-t border-[var(--border)]">
-                  <button onClick={() => setShowOrders((s) => !s)} className="flex items-center gap-2 text-xs text-[var(--amber)] hover:text-[var(--amber-hover)]">
+                  <button onClick={() => setShowOrders((s) => !s)} className="flex items-center gap-2 text-xs text-[var(--accent)] hover:text-[var(--accent-hover)]">
                     <GanttChartSquare className="w-3.5 h-3.5" /> {showOrders ? "Hide" : "Show"} Conditional Orders
                   </button>
                   {showOrders && (
@@ -200,7 +200,7 @@ export default function Replay() {
                         <button onClick={() => addCondOrder("limit")} className="flex-1 py-2 rounded-lg text-xs font-bold bg-[var(--green-soft)] text-[var(--green)] border border-[var(--green)]/30 hover:bg-[var(--green)]/20">
                           Add Take Profit
                         </button>
-                        <button onClick={() => addCondOrder("oco_buy")} className="flex-1 py-2 rounded-lg text-xs font-bold bg-[var(--amber)]/20 text-[var(--amber)] border border-[var(--amber)]/30 hover:bg-[var(--amber)]/30">
+                        <button onClick={() => addCondOrder("oco_buy")} className="flex-1 py-2 rounded-lg text-xs font-bold bg-[var(--accent)]/20 text-[var(--accent)] border border-[var(--accent)]/30 hover:bg-[var(--accent)]/30">
                           <ArrowRightLeft className="w-3 h-3 inline mr-1" />OCO
                         </button>
                       </div>
@@ -220,14 +220,14 @@ export default function Replay() {
 
                 <div className="mt-3 pt-3 border-t border-[var(--border)]">
                   <label className="flex items-center gap-2 text-xs text-[var(--text-secondary)] cursor-pointer">
-                    <input type="checkbox" checked={trailing.active} onChange={(e) => setTrailing((t) => ({ ...t, active: e.target.checked, activationPrice: null }))} className="accent-[var(--amber)]" />
-                    <Bell className="w-3 h-3 text-[var(--amber)]" /> Trailing Stop
+                    <input type="checkbox" checked={trailing.active} onChange={(e) => setTrailing((t) => ({ ...t, active: e.target.checked, activationPrice: null }))} className="accent-[var(--accent)]" />
+                    <Bell className="w-3 h-3 text-[var(--accent)]" /> Trailing Stop
                   </label>
                   {trailing.active && (
                     <div className="mt-2 flex items-center gap-2">
                       <span className="text-xs text-[var(--text-muted)]">Distance:</span>
                       <input type="range" min={1} max={100} value={trailing.distance} onChange={(e) => setTrailing((t) => ({ ...t, distance: Number(e.target.value) }))} className="flex-1" />
-                      <span className="text-xs text-[var(--amber)] font-bold">{trailing.distance} pts</span>
+                      <span className="text-xs text-[var(--accent)] font-bold">{trailing.distance} pts</span>
                     </div>
                   )}
                 </div>

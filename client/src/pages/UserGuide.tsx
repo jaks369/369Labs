@@ -135,7 +135,7 @@ export default function UserGuide() {
     <div className="min-h-screen bg-[var(--card)] p-6">
       <div className="max-w-4xl mx-auto space-y-8">
         <div className="flex items-center gap-3">
-          <BookOpen className="w-7 h-7 text-[var(--amber)]" />
+          <BookOpen className="w-7 h-7 text-[var(--accent)]" />
           <div>
             <h1 className="text-2xl font-bold text-white">User Guide</h1>
             <p className="text-xs text-[var(--text-muted)]">Complete reference for every feature, parameter, and command in 369Labs</p>
@@ -147,15 +147,15 @@ export default function UserGuide() {
             return (
               <details key={s.title} className="bg-[var(--card)] border border-[var(--border)] rounded-xl group">
                 <summary className="flex items-center gap-3 p-5 cursor-pointer sticky top-0 bg-[var(--card)] z-10">
-                  <div className="w-10 h-10 rounded-xl bg-[var(--amber-soft)] border border-[var(--amber-border)] flex items-center justify-center shrink-0">
-                    <Icon className="w-5 h-5 text-[var(--amber)]" />
+                  <div className="w-10 h-10 rounded-xl bg-[var(--accent-soft)] border border-[var(--accent-border)] flex items-center justify-center shrink-0">
+                    <Icon className="w-5 h-5 text-[var(--accent)]" />
                   </div>
                   <span className="text-sm font-bold text-white">{s.title}</span>
                 </summary>
                 <div className="px-5 pb-5 space-y-4">
                   {s.content.map((item: any) => (
                     <div key={item.heading}>
-                      <h4 className="text-sm font-bold text-[var(--amber)] mb-1">{item.heading}</h4>
+                      <h4 className="text-sm font-bold text-[var(--accent)] mb-1">{item.heading}</h4>
                       <p className="text-sm text-[var(--text-secondary)] leading-relaxed whitespace-pre-wrap">{item.body}</p>
                     </div>
                   ))}

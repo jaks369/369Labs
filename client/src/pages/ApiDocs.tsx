@@ -22,7 +22,7 @@ export default function ApiDocs() {
       <div className="max-w-5xl mx-auto space-y-6">
         <div>
           <h1 className="text-3xl font-bold text-white flex items-center gap-3">
-            <BookText className="w-7 h-7 text-[var(--amber)]" /> API Documentation
+            <BookText className="w-7 h-7 text-[var(--accent)]" /> API Documentation
           </h1>
           <p className="text-[var(--text-secondary)] text-sm mt-1">tRPC endpoints available in the 369Labs API. All endpoints require authentication unless noted.</p>
         </div>
@@ -33,7 +33,7 @@ export default function ApiDocs() {
         </div>
 
         {endpointsQuery.isLoading ? (
-          <div className="flex justify-center py-16"><Loader2 className="w-6 h-6 animate-spin text-[var(--amber)]" /></div>
+          <div className="flex justify-center py-16"><Loader2 className="w-6 h-6 animate-spin text-[var(--accent)]" /></div>
         ) : filtered.length === 0 ? (
           <div className="text-center py-16">
             <AlertCircle className="w-10 h-10 text-[var(--border)] mx-auto mb-3" />
@@ -43,7 +43,7 @@ export default function ApiDocs() {
           filtered.map((group: any) => (
             <div key={group.group}>
               <h2 className="text-lg font-bold text-white mb-3 flex items-center gap-2">
-                <Terminal className="w-4 h-4 text-[var(--amber)]" /> {group.group}
+                <Terminal className="w-4 h-4 text-[var(--accent)]" /> {group.group}
               </h2>
               <div className="overflow-x-auto rounded-xl border border-[var(--border)]">
                 <table className="w-full text-xs">
@@ -59,7 +59,7 @@ export default function ApiDocs() {
                     {group.items.map((ep: any) => (
                       <tr key={ep.path} className="hover:bg-white/5 transition-colors">
                         <td className="p-3">
-                          <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold ${ep.method === "query" ? "bg-[var(--amber-soft)] text-[var(--amber)]" : "bg-[var(--amber-soft)] text-[var(--amber)]"}`}>
+                          <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold ${ep.method === "query" ? "bg-[var(--accent-soft)] text-[var(--accent)]" : "bg-[var(--accent-soft)] text-[var(--accent)]"}`}>
                             {ep.method}
                           </span>
                         </td>

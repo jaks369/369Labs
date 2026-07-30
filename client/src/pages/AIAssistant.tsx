@@ -10,9 +10,9 @@ import { toast } from "@/components/Toast";
 interface Message { role: "user" | "ai"; content: string; steps?: any[]; }
 interface PendingAction { action: string; params: any; }
 
-const ACCENT = "text-[var(--cyan)]";
-const ACCENT_BG = "bg-[var(--cyan-soft)]";
-const ACCENT_BORDER = "border-[var(--cyan-border)]";
+const ACCENT = "text-[var(--accent)]";
+const ACCENT_BG = "bg-[var(--accent-soft)]";
+const ACCENT_BORDER = "border-[var(--accent-border)]";
 
 export default function AIAssistant() {
   const { user, isAuthenticated } = useAuth();
@@ -177,7 +177,7 @@ export default function AIAssistant() {
           { id: "alerts" as const, label: "AI Alerts", icon: Bell },
           { id: "schedule" as const, label: "Scheduler", icon: Clock },
         ]).map((t) => (
-          <button key={t.id} onClick={() => setTab(t.id)} className={`flex items-center gap-1.5 px-3 py-2 text-xs font-bold border-b-2 transition-all ${tab === t.id ? "text-[var(--cyan)] border-[var(--cyan)]" : "text-[var(--text-muted)] border-transparent hover:text-white"}`}>
+          <button key={t.id} onClick={() => setTab(t.id)} className={`flex items-center gap-1.5 px-3 py-2 text-xs font-bold border-b-2 transition-all ${tab === t.id ? "text-[var(--accent)] border-[var(--accent)]" : "text-[var(--text-muted)] border-transparent hover:text-white"}`}>
             <t.icon className="w-3.5 h-3.5" /> {t.label}
           </button>
         ))}
@@ -191,18 +191,18 @@ export default function AIAssistant() {
                 <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 border ${msg.role === "ai" ? `${ACCENT_BG} ${ACCENT_BORDER}` : "bg-[var(--card)] border-[var(--border)]"}`}>
                   {msg.role === "ai" ? <CandlestickChart className={`w-4 h-4 ${ACCENT}`} /> : <div className="text-caption font-bold text-white">{user?.name?.charAt(0)}</div>}
                 </div>
-                <div className={`p-4 rounded-2xl text-sm leading-relaxed whitespace-pre-line ${msg.role === "ai" ? "bg-[var(--card)] border border-[var(--border)] text-[var(--text-secondary)] border-l-2 border-l-amber-400/60" : "bg-[var(--cyan)] text-black font-medium"}`}>
-                  {msg.content.slice(0, reveal[i] ?? msg.content.length)}{reveal[i] !== undefined && reveal[i] < msg.content.length ? <span className="inline-block w-1.5 h-3 bg-[var(--cyan)] ml-0.5 align-middle animate-pulse" /> : null}
+                <div className={`p-4 rounded-2xl text-sm leading-relaxed whitespace-pre-line ${msg.role === "ai" ? "bg-[var(--card)] border border-[var(--border)] text-[var(--text-secondary)] border-l-2 border-l-accent/60" : "bg-[var(--accent)] text-black font-medium"}`}>
+                  {msg.content.slice(0, reveal[i] ?? msg.content.length)}{reveal[i] !== undefined && reveal[i] < msg.content.length ? <span className="inline-block w-1.5 h-3 bg-[var(--accent)] ml-0.5 align-middle animate-pulse" /> : null}
                   {msg.role === "ai" && msg.content.includes('"Retry"') && input ? (
                     <div className="mt-3">
-                      <button onClick={() => handleSend(input)} disabled={isTyping} className="px-3 py-1.5 rounded bg-[var(--cyan)] text-black text-xs font-bold hover:bg-[var(--cyan)] transition-colors disabled:opacity-50">
+                      <button onClick={() => handleSend(input)} disabled={isTyping} className="px-3 py-1.5 rounded bg-[var(--accent)] text-black text-xs font-bold hover:bg-[var(--accent)] transition-colors disabled:opacity-50">
                         {isTyping ? <><Loader2 className="w-3 h-3 animate-spin inline mr-1" />Retrying...</> : "Retry"}
                       </button>
                     </div>
                   ) : null}
                   {msg.steps && msg.steps.length > 0 && (
                     <div className="mt-3 border-t border-[var(--border)] pt-2">
-                      <button onClick={() => setExpanded(e => ({ ...e, [i]: !e[i] }))} className="flex items-center gap-1 text-micro hover:text-[var(--cyan)]">
+                      <button onClick={() => setExpanded(e => ({ ...e, [i]: !e[i] }))} className="flex items-center gap-1 text-micro hover:text-[var(--accent)]">
                         {expanded[i] ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />} <Wrench className="w-3 h-3" /> {msg.steps.length} tool step{msg.steps.length > 1 ? "s" : ""}
                       </button>
                       {expanded[i] && (
@@ -211,7 +211,7 @@ export default function AIAssistant() {
                             <div key={j} className="rounded bg-black/40 p-2 border border-[var(--border)]">
                               <span className="text-[var(--green)]">{">"} {s.tool}</span>
                               <span className="text-[var(--text-muted)]">({JSON.stringify(s.args)})</span>
-                              <span className="text-[var(--cyan)]"> {"=>"} {s.result?.__action ? "ACTION" : "ok"}</span>
+                              <span className="text-[var(--accent)]"> {"=>"} {s.result?.__action ? "ACTION" : "ok"}</span>
                             </div>
                           ))}
                         </div>
@@ -228,7 +228,7 @@ export default function AIAssistant() {
                 <div className={`w-8 h-8 rounded-lg ${ACCENT_BG} ${ACCENT_BORDER} flex items-center justify-center`}>
                   <CandlestickChart className={`w-4 h-4 ${ACCENT} animate-pulse`} />
                 </div>
-                <div className="p-4 rounded-2xl bg-[var(--card)] border border-[var(--border)] flex items-center gap-2 text-xs text-[var(--cyan)] font-mono">
+                <div className="p-4 rounded-2xl bg-[var(--card)] border border-[var(--border)] flex items-center gap-2 text-xs text-[var(--accent)] font-mono">
                   <Loader2 className="w-3 h-3 animate-spin" /> 369AI is {typingLabel.toLowerCase()}...
                 </div>
               </div>
@@ -238,8 +238,8 @@ export default function AIAssistant() {
           {tab === "journal" && (
             <div className="space-y-4">
               <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-6">
-                <h3 className="text-sm font-bold text-white mb-3 flex items-center gap-2"><BookOpen className="w-4 h-4 text-[var(--cyan)]" /> Automated Journal Entry</h3>
-                <button onClick={() => journalMutation.mutateAsync({ strategyId: undefined }).then(() => { toast("Journal entry generated", "success"); journalListQuery.refetch(); }).catch(() => toast("Failed", "error"))} disabled={journalMutation.isPending} className="px-4 py-2 rounded-lg bg-[var(--cyan)] text-black text-xs font-bold">
+                <h3 className="text-sm font-bold text-white mb-3 flex items-center gap-2"><BookOpen className="w-4 h-4 text-[var(--accent)]" /> Automated Journal Entry</h3>
+                <button onClick={() => journalMutation.mutateAsync({ strategyId: undefined }).then(() => { toast("Journal entry generated", "success"); journalListQuery.refetch(); }).catch(() => toast("Failed", "error"))} disabled={journalMutation.isPending} className="px-4 py-2 rounded-lg bg-[var(--accent)] text-black text-xs font-bold">
                   {journalMutation.isPending ? <><Loader2 className="w-3 h-3 animate-spin inline mr-1" /> Generating...</> : "Generate AI Journal Entry"}
                 </button>
               </div>
@@ -250,7 +250,7 @@ export default function AIAssistant() {
                     <p className="text-[var(--text-secondary)] whitespace-pre-wrap">{entry.content}</p>
                   </div>
                 ))}
-                {journalListQuery.isLoading && <Loader2 className="w-4 h-4 animate-spin text-[var(--cyan)] mx-auto" />}
+                {journalListQuery.isLoading && <Loader2 className="w-4 h-4 animate-spin text-[var(--accent)] mx-auto" />}
               </div>
             </div>
           )}
@@ -258,8 +258,8 @@ export default function AIAssistant() {
           {tab === "alerts" && (
             <div className="space-y-4">
               <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-6">
-                <h3 className="text-sm font-bold text-white mb-3 flex items-center gap-2"><Bell className="w-4 h-4 text-[var(--cyan)]" /> AI-Triggered Alert</h3>
-                <button onClick={() => alertMutation.mutateAsync({ message: "Market alert from 369AI", symbol: "R_100", type: "volatility" }).then(() => { toast("Alert triggered", "success"); alertListQuery.refetch(); }).catch(() => toast("Failed", "error"))} disabled={alertMutation.isPending} className="px-4 py-2 rounded-lg bg-[var(--cyan)] text-black text-xs font-bold">
+                <h3 className="text-sm font-bold text-white mb-3 flex items-center gap-2"><Bell className="w-4 h-4 text-[var(--accent)]" /> AI-Triggered Alert</h3>
+                <button onClick={() => alertMutation.mutateAsync({ message: "Market alert from 369AI", symbol: "R_100", type: "volatility" }).then(() => { toast("Alert triggered", "success"); alertListQuery.refetch(); }).catch(() => toast("Failed", "error"))} disabled={alertMutation.isPending} className="px-4 py-2 rounded-lg bg-[var(--accent)] text-black text-xs font-bold">
                   {alertMutation.isPending ? <><Loader2 className="w-3 h-3 animate-spin inline mr-1" /> Sending...</> : "Trigger AI Alert"}
                 </button>
               </div>
@@ -267,14 +267,14 @@ export default function AIAssistant() {
                 {(alertListQuery.data?.alerts || []).map((alert: any) => (
                   <div key={alert.id} className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4 text-xs">
                     <div className="flex items-center gap-2 mb-1">
-                      <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold ${alert.type === "volatility" ? "bg-[var(--red-soft)] text-[var(--red)]" : "bg-[var(--amber-soft)] text-[var(--amber)]"}`}>{alert.type}</span>
+                      <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold ${alert.type === "volatility" ? "bg-[var(--red-soft)] text-[var(--red)]" : "bg-[var(--accent-soft)] text-[var(--accent)]"}`}>{alert.type}</span>
                       <span className="text-[var(--text-muted)]">{alert.symbol}</span>
                       <span className="ml-auto text-caption">{new Date(alert.createdAt).toLocaleString()}</span>
                     </div>
                     <p className="text-[var(--text-secondary)]">{alert.message}</p>
                   </div>
                 ))}
-                {alertListQuery.isLoading && <Loader2 className="w-4 h-4 animate-spin text-[var(--cyan)] mx-auto" />}
+                {alertListQuery.isLoading && <Loader2 className="w-4 h-4 animate-spin text-[var(--accent)] mx-auto" />}
               </div>
             </div>
           )}
@@ -282,8 +282,8 @@ export default function AIAssistant() {
           {tab === "schedule" && (
             <div className="space-y-4">
               <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-6">
-                <h3 className="text-sm font-bold text-white mb-3 flex items-center gap-2"><Clock className="w-4 h-4 text-[var(--cyan)]" /> Scheduled Analysis</h3>
-                <button onClick={() => scheduleMutation.mutateAsync({ symbol: "R_100", interval: "1h", prompt: "Market overview" }).then(() => { toast("Scheduled analysis created", "success"); scheduleListQuery.refetch(); }).catch(() => toast("Failed", "error"))} disabled={scheduleMutation.isPending} className="px-4 py-2 rounded-lg bg-[var(--cyan)] text-black text-xs font-bold">
+                <h3 className="text-sm font-bold text-white mb-3 flex items-center gap-2"><Clock className="w-4 h-4 text-[var(--accent)]" /> Scheduled Analysis</h3>
+                <button onClick={() => scheduleMutation.mutateAsync({ symbol: "R_100", interval: "1h", prompt: "Market overview" }).then(() => { toast("Scheduled analysis created", "success"); scheduleListQuery.refetch(); }).catch(() => toast("Failed", "error"))} disabled={scheduleMutation.isPending} className="px-4 py-2 rounded-lg bg-[var(--accent)] text-black text-xs font-bold">
                   {scheduleMutation.isPending ? <><Loader2 className="w-3 h-3 animate-spin inline mr-1" /> Creating...</> : "Schedule Hourly Analysis"}
                 </button>
               </div>
@@ -291,13 +291,13 @@ export default function AIAssistant() {
                 {(scheduleListQuery.data?.schedules || []).map((sched: any) => (
                   <div key={sched.id} className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4 text-xs">
                     <div className="flex items-center gap-2 mb-1">
-                      <span className="text-[var(--cyan)] font-bold uppercase text-caption">{sched.interval}</span>
+                      <span className="text-[var(--accent)] font-bold uppercase text-caption">{sched.interval}</span>
                       <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold ${sched.status === "active" ? "bg-[var(--green-soft)] text-[var(--green)]" : "bg-[var(--text-muted)] text-white"}`}>{sched.status}</span>
                     </div>
                     <p className="text-[var(--text-secondary)]">{sched.query}</p>
                   </div>
                 ))}
-                {scheduleListQuery.isLoading && <Loader2 className="w-4 h-4 animate-spin text-[var(--cyan)] mx-auto" />}
+                {scheduleListQuery.isLoading && <Loader2 className="w-4 h-4 animate-spin text-[var(--accent)] mx-auto" />}
               </div>
             </div>
           )}
@@ -305,14 +305,14 @@ export default function AIAssistant() {
       </div>
 
       {pending && (
-        <div className="p-4 border-t border-[var(--cyan-border)] bg-[var(--cyan)]/5">
+        <div className="p-4 border-t border-[var(--accent-border)] bg-[var(--accent)]/5">
           <div className="max-w-4xl mx-auto flex items-center justify-between gap-4">
-            <div className="text-xs text-[var(--cyan)] font-mono">
+            <div className="text-xs text-[var(--accent)] font-mono">
               <span className="font-bold uppercase">{pending.action}</span> {JSON.stringify(pending.params)}
             </div>
             <div className="flex gap-2">
               <button onClick={() => setPending(null)} className="px-3 py-1.5 rounded bg-[var(--card)] text-[var(--text-secondary)] text-xs hover:bg-[var(--border)]">Cancel</button>
-              <button onClick={executeAction} className="px-3 py-1.5 rounded bg-[var(--cyan)] text-black text-xs font-bold hover:bg-[var(--cyan)]">Confirm</button>
+              <button onClick={executeAction} className="px-3 py-1.5 rounded bg-[var(--accent)] text-black text-xs font-bold hover:bg-[var(--accent)]">Confirm</button>
             </div>
           </div>
         </div>
@@ -323,7 +323,7 @@ export default function AIAssistant() {
           {messages.length < 3 && (
             <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
               {suggestions.map(s => (
-                <button key={s} onClick={() => setInput(s)} className="whitespace-nowrap px-4 py-2 rounded-full bg-[var(--card)] border border-[var(--card)] text-xs text-[var(--text-secondary)] hover:border-[var(--cyan)] hover:text-[var(--cyan)] transition-all">{s}</button>
+                <button key={s} onClick={() => setInput(s)} className="whitespace-nowrap px-4 py-2 rounded-full bg-[var(--card)] border border-[var(--card)] text-xs text-[var(--text-secondary)] hover:border-[var(--accent)] hover:text-[var(--accent)] transition-all">{s}</button>
               ))}
             </div>
           )}
@@ -333,17 +333,17 @@ export default function AIAssistant() {
               onChange={e => setInput(e.target.value)}
               onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
               placeholder="Ask 369AI to analyze, suggest, or act..."
-              className="w-full bg-[var(--card)] border-[var(--border)] rounded-xl pl-4 pr-12 py-4 text-sm focus:border-[var(--cyan)] focus:ring-1 focus:ring-[var(--cyan)] transition-all resize-none h-14"
+              className="w-full bg-[var(--card)] border-[var(--border)] rounded-xl pl-4 pr-12 py-4 text-sm focus:border-[var(--accent)] focus:ring-1 focus:ring-[var(--accent)] transition-all resize-none h-14"
             />
-            <button onClick={() => handleSend()} disabled={!input.trim() || isTyping} className="absolute right-3 top-1/2 -translate-y-1/2 p-2 bg-[var(--cyan)] text-black rounded-lg hover:bg-[var(--cyan)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
+            <button onClick={() => handleSend()} disabled={!input.trim() || isTyping} className="absolute right-3 top-1/2 -translate-y-1/2 p-2 bg-[var(--accent)] text-black rounded-lg hover:bg-[var(--accent)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
               <Send className="w-4 h-4" />
             </button>
           </div>
           <div className="flex flex-wrap items-center justify-center gap-3 text-micro">
-            <button onClick={() => handleSend("Give me a live market analysis: pick an active volatility symbol, read its recent ticks, and tell me the current trend, hottest/odd last digits, and any repeatable pattern forming right now.")} className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[var(--card)] border border-[var(--card)] text-[var(--text-secondary)] hover:border-[var(--cyan)] hover:text-[var(--cyan)] transition-all">
+            <button onClick={() => handleSend("Give me a live market analysis: pick an active volatility symbol, read its recent ticks, and tell me the current trend, hottest/odd last digits, and any repeatable pattern forming right now.")} className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[var(--card)] border border-[var(--card)] text-[var(--text-secondary)] hover:border-[var(--accent)] hover:text-[var(--accent)] transition-all">
               <LineChart className="w-3 h-3" /> Market Analysis
             </button>
-            <button onClick={() => handleSend("What is my risk on the current bots and open positions? Recommend stake sizing, stop-loss and take-profit rules based on the volatility symbols I am trading.")} className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[var(--card)] border border-[var(--card)] text-[var(--text-secondary)] hover:border-[var(--cyan)] hover:text-[var(--cyan)] transition-all">
+            <button onClick={() => handleSend("What is my risk on the current bots and open positions? Recommend stake sizing, stop-loss and take-profit rules based on the volatility symbols I am trading.")} className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[var(--card)] border border-[var(--card)] text-[var(--text-secondary)] hover:border-[var(--accent)] hover:text-[var(--accent)] transition-all">
               <ShieldCheck className="w-3 h-3" /> Risk Management
             </button>
           </div>

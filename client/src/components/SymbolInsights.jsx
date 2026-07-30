@@ -58,14 +58,14 @@ export default function SymbolInsights({ symbol, ticks = [], trades = [], decima
       label: "Digit Pattern",
       value: maxDigit != null ? `#${maxDigit} (${digitPct}%)` : "—",
       detail: `Most frequent last digit in ${total} ticks`,
-      color: "var(--amber)",
+      color: "var(--accent)",
     },
     {
       icon: Activity,
       label: "Volatility",
       value: vol.label,
       detail: `Range ${vol.pct.toFixed(2)}%`,
-      color: vol.label === "High" ? "var(--red)" : vol.label === "Medium" ? "var(--amber)" : "var(--green)",
+      color: vol.label === "High" ? "var(--red)" : vol.label === "Medium" ? "var(--accent)" : "var(--green)",
     },
   ];
 
@@ -82,7 +82,7 @@ export default function SymbolInsights({ symbol, ticks = [], trades = [], decima
   return (
     <div className="panel p-4">
       <div className="flex items-center gap-2 mb-3">
-        <BarChart3 className="w-3.5 h-3.5 text-[var(--amber)]" />
+        <BarChart3 className="w-3.5 h-3.5 text-[var(--accent)]" />
         <h3 className="text-micro font-bold text-[var(--text-muted)] uppercase tracking-widest">{symbol} Insights</h3>
       </div>
       <div className="space-y-2">

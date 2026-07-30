@@ -1,4 +1,4 @@
-﻿import { useEffect } from "react";
+import { useEffect } from "react";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
@@ -34,7 +34,7 @@ export default function MarketIntelligencePage() {
       <div className="max-w-7xl mx-auto">
         <PageSection>
         <div className="flex items-center gap-2.5 mb-6">
-          <BarChart3 className="w-5 h-5 text-[var(--cyan)]" />
+          <BarChart3 className="w-5 h-5 text-[var(--accent)]" />
           <h1 className="text-2xl font-bold text-white">Market <span className="text-gradient-cyan">Intelligence</span></h1>
           <p className="text-[var(--text-muted)] text-sm ml-2 hidden md:inline">Real-time market health, predictions & insights</p>
           <div className="ml-auto flex items-center gap-2">
@@ -45,7 +45,7 @@ export default function MarketIntelligencePage() {
             )}
             <button
               onClick={() => overviewQuery.refetch()}
-              className="text-[var(--text-muted)] hover:text-white transition-colors cursor-pointer focus-visible:ring-2 focus-visible:ring-[var(--amber)] focus-visible:outline-none rounded"
+              className="text-[var(--text-muted)] hover:text-white transition-colors cursor-pointer focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:outline-none rounded"
               title="Refresh"
             >
               <RefreshCw className={`w-3.5 h-3.5 ${overviewQuery.isFetching ? "animate-spin" : ""}`} />
@@ -83,9 +83,9 @@ export default function MarketIntelligencePage() {
 
           {/* Symbol Screener */}
           <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-6">
-            <h2 className="text-sm font-bold text-white mb-4 flex items-center gap-2"><Search className="w-4 h-4 text-[var(--cyan)]" /> Symbol Screener</h2>
+            <h2 className="text-sm font-bold text-white mb-4 flex items-center gap-2"><Search className="w-4 h-4 text-[var(--accent)]" /> Symbol Screener</h2>
             {isLoading ? (
-              <div className="flex items-center justify-center py-8"><Loader2 className="w-4 h-4 animate-spin text-[var(--cyan)]" /></div>
+              <div className="flex items-center justify-center py-8"><Loader2 className="w-4 h-4 animate-spin text-[var(--accent)]" /></div>
             ) : (
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2">
                 {SCREENER_SYMBOLS.map((sym) => {
@@ -112,9 +112,9 @@ export default function MarketIntelligencePage() {
           {/* Correlations & Volatility */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
             <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-6">
-              <h2 className="text-sm font-bold text-white mb-4 flex items-center gap-2"><Activity className="w-4 h-4 text-[var(--amber)]" /> Symbol Correlations</h2>
+              <h2 className="text-sm font-bold text-white mb-4 flex items-center gap-2"><Activity className="w-4 h-4 text-[var(--accent)]" /> Symbol Correlations</h2>
               {isLoading ? (
-                <div className="flex justify-center py-4"><Loader2 className="w-4 h-4 animate-spin text-[var(--amber)]" /></div>
+                <div className="flex justify-center py-4"><Loader2 className="w-4 h-4 animate-spin text-[var(--accent)]" /></div>
               ) : (
                 <div className="space-y-2">
                   {(data as any)?.insights?.filter?.((i: any) => i?.type === "correlation")?.slice(0, 5)?.map((ins: any, idx: number) => (
@@ -129,16 +129,16 @@ export default function MarketIntelligencePage() {
               )}
             </div>
             <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-6">
-              <h2 className="text-sm font-bold text-white mb-4 flex items-center gap-2"><BarChart3 className="w-4 h-4 text-[var(--amber)]" /> Volatility Monitor</h2>
+              <h2 className="text-sm font-bold text-white mb-4 flex items-center gap-2"><BarChart3 className="w-4 h-4 text-[var(--accent)]" /> Volatility Monitor</h2>
               {isLoading ? (
-                <div className="flex justify-center py-4"><Loader2 className="w-4 h-4 animate-spin text-[var(--amber)]" /></div>
+                <div className="flex justify-center py-4"><Loader2 className="w-4 h-4 animate-spin text-[var(--accent)]" /></div>
               ) : (
                 <div className="space-y-2">
                   {SCREENER_SYMBOLS.slice(0, 5).map((sym) => {
                     const healthData = (data as any)?.health?.find?.((h: any) => h?.symbol === sym || h?.name === sym);
                     const vol = healthData?.volatility ?? healthData?.score;
                     const level = vol != null ? (vol > 70 ? "Very High" : vol > 50 ? "High" : vol > 30 ? "Medium" : "Low") : "-";
-                    const cls = vol != null ? (vol > 70 ? "text-[var(--red)]" : vol > 50 ? "text-[var(--amber)]" : "text-[var(--green)]") : "text-[var(--text-muted)]";
+                    const cls = vol != null ? (vol > 70 ? "text-[var(--red)]" : vol > 50 ? "text-[var(--accent)]" : "text-[var(--green)]") : "text-[var(--text-muted)]";
                     return (
                       <div key={sym} className="flex justify-between text-xs p-2 bg-black/20 rounded-lg">
                         <span className="text-[var(--text-secondary)]">{sym}</span>

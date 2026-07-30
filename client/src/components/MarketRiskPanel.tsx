@@ -31,8 +31,8 @@ function levelIcon(level: string) {
 function levelColor(level: string): string {
   switch (level) {
     case "CRITICAL": return "text-[var(--red)]";
-    case "HIGH": return "text-[var(--amber)]";
-    case "MEDIUM": return "text-[var(--cyan)]";
+    case "HIGH": return "text-[var(--accent)]";
+    case "MEDIUM": return "text-[var(--accent)]";
     default: return "text-[var(--green)]";
   }
 }
@@ -40,8 +40,8 @@ function levelColor(level: string): string {
 function levelBg(level: string): string {
   switch (level) {
     case "CRITICAL": return "bg-[var(--red-soft)] border-[var(--red)]/30";
-    case "HIGH": return "bg-[var(--amber-soft)] border-[var(--amber)]/30";
-    case "MEDIUM": return "bg-[var(--cyan-soft)] border-[var(--cyan)]/30";
+    case "HIGH": return "bg-[var(--accent-soft)] border-[var(--accent)]/30";
+    case "MEDIUM": return "bg-[var(--accent-soft)] border-[var(--accent)]/30";
     default: return "bg-[var(--green-soft)] border-[var(--green)]/30";
   }
 }
@@ -51,7 +51,7 @@ export default function MarketRiskPanel({ data, loading }: MarketRiskPanelProps)
     return (
       <div className="surface-elevated p-5">
         <div className="flex items-center gap-2 mb-4">
-          <Shield className="w-4 h-4 text-[var(--cyan)]" />
+          <Shield className="w-4 h-4 text-[var(--accent)]" />
           <h3 className="section-title text-caption">Risk Advisories</h3>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -71,7 +71,7 @@ export default function MarketRiskPanel({ data, loading }: MarketRiskPanelProps)
     return (
       <div className="surface-elevated p-5">
         <div className="flex items-center gap-2 mb-4">
-          <Shield className="w-4 h-4 text-[var(--cyan)]" />
+          <Shield className="w-4 h-4 text-[var(--accent)]" />
           <h3 className="section-title text-caption">Risk Advisories</h3>
         </div>
         <p className="text-micro text-[var(--text-muted)] italic text-center py-6">No risk advisories. All markets operating within normal parameters.</p>
@@ -87,7 +87,7 @@ export default function MarketRiskPanel({ data, loading }: MarketRiskPanelProps)
   return (
     <div className="surface-elevated p-5">
       <div className="flex items-center gap-2 mb-4">
-        <Shield className="w-4 h-4 text-[var(--cyan)]" />
+        <Shield className="w-4 h-4 text-[var(--accent)]" />
         <h3 className="section-title text-caption">Risk Advisories</h3>
         <span className="text-[9px] text-[var(--text-muted)] ml-auto">{data.length} advisories{highCount > 0 ? `, ${highCount} critical/high` : ""}</span>
       </div>

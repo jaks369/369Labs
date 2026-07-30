@@ -62,11 +62,11 @@ export default function Notifications() {
             <h1 className="text-3xl font-bold text-white">Notification Settings</h1>
             <p className="text-[var(--text-secondary)] text-sm mt-1">Configure which events trigger alerts</p>
           </div>
-          <Bell className="w-6 h-6 text-[var(--amber)]" />
+          <Bell className="w-6 h-6 text-[var(--accent)]" />
         </div>
 
         {settingsQuery.isLoading ? (
-          <div className="flex items-center justify-center h-64"><Loader2 className="w-8 h-8 animate-spin text-[var(--amber)]" /></div>
+          <div className="flex items-center justify-center h-64"><Loader2 className="w-8 h-8 animate-spin text-[var(--accent)]" /></div>
         ) : settingsQuery.isError ? (
           <div className="bg-[var(--card)] border border-[var(--red)]/20 rounded-xl p-6 flex items-center gap-3">
             <AlertCircle className="w-5 h-5 text-[var(--red)] shrink-0" />
@@ -75,7 +75,7 @@ export default function Notifications() {
         ) : (
           <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-6 space-y-6">
             <div>
-              <h2 className="text-xs font-bold text-[var(--amber)] uppercase tracking-wider mb-3">Delivery Channels</h2>
+              <h2 className="text-xs font-bold text-[var(--accent)] uppercase tracking-wider mb-3">Delivery Channels</h2>
               {channelToggles.map(t => (
                 <div key={t.label} className="flex items-center justify-between py-4 border-b border-[var(--border)] last:border-0">
                   <div>
@@ -84,7 +84,7 @@ export default function Notifications() {
                   </div>
                   <button
                     onClick={() => t.set(!t.value)}
-                    className={`relative w-12 h-6 rounded-full transition-colors ${t.value ? "bg-[var(--amber)]" : "bg-[var(--border)]"}`}
+                    className={`relative w-12 h-6 rounded-full transition-colors ${t.value ? "bg-[var(--accent)]" : "bg-[var(--border)]"}`}
                   >
                     <div className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${t.value ? "translate-x-6" : "translate-x-0.5"}`} />
                   </button>
@@ -92,7 +92,7 @@ export default function Notifications() {
               ))}
             </div>
             <div>
-              <h2 className="text-xs font-bold text-[var(--amber)] uppercase tracking-wider mb-3">Events</h2>
+              <h2 className="text-xs font-bold text-[var(--accent)] uppercase tracking-wider mb-3">Events</h2>
               {eventToggles.map(t => (
                 <div key={t.label} className="flex items-center justify-between py-4 border-b border-[var(--border)] last:border-0">
                   <div>
@@ -101,7 +101,7 @@ export default function Notifications() {
                   </div>
                   <button
                     onClick={() => t.set(!t.value)}
-                    className={`relative w-12 h-6 rounded-full transition-colors ${t.value ? "bg-[var(--amber)]" : "bg-[var(--border)]"}`}
+                    className={`relative w-12 h-6 rounded-full transition-colors ${t.value ? "bg-[var(--accent)]" : "bg-[var(--border)]"}`}
                   >
                     <div className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${t.value ? "translate-x-6" : "translate-x-0.5"}`} />
                   </button>
@@ -110,7 +110,7 @@ export default function Notifications() {
             </div>
 
             <div className="flex items-center gap-4 pt-2">
-              <Button onClick={handleSave} disabled={saveMutation.isPending} className="bg-[var(--amber)] hover:bg-[var(--amber-hover)] text-white">
+              <Button onClick={handleSave} disabled={saveMutation.isPending} className="bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white">
                 {saveMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
                 Save Settings
               </Button>

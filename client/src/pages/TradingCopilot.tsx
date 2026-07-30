@@ -43,7 +43,7 @@ export default function TradingCopilot() {
         {/* Header */}
         <div className="flex items-center justify-between flex-wrap gap-4">
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[var(--amber)] to-[var(--cyan)] flex items-center justify-center">
+            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[var(--accent)] to-[var(--accent)] flex items-center justify-center">
               <Bot className="w-6 h-6 text-black" />
             </div>
             <div>
@@ -52,7 +52,7 @@ export default function TradingCopilot() {
             </div>
           </div>
           <select value={symbol} onChange={e => setSymbol(e.target.value)}
-            className="bg-[var(--surface-secondary)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-white focus:border-[var(--amber)] outline-none [&>option]:bg-[var(--surface-secondary)] [&>option]:text-white">
+            className="bg-[var(--surface-secondary)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-white focus:border-[var(--accent)] outline-none [&>option]:bg-[var(--surface-secondary)] [&>option]:text-white">
             {getValidSymbols().map(s => <option key={s} value={s}>{s}</option>)}
           </select>
         </div>
@@ -89,7 +89,7 @@ export default function TradingCopilot() {
           <div className="space-y-4">
             {/* Quick Actions */}
             <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4">
-              <h3 className="text-xs font-bold text-white mb-3 flex items-center gap-2"><Sparkles className="w-3.5 h-3.5 text-[var(--amber)]" /> Quick Actions</h3>
+              <h3 className="text-xs font-bold text-white mb-3 flex items-center gap-2"><Sparkles className="w-3.5 h-3.5 text-[var(--accent)]" /> Quick Actions</h3>
               <div className="space-y-2">
                 {[
                   { icon: BrainCircuit, label: "Analyze current market", action: `Analyze ${symbol} market conditions and give a trading recommendation.` },
@@ -102,7 +102,7 @@ export default function TradingCopilot() {
                     if (input) { input.value = q.action; input.dispatchEvent(new Event("input", { bubbles: true })); input.focus(); }
                   }}
                     className="w-full text-left flex items-center gap-2 px-3 py-2 rounded-lg text-xs text-[var(--text-secondary)] hover:bg-white/5 hover:text-white transition-colors">
-                    <q.icon className="w-3.5 h-3.5 shrink-0 text-[var(--amber)]" />
+                    <q.icon className="w-3.5 h-3.5 shrink-0 text-[var(--accent)]" />
                     {q.label}
                   </button>
                 ))}
@@ -111,7 +111,7 @@ export default function TradingCopilot() {
 
             {/* Active Strategies summary */}
             <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4">
-              <h3 className="text-xs font-bold text-white mb-3 flex items-center gap-2"><Bot className="w-3.5 h-3.5 text-[var(--amber)]" /> Strategies ({strategiesQuery.data?.length || 0})</h3>
+              <h3 className="text-xs font-bold text-white mb-3 flex items-center gap-2"><Bot className="w-3.5 h-3.5 text-[var(--accent)]" /> Strategies ({strategiesQuery.data?.length || 0})</h3>
               {strategiesQuery.isLoading ? (
                 <Loader2 className="w-4 h-4 animate-spin text-[var(--text-muted)]" />
               ) : (strategiesQuery.data || []).length === 0 ? (

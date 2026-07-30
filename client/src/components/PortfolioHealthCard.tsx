@@ -16,7 +16,7 @@ interface PortfolioHealthCardProps {
 function riskColor(rating: string): string {
   switch (rating) {
     case "LOW": return "text-[var(--green)]";
-    case "MEDIUM": return "text-[var(--amber)]";
+    case "MEDIUM": return "text-[var(--accent)]";
     case "HIGH": return "text-[var(--red)]";
     case "CRITICAL": return "text-[var(--red)]";
     default: return "text-[var(--text-muted)]";
@@ -26,7 +26,7 @@ function riskColor(rating: string): string {
 function riskBg(rating: string): string {
   switch (rating) {
     case "LOW": return "bg-[var(--green-soft)]";
-    case "MEDIUM": return "bg-[var(--amber-soft)]";
+    case "MEDIUM": return "bg-[var(--accent-soft)]";
     case "HIGH": return "bg-[var(--red-soft)]";
     case "CRITICAL": return "bg-[var(--red-soft)]";
     default: return "bg-[var(--text-muted)]/10";
@@ -82,7 +82,7 @@ export default function PortfolioHealthCard({ data, loading }: PortfolioHealthCa
       label: "Avg Confidence",
       value: `${data.avgConfidence}%`,
       icon: Target,
-      color: "text-[var(--amber)]",
+      color: "text-[var(--accent)]",
     },
     {
       label: "Risk Rating",
@@ -95,7 +95,7 @@ export default function PortfolioHealthCard({ data, loading }: PortfolioHealthCa
       label: "Consistency",
       value: `${data.consistencyScore}`,
       icon: BarChart3,
-      color: data.consistencyScore >= 60 ? "text-[var(--green)]" : "text-[var(--amber)]",
+      color: data.consistencyScore >= 60 ? "text-[var(--green)]" : "text-[var(--accent)]",
     },
   ];
 

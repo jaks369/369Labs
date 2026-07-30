@@ -36,12 +36,12 @@ export default function ForgotPassword() {
           {resetUrl && (
             <div className='text-sm text-center text-[var(--text-secondary)] p-3 rounded-lg border border-[var(--border)] bg-[var(--card)]'>
               <p className='mb-1'>Dev mode — use this link to reset:</p>
-              <a href={resetUrl} className='text-[var(--amber)] hover:underline break-all'>{resetUrl}</a>
+              <a href={resetUrl} className='text-[var(--accent)] hover:underline break-all'>{resetUrl}</a>
             </div>
           )}
         </form>
         <p className='mt-6 text-center text-sm text-[var(--text-muted)]'>
-          <Link to='/login' className='text-[var(--amber)] hover:underline'>Back to login</Link>
+          <Link to='/login' className='text-[var(--accent)] hover:underline'>Back to login</Link>
         </p>
       </div>
     </div>

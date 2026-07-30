@@ -46,23 +46,23 @@ export default function Watchlist() {
       <div className="max-w-2xl mx-auto space-y-6">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <Star className="w-6 h-6 text-[var(--amber)]" />
+            <Star className="w-6 h-6 text-[var(--accent)]" />
             <div>
               <h1 className="text-2xl font-bold text-white">Watchlist</h1>
               <p className="text-xs text-[var(--text-muted)]">Monitor your favorite symbols in real time</p>
             </div>
           </div>
-          <button onClick={() => setAdding(true)} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[var(--amber)]/20 text-[var(--amber)] border border-[var(--amber)]/30 text-xs font-bold hover:bg-[var(--amber)]/30">
+          <button onClick={() => setAdding(true)} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[var(--accent)]/20 text-[var(--accent)] border border-[var(--accent)]/30 text-xs font-bold hover:bg-[var(--accent)]/30">
             <Plus className="w-3.5 h-3.5" /> Add Symbol
           </button>
         </div>
 
         {adding && (
           <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4 flex gap-2">
-            <select value={newSym} onChange={(e) => setNewSym(e.target.value)} className="flex-1 bg-[var(--surface-secondary)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-white focus:border-[var(--amber)] outline-none [&>option]:bg-[var(--surface-secondary)] [&>option]:text-white">
+            <select value={newSym} onChange={(e) => setNewSym(e.target.value)} className="flex-1 bg-[var(--surface-secondary)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-white focus:border-[var(--accent)] outline-none [&>option]:bg-[var(--surface-secondary)] [&>option]:text-white">
               {VALID_SYMBOLS.filter((s) => !symbols.includes(s)).map((s) => (<option key={s} value={s}>{s}</option>))}
             </select>
-            <button onClick={addSymbol} className="px-4 py-2 rounded-lg bg-[var(--amber)] text-black text-xs font-bold">Add</button>
+            <button onClick={addSymbol} className="px-4 py-2 rounded-lg bg-[var(--accent)] text-black text-xs font-bold">Add</button>
             <button onClick={() => setAdding(false)} className="px-3 py-2 text-xs text-[var(--text-muted)] hover:text-white">Cancel</button>
           </div>
         )}
@@ -77,9 +77,9 @@ export default function Watchlist() {
             {symbols.map((sym) => {
               const p = prices[sym];
               return (
-                <div key={sym} className="flex items-center justify-between bg-[var(--card)] border border-[var(--border)] rounded-xl p-4 hover:border-[var(--amber)]/30 transition-all">
+                <div key={sym} className="flex items-center justify-between bg-[var(--card)] border border-[var(--border)] rounded-xl p-4 hover:border-[var(--accent)]/30 transition-all">
                   <div className="flex items-center gap-3">
-                    <Star className="w-4 h-4 text-[var(--amber)] fill-[var(--amber)]" />
+                    <Star className="w-4 h-4 text-[var(--accent)] fill-[var(--accent)]" />
                     <span className="text-sm font-bold text-white">{sym}</span>
                   </div>
                   <div className="flex items-center gap-4">

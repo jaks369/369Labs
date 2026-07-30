@@ -99,7 +99,7 @@ export default function TradeHistory() {
         {tradesQuery.isLoading && (
           <div className="panel p-12">
             <div className="empty-state">
-              <Loader2 className="w-8 h-8 animate-spin text-[var(--amber)] mb-4" />
+              <Loader2 className="w-8 h-8 animate-spin text-[var(--accent)] mb-4" />
               <p className="text-sm text-[var(--text-muted)]">Loading trade history...</p>
             </div>
           </div>

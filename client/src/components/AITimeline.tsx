@@ -15,8 +15,8 @@ const ICONS = {
   risk: AlertTriangle,
 };
 const COLORS = {
-  ai: "text-[var(--cyan)]",
-  bot: "text-[var(--cyan)]",
+  ai: "text-[var(--accent)]",
+  bot: "text-[var(--accent)]",
   market: "text-[var(--green)]",
   risk: "text-[var(--red)]",
 };
@@ -45,7 +45,7 @@ export default function AITimeline({ compact = false }: { compact?: boolean }) {
   return (
     <div className="text-left">
       <div className="flex items-center gap-1.5 mb-1.5">
-        <Activity className="w-3 h-3 text-[var(--cyan)]" />
+        <Activity className="w-3 h-3 text-[var(--accent)]" />
         <span className="text-[9px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">AI Timeline</span>
       </div>
       {entries.length === 0 ? (

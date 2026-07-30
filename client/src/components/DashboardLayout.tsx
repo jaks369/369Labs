@@ -386,7 +386,7 @@ function DashboardLayoutContent({
               <div className="mb-1 px-1">
                 {!isCollapsed && (
                   <div className="flex items-center gap-2 px-2 py-1.5">
-                    <span className="accent-dot accent-dot-amber" />
+                    <span className="accent-dot accent-dot-accent" />
                     <p className="sidebar-label text-[var(--accent)]">Admin</p>
                   </div>
                 )}

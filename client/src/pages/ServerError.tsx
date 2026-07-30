@@ -13,7 +13,7 @@ export default function ServerError() {
         <p className="text-[var(--text-secondary)] mb-2">Something went wrong on our end.</p>
         <p className="text-sm text-[var(--text-muted)] mb-8">The server encountered an internal error. Try refreshing the page.</p>
         <div className="flex gap-3 justify-center">
-          <button onClick={() => window.location.reload()} className="flex items-center gap-2 px-5 py-2.5 rounded-lg bg-[var(--amber)] text-black text-sm font-bold hover:bg-[var(--amber)]/90">
+          <button onClick={() => window.location.reload()} className="flex items-center gap-2 px-5 py-2.5 rounded-lg bg-[var(--accent)] text-black text-sm font-bold hover:bg-[var(--accent)]/90">
             <RefreshCw className="w-4 h-4" /> Refresh
           </button>
           <button onClick={() => navigate("/")} className="flex items-center gap-2 px-5 py-2.5 rounded-lg bg-[var(--card)] border border-[var(--border)] text-white text-sm font-bold hover:bg-white/5">

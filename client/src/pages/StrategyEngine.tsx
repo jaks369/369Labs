@@ -12,7 +12,7 @@ function actionColor(action: string): string {
   switch (action) {
     case "BUY": return "text-[var(--green)]";
     case "SELL": return "text-[var(--red)]";
-    default: return "text-[var(--amber)]";
+    default: return "text-[var(--accent)]";
   }
 }
 
@@ -20,7 +20,7 @@ function actionBg(action: string): string {
   switch (action) {
     case "BUY": return "bg-[var(--green-soft)] border-[var(--green)]/20";
     case "SELL": return "bg-[var(--red-soft)] border-[var(--red)]/20";
-    default: return "bg-[var(--amber-soft)] border-[var(--amber)]/20";
+    default: return "bg-[var(--accent-soft)] border-[var(--accent)]/20";
   }
 }
 
@@ -37,7 +37,7 @@ function regimeIcon(regime: string) {
   switch (regime) {
     case "bullish": return <TrendingUp className="w-4 h-4 text-[var(--green)]" />;
     case "bearish": return <TrendingDown className="w-4 h-4 text-[var(--red)]" />;
-    case "volatile": return <Zap className="w-4 h-4 text-[var(--amber)]" />;
+    case "volatile": return <Zap className="w-4 h-4 text-[var(--accent)]" />;
     case "calm": return <Minus className="w-4 h-4 text-[var(--green)]" />;
     default: return <Minus className="w-4 h-4 text-[var(--text-muted)]" />;
   }
@@ -69,7 +69,7 @@ export default function StrategyEngine() {
     <div className="space-y-6 p-6">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <Brain className="w-7 h-7 text-[var(--amber)]" />
+          <Brain className="w-7 h-7 text-[var(--accent)]" />
           <h1 className="text-2xl font-bold text-white">Strategy Engine</h1>
         </div>
         <div className="flex items-center gap-2">
@@ -82,7 +82,7 @@ export default function StrategyEngine() {
           </select>
           <button
             onClick={() => { metas.refetch(); consensus.refetch(); regime.refetch(); }}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[var(--amber)]/10 border border-[var(--amber)]/20 text-[var(--amber)] text-sm hover:bg-[var(--amber)]/20"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[var(--accent)]/10 border border-[var(--accent)]/20 text-[var(--accent)] text-sm hover:bg-[var(--accent)]/20"
           >
             <RefreshCw className="w-3.5 h-3.5" /> Refresh
           </button>
@@ -96,13 +96,13 @@ export default function StrategyEngine() {
         >
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
-              <Activity className="w-5 h-5 text-[var(--amber)]" />
+              <Activity className="w-5 h-5 text-[var(--accent)]" />
               <h3 className="text-white font-semibold">Market Regime</h3>
             </div>
             {showRegime ? <ChevronUp className="w-4 h-4 text-[var(--text-muted)]" /> : <ChevronDown className="w-4 h-4 text-[var(--text-muted)]" />}
           </div>
           {showRegime && (regime.isLoading ? (
-            <div className="flex items-center justify-center py-4"><Loader2 className="w-5 h-5 animate-spin text-[var(--amber)]" /></div>
+            <div className="flex items-center justify-center py-4"><Loader2 className="w-5 h-5 animate-spin text-[var(--accent)]" /></div>
           ) : regime.data ? (
             <div className="space-y-2">
               <div className="flex items-center gap-2">
@@ -129,13 +129,13 @@ export default function StrategyEngine() {
         >
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
-              <Shield className="w-5 h-5 text-[var(--amber)]" />
+              <Shield className="w-5 h-5 text-[var(--accent)]" />
               <h3 className="text-white font-semibold">Consensus Signal — {symbol}</h3>
             </div>
             {showConsensus ? <ChevronUp className="w-4 h-4 text-[var(--text-muted)]" /> : <ChevronDown className="w-4 h-4 text-[var(--text-muted)]" />}
           </div>
           {showConsensus && (consensus.isLoading ? (
-            <div className="flex items-center justify-center py-4"><Loader2 className="w-5 h-5 animate-spin text-[var(--amber)]" /></div>
+            <div className="flex items-center justify-center py-4"><Loader2 className="w-5 h-5 animate-spin text-[var(--accent)]" /></div>
           ) : consensus.data ? (
             <div className="space-y-3">
               <div className="flex items-center gap-3">
@@ -175,13 +175,13 @@ export default function StrategyEngine() {
       <div className="bg-black/20 border border-[var(--border)] rounded-xl p-4">
         <div className="flex items-center justify-between mb-3 cursor-pointer" onClick={() => setShowRankings(!showRankings)}>
           <div className="flex items-center gap-2">
-            <BarChart3 className="w-5 h-5 text-[var(--amber)]" />
+            <BarChart3 className="w-5 h-5 text-[var(--accent)]" />
             <h3 className="text-white font-semibold">Strategy Rankings</h3>
           </div>
           {showRankings ? <ChevronUp className="w-4 h-4 text-[var(--text-muted)]" /> : <ChevronDown className="w-4 h-4 text-[var(--text-muted)]" />}
         </div>
         {showRankings && (rankings.isLoading ? (
-          <div className="flex items-center justify-center py-4"><Loader2 className="w-5 h-5 animate-spin text-[var(--amber)]" /></div>
+          <div className="flex items-center justify-center py-4"><Loader2 className="w-5 h-5 animate-spin text-[var(--accent)]" /></div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
@@ -205,7 +205,7 @@ export default function StrategyEngine() {
                     <td className="py-2 px-2 text-white">#{r.rank}</td>
                     <td className="py-2 px-2 text-white font-medium">{r.strategyName}</td>
                     <td className="py-2 px-2 text-right text-[var(--text-muted)]">{r.totalSignals}</td>
-                    <td className={`py-2 px-2 text-right font-bold ${r.winRate >= 60 ? "text-[var(--green)]" : r.winRate >= 40 ? "text-[var(--amber)]" : "text-[var(--red)]"}`}>{r.winRate}%</td>
+                    <td className={`py-2 px-2 text-right font-bold ${r.winRate >= 60 ? "text-[var(--green)]" : r.winRate >= 40 ? "text-[var(--accent)]" : "text-[var(--red)]"}`}>{r.winRate}%</td>
                     <td className="py-2 px-2 text-right text-white">{r.confidence}%</td>
                     <td className="py-2 px-2 text-right text-white">{r.avgRiskReward}</td>
                     <td className={`py-2 px-2 text-right font-bold ${r.totalPnl >= 0 ? "text-[var(--green)]" : "text-[var(--red)]"}`}>${r.totalPnl}</td>
@@ -220,11 +220,11 @@ export default function StrategyEngine() {
 
       <div className="bg-black/20 border border-[var(--border)] rounded-xl p-4">
         <div className="flex items-center gap-2 mb-4">
-          <Info className="w-5 h-5 text-[var(--amber)]" />
+          <Info className="w-5 h-5 text-[var(--accent)]" />
           <h3 className="text-white font-semibold">Strategy Registry ({metas.data?.length || 0} strategies)</h3>
         </div>
         {metas.isLoading ? (
-          <div className="flex items-center justify-center py-4"><Loader2 className="w-5 h-5 animate-spin text-[var(--amber)]" /></div>
+          <div className="flex items-center justify-center py-4"><Loader2 className="w-5 h-5 animate-spin text-[var(--accent)]" /></div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
             {(metas.data as StrategyMetaItem[] | undefined)?.map((m: StrategyMetaItem) => (
@@ -243,7 +243,7 @@ export default function StrategyEngine() {
                 </div>
                 <p className="text-xs text-[var(--text-muted)] mb-2">{m.description}</p>
                 <div className="flex items-center gap-2 text-xs text-[var(--text-muted)]">
-                  <span className="bg-[var(--amber)]/10 px-2 py-0.5 rounded">{m.category}</span>
+                  <span className="bg-[var(--accent)]/10 px-2 py-0.5 rounded">{m.category}</span>
                   <span>v{m.version}</span>
                 </div>
               </div>

@@ -239,10 +239,10 @@ export function StrategyBuilderContent({ embedded = false, onClose, onSaved }: S
   };
 
   const blockTypes: { type: StrategyBlock["type"]; icon: any; color: string; borderColor: string }[] = [
-    { type: "market", icon: Database, color: "text-[var(--cyan)]", borderColor: "border-l-[var(--cyan)]" },
-    { type: "condition", icon: Activity, color: "text-[var(--amber)]", borderColor: "border-l-[var(--amber)]" },
+    { type: "market", icon: Database, color: "text-[var(--accent)]", borderColor: "border-l-[var(--accent)]" },
+    { type: "condition", icon: Activity, color: "text-[var(--accent)]", borderColor: "border-l-[var(--accent)]" },
     { type: "indicator", icon: Layers, color: "text-[#a78bfa]", borderColor: "border-l-[#a78bfa]" },
-    { type: "risk", icon: ShieldCheck, color: "text-[var(--amber)]", borderColor: "border-l-[var(--amber)]" },
+    { type: "risk", icon: ShieldCheck, color: "text-[var(--accent)]", borderColor: "border-l-[var(--accent)]" },
     { type: "trade", icon: Zap, color: "text-[var(--green)]", borderColor: "border-l-[var(--green)]" },
     { type: "exit", icon: ChevronRight, color: "text-[var(--red)]", borderColor: "border-l-[var(--red)]" },
   ];
@@ -297,11 +297,11 @@ export function StrategyBuilderContent({ embedded = false, onClose, onSaved }: S
                     <button
                       key={bt.type}
                       onClick={() => addBlock(bt.type)}
-                      className={`flex items-center gap-3 p-3 rounded-lg border border-[var(--border)] hover:border-[var(--amber)] transition-all duration-150 text-left group cursor-pointer border-l-2 ${bt.borderColor}`}
+                      className={`flex items-center gap-3 p-3 rounded-lg border border-[var(--border)] hover:border-[var(--accent)] transition-all duration-150 text-left group cursor-pointer border-l-2 ${bt.borderColor}`}
                     >
                       <bt.icon className={`w-4 h-4 ${bt.color}`} />
                       <span className="text-xs font-semibold text-[var(--text-secondary)] group-hover:text-white capitalize">{bt.type}</span>
-                      <span className="w-6 h-6 rounded-md bg-transparent hover:bg-white/5 flex items-center justify-center ml-auto text-[var(--text-muted)] group-hover:text-[var(--amber)] transition-colors">
+                      <span className="w-6 h-6 rounded-md bg-transparent hover:bg-white/5 flex items-center justify-center ml-auto text-[var(--text-muted)] group-hover:text-[var(--accent)] transition-colors">
                         <Plus className="w-3.5 h-3.5" />
                       </span>
                     </button>
@@ -314,12 +314,12 @@ export function StrategyBuilderContent({ embedded = false, onClose, onSaved }: S
               <div className="space-y-3">
                 {strategiesQuery.isLoading ? (
                   <div className="flex items-center justify-center py-6">
-                    <Loader2 className="w-5 h-5 animate-spin text-[var(--amber)]" />
+                    <Loader2 className="w-5 h-5 animate-spin text-[var(--accent)]" />
                   </div>
                 ) : strategiesQuery.isError ? (
                   <p className="text-xs text-[var(--red)] italic">Failed to load strategies.</p>
                 ) : (Array.isArray(strategiesQuery.data) ? strategiesQuery.data.slice(0, 5) : []).map(s => (
-                  <div key={s.id} className="p-3 rounded-lg bg-black/20 border border-white/5 hover:border-[var(--amber)]/50 transition-all">
+                  <div key={s.id} className="p-3 rounded-lg bg-black/20 border border-white/5 hover:border-[var(--accent)]/50 transition-all">
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0 flex-1">
                         <p className="text-xs font-bold text-white truncate">{s.name}</p>
@@ -331,7 +331,7 @@ export function StrategyBuilderContent({ embedded = false, onClose, onSaved }: S
                         onClick={() => duplicateMutation.mutate({ id: s.id })}
                         disabled={duplicateMutation.isPending}
                         title="Duplicate strategy"
-                        className="p-1.5 rounded-md text-[var(--text-muted)] hover:text-[var(--amber)] hover:bg-[var(--amber-soft)] transition-colors disabled:opacity-50"
+                        className="p-1.5 rounded-md text-[var(--text-muted)] hover:text-[var(--accent)] hover:bg-[var(--accent-soft)] transition-colors disabled:opacity-50"
                       >
                         <Copy className="w-3.5 h-3.5" />
                       </button>
@@ -378,10 +378,10 @@ export function StrategyBuilderContent({ embedded = false, onClose, onSaved }: S
                   <span className="text-micro">Workflow Canvas</span>
                 </div>
                 <div className="flex gap-1">
-                   <button onClick={() => setBuilderMode("blocks")} className={`px-3 py-1.5 text-sm font-medium rounded-lg transition-colors ${builderMode === "blocks" ? "bg-[var(--amber)] text-black" : "text-[var(--text-muted)] hover:bg-[var(--surface-elevated)]"}`}>BLOCKS</button>
-                   <button onClick={() => setBuilderMode("visual")} className={`px-3 py-1.5 text-sm font-medium rounded-lg transition-colors ${builderMode === "visual" ? "bg-[var(--amber)] text-black" : "text-[var(--text-muted)] hover:bg-[var(--surface-elevated)]"}`}>IF/THEN</button>
-                   <button onClick={() => setBuilderMode("ensemble")} className={`px-3 py-1.5 text-sm font-medium rounded-lg transition-colors ${builderMode === "ensemble" ? "bg-[var(--amber)] text-black" : "text-[var(--text-muted)] hover:bg-[var(--surface-elevated)]"}`}>ENSEMBLE</button>
-                   <button onClick={() => setShowHistory((v) => !v)} className={`px-3 py-1.5 text-sm font-medium rounded-lg transition-colors ${showHistory ? "bg-[var(--amber)] text-black" : "text-[var(--text-muted)] hover:bg-[var(--surface-elevated)]"}`}><GitCompare className="w-3.5 h-3.5 inline mr-1" />HISTORY</button>
+                   <button onClick={() => setBuilderMode("blocks")} className={`px-3 py-1.5 text-sm font-medium rounded-lg transition-colors ${builderMode === "blocks" ? "bg-[var(--accent)] text-black" : "text-[var(--text-muted)] hover:bg-[var(--surface-elevated)]"}`}>BLOCKS</button>
+                   <button onClick={() => setBuilderMode("visual")} className={`px-3 py-1.5 text-sm font-medium rounded-lg transition-colors ${builderMode === "visual" ? "bg-[var(--accent)] text-black" : "text-[var(--text-muted)] hover:bg-[var(--surface-elevated)]"}`}>IF/THEN</button>
+                   <button onClick={() => setBuilderMode("ensemble")} className={`px-3 py-1.5 text-sm font-medium rounded-lg transition-colors ${builderMode === "ensemble" ? "bg-[var(--accent)] text-black" : "text-[var(--text-muted)] hover:bg-[var(--surface-elevated)]"}`}>ENSEMBLE</button>
+                   <button onClick={() => setShowHistory((v) => !v)} className={`px-3 py-1.5 text-sm font-medium rounded-lg transition-colors ${showHistory ? "bg-[var(--accent)] text-black" : "text-[var(--text-muted)] hover:bg-[var(--surface-elevated)]"}`}><GitCompare className="w-3.5 h-3.5 inline mr-1" />HISTORY</button>
                    <button onClick={() => critiqueMutation.mutate({ rule: buildConfig().rule })} className={`px-3 py-1.5 text-sm font-medium rounded-lg transition-colors ${critiqueMutation.isPending ? "opacity-50" : "text-[var(--green)] border border-[var(--green)]/30 hover:bg-[var(--green)]/10"}`}><ShieldCheck className="w-3.5 h-3.5 inline mr-1" />AI REVIEW</button>
                  </div>
                </div>
@@ -391,7 +391,7 @@ export function StrategyBuilderContent({ embedded = false, onClose, onSaved }: S
                    <div className="flex items-center justify-between">
                      <span className="text-caption font-bold text-[var(--text-secondary)] uppercase tracking-widest">Version History ({versions.length})</span>
                      {versions.length >= 2 && compareIdx === null && (
-                       <button onClick={() => setCompareIdx([versions.length - 2, versions.length - 1])} className="text-caption text-[var(--amber)] hover:underline">Compare last two</button>
+                       <button onClick={() => setCompareIdx([versions.length - 2, versions.length - 1])} className="text-caption text-[var(--accent)] hover:underline">Compare last two</button>
                      )}
                    </div>
                    {versions.length === 0 && <p className="text-xs text-[var(--text-muted)]">No saved versions yet. Save this strategy to start tracking history.</p>}
@@ -428,7 +428,7 @@ export function StrategyBuilderContent({ embedded = false, onClose, onSaved }: S
                     <div className="space-y-2">
                       {(Array.isArray(critiqueMutation.data?.findings) ? critiqueMutation.data.findings : []).map((f: any, i: number) => (
                         <div key={i} className="flex items-start gap-2 text-xs">
-                          <span className={`px-1.5 py-0.5 rounded font-bold uppercase ${f.severity === "high" ? "bg-[var(--red)]/30 text-[var(--red)]" : f.severity === "medium" ? "bg-[var(--amber)]/30 text-[var(--amber-hover)]" : "bg-[var(--text-muted)]/30 text-[var(--text-secondary)]"}`}>{f.severity}</span>
+                          <span className={`px-1.5 py-0.5 rounded font-bold uppercase ${f.severity === "high" ? "bg-[var(--red)]/30 text-[var(--red)]" : f.severity === "medium" ? "bg-[var(--accent)]/30 text-[var(--accent-hover)]" : "bg-[var(--text-muted)]/30 text-[var(--text-secondary)]"}`}>{f.severity}</span>
                           <div><b className="text-white">{f.title}</b> <span className="text-[var(--text-secondary)]">— {f.detail}</span></div>
                         </div>
                       ))}
@@ -448,7 +448,7 @@ export function StrategyBuilderContent({ embedded = false, onClose, onSaved }: S
                       <label className="text-micro">Vote rule</label>
                       <div className="flex gap-2 mt-2">
                         {(["all", "majority", "any"] as const).map((v) => (
-                          <button key={v} onClick={() => setEnsembleVote(v)} className={`px-3 py-1 text-caption font-bold rounded ${ensembleVote === v ? "bg-[var(--amber)] text-white" : "bg-[var(--card)] text-[var(--text-muted)] border border-[var(--border)]"}`}>{v === "all" ? "ALL agree" : v === "majority" ? "MAJORITY" : "ANY"}</button>
+                          <button key={v} onClick={() => setEnsembleVote(v)} className={`px-3 py-1 text-caption font-bold rounded ${ensembleVote === v ? "bg-[var(--accent)] text-white" : "bg-[var(--card)] text-[var(--text-muted)] border border-[var(--border)]"}`}>{v === "all" ? "ALL agree" : v === "majority" ? "MAJORITY" : "ANY"}</button>
                         ))}
                       </div>
                     </div>
@@ -457,7 +457,7 @@ export function StrategyBuilderContent({ embedded = false, onClose, onSaved }: S
                       {((strategiesQuery.data || []) as any[]).filter((s) => s.config?.rule).map((s) => {
                         const checked = ensembleIds.includes(s.id);
                         return (
-                          <label key={s.id} className="flex items-center gap-3 bg-[var(--card)] border border-[var(--border)] rounded-lg p-3 cursor-pointer hover:border-[var(--amber)]/50">
+                          <label key={s.id} className="flex items-center gap-3 bg-[var(--card)] border border-[var(--border)] rounded-lg p-3 cursor-pointer hover:border-[var(--accent)]/50">
                             <input type="checkbox" checked={checked} onChange={(e) => setEnsembleIds((prev) => e.target.checked ? [...prev, s.id] : prev.filter((id) => id !== s.id))} className="rounded" />
                             <span className="text-sm text-white">{s.name}</span>
                             <span className="text-caption ml-auto">{(s.config.rule.symbol) || "R_100"}</span>
@@ -483,7 +483,7 @@ export function StrategyBuilderContent({ embedded = false, onClose, onSaved }: S
                               {index < blocks.length - 1 && (
                                 <div className="absolute left-6 top-12 w-0.5 h-8 bg-[var(--border)]" />
                               )}
-                              <div className="flex gap-4 items-start bg-[var(--card)] border border-[var(--border)] p-4 rounded-xl group-hover:border-[var(--amber)]/50 transition-all">
+                              <div className="flex gap-4 items-start bg-[var(--card)] border border-[var(--border)] p-4 rounded-xl group-hover:border-[var(--accent)]/50 transition-all">
                                 <div className={`w-12 h-12 rounded-lg flex items-center justify-center shrink-0 bg-[var(--card)] border border-white/5`}>
                                   <typeInfo.icon className={`w-6 h-6 ${typeInfo.color}`} />
                                 </div>
@@ -491,8 +491,8 @@ export function StrategyBuilderContent({ embedded = false, onClose, onSaved }: S
                                   <div className="flex items-center justify-between">
                                     <span className="text-micro">{block.type}</span>
                                     <div className="flex items-center gap-1">
-                                      <button onClick={() => moveBlock(block.id, -1)} disabled={index === 0} className="text-[var(--text-muted)] hover:text-[var(--amber)] disabled:opacity-25 transition-colors" aria-label="Move up"><ArrowUp className="w-3 h-3" /></button>
-                                      <button onClick={() => moveBlock(block.id, 1)} disabled={index === blocks.length - 1} className="text-[var(--text-muted)] hover:text-[var(--amber)] disabled:opacity-25 transition-colors" aria-label="Move down"><ArrowDown className="w-3 h-3" /></button>
+                                      <button onClick={() => moveBlock(block.id, -1)} disabled={index === 0} className="text-[var(--text-muted)] hover:text-[var(--accent)] disabled:opacity-25 transition-colors" aria-label="Move up"><ArrowUp className="w-3 h-3" /></button>
+                                      <button onClick={() => moveBlock(block.id, 1)} disabled={index === blocks.length - 1} className="text-[var(--text-muted)] hover:text-[var(--accent)] disabled:opacity-25 transition-colors" aria-label="Move down"><ArrowDown className="w-3 h-3" /></button>
                                       <button onClick={() => removeBlock(block.id)} className="text-[var(--text-muted)] hover:text-[var(--red)] transition-colors"><Trash2 className="w-3 h-3" /></button>
                                     </div>
                                   </div>
@@ -526,12 +526,12 @@ export function StrategyBuilderContent({ embedded = false, onClose, onSaved }: S
             </div>
             <div className="p-4 space-y-3">
               {templatesQuery.isLoading ? (
-                <div className="flex items-center justify-center py-8"><Loader2 className="w-5 h-5 animate-spin text-[var(--amber)]" /></div>
+                <div className="flex items-center justify-center py-8"><Loader2 className="w-5 h-5 animate-spin text-[var(--accent)]" /></div>
               ) : !Array.isArray(templatesQuery.data) || templatesQuery.data.length === 0 ? (
                 <p className="text-sm text-[var(--text-muted)]">No templates available.</p>
               ) : (
                 templatesQuery.data.slice(0, 10).map((t: any, i: number) => (
-                  <div key={i} className="p-4 rounded-xl bg-[var(--card)] border border-[var(--border)] hover:border-[var(--amber)]/50 transition-all cursor-pointer" onClick={() => loadTemplate(t)}>
+                  <div key={i} className="p-4 rounded-xl bg-[var(--card)] border border-[var(--border)] hover:border-[var(--accent)]/50 transition-all cursor-pointer" onClick={() => loadTemplate(t)}>
                     <h4 className="text-sm font-bold text-white mb-1">{t.name}</h4>
                     <p className="text-xs text-[var(--text-secondary)]">{t.description}</p>
                   </div>
@@ -575,8 +575,8 @@ export function StrategyBuilderContent({ embedded = false, onClose, onSaved }: S
                         <div key={i} className="flex items-center gap-3 p-2 bg-black/20 rounded-lg">
                           <span className="text-xs text-[var(--text-secondary)] w-24 shrink-0">{new Date(v.savedAt).toLocaleString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}</span>
                           <code className="text-caption flex-1 truncate">{summarizeRuleSafe(v.rule)}</code>
-                          <button onClick={() => setDiffA(i)} className={`text-caption px-2 py-0.5 rounded ${diffA === i ? "bg-[var(--amber)] text-white" : "bg-white/5 text-[var(--text-secondary)]"}`}>A</button>
-                          <button onClick={() => setDiffB(i)} className={`text-caption px-2 py-0.5 rounded ${diffB === i ? "bg-[var(--amber)] text-white" : "bg-white/5 text-[var(--text-secondary)]"}`}>B</button>
+                          <button onClick={() => setDiffA(i)} className={`text-caption px-2 py-0.5 rounded ${diffA === i ? "bg-[var(--accent)] text-white" : "bg-white/5 text-[var(--text-secondary)]"}`}>A</button>
+                          <button onClick={() => setDiffB(i)} className={`text-caption px-2 py-0.5 rounded ${diffB === i ? "bg-[var(--accent)] text-white" : "bg-white/5 text-[var(--text-secondary)]"}`}>B</button>
                         </div>
                       ))}
                     </div>

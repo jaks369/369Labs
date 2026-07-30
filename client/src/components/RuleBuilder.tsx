@@ -185,8 +185,8 @@ export default function RuleBuilder({ rule, onChange }: RuleBuilderProps) {
 
   return (
     <div className="space-y-4">      {/* Natural-language input */}
-      <div className="relative border border-[var(--cyan)]/50 bg-[var(--card)] p-4 rounded">
-        <div className="absolute -top-3 left-4 bg-[var(--bg)] px-2 text-sm font-bold text-[var(--cyan)]">
+      <div className="relative border border-[var(--accent)]/50 bg-[var(--card)] p-4 rounded">
+        <div className="absolute -top-3 left-4 bg-[var(--bg)] px-2 text-sm font-bold text-[var(--accent)]">
           DESCRIBE IN ENGLISH
         </div>
         <div className="mt-2 flex gap-2">
@@ -195,9 +195,9 @@ export default function RuleBuilder({ rule, onChange }: RuleBuilderProps) {
             onChange={(e) => setNlText(e.target.value)}
             onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); applyNl(); } }}
             placeholder={'e.g. "when an even digit appears, buy rise" or "after 3 of digit 5 in a row, buy fall"'}
-            className="flex-1 bg-[var(--bg)] border border-[var(--cyan)]/30 rounded px-3 py-2 text-sm text-white placeholder:text-[var(--text-muted)] outline-none focus:border-[var(--cyan)]"
+            className="flex-1 bg-[var(--bg)] border border-[var(--accent)]/30 rounded px-3 py-2 text-sm text-white placeholder:text-[var(--text-muted)] outline-none focus:border-[var(--accent)]"
           />
-          <button onClick={applyNl} className="px-4 py-2 rounded bg-[var(--cyan)] text-black text-sm font-bold hover:bg-[var(--cyan)]">Build</button>
+          <button onClick={applyNl} className="px-4 py-2 rounded bg-[var(--accent)] text-black text-sm font-bold hover:bg-[var(--accent)]">Build</button>
         </div>
         {nlMsg && (
           <div className={`mt-2 text-xs ${nlMsg.kind === "ok" ? "text-[var(--green)]" : "text-[var(--red)]"}`}>{nlMsg.text}</div>
@@ -207,19 +207,19 @@ export default function RuleBuilder({ rule, onChange }: RuleBuilderProps) {
 
 
       {/* Symbol selector */}
-      <div className="relative border border-[var(--amber-hover)]/50 bg-[var(--card)] p-4 rounded">
-        <div className="absolute -top-3 left-4 bg-[var(--bg)] px-2 text-sm font-bold text-[var(--amber-hover)]">
+      <div className="relative border border-[var(--accent-hover)]/50 bg-[var(--card)] p-4 rounded">
+        <div className="absolute -top-3 left-4 bg-[var(--bg)] px-2 text-sm font-bold text-[var(--accent-hover)]">
           SYMBOL
         </div>
         <div className="mt-2">
-          <label className="text-micro text-[var(--amber-hover)]/70 uppercase tracking-wider block mb-1">
+          <label className="text-micro text-[var(--accent-hover)]/70 uppercase tracking-wider block mb-1">
             Instrument
           </label>
           <Select
             value={rule.symbol ?? "R_100"}
             onValueChange={(v) => onChange({ ...rule, symbol: v })}
           >
-            <SelectTrigger className="border-[var(--amber-hover)]/40 text-[var(--amber-hover)]">
+            <SelectTrigger className="border-[var(--accent-hover)]/40 text-[var(--accent-hover)]">
               <SelectValue placeholder="Select symbol" />
             </SelectTrigger>
             <SelectContent>
@@ -234,13 +234,13 @@ export default function RuleBuilder({ rule, onChange }: RuleBuilderProps) {
       </div>
 
       {/* IF Block */}
-      <div className="relative border border-[var(--amber)]/50 bg-[var(--card)] p-4 rounded">
-        <div className="absolute -top-3 left-4 bg-[var(--bg)] px-2 text-sm font-bold text-[var(--amber)]">
+      <div className="relative border border-[var(--accent)]/50 bg-[var(--card)] p-4 rounded">
+        <div className="absolute -top-3 left-4 bg-[var(--bg)] px-2 text-sm font-bold text-[var(--accent)]">
           IF
         </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mt-2">
           <div>
-            <label className="text-micro text-[var(--amber)]/70 uppercase tracking-wider block mb-1">
+            <label className="text-micro text-[var(--accent)]/70 uppercase tracking-wider block mb-1">
               Indicator
             </label>
             <Select
@@ -249,7 +249,7 @@ export default function RuleBuilder({ rule, onChange }: RuleBuilderProps) {
                 onChange({ ...rule, condition: { ...rule.condition, indicator: v } })
               }
             >
-              <SelectTrigger className="border-[var(--amber)]/40 text-[var(--amber)]">
+              <SelectTrigger className="border-[var(--accent)]/40 text-[var(--accent)]">
                 <SelectValue placeholder="Select indicator" />
               </SelectTrigger>
               <SelectContent>
@@ -262,7 +262,7 @@ export default function RuleBuilder({ rule, onChange }: RuleBuilderProps) {
             </Select>
           </div>
           <div>
-            <label className="text-micro text-[var(--amber)]/70 uppercase tracking-wider block mb-1">
+            <label className="text-micro text-[var(--accent)]/70 uppercase tracking-wider block mb-1">
               Comparison
             </label>
             <Select
@@ -271,7 +271,7 @@ export default function RuleBuilder({ rule, onChange }: RuleBuilderProps) {
                 onChange({ ...rule, condition: { ...rule.condition, comparison: v } })
               }
             >
-              <SelectTrigger className="border-[var(--amber)]/40 text-[var(--amber)]">
+              <SelectTrigger className="border-[var(--accent)]/40 text-[var(--accent)]">
                 <SelectValue placeholder="Select comparison" />
               </SelectTrigger>
               <SelectContent>
@@ -284,7 +284,7 @@ export default function RuleBuilder({ rule, onChange }: RuleBuilderProps) {
             </Select>
           </div>
           <div>
-            <label className="text-micro text-[var(--amber)]/70 uppercase tracking-wider block mb-1">
+            <label className="text-micro text-[var(--accent)]/70 uppercase tracking-wider block mb-1">
               Times
             </label>
             <Input
@@ -298,13 +298,13 @@ export default function RuleBuilder({ rule, onChange }: RuleBuilderProps) {
                   condition: { ...rule.condition, count: parseInt(e.target.value) || 1 },
                 })
               }
-              className="border-[var(--amber)]/40 text-[var(--amber)]"
+              className="border-[var(--accent)]/40 text-[var(--accent)]"
             />
           </div>
         </div>
         {(rule.condition.indicator === "digit_over" || rule.condition.indicator === "digit_under") && (
           <div className="mt-3 max-w-[200px]">
-            <label className="text-micro text-[var(--amber)]/70 uppercase tracking-wider block mb-1">
+            <label className="text-micro text-[var(--accent)]/70 uppercase tracking-wider block mb-1">
               Barrier Digit (0-9)
             </label>
             <Input
@@ -321,7 +321,7 @@ export default function RuleBuilder({ rule, onChange }: RuleBuilderProps) {
                   },
                 })
               }
-              className="border-[var(--amber)]/40 text-[var(--amber)]"
+              className="border-[var(--accent)]/40 text-[var(--accent)]"
             />
           </div>
         )}
@@ -339,7 +339,7 @@ export default function RuleBuilder({ rule, onChange }: RuleBuilderProps) {
             }
             setShowTree(!showTree);
           }}
-          className="text-xs px-3 py-1 rounded border border-[var(--amber-hover)]/50 text-[var(--amber-hover)] hover:bg-[var(--amber-hover)]/15"
+          className="text-xs px-3 py-1 rounded border border-[var(--accent-hover)]/50 text-[var(--accent-hover)] hover:bg-[var(--accent-hover)]/15"
         >
           {showTree ? "← Back to simple condition" : "+ Combine conditions (AND / OR / NOT)"}
         </button>
@@ -358,23 +358,23 @@ export default function RuleBuilder({ rule, onChange }: RuleBuilderProps) {
 
       {/* Connector Arrow */}
       <div className="flex justify-center">
-        <div className="text-[var(--amber-hover)] text-xl font-bold">▼</div>
+        <div className="text-[var(--accent-hover)] text-xl font-bold">▼</div>
       </div>
 
       {/* THEN Block */}
-      <div className="relative border border-[var(--amber-hover)]/50 bg-[var(--card)] p-4 rounded">
-        <div className="absolute -top-3 left-4 bg-[var(--bg)] px-2 text-sm font-bold text-[var(--amber-hover)]">
+      <div className="relative border border-[var(--accent-hover)]/50 bg-[var(--card)] p-4 rounded">
+        <div className="absolute -top-3 left-4 bg-[var(--bg)] px-2 text-sm font-bold text-[var(--accent-hover)]">
           THEN
         </div>
         <div className="mt-2">
-          <label className="text-micro text-[var(--amber-hover)]/70 uppercase tracking-wider block mb-1">
+          <label className="text-micro text-[var(--accent-hover)]/70 uppercase tracking-wider block mb-1">
             Trade Action
           </label>
           <Select
             value={rule.action.tradeType}
             onValueChange={(v) => onChange({ ...rule, action: { tradeType: v } })}
           >
-            <SelectTrigger className="border-[var(--amber-hover)]/40 text-[var(--amber-hover)]">
+            <SelectTrigger className="border-[var(--accent-hover)]/40 text-[var(--accent-hover)]">
               <SelectValue placeholder="Select action" />
             </SelectTrigger>
             <SelectContent>
@@ -467,7 +467,7 @@ export default function RuleBuilder({ rule, onChange }: RuleBuilderProps) {
       </div>
 
       {/* Rule Summary */}
-      <div className="text-center text-xs text-[var(--amber)]/60 italic border-t border-[var(--amber)]/20 pt-3">
+      <div className="text-center text-xs text-[var(--accent)]/60 italic border-t border-[var(--accent)]/20 pt-3">
         {summarizeRule(rule)}
       </div>
     </div>

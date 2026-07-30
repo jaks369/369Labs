@@ -217,7 +217,7 @@ export default function Workflow() {
       <div className="max-w-4xl mx-auto space-y-6">
         <div>
           <h1 className="text-3xl font-bold text-white flex items-center gap-3">
-            <WorkflowIcon className="w-7 h-7 text-[var(--amber)]" /> Workflow Automation
+            <WorkflowIcon className="w-7 h-7 text-[var(--accent)]" /> Workflow Automation
           </h1>
           <p className="text-[var(--text-secondary)] text-sm mt-1">Chain agent steps into repeatable automation. Runs the existing scan → backtest → risk → notify pipeline.</p>
         </div>
@@ -240,14 +240,14 @@ export default function Workflow() {
               <div className="flex items-center gap-2 mb-3">
                 <label className="text-xs text-[var(--text-muted)] shrink-0">Symbol:</label>
                 <div className="relative flex-1">
-                  <button onClick={() => setMenuOpen(menuOpen === w.id ? null : w.id)} className="w-full bg-[var(--surface-secondary)] border border-[var(--border)] text-white px-3 py-2 rounded-lg text-sm font-medium flex items-center justify-between hover:border-[var(--amber)]/50">
+                  <button onClick={() => setMenuOpen(menuOpen === w.id ? null : w.id)} className="w-full bg-[var(--surface-secondary)] border border-[var(--border)] text-white px-3 py-2 rounded-lg text-sm font-medium flex items-center justify-between hover:border-[var(--accent)]/50">
                     {symbol}
                     <ChevronDown className={`w-4 h-4 transition-transform ${menuOpen === w.id ? "rotate-180" : ""}`} />
                   </button>
                   {menuOpen === w.id && (
                     <div className="absolute bottom-full left-0 right-0 mb-1 bg-[var(--surface-secondary)] border border-[var(--border)] rounded-lg shadow-xl z-10 max-h-60 overflow-y-auto">
                       {SYMBOLS.map((s) => (
-                        <button key={s} onClick={() => { setSymbol(s); setMenuOpen(null); }} className={`w-full px-3 py-2 text-left text-sm ${symbol === s ? "bg-[var(--amber-soft)] text-[var(--amber)]" : "text-white hover:bg-white/10"}`}>
+                        <button key={s} onClick={() => { setSymbol(s); setMenuOpen(null); }} className={`w-full px-3 py-2 text-left text-sm ${symbol === s ? "bg-[var(--accent-soft)] text-[var(--accent)]" : "text-white hover:bg-white/10"}`}>
                           {s}
                         </button>
                       ))}
@@ -258,7 +258,7 @@ export default function Workflow() {
               <button
                 onClick={() => runWorkflow(w, symbol)}
                 disabled={running === w.id}
-                className="w-full bg-[var(--amber)] hover:bg-[var(--amber)] text-white text-sm font-bold py-2.5 rounded-lg flex items-center justify-center gap-2"
+                className="w-full bg-[var(--accent)] hover:bg-[var(--accent)] text-white text-sm font-bold py-2.5 rounded-lg flex items-center justify-center gap-2"
               >
                 {running === w.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />}
                 {running === w.id ? "Running…" : "Run Workflow"}
@@ -272,7 +272,7 @@ export default function Workflow() {
             <h2 className="text-sm font-bold text-white mb-3 flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-[var(--green)]" /> Run Log</h2>
             <div className="space-y-1 font-mono text-xs">
               {log.map((l, i) => (
-                <div key={i} className={l.startsWith("✓") ? "text-[var(--green)]" : l.startsWith("▶") ? "text-[var(--amber)]" : "text-[var(--text-secondary)]"}>{l}</div>
+                <div key={i} className={l.startsWith("✓") ? "text-[var(--green)]" : l.startsWith("▶") ? "text-[var(--accent)]" : "text-[var(--text-secondary)]"}>{l}</div>
               ))}
             </div>
           </div>

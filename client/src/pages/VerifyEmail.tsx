@@ -29,11 +29,11 @@ export default function VerifyEmail() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-[var(--bg)] px-4">
-      <div className="w-full max-w-sm border border-[var(--amber-border)] bg-[var(--card)] rounded p-8 text-center">
+      <div className="w-full max-w-sm border border-[var(--accent-border)] bg-[var(--card)] rounded p-8 text-center">
         {status === "verifying" && (
           <>
-            <Loader2 className="w-10 h-10 animate-spin text-[var(--amber)] mx-auto mb-4" />
-            <p className="text-[var(--amber)] font-semibold">Verifying your email...</p>
+            <Loader2 className="w-10 h-10 animate-spin text-[var(--accent)] mx-auto mb-4" />
+            <p className="text-[var(--accent)] font-semibold">Verifying your email...</p>
           </>
         )}
         {status === "success" && (
@@ -51,7 +51,7 @@ export default function VerifyEmail() {
             <XCircle className="w-10 h-10 text-[var(--red)] mx-auto mb-4" />
             <h1 className="text-lg font-bold text-white mb-2">Verification Failed</h1>
             <p className="text-sm text-[var(--red)] mb-6">{errorMsg}</p>
-            <Link to="/login" className="text-[var(--amber)] hover:underline text-sm">Back to login</Link>
+            <Link to="/login" className="text-[var(--accent)] hover:underline text-sm">Back to login</Link>
           </>
         )}
       </div>

@@ -138,23 +138,23 @@ export default function Analytics() {
   const eqFillColor = totalPnl >= 0 ? "rgba(var(--green-rgb), 0.08)" : "rgba(var(--red-rgb), 0.08)";
 
   const riskStats = [
-    { label: "Current Drawdown", value: `$${currentDD.toFixed(2)}`, sub: "peak-to-now", color: currentDD > 0 ? "text-[var(--amber)]" : "text-[var(--text-secondary)]" },
+    { label: "Current Drawdown", value: `$${currentDD.toFixed(2)}`, sub: "peak-to-now", color: currentDD > 0 ? "text-[var(--accent)]" : "text-[var(--text-secondary)]" },
     { label: "Max Drawdown", value: `$${maxDD.toFixed(2)}`, sub: "all-time", color: maxDD > 0 ? "text-[var(--red)]" : "text-[var(--text-secondary)]" },
     { label: "Daily Drawdown", value: `$${dailyDD.toFixed(2)}`, sub: "worst day", color: dailyDD < 0 ? "text-[var(--red)]" : "text-[var(--text-secondary)]" },
     { label: "Weekly Drawdown", value: `$${weeklyDD.toFixed(2)}`, sub: "worst week", color: weeklyDD < 0 ? "text-[var(--red)]" : "text-[var(--text-secondary)]" },
     { label: "Largest Loss", value: `$${largestLoss.toFixed(2)}`, sub: "single trade", color: largestLoss < 0 ? "text-[var(--red)]" : "text-[var(--text-secondary)]" },
-    { label: "Risk : Reward", value: rr.toFixed(2), sub: "gross win/loss", color: rr >= 1 ? "text-[var(--green)]" : "text-[var(--amber)]" },
+    { label: "Risk : Reward", value: rr.toFixed(2), sub: "gross win/loss", color: rr >= 1 ? "text-[var(--green)]" : "text-[var(--accent)]" },
     { label: "Avg Exposure", value: `$${exposure.toFixed(2)}`, sub: "per trade stake", color: "text-[var(--text-secondary)]" },
     { label: "Open Risk", value: "—", sub: "live bots", color: "text-[var(--text-muted)]" },
-    { label: "Sharpe Ratio", value: sharpeRatio.toFixed(2), sub: "risk-adjusted return", color: sharpeRatio >= 1 ? "text-[var(--green)]" : sharpeRatio >= 0 ? "text-[var(--amber)]" : "text-[var(--red)]" },
-    { label: "Sortino Ratio", value: sortinoRatio.toFixed(2), sub: "downside risk-adjusted", color: sortinoRatio >= 1 ? "text-[var(--green)]" : sortinoRatio >= 0 ? "text-[var(--amber)]" : "text-[var(--red)]" },
+    { label: "Sharpe Ratio", value: sharpeRatio.toFixed(2), sub: "risk-adjusted return", color: sharpeRatio >= 1 ? "text-[var(--green)]" : sharpeRatio >= 0 ? "text-[var(--accent)]" : "text-[var(--red)]" },
+    { label: "Sortino Ratio", value: sortinoRatio.toFixed(2), sub: "downside risk-adjusted", color: sortinoRatio >= 1 ? "text-[var(--green)]" : sortinoRatio >= 0 ? "text-[var(--accent)]" : "text-[var(--red)]" },
     { label: "Benchmark", value: benchmarkLabel, sub: "buy & hold return", color: benchmarkReturn >= 0 ? "text-[var(--green)]" : "text-[var(--red)]" },
   ];
 
   const stats = [
     { label: "Total P&L", value: `$${totalPnl.toFixed(2)}`, icon: DollarSign, color: totalPnl >= 0 ? "text-[var(--green)]" : "text-[var(--red)]" },
     { label: "Win Rate", value: `${winRate}%`, icon: TrendingUp, color: "text-[var(--green)]" },
-    { label: "Total Trades", value: totalTrades.toString(), icon: Activity, color: "text-[var(--amber)]" },
+    { label: "Total Trades", value: totalTrades.toString(), icon: Activity, color: "text-[var(--accent)]" },
     { label: "Avg. Trade", value: `${avgTrade >= 0 ? "+" : ""}$${avgTrade.toFixed(2)}`, icon: BarChart4, color: avgTrade >= 0 ? "text-[var(--green)]" : "text-[var(--red)]" },
   ];
 
@@ -194,7 +194,7 @@ export default function Analytics() {
         </div>
 
         {tradesQuery.isLoading ? (
-          <div className="flex items-center justify-center h-64"><Loader2 className="w-8 h-8 animate-spin text-[var(--amber)]" /></div>
+          <div className="flex items-center justify-center h-64"><Loader2 className="w-8 h-8 animate-spin text-[var(--accent)]" /></div>
         ) : tradesQuery.isError ? (
           <div className="flex items-center justify-center h-64">
             <div className="text-center">
@@ -210,7 +210,7 @@ export default function Analytics() {
                 <div key={s.label} className="animate-cardEnter bg-[var(--card)] border border-[var(--border)] rounded-xl p-5 card-hover">
                   <div className="flex items-center justify-between mb-3">
                     <span className="text-xs font-bold uppercase tracking-wider" style={{color: "var(--text-muted)"}}>{s.label}</span>
-                    <s.icon className={`w-5 h-5 ${s.icon === DollarSign ? "text-[var(--amber)]" : s.color}`} />
+                    <s.icon className={`w-5 h-5 ${s.icon === DollarSign ? "text-[var(--accent)]" : s.color}`} />
                   </div>
                   <p className={`text-[28px] font-bold ${s.color}`}>{s.value}</p>
                 </div>
@@ -225,7 +225,7 @@ export default function Analytics() {
                   <button key={m} onClick={() => setFilter(m)}
                     className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                       filter === m
-                        ? "bg-[var(--amber)] text-black font-semibold"
+                        ? "bg-[var(--accent)] text-black font-semibold"
                         : "bg-transparent border border-[var(--border)] text-[var(--text-muted)] hover:text-white"
                     }`}>
                     <Icon className="w-4 h-4" />
@@ -256,11 +256,11 @@ export default function Analytics() {
                   ))}
                   <path d={eqPath} fill="none" stroke={eqColor} strokeWidth="2" />
                   <path d={`${eqPath} L${eqPadding + eqInnerW},${eqPadding + eqInnerH} L${eqPadding},${eqPadding + eqInnerH} Z`} fill="url(#eqGrad)" />
-                  <rect x={eqPadding + eqInnerW - 48} y={eqHeight - 18} width="42" height="14" rx="3" fill="var(--amber)" />
+                  <rect x={eqPadding + eqInnerW - 48} y={eqHeight - 18} width="42" height="14" rx="3" fill="var(--accent)" />
                   <text x={eqPadding + eqInnerW - 27} y={eqHeight - 9} fill="#000" fontSize="9" textAnchor="middle" fontWeight="600">{equityCurve[equityCurve.length - 1]?.date || ""}</text>
-                  <rect x={eqPadding} y={eqPadding - 4} width="28" height="14" rx="3" fill="var(--amber)" />
+                  <rect x={eqPadding} y={eqPadding - 4} width="28" height="14" rx="3" fill="var(--accent)" />
                   <text x={eqPadding + 14} y={eqPadding + 5} fill="#000" fontSize="9" textAnchor="middle" fontWeight="600">${eqMax.toFixed(0)}</text>
-                  <rect x={eqPadding + eqInnerW - 48} y={eqPadding + eqInnerH - 7} width="42" height="14" rx="3" fill="var(--amber)" />
+                  <rect x={eqPadding + eqInnerW - 48} y={eqPadding + eqInnerH - 7} width="42" height="14" rx="3" fill="var(--accent)" />
                   <text x={eqPadding + eqInnerW - 27} y={eqPadding + eqInnerH + 2} fill="#000" fontSize="9" textAnchor="middle" fontWeight="600">${eqMin.toFixed(0)}</text>
                 </svg>
               ) : (
@@ -270,7 +270,7 @@ export default function Analytics() {
 
             <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-6">
               <h2 className="text-lg font-bold text-white mb-1 flex items-center gap-2">
-                <ShieldAlert className="w-5 h-5 text-[var(--amber)]" /> Risk Dashboard
+                <ShieldAlert className="w-5 h-5 text-[var(--accent)]" /> Risk Dashboard
               </h2>
               <p className="text-xs text-[var(--text-muted)] mb-4">Drawdown, exposure and risk:reward across all closed trades.</p>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -286,7 +286,7 @@ export default function Analytics() {
 
             <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-6">
               <h2 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
-                <BarChart4 className="w-5 h-5 text-[var(--amber)]" /> Monthly Returns Heatmap
+                <BarChart4 className="w-5 h-5 text-[var(--accent)]" /> Monthly Returns Heatmap
               </h2>
               {trades.length > 0 ? (
                 <div className="overflow-x-auto">
@@ -333,7 +333,7 @@ export default function Analytics() {
             {calMonths.length > 0 && (
               <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-6">
                 <h2 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
-                  <CalendarDays className="w-5 h-5 text-[var(--amber)]" /> Trade Days Calendar
+                  <CalendarDays className="w-5 h-5 text-[var(--accent)]" /> Trade Days Calendar
                 </h2>
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
                   {calMonths.slice(-12).map(ym => {

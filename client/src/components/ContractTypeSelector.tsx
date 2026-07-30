@@ -49,7 +49,7 @@ export default function ContractTypeSelector({ selection, onChange }: ContractTy
             onClick={() => setCat(c.id)}
             className={`flex flex-col items-center gap-0.5 py-2 rounded-md text-micro font-bold transition-all ${
               selection.category === c.id
-                ? "bg-[var(--amber)] text-white shadow-sm"
+                ? "bg-[var(--accent)] text-white shadow-sm"
                 : "text-[var(--text-secondary)] hover:text-white"
             }`}
           >
@@ -92,7 +92,7 @@ export default function ContractTypeSelector({ selection, onChange }: ContractTy
                 onClick={() => onChange({ ...selection, overUnder: "over" })}
                 className={`flex-1 py-2 text-center text-xs font-bold rounded-md transition-all ${
                   selection.overUnder === "over"
-                    ? "bg-[var(--amber)] text-white shadow-sm"
+                    ? "bg-[var(--accent)] text-white shadow-sm"
                     : "text-[var(--text-secondary)] hover:text-white"
                 }`}
               >
@@ -102,7 +102,7 @@ export default function ContractTypeSelector({ selection, onChange }: ContractTy
                 onClick={() => onChange({ ...selection, overUnder: "under" })}
                 className={`flex-1 py-2 text-center text-xs font-bold rounded-md transition-all ${
                   selection.overUnder === "under"
-                    ? "bg-[var(--amber)] text-white shadow-sm"
+                    ? "bg-[var(--accent)] text-white shadow-sm"
                     : "text-[var(--text-secondary)] hover:text-white"
                 }`}
               >
@@ -118,7 +118,7 @@ export default function ContractTypeSelector({ selection, onChange }: ContractTy
                     onClick={() => onChange({ ...selection, barrier: i })}
                     className={`py-2 rounded text-xs font-bold ${
                       selection.barrier === i
-                        ? "bg-[var(--amber)] text-white"
+                        ? "bg-[var(--accent)] text-white"
                         : "bg-[var(--card)] text-[var(--text-secondary)] hover:bg-[var(--border)]"
                     }`}
                   >
@@ -188,7 +188,7 @@ export default function ContractTypeSelector({ selection, onChange }: ContractTy
                     onClick={() => onChange({ ...selection, digit: i })}
                     className={`py-2 rounded text-xs font-bold ${
                       selection.digit === i
-                        ? "bg-[var(--amber)] text-white"
+                        ? "bg-[var(--accent)] text-white"
                         : "bg-[var(--card)] text-[var(--text-secondary)] hover:bg-[var(--border)]"
                     }`}
                   >
@@ -210,7 +210,7 @@ export default function ContractTypeSelector({ selection, onChange }: ContractTy
                   onClick={() => onChange({ ...selection, growthRate: rate })}
                   className={`py-2 rounded text-xs font-bold ${
                     selection.growthRate === rate
-                      ? "bg-[var(--amber)] text-white"
+                      ? "bg-[var(--accent)] text-white"
                       : "bg-[var(--card)] text-[var(--text-secondary)] hover:bg-[var(--border)]"
                   }`}
                 >

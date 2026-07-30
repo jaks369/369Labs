@@ -745,7 +745,7 @@
     font-weight: 600;
     letter-spacing: 0.02em;
   }
-  .badge-amber { background: var(--accent-soft); color: var(--accent); }
+  .badge-accent { background: var(--accent-soft); color: var(--accent); }
   .badge-green { background: var(--green-soft); color: var(--green); }
   .badge-red { background: var(--red-soft); color: var(--red); }
   .badge-cyan { background: var(--cyan-soft); color: var(--cyan); }

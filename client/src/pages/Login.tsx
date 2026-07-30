@@ -100,8 +100,8 @@ export default function Login() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-[var(--bg)] px-4">
-      <div className="w-full max-w-sm border border-[var(--amber-border)] bg-[var(--card)] rounded p-6 relative">
-        <div className="absolute -top-3 left-4 bg-[var(--bg)] px-2 text-sm font-bold text-[var(--amber)]">
+      <div className="w-full max-w-sm border border-[var(--accent-border)] bg-[var(--card)] rounded p-6 relative">
+        <div className="absolute -top-3 left-4 bg-[var(--bg)] px-2 text-sm font-bold text-[var(--accent)]">
           {mode === "login" ? "LOG IN" : "SIGN UP"}
         </div>
 
@@ -110,11 +110,11 @@ export default function Login() {
             <>
               <p className="text-sm text-[var(--text-muted)] text-center">Enter the 6-digit code from your authenticator app.</p>
               <div>
-                <label className="text-micro text-[var(--amber)]/70 block mb-1">Authentication Code</label>
+                <label className="text-micro text-[var(--accent)]/70 block mb-1">Authentication Code</label>
                 <Input
                   value={twoFAToken}
                   onChange={e => setTwoFAToken(e.target.value)}
-                  className="border-[var(--amber-border)] text-[var(--amber)] font-mono text-center text-lg tracking-widest"
+                  className="border-[var(--accent-border)] text-[var(--accent)] font-mono text-center text-lg tracking-widest"
                   placeholder="000000"
                   maxLength={6}
                   autoFocus
@@ -126,7 +126,7 @@ export default function Login() {
               <Button
                 type="submit"
                 disabled={verify2FALoginMutation.isPending || twoFAToken.length !== 6}
-                className="w-full bg-[var(--amber)] text-[var(--bg)] hover:bg-[var(--amber)]/80"
+                className="w-full bg-[var(--accent)] text-[var(--bg)] hover:bg-[var(--accent)]/80"
               >
                 {verify2FALoginMutation.isPending ? "Verifying..." : "VERIFY"}
               </Button>
@@ -142,20 +142,20 @@ export default function Login() {
             <>
           {mode === "signup" && (
             <div>
-              <label className="text-micro text-[var(--amber)]/70 block mb-1">
+              <label className="text-micro text-[var(--accent)]/70 block mb-1">
                 Name
               </label>
               <Input
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                className="border-[var(--amber-border)] text-[var(--amber)]"
+                className="border-[var(--accent-border)] text-[var(--accent)]"
                 placeholder="Your name"
               />
             </div>
           )}
 
           <div>
-            <label className="text-micro text-[var(--amber)]/70 block mb-1">
+            <label className="text-micro text-[var(--accent)]/70 block mb-1">
               Email
             </label>
             <Input
@@ -163,13 +163,13 @@ export default function Login() {
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="border-[var(--amber-border)] text-[var(--amber)]"
+              className="border-[var(--accent-border)] text-[var(--accent)]"
               placeholder="you@example.com"
             />
           </div>
 
           <div>
-            <label className="text-micro text-[var(--amber)]/70 block mb-1">
+            <label className="text-micro text-[var(--accent)]/70 block mb-1">
               Password
             </label>
             <PasswordInput
@@ -177,21 +177,21 @@ export default function Login() {
               minLength={8}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="border-[var(--amber-border)] text-[var(--amber)]"
+              className="border-[var(--accent-border)] text-[var(--accent)]"
               placeholder="At least 8 characters"
             />
           </div>
 
           {mode === "signup" && (
           <div>
-            <label className="text-micro text-[var(--amber)]/70 block mb-1">
+            <label className="text-micro text-[var(--accent)]/70 block mb-1">
               Confirm Password
             </label>
             <PasswordInput
               required
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
-              className="border-[var(--amber-border)] text-[var(--amber)]"
+              className="border-[var(--accent-border)] text-[var(--accent)]"
               placeholder="Repeat password"
             />
           </div>
@@ -212,7 +212,7 @@ export default function Login() {
             </p>
           )}
           {showVerifyMsg && (
-            <div className="text-xs text-[var(--amber)] border border-[var(--amber-border)] bg-[var(--amber-soft)] rounded px-3 py-2">
+            <div className="text-xs text-[var(--accent)] border border-[var(--accent-border)] bg-[var(--accent-soft)] rounded px-3 py-2">
               Account created! Check your email to verify your address before trading.
             </div>
           )}
@@ -220,11 +220,11 @@ export default function Login() {
           <Button
             type="submit"
             disabled={pending}
-            className="w-full bg-[var(--amber)] text-[var(--bg)] hover:bg-[var(--amber)]/80"
+            className="w-full bg-[var(--accent)] text-[var(--bg)] hover:bg-[var(--accent)]/80"
           >
             {pending ? "Please wait…" : mode === "login" ? "Log in" : "Create account"}
           </Button>
-          <p className="text-xs text-[var(--text-muted)] mt-4 text-center"><Link to="/forgot-password" className="text-[var(--amber)] hover:underline">Forgot password?</Link></p>
+          <p className="text-xs text-[var(--text-muted)] mt-4 text-center"><Link to="/forgot-password" className="text-[var(--accent)] hover:underline">Forgot password?</Link></p>
 
           <div className="grid grid-cols-2 gap-3 mt-4">
             <a
@@ -255,7 +255,7 @@ export default function Login() {
             setError(null);
             setConfirmPassword("");
           }}
-          className="mt-4 text-xs text-[var(--amber-hover)] hover:underline w-full text-center"
+          className="mt-4 text-xs text-[var(--accent-hover)] hover:underline w-full text-center"
         >
           {mode === "login"
             ? "Need an account? Sign up"

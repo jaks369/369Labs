@@ -58,7 +58,7 @@ const LazyCoding = lazy(() => import("./pages/Coding"));
 const LazyTradingCopilot = lazy(() => import("./pages/TradingCopilot"));
 
 const LazyLoad = ({ children }: { children: React.ReactNode }) => (
-  <Suspense fallback={<div className="flex items-center justify-center min-h-[60vh]"><div className="h-8 w-8 border-2 border-[var(--amber)] border-t-transparent rounded-full animate-spin" /></div>}>{children}</Suspense>
+  <Suspense fallback={<div className="flex items-center justify-center min-h-[60vh]"><div className="h-8 w-8 border-2 border-[var(--accent)] border-t-transparent rounded-full animate-spin" /></div>}>{children}</Suspense>
 );
 
 function AppLayout({ children }: { children: React.ReactNode }) {

@@ -28,7 +28,7 @@ export default function Plugins() {
     return (
       <div className="min-h-screen bg-[var(--card)] p-6">
         <div className="max-w-4xl mx-auto text-center py-16">
-          <ShieldOff className="w-12 h-12 text-[var(--amber)] mx-auto mb-4" />
+          <ShieldOff className="w-12 h-12 text-[var(--accent)] mx-auto mb-4" />
           <h1 className="text-2xl font-bold text-white mb-2">Admin Only</h1>
           <p className="text-[var(--text-secondary)] text-sm">Plugin management is restricted to administrators.</p>
         </div>
@@ -57,7 +57,7 @@ export default function Plugins() {
       <div className="max-w-4xl mx-auto space-y-6">
         <div>
           <h1 className="text-3xl font-bold text-white flex items-center gap-3">
-            <Plug className="w-7 h-7 text-[var(--amber-hover)]" /> Plugins
+            <Plug className="w-7 h-7 text-[var(--accent-hover)]" /> Plugins
           </h1>
           <p className="text-[var(--text-secondary)] text-sm mt-1">Extend 369Labs with safety, signal and automation hooks.</p>
         </div>
@@ -70,8 +70,8 @@ export default function Plugins() {
             return (
               <div key={p.id} className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4 space-y-3">
                 <div className="flex items-start gap-3">
-                  <div className="h-9 w-9 rounded-lg bg-[var(--amber-soft)] flex items-center justify-center shrink-0">
-                    <Icon className="w-4 h-4 text-[var(--amber-hover)]" />
+                  <div className="h-9 w-9 rounded-lg bg-[var(--accent-soft)] flex items-center justify-center shrink-0">
+                    <Icon className="w-4 h-4 text-[var(--accent-hover)]" />
                   </div>
                   <div className="flex-1">
                     <p className="text-sm font-semibold text-white">{p.name}</p>
@@ -83,7 +83,7 @@ export default function Plugins() {
                   onClick={() => toggle(p)}
                   disabled={busy === p.id}
                   className={`w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-xs font-bold transition-colors disabled:opacity-50 ${
-                    on ? "bg-[var(--green)]/20 text-[var(--green)] border border-[var(--green)]/40 hover:bg-[var(--green)]/30" : "bg-[var(--amber)] text-white hover:bg-[var(--amber)]"
+                    on ? "bg-[var(--green)]/20 text-[var(--green)] border border-[var(--green)]/40 hover:bg-[var(--green)]/30" : "bg-[var(--accent)] text-white hover:bg-[var(--accent)]"
                   }`}
                 >
                   {busy === p.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : on ? <Check className="w-3.5 h-3.5" /> : <Plus className="w-3.5 h-3.5" />}

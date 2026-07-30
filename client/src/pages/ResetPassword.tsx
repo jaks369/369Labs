@@ -40,7 +40,7 @@ export default function ResetPassword() {
           {!token && <p className='text-sm text-center text-[var(--red)]'>Missing or invalid reset token.</p>}
           {msg && <p className={`text-sm text-center ${done ? 'text-[var(--green)]' : 'text-[var(--red)]'}`}>{msg}</p>}
           {done && (
-            <p className='text-center'><button onClick={() => navigate('/login')} className='text-[var(--amber)] hover:underline text-sm'>Back to login</button></p>
+            <p className='text-center'><button onClick={() => navigate('/login')} className='text-[var(--accent)] hover:underline text-sm'>Back to login</button></p>
           )}
         </form>
       </div>

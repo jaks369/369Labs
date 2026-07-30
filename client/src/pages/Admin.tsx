@@ -21,7 +21,7 @@ export default function Admin() {
   }
 
   if (listQuery.isLoading) {
-    return <div className="flex items-center justify-center min-h-[60vh]"><div className="h-8 w-8 border-2 border-[var(--amber)] border-t-transparent rounded-full animate-spin" /></div>;
+    return <div className="flex items-center justify-center min-h-[60vh]"><div className="h-8 w-8 border-2 border-[var(--accent)] border-t-transparent rounded-full animate-spin" /></div>;
   }
 
   const formatBytes = (b: number) => {
@@ -34,13 +34,13 @@ export default function Admin() {
   return (
     <div className="p-4 md:p-6 max-w-6xl mx-auto space-y-6">
       <div className="flex items-center gap-2 mb-2">
-        <Shield className="w-5 h-5 text-[var(--amber)]" />
+        <Shield className="w-5 h-5 text-[var(--accent)]" />
         <h1 className="text-xl font-bold">Admin Dashboard</h1>
       </div>
 
       <div className="flex gap-2 border-b border-[var(--border)] pb-3">
           {(["users", "audit", "health", "perf", "config", "stats", "features"] as const).map(t => (
-          <button key={t} onClick={() => setTab(t)} className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${tab === t ? "bg-[var(--amber)] text-black" : "text-[var(--text-secondary)] hover:text-white"}`}>
+          <button key={t} onClick={() => setTab(t)} className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${tab === t ? "bg-[var(--accent)] text-black" : "text-[var(--text-secondary)] hover:text-white"}`}>
             {t === "users" ? "Users" : t === "audit" ? "Audit Logs" : t === "health" ? "System Health" : t === "perf" ? "Performance" : t === "config" ? "Config" : t === "stats" ? "Usage Stats" : "Feature Flags"}
           </button>
         ))}
@@ -62,14 +62,14 @@ export default function Admin() {
                   <td className="py-2.5">{u.email}</td>
                   <td className="py-2.5">{u.name || "—"}</td>
                   <td className="py-2.5">
-                    <span className={`px-2 py-0.5 rounded text-xs font-medium ${u.role === "admin" ? "bg-[var(--amber)]/20 text-[var(--amber)]" : "bg-white/5 text-[var(--text-muted)]"}`}>{u.role}</span>
+                    <span className={`px-2 py-0.5 rounded text-xs font-medium ${u.role === "admin" ? "bg-[var(--accent)]/20 text-[var(--accent)]" : "bg-white/5 text-[var(--text-muted)]"}`}>{u.role}</span>
                   </td>
                   <td className="py-2.5">{u.emailVerified ? "✓" : "✗"}</td>
                   <td className="py-2.5 text-[var(--text-muted)]">{new Date(u.createdAt).toLocaleDateString()}</td>
                   <td className="py-2.5">
                     <div className="flex gap-2">
                       {u.role === "user" ? (
-                        <button onClick={() => promoteMutation.mutate({ userId: u.id })} className="text-xs text-[var(--amber)] hover:underline">Promote</button>
+                        <button onClick={() => promoteMutation.mutate({ userId: u.id })} className="text-xs text-[var(--accent)] hover:underline">Promote</button>
                       ) : (u.id !== user.id && (
                         <button onClick={() => demoteMutation.mutate({ userId: u.id })} className="text-xs text-yellow-500 hover:underline">Demote</button>
                       ))}
@@ -88,12 +88,12 @@ export default function Admin() {
       {tab === "audit" && (
         <div>
           <div className="flex items-center gap-2 mb-4">
-            <ScrollText className="w-4 h-4 text-[var(--amber)]" />
+            <ScrollText className="w-4 h-4 text-[var(--accent)]" />
             <span className="text-xs font-bold text-[var(--text-muted)] uppercase tracking-wider">Security Audit Log</span>
             <span className="text-caption ml-auto">{(auditLogsQuery.data?.logs || []).length} entries</span>
           </div>
           {auditLogsQuery.isLoading ? (
-            <Loader2 className="w-5 h-5 animate-spin text-[var(--amber)]" />
+            <Loader2 className="w-5 h-5 animate-spin text-[var(--accent)]" />
           ) : (
             <div className="overflow-x-auto max-h-[60vh] overflow-y-auto">
               <table className="w-full text-xs">
@@ -107,7 +107,7 @@ export default function Admin() {
                     <tr key={i} className="hover:bg-white/5">
                       <td className="py-2 text-[var(--text-muted)] whitespace-nowrap">{new Date(log.createdAt).toLocaleString()}</td>
                       <td className="py-2">{log.userId}</td>
-                      <td className="py-2"><span className="px-1.5 py-0.5 rounded bg-white/5 text-[var(--amber)]">{log.action}</span></td>
+                      <td className="py-2"><span className="px-1.5 py-0.5 rounded bg-white/5 text-[var(--accent)]">{log.action}</span></td>
                       <td className="py-2 text-[var(--text-secondary)]">{log.target || "—"}</td>
                       <td className="py-2 text-[var(--text-muted)] max-w-[200px] truncate">{log.detail ? JSON.stringify(log.detail).slice(0, 80) : "—"}</td>
                     </tr>
@@ -122,24 +122,24 @@ export default function Admin() {
       {tab === "health" && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {healthQuery.isLoading ? (
-            <div className="col-span-2 flex justify-center py-8"><Loader2 className="w-6 h-6 animate-spin text-[var(--amber)]" /></div>
+            <div className="col-span-2 flex justify-center py-8"><Loader2 className="w-6 h-6 animate-spin text-[var(--accent)]" /></div>
           ) : healthQuery.isError ? (
             <div className="col-span-2 text-center text-[var(--red)] text-sm">Failed to load system health</div>
           ) : healthQuery.data ? (
             <>
               <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
-                <div className="flex items-center gap-2 mb-3"><HardDrive className="w-4 h-4 text-[var(--amber)]" /><h3 className="text-sm font-bold text-white">Memory</h3></div>
+                <div className="flex items-center gap-2 mb-3"><HardDrive className="w-4 h-4 text-[var(--accent)]" /><h3 className="text-sm font-bold text-white">Memory</h3></div>
                 <div className="space-y-2 text-xs">
                   <div className="flex justify-between"><span className="text-[var(--text-muted)]">Total</span><span className="text-white">{formatBytes(healthQuery.data.memory.total)}</span></div>
-                  <div className="flex justify-between"><span className="text-[var(--text-muted)]">Used</span><span className="text-[var(--amber)]">{formatBytes(healthQuery.data.memory.used)}</span></div>
+                  <div className="flex justify-between"><span className="text-[var(--text-muted)]">Used</span><span className="text-[var(--accent)]">{formatBytes(healthQuery.data.memory.used)}</span></div>
                   <div className="flex justify-between"><span className="text-[var(--text-muted)]">Free</span><span className="text-[var(--green)]">{formatBytes(healthQuery.data.memory.free)}</span></div>
                   <div className="w-full h-2 bg-[var(--border)] rounded-full overflow-hidden mt-1">
-                    <div className="h-full bg-[var(--amber)] rounded-full" style={{ width: `${(healthQuery.data.memory.used / healthQuery.data.memory.total) * 100}%` }} />
+                    <div className="h-full bg-[var(--accent)] rounded-full" style={{ width: `${(healthQuery.data.memory.used / healthQuery.data.memory.total) * 100}%` }} />
                   </div>
                 </div>
               </div>
               <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
-                <div className="flex items-center gap-2 mb-3"><Cpu className="w-4 h-4 text-[var(--amber)]" /><h3 className="text-sm font-bold text-white">CPU</h3></div>
+                <div className="flex items-center gap-2 mb-3"><Cpu className="w-4 h-4 text-[var(--accent)]" /><h3 className="text-sm font-bold text-white">CPU</h3></div>
                 <div className="space-y-2 text-xs">
                   <div className="flex justify-between"><span className="text-[var(--text-muted)]">Load Avg (1m)</span><span className="text-white">{Number(healthQuery.data.cpu.loadAvg1).toFixed(2)}</span></div>
                   <div className="flex justify-between"><span className="text-[var(--text-muted)]">Load Avg (5m)</span><span className="text-white">{Number(healthQuery.data.cpu.loadAvg5).toFixed(2)}</span></div>
@@ -147,14 +147,14 @@ export default function Admin() {
                 </div>
               </div>
               <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
-                <div className="flex items-center gap-2 mb-3"><Database className="w-4 h-4 text-[var(--amber)]" /><h3 className="text-sm font-bold text-white">Database</h3></div>
+                <div className="flex items-center gap-2 mb-3"><Database className="w-4 h-4 text-[var(--accent)]" /><h3 className="text-sm font-bold text-white">Database</h3></div>
                 <div className="flex items-center gap-2 text-xs">
                   <span className={`w-2 h-2 rounded-full ${healthQuery.data.database === "connected" ? "bg-[var(--green)]" : "bg-[var(--red)]"}`} />
                   <span className="text-white">{healthQuery.data.database}</span>
                 </div>
               </div>
               <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
-                <div className="flex items-center gap-2 mb-3"><Clock className="w-4 h-4 text-[var(--amber)]" /><h3 className="text-sm font-bold text-white">System</h3></div>
+                <div className="flex items-center gap-2 mb-3"><Clock className="w-4 h-4 text-[var(--accent)]" /><h3 className="text-sm font-bold text-white">System</h3></div>
                 <div className="space-y-2 text-xs">
                   <div className="flex justify-between"><span className="text-[var(--text-muted)]">Node</span><span className="text-white">{healthQuery.data.node}</span></div>
                   <div className="flex justify-between"><span className="text-[var(--text-muted)]">Platform</span><span className="text-white">{healthQuery.data.platform}</span></div>
@@ -169,7 +169,7 @@ export default function Admin() {
       {tab === "config" && (
         <div className="space-y-4">
           <div className="flex items-center gap-2 mb-4">
-            <Settings2 className="w-4 h-4 text-[var(--amber)]" />
+            <Settings2 className="w-4 h-4 text-[var(--accent)]" />
             <span className="text-xs font-bold text-[var(--text-muted)] uppercase tracking-wider">Platform Configuration</span>
           </div>
           <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5 space-y-4">
@@ -192,7 +192,7 @@ export default function Admin() {
               <label className="text-xs text-[var(--text-muted)] font-bold block mb-1">Allowed Origins (CORS)</label>
               <input defaultValue="https://369labs.com" className="w-full bg-[var(--card)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-white" />
             </div>
-            <button onClick={() => { toast("Config saved.", "success"); }} className="px-4 py-2 rounded-lg bg-[var(--amber)] text-black text-xs font-bold">Save Config</button>
+            <button onClick={() => { toast("Config saved.", "success"); }} className="px-4 py-2 rounded-lg bg-[var(--accent)] text-black text-xs font-bold">Save Config</button>
           </div>
         </div>
       )}
@@ -200,7 +200,7 @@ export default function Admin() {
       {tab === "stats" && (
         <div className="space-y-4">
           <div className="flex items-center gap-2 mb-4">
-            <Users className="w-4 h-4 text-[var(--amber)]" />
+            <Users className="w-4 h-4 text-[var(--accent)]" />
             <span className="text-xs font-bold text-[var(--text-muted)] uppercase tracking-wider">Usage Statistics</span>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -223,7 +223,7 @@ export default function Admin() {
       {tab === "features" && (
         <div className="space-y-4">
           <div className="flex items-center gap-2 mb-4">
-            <Flag className="w-4 h-4 text-[var(--amber)]" />
+            <Flag className="w-4 h-4 text-[var(--accent)]" />
             <span className="text-xs font-bold text-[var(--text-muted)] uppercase tracking-wider">Feature Flags</span>
           </div>
           <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl divide-y divide-[var(--border)]/50">
@@ -247,7 +247,7 @@ export default function Admin() {
                 </div>
                 <label className="relative inline-flex items-center cursor-pointer">
                   <input type="checkbox" defaultChecked={f.enabled} className="sr-only peer" />
-                  <div className="w-9 h-5 bg-[var(--border)] rounded-full peer peer-checked:bg-[var(--amber)] peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-black after:rounded-full after:h-4 after:w-4 after:transition-all" />
+                  <div className="w-9 h-5 bg-[var(--border)] rounded-full peer peer-checked:bg-[var(--accent)] peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-black after:rounded-full after:h-4 after:w-4 after:transition-all" />
                 </label>
               </div>
             ))}
@@ -258,11 +258,11 @@ export default function Admin() {
       {tab === "perf" && (
         <div className="space-y-4">
           <div className="flex items-center gap-2 mb-4">
-            <BarChart3 className="w-4 h-4 text-[var(--amber)]" />
+            <BarChart3 className="w-4 h-4 text-[var(--accent)]" />
             <span className="text-xs font-bold text-[var(--text-muted)] uppercase tracking-wider">System Performance Audit</span>
           </div>
           {healthQuery.isLoading ? (
-            <div className="flex justify-center py-8"><Loader2 className="w-5 h-5 animate-spin text-[var(--amber)]" /></div>
+            <div className="flex justify-center py-8"><Loader2 className="w-5 h-5 animate-spin text-[var(--accent)]" /></div>
           ) : healthQuery.data ? (
             <>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -272,7 +272,7 @@ export default function Admin() {
                   <p className="text-xs text-[var(--text-muted)] mt-1">Server uptime</p>
                 </div>
                 <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
-                  <div className="flex items-center gap-2 mb-3"><HardDrive className="w-4 h-4 text-[var(--amber)]" /><h3 className="text-sm font-bold text-white">Memory</h3></div>
+                  <div className="flex items-center gap-2 mb-3"><HardDrive className="w-4 h-4 text-[var(--accent)]" /><h3 className="text-sm font-bold text-white">Memory</h3></div>
                   <p className="text-2xl font-bold text-white">{(healthQuery.data as any)?.memory || "—"}</p>
                   <p className="text-xs text-[var(--text-muted)] mt-1">Used / Total</p>
                 </div>

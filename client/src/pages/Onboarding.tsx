@@ -37,12 +37,12 @@ export default function Onboarding() {
       <div className="w-full max-w-lg">
         <div className="flex gap-1.5 mb-12 justify-center">
           {STEPS.map((_, i) => (
-            <div key={i} className={`h-1.5 w-12 rounded-full transition-all ${i <= step ? "bg-[var(--amber)]" : "bg-[var(--border)]"}`} />
+            <div key={i} className={`h-1.5 w-12 rounded-full transition-all ${i <= step ? "bg-[var(--accent)]" : "bg-[var(--border)]"}`} />
           ))}
         </div>
         <div className="bg-[var(--card)] border border-[var(--border)] rounded-2xl p-8 md:p-10 text-center">
-          <div className="w-16 h-16 mx-auto mb-6 rounded-2xl bg-[var(--amber-soft)] border border-[var(--amber-border)] flex items-center justify-center">
-            <Icon className="w-8 h-8 text-[var(--amber)]" />
+          <div className="w-16 h-16 mx-auto mb-6 rounded-2xl bg-[var(--accent-soft)] border border-[var(--accent-border)] flex items-center justify-center">
+            <Icon className="w-8 h-8 text-[var(--accent)]" />
           </div>
           <h1 className="text-2xl font-bold text-white mb-3">{s.title}</h1>
           <p className="text-[var(--text-secondary)] mb-8 leading-relaxed">{s.description}</p>
@@ -52,7 +52,7 @@ export default function Onboarding() {
                 <ChevronLeft className="w-4 h-4" /> Back
               </button>
             )}
-            <button onClick={step < STEPS.length - 1 ? () => setStep(step + 1) : complete} className="flex items-center gap-2 px-5 py-2.5 rounded-lg bg-[var(--amber)] text-black text-sm font-bold hover:bg-[var(--amber)]/90">
+            <button onClick={step < STEPS.length - 1 ? () => setStep(step + 1) : complete} className="flex items-center gap-2 px-5 py-2.5 rounded-lg bg-[var(--accent)] text-black text-sm font-bold hover:bg-[var(--accent)]/90">
               {step < STEPS.length - 1 ? (<>Next <ChevronRight className="w-4 h-4" /></>) : (<><Check className="w-4 h-4" /> Get Started</>)}
             </button>
           </div>

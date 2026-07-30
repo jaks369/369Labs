@@ -29,7 +29,7 @@ export default function KeyboardShortcuts({ onClose }: { onClose: () => void }) 
       <div className="bg-[var(--card)] border border-[var(--border)] rounded-2xl w-full max-w-md max-h-[80vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between p-5 border-b border-[var(--border)]">
           <div className="flex items-center gap-2">
-            <Command className="w-5 h-5 text-[var(--amber)]" />
+            <Command className="w-5 h-5 text-[var(--accent)]" />
             <span className="text-sm font-bold text-white">Keyboard Shortcuts</span>
           </div>
           <button onClick={onClose} className="text-[var(--text-muted)] hover:text-white"><X className="w-4 h-4" /></button>

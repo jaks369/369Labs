@@ -29,7 +29,7 @@ export default function SubscriptionPage() {
       <div className="max-w-5xl mx-auto space-y-8">
         <div className="text-center">
           <div className="flex items-center justify-center gap-2 mb-2">
-            <Crown className="w-6 h-6 text-[var(--amber)]" />
+            <Crown className="w-6 h-6 text-[var(--accent)]" />
             <h1 className="text-3xl font-bold text-white">Subscription Plans</h1>
           </div>
           <p className="text-[var(--text-secondary)] text-sm">Choose the plan that fits your trading needs</p>
@@ -37,10 +37,10 @@ export default function SubscriptionPage() {
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {plans.map((plan, i) => (
-            <div key={plan.name} className={`relative bg-[var(--card)] border rounded-xl p-6 flex flex-col ${plan.popular ? "border-[var(--amber)] ring-1 ring-[var(--amber)]/30" : "border-[var(--border)]"}`}>
-              {plan.popular && <span className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-0.5 bg-[var(--amber)] text-black text-caption font-bold rounded-full">Most Popular</span>}
+            <div key={plan.name} className={`relative bg-[var(--card)] border rounded-xl p-6 flex flex-col ${plan.popular ? "border-[var(--accent)] ring-1 ring-[var(--accent)]/30" : "border-[var(--border)]"}`}>
+              {plan.popular && <span className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-0.5 bg-[var(--accent)] text-black text-caption font-bold rounded-full">Most Popular</span>}
               <div className="flex items-center gap-2 mb-4">
-                {i === 1 ? <Zap className="w-5 h-5 text-[var(--amber)]" /> : i === 2 ? <Shield className="w-5 h-5 text-[var(--amber)]" /> : <BarChart3 className="w-5 h-5 text-[var(--text-muted)]" />}
+                {i === 1 ? <Zap className="w-5 h-5 text-[var(--accent)]" /> : i === 2 ? <Shield className="w-5 h-5 text-[var(--accent)]" /> : <BarChart3 className="w-5 h-5 text-[var(--text-muted)]" />}
                 <h2 className="text-lg font-bold text-white">{plan.name}</h2>
               </div>
               <p className="text-3xl font-bold text-white mb-1">{plan.price}<span className="text-sm text-[var(--text-muted)] font-normal">{plan.period}</span></p>
@@ -54,7 +54,7 @@ export default function SubscriptionPage() {
               </div>
               <Button
                 onClick={() => { setSelected(i); if (i !== 0) toast("Payment integration coming soon. No charges will be made yet.", "info"); }}
-                className={`mt-6 w-full text-xs font-bold py-2 rounded-lg ${i === selected ? "bg-[var(--amber)] text-black" : "bg-white/5 text-[var(--text-secondary)] border border-[var(--border)] hover:bg-white/10"}`}
+                className={`mt-6 w-full text-xs font-bold py-2 rounded-lg ${i === selected ? "bg-[var(--accent)] text-black" : "bg-white/5 text-[var(--text-secondary)] border border-[var(--border)] hover:bg-white/10"}`}
               >
                 {i === selected ? (plan.cta === "Current Plan" ? "Current Plan" : "Selected") : plan.cta}
               </Button>
@@ -63,17 +63,17 @@ export default function SubscriptionPage() {
         </div>
 
         <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-6">
-          <h2 className="text-sm font-bold text-white mb-4 flex items-center gap-2"><Bot className="w-4 h-4 text-[var(--amber)]" /> Usage</h2>
+          <h2 className="text-sm font-bold text-white mb-4 flex items-center gap-2"><Bot className="w-4 h-4 text-[var(--accent)]" /> Usage</h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
             <div className="bg-black/20 rounded-lg p-4">
               <p className="text-[var(--text-muted)] mb-1">Active Bots</p>
               {activeBots.isLoading ? (
-                <Loader2 className="w-4 h-4 animate-spin text-[var(--amber)]" />
+                <Loader2 className="w-4 h-4 animate-spin text-[var(--accent)]" />
               ) : (
                 <>
                   <p className="text-xl font-bold text-white">{activeCount} <span className="text-sm text-[var(--text-muted)] font-normal">/ 10 (Pro)</span></p>
                   <div className="mt-2 h-1.5 bg-[var(--border)] rounded-full overflow-hidden">
-                    <div className="h-full bg-[var(--amber)] rounded-full" style={{ width: `${Math.min((activeCount / 10) * 100, 100)}%` }} />
+                    <div className="h-full bg-[var(--accent)] rounded-full" style={{ width: `${Math.min((activeCount / 10) * 100, 100)}%` }} />
                   </div>
                 </>
               )}
@@ -100,18 +100,18 @@ export default function SubscriptionPage() {
 
         <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-6">
           <div className="flex items-center gap-3 mb-4">
-            <CreditCard className="w-5 h-5 text-[var(--amber)]" />
+            <CreditCard className="w-5 h-5 text-[var(--accent)]" />
             <h2 className="text-sm font-bold text-white">Payment</h2>
           </div>
           <p className="text-xs text-[var(--text-secondary)] mb-4">To upgrade or manage your subscription, visit the billing portal.</p>
-          <Button onClick={() => window.open("https://billing.stripe.com", "_blank")} className="bg-[var(--amber)] text-black text-xs font-bold px-6 py-2.5 rounded-lg">
+          <Button onClick={() => window.open("https://billing.stripe.com", "_blank")} className="bg-[var(--accent)] text-black text-xs font-bold px-6 py-2.5 rounded-lg">
             Manage Billing
           </Button>
         </div>
 
         <div className="text-center">
           <p className="text-xs text-[var(--text-muted)] flex items-center justify-center gap-1">
-            <Sparkles className="w-3 h-3 text-[var(--amber)]" /> All plans include paper trading, basic backtesting, and community strategies.
+            <Sparkles className="w-3 h-3 text-[var(--accent)]" /> All plans include paper trading, basic backtesting, and community strategies.
           </p>
         </div>
       </div>
