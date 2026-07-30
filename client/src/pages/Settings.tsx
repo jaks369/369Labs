@@ -346,7 +346,7 @@ export default function Settings() {
         )}
 
         <SpotlightCard className="mb-6" data-section="profile">
-          <h2 className="text-lg font-bold text-[var(--text-primary)] mb-4">PROFILE</h2>
+          <h2 className="text-lg font-bold text-[var(--text-primary)] mb-4">Profile</h2>
           <div className="space-y-4">
             <div className="flex items-center gap-4">
               <div className="relative">
@@ -408,7 +408,7 @@ export default function Settings() {
         </SpotlightCard>
 
         <SpotlightCard className="mb-6">
-          <h2 className="text-lg font-bold text-[var(--text-primary)] mb-4">DERIV API TOKEN</h2>
+          <h2 className="text-lg font-bold text-[var(--text-primary)] mb-4">Deriv API token</h2>
           <div className="space-y-4">
             <div>
               <label className="text-sm text-[var(--text-secondary)] block mb-2">API Token</label>
@@ -444,7 +444,7 @@ export default function Settings() {
         </SpotlightCard>
 
         <SpotlightCard className="mb-6">
-          <h2 className="text-lg font-bold text-[var(--text-primary)] mb-4">TELEGRAM NOTIFICATIONS</h2>
+          <h2 className="text-lg font-bold text-[var(--text-primary)] mb-4">Telegram notifications</h2>
           <div className="space-y-4">
             <div>
               <label className="text-sm text-[var(--text-secondary)] block mb-2">Chat ID</label>
@@ -499,7 +499,7 @@ export default function Settings() {
         </SpotlightCard>
 
         <SpotlightCard className="mb-6">
-          <h2 className="text-lg font-bold text-[var(--text-primary)] mb-4">NOTIFICATION PREFERENCES</h2>
+          <h2 className="text-lg font-bold text-[var(--text-primary)] mb-4">Notification preferences</h2>
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <label className="text-sm text-[var(--text-secondary)]">Trade Executed</label>
@@ -679,7 +679,7 @@ export default function Settings() {
         </SpotlightCard>
 
         <SpotlightCard className="mb-6">
-          <h2 className="text-lg font-bold text-[var(--text-primary)] mb-4">EMAIL</h2>
+          <h2 className="text-lg font-bold text-[var(--text-primary)] mb-4">Email</h2>
           <div className="space-y-4">
             <p className="text-sm text-[var(--text-muted)]">Current email: <span className="text-[var(--accent)]">{user?.email}</span></p>
             {emailChanged && <p className="text-xs text-[var(--green)]">Email updated! Check your new inbox for a verification link.</p>}
@@ -714,7 +714,7 @@ export default function Settings() {
         </SpotlightCard>
 
         <SpotlightCard className="mb-6">
-          <h2 className="text-lg font-bold text-[var(--text-primary)] mb-4">SECURITY</h2>
+          <h2 className="text-lg font-bold text-[var(--text-primary)] mb-4">Security</h2>
           <div className="space-y-4">
             <div>
               <label className="text-sm text-[var(--text-secondary)] block mb-2">Current Password</label>
@@ -748,7 +748,7 @@ export default function Settings() {
 
         {/* Two-Factor Authentication */}
         <SpotlightCard className="mb-6">
-          <h2 className="text-lg font-bold text-[var(--text-primary)] mb-4">TWO-FACTOR AUTHENTICATION</h2>
+          <h2 className="text-lg font-bold text-[var(--text-primary)] mb-4">Two-factor authentication</h2>
           {twoFASetup && twoFASecret ? (
             <div className="space-y-4">
               <p className="text-sm text-[var(--text-muted)]">Scan this QR code in your authenticator app (Google Authenticator, Authy, etc.):</p>
@@ -812,7 +812,7 @@ export default function Settings() {
         </SpotlightCard>
 
         <SpotlightCard className="mb-6">
-          <h2 className="text-lg font-bold text-[var(--text-primary)] mb-4">ACCOUNT</h2>
+          <h2 className="text-lg font-bold text-[var(--text-primary)] mb-4">Account</h2>
           <div className="space-y-4">
             <p className="text-sm text-[var(--text-secondary)]">Signed in as <span className="text-[var(--accent)] font-semibold">{user?.email || (user as any)?.username || "user"}</span></p>
             <Button
@@ -825,7 +825,7 @@ export default function Settings() {
         </SpotlightCard>
 
         <SpotlightCard className="mb-6">
-          <h2 className="text-lg font-bold text-[var(--text-primary)] mb-4">ACTIVE SESSIONS</h2>
+          <h2 className="text-lg font-bold text-[var(--text-primary)] mb-4">Active sessions</h2>
           {sessionsQuery.isLoading ? (
             <div className="flex items-center justify-center py-8"><div className="h-6 w-6 border-2 border-[var(--accent)] border-t-transparent rounded-full animate-spin" /></div>
           ) : sessionsQuery.isError ? (
@@ -881,7 +881,7 @@ export default function Settings() {
         </SpotlightCard>
 
         <SpotlightCard className="mb-6 border-[var(--red)]/30">
-          <h2 className="text-lg font-bold text-[var(--red)] mb-4">DANGER ZONE</h2>
+          <h2 className="text-lg font-bold text-[var(--red)] mb-4">Danger zone</h2>
           <div className="space-y-4">
             {deleteConfirm ? (
               <>

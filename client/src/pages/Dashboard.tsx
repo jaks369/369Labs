@@ -475,7 +475,7 @@ export default function Dashboard() {
           {/* History panel */}
           <div className="panel">
             <div className="panel-header">
-              <h2 className="text-display">History</h2>
+              <h2 className="text-lg font-bold">History</h2>
               <div className="tabs">
                 <button onClick={() => setHistoryTab("trades")} className={`tab ${historyTab === "trades" ? "active" : ""}`}>Trades</button>
                 <button onClick={() => setHistoryTab("prices")} className={`tab ${historyTab === "prices" ? "active" : ""}`}>Price History</button>
