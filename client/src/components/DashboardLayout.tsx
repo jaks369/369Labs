@@ -72,6 +72,21 @@ import { useGlobalKeyboardNav } from "@/hooks/useKeyboardNav";
 import KeyboardShortcuts from "./KeyboardShortcuts";
 import { ChevronRight } from "lucide-react";
 
+import { ChevronDown } from "lucide-react";
+
+function CollapsibleSection({ defaultOpen = false, children }: { defaultOpen?: boolean; children: React.ReactNode }) {
+  const [open, setOpen] = useState(defaultOpen);
+  return (
+    <div className="rounded-lg border border-[var(--border)] bg-[var(--surface-elevated)]">
+      <button onClick={() => setOpen(!open)} className="w-full flex items-center justify-between px-3 py-2 text-[11px] font-semibold uppercase tracking-wider text-[var(--text-muted)] hover:text-[var(--text-secondary)] transition-colors cursor-pointer">
+        <span>Tools</span>
+        <ChevronDown className={`w-3 h-3 transition-transform ${open ? "rotate-180" : ""}`} />
+      </button>
+      {open && <div className="px-2 pb-2 space-y-1.5">{children}</div>}
+    </div>
+  );
+}
+
 type NavItem = { icon: React.ComponentType<{ className?: string }>; label: string; path: string };
 type NavGroup = { title: string; icon: React.ComponentType<{ className?: string }>; items: NavItem[] };
 
@@ -410,43 +425,45 @@ function DashboardLayoutContent({
           </SidebarContent>
 
           <SidebarFooter className="p-2 border-t border-[var(--border)] space-y-1.5">
-            <button
-              onClick={() => openCommandPalette()}
-              className="w-full flex items-center gap-2 rounded-lg border border-[var(--border)] bg-[var(--surface-elevated)] px-3 py-2 text-sm text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-all duration-150 group cursor-pointer"
-            >
-              <Command className="w-3.5 h-3.5 text-[var(--text-muted)] group-hover:text-[var(--accent)] transition-colors shrink-0" />
-              <span className="flex-1 text-left text-[13px]">Quick Command</span>
-              <kbd className="text-[9px] text-[var(--text-disabled)] border border-[var(--border)] rounded px-1 py-0.5">⌘K</kbd>
-            </button>
-
-            <button
-              onClick={() => (voice.listening ? voice.stop() : voice.start())}
-              className={`w-full flex items-center gap-2 rounded-lg border px-3 py-2 transition-all duration-150 cursor-pointer ${
-                voice.listening
-                  ? "border-[var(--red)]/40 bg-[var(--red)]/10 text-[var(--red)]"
-                  : "border-[var(--border)] bg-[var(--surface-elevated)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
-              }`}
-            >
-              {voice.listening ? <Square className="w-3.5 h-3.5 shrink-0" /> : <Mic className="w-3.5 h-3.5 text-[var(--text-muted)] shrink-0 group-hover:text-[var(--accent)] transition-colors" />}
-              <span className="flex-1 text-left text-[13px]">{voice.listening ? "Listening…" : "Voice Commands"}</span>
-              {voice.listening && <span className="w-1.5 h-1.5 rounded-full bg-[var(--red)] animate-pulse-dot" />}
-            </button>
-            {voice.listening && voice.transcript && (
-              <p className="text-micro text-[var(--accent)] px-1 truncate">"{voice.transcript}"</p>
-            )}
-
             {!isCollapsed && (
-              <div className="rounded-lg border border-[var(--border)] bg-[var(--card)] p-2">
-                <AITimeline compact />
-              </div>
-            )}
+              <CollapsibleSection defaultOpen={false}>
+                <div className="space-y-1.5">
+                  <button
+                    onClick={() => openCommandPalette()}
+                    className="w-full flex items-center gap-2 rounded-lg border border-[var(--border)] bg-[var(--surface-elevated)] px-3 py-2 text-sm text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-all duration-150 group cursor-pointer"
+                  >
+                    <Command className="w-3.5 h-3.5 text-[var(--text-muted)] group-hover:text-[var(--accent)] transition-colors shrink-0" />
+                    <span className="flex-1 text-left text-[13px]">Quick Command</span>
+                    <kbd className="text-[9px] text-[var(--text-disabled)] border border-[var(--border)] rounded px-1 py-0.5">⌘K</kbd>
+                  </button>
 
-            {!isCollapsed && (
-              <button onClick={() => setShortcutsOpen(true)} className="w-full flex items-center gap-2 rounded-lg border border-[var(--border)] bg-[var(--surface-elevated)] px-3 py-2 transition-all duration-150 group cursor-pointer text-[13px] text-[var(--text-muted)] hover:text-[var(--text-primary)]">
-                <Command className="w-3.5 h-3.5 shrink-0 group-hover:text-[var(--accent)] transition-colors" />
-                <span className="flex-1 text-left">Keyboard Shortcuts</span>
-                <kbd className="text-[9px] text-[var(--text-disabled)] border border-[var(--border)] rounded px-1 py-0.5">?</kbd>
-              </button>
+                  <button
+                    onClick={() => (voice.listening ? voice.stop() : voice.start())}
+                    className={`w-full flex items-center gap-2 rounded-lg border px-3 py-2 transition-all duration-150 cursor-pointer ${
+                      voice.listening
+                        ? "border-[var(--red)]/40 bg-[var(--red)]/10 text-[var(--red)]"
+                        : "border-[var(--border)] bg-[var(--surface-elevated)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+                    }`}
+                  >
+                    {voice.listening ? <Square className="w-3.5 h-3.5 shrink-0" /> : <Mic className="w-3.5 h-3.5 text-[var(--text-muted)] shrink-0 group-hover:text-[var(--accent)] transition-colors" />}
+                    <span className="flex-1 text-left text-[13px]">{voice.listening ? "Listening…" : "Voice Commands"}</span>
+                    {voice.listening && <span className="w-1.5 h-1.5 rounded-full bg-[var(--red)] animate-pulse-dot" />}
+                  </button>
+                  {voice.listening && voice.transcript && (
+                    <p className="text-micro text-[var(--accent)] px-1 truncate">"{voice.transcript}"</p>
+                  )}
+
+                  <div className="rounded-lg border border-[var(--border)] bg-[var(--card)] p-2">
+                    <AITimeline compact />
+                  </div>
+
+                  <button onClick={() => setShortcutsOpen(true)} className="w-full flex items-center gap-2 rounded-lg border border-[var(--border)] bg-[var(--surface-elevated)] px-3 py-2 transition-all duration-150 group cursor-pointer text-[13px] text-[var(--text-muted)] hover:text-[var(--text-primary)]">
+                    <Command className="w-3.5 h-3.5 shrink-0 group-hover:text-[var(--accent)] transition-colors" />
+                    <span className="flex-1 text-left">Keyboard Shortcuts</span>
+                    <kbd className="text-[9px] text-[var(--text-disabled)] border border-[var(--border)] rounded px-1 py-0.5">?</kbd>
+                  </button>
+                </div>
+              </CollapsibleSection>
             )}
 
             <DropdownMenu>
