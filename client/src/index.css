@@ -1180,6 +1180,12 @@
     border-radius: var(--radius);
     position: relative;
   }
+  @media (max-width: 768px) {
+    .chart-workspace .chart-plot { max-height: 40vh; }
+    .chart-workspace .chart-plot > * { max-height: 40vh !important; }
+    .trade-studio > div:last-child { padding-bottom: 72px !important; }
+    .trade-studio .grid-cols-5 { grid-template-columns: repeat(5, minmax(40px, 1fr)); }
+  }
   .chart-workspace .chart-plot {
     background-color: var(--surface-dim);
     padding: 0;

@@ -671,7 +671,7 @@ export default function Dashboard() {
             </div>
 
             {/* Sticky Buy button */}
-            <div className="flex-shrink-0 px-4 pb-4 pt-2">
+            <div className="flex-shrink-0 px-4 pb-4 pt-2 max-md:fixed max-md:bottom-16 max-md:left-0 max-md:right-0 max-md:z-40 max-md:bg-[var(--card)] max-md:border-t max-md:border-[var(--border)] max-md:p-3">
               <Button
                 onClick={handleQuickTrade}
                 disabled={tradeBusy}
@@ -728,7 +728,7 @@ export default function Dashboard() {
           {/* Price Alerts */}
           <div className="panel">
             <div className="panel-header flex items-center justify-between">
-              <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 overflow-x-auto scrollbar-none max-md:-mx-4 max-md:px-4">
                 <Bell className="w-3.5 h-3.5 text-[var(--accent)]" />
                 <h3 className="text-micro">Price Alerts</h3>
               </div>
