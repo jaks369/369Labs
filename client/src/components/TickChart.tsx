@@ -27,6 +27,19 @@ function niceScale(min: number, max: number, ticks: number) {
 export default function TickChart({ symbol, maxDataPoints = 100, decimalPlaces = 3 }: TickChartProps) {
   const n = maxDataPoints;
   const [data, setData] = useState<ChartData[]>([]);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [dims, setDims] = useState({ w: 800, h: 320 });
+
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver(([e]) => {
+      const { width, height } = e.contentRect;
+      setDims({ w: Math.round(width), h: Math.round(height) });
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
 
   const historyQuery = trpc.market.getHistory.useQuery({ symbol, limit: n }, { enabled: Boolean(symbol) });
   useEffect(() => {
@@ -41,7 +54,6 @@ export default function TickChart({ symbol, maxDataPoints = 100, decimalPlaces =
   const [error, setError] = useState<string | null>(null);
   const [currentPrice, setCurrentPrice] = useState<number | null>(null);
   const [priceColor, setPriceColor] = useState<"up" | "down">("up");
-  const svgRef = useRef<SVGSVGElement>(null);
 
   useEffect(() => {
     const buffered = derivWS.getRecentTicks(symbol, n);
@@ -83,7 +95,7 @@ export default function TickChart({ symbol, maxDataPoints = 100, decimalPlaces =
       onError: (err: Error, sym?: string) => {
         if (!sym || sym === symbol) setError(err.message);
       },
-        };
+    };
 
     const id = derivWS.subscribe(symbol);
     const cachedErr = derivWS.getSubError(symbol);
@@ -103,255 +115,170 @@ export default function TickChart({ symbol, maxDataPoints = 100, decimalPlaces =
   const yMin = minPrice - padding;
   const yMax = maxPrice + padding;
 
-  // Layout
-  const chartW = 750;
-  const chartH = 210;
-  const rightMargin = 100;
-  const bottomMargin = 80;
-  const totalW = chartW + rightMargin;
-  const totalH = chartH + bottomMargin;
+  const padX = 56;
+  const padTop = 16;
+  const padBottom = 32;
+  const chartW = dims.w - padX;
+  const chartH = dims.h - padTop - padBottom;
 
-  // Scale
-  const scale = niceScale(yMin, yMax, 6);
+  const scale = niceScale(yMin, yMax, 5);
   const yRange = scale.end - scale.start || 1;
 
-  // Line points
   const points = data.map((d, i) => {
-    const x = data.length > 1 ? (i / (data.length - 1)) * chartW : 0;
-    const y = chartH - ((d.price - scale.start) / yRange) * chartH;
-    return `${x},${y}`;
+    const x = data.length > 1 ? padX + (i / (data.length - 1)) * chartW : padX;
+    const y = padTop + chartH - ((d.price - scale.start) / yRange) * chartH;
+    return { x, y };
   });
+  const pathD = points.map((p, i) => `${i === 0 ? "M" : "L"}${p.x},${p.y}`).join(" ");
+  const areaD = `${pathD} L${padX + chartW},${padTop + chartH} L${padX},${padTop + chartH} Z`;
 
-  // Grid lines
   const gridLines: { value: number; y: number }[] = [];
   for (let v = scale.start; v <= scale.end + scale.step * 0.01; v += scale.step) {
-    const y = chartH - ((v - scale.start) / yRange) * chartH;
+    const y = padTop + chartH - ((v - scale.start) / yRange) * chartH;
     gridLines.push({ value: v, y });
   }
 
-  // Volume momentum bars
-  const numSegs = 10;
-  const segs: { up: number; down: number; total: number }[] = [];
-  if (data.length >= numSegs) {
-    const segLen = Math.floor(data.length / numSegs);
-    for (let s = 0; s < numSegs; s++) {
-      const startIdx = s * segLen;
-      const endIdx = s === numSegs - 1 ? data.length : (s + 1) * segLen;
-      let up = 0, down = 0;
-      for (let i = startIdx + 1; i < endIdx; i++) {
-        if (data[i].price > data[i - 1].price) up++;
-        else if (data[i].price < data[i - 1].price) down++;
-      }
-      segs.push({ up, down, total: endIdx - startIdx });
+  const lastPrice = prices.length ? prices[prices.length - 1] : null;
+  const lastY = lastPrice != null ? padTop + chartH - ((lastPrice - scale.start) / yRange) * chartH : 0;
+
+  const uniqueTimes = new Set(data.map((d) => d.time));
+  const timeLabels: { label: string; x: number }[] = [];
+  if (data.length > 1 && uniqueTimes.size > 1) {
+    const step = Math.max(1, Math.floor(data.length / 4));
+    for (let i = 0; i < data.length; i += step) {
+      const x = padX + (i / (data.length - 1)) * chartW;
+      timeLabels.push({ label: data[i].time, x });
     }
   }
-  const maxSegTicks = segs.length ? Math.max(...segs.map(s => s.total), 1) : 1;
-
-  // Time labels
-  const timeLabels: { label: string; x: number }[] = [];
-  if (data.length > 1) {
-    const indices = [0, Math.floor(data.length / 2), data.length - 1];
-    indices.forEach((idx) => {
-      const x = (idx / (data.length - 1)) * chartW;
-      timeLabels.push({ label: data[idx].time, x });
-    });
-  }
-
-  // Current price dashed line
-  const lastPrice = prices.length ? prices[prices.length - 1] : null;
-  const lastY = lastPrice != null ? chartH - ((lastPrice - scale.start) / yRange) * chartH : 0;
 
   return (
     <div className="w-full">
-      <div className="flex items-center justify-between mb-3 px-3 py-2 bg-[var(--bg)] rounded border border-[var(--border)]">
-        <span className="text-xs font-bold text-white">{symbol}</span>
-        <span className={`text-lg font-bold ${priceColor === "up" ? "text-[var(--green)]" : "text-[var(--red)]"}`}>
-          {currentPrice !== null ? Number(currentPrice).toFixed(decimalPlaces) : "--"}
-        </span>
-      </div>
+      <div ref={containerRef} className="w-full h-[280px] md:h-[340px] relative rounded-xl overflow-hidden border border-[var(--border-subtle)]"
+        style={{ background: "linear-gradient(180deg, rgba(45,217,196,0.04) 0%, rgba(45,217,196,0.01) 60%, transparent 100%)" }}>
+        {error ? (
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 p-6">
+            <p className="text-[var(--red)] text-sm text-center">Connection Error: {error}</p>
+            <p className="text-[var(--text-muted)] text-xs text-center max-w-md">The symbol <span className="font-mono text-[var(--accent)]">{symbol}</span> may not be available. Try selecting a different symbol.</p>
+          </div>
+        ) : data.length > 1 ? (
+          <svg viewBox={`0 0 ${dims.w} ${dims.h}`} preserveAspectRatio="none" className="absolute inset-0 w-full h-full">
+            <defs>
+              <linearGradient id="chartAreaGrad" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="var(--accent)" stopOpacity="0.18" />
+                <stop offset="70%" stopColor="var(--accent)" stopOpacity="0.04" />
+                <stop offset="100%" stopColor="var(--accent)" stopOpacity="0" />
+              </linearGradient>
+              <linearGradient id="lineGrad" x1="0" y1="0" x2="1" y2="0">
+                <stop offset="0%" stopColor="var(--accent)" stopOpacity="0.6" />
+                <stop offset="100%" stopColor="var(--accent)" stopOpacity="1" />
+              </linearGradient>
+              <filter id="chartGlow" x="-10%" y="-30%" width="120%" height="160%">
+                <feGaussianBlur stdDeviation="2.5" result="blur" />
+                <feMerge>
+                  <feMergeNode in="blur" />
+                  <feMergeNode in="SourceGraphic" />
+                </feMerge>
+              </filter>
+            </defs>
 
-      {error ? (
-        <div className="w-full h-64 flex flex-col items-center justify-center gap-3 bg-[var(--bg)] rounded border border-[var(--red)]/30 p-6">
-          <p className="text-[var(--red)] text-sm text-center">Connection Error: {error}</p>
-          <p className="text-[var(--text-muted)] text-xs text-center max-w-md">The symbol <span className="font-mono text-[var(--accent)]">{symbol}</span> may not be available on your Deriv account or may have been renamed. Try selecting a different symbol from the picker.</p>
-        </div>
-      ) : data.length > 1 ? (
-        <svg ref={svgRef} viewBox={`0 0 ${totalW} ${totalH}`} preserveAspectRatio="none" className="w-full h-[220px]" style={{ maxHeight: "300px" }}>
-          <defs>
-            <linearGradient id="lineGradUp" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="var(--green)" stopOpacity="0.22" />
-              <stop offset="85%" stopColor="var(--green)" stopOpacity="0" />
-            </linearGradient>
-            <linearGradient id="lineGradDown" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="var(--red)" stopOpacity="0.22" />
-              <stop offset="85%" stopColor="var(--red)" stopOpacity="0" />
-            </linearGradient>
-            <filter id="lineGlow" x="-20%" y="-20%" width="140%" height="140%">
-              <feGaussianBlur stdDeviation="3" result="blur" />
-              <feMerge>
-                <feMergeNode in="blur" />
-                <feMergeNode in="SourceGraphic" />
-              </feMerge>
-            </filter>
-          </defs>
-
-          {/* Grid lines */}
-          {gridLines.map((gl, i) => (
-            <g key={`grid-${i}`}>
+            {/* Grid lines */}
+            {gridLines.map((gl, i) => (
               <line
-                x1="0" y1={gl.y} x2={chartW} y2={gl.y}
+                key={`grid-${i}`}
+                x1={padX} y1={gl.y} x2={padX + chartW} y2={gl.y}
                 stroke="var(--border-subtle)"
                 strokeWidth="1"
+                opacity="0.6"
               />
+            ))}
+
+            {/* Area fill */}
+            <path d={areaD} fill="url(#chartAreaGrad)" />
+
+            {/* Line */}
+            <path
+              d={pathD}
+              fill="none"
+              stroke="url(#lineGrad)"
+              strokeWidth="2"
+              strokeLinejoin="round"
+              strokeLinecap="round"
+              vectorEffect="non-scaling-stroke"
+              filter="url(#chartGlow)"
+            />
+
+            {/* Current price dashed line */}
+            {lastPrice != null && (
+              <line
+                x1={padX} y1={lastY}
+                x2={padX + chartW} y2={lastY}
+                stroke="var(--accent)"
+                strokeWidth="1"
+                strokeDasharray="4,4"
+                opacity="0.4"
+              />
+            )}
+
+            {/* Last point dot */}
+            {points.length > 0 && (
+              <circle
+                cx={points[points.length - 1].x}
+                cy={points[points.length - 1].y}
+                r="4"
+                fill="var(--accent)"
+                filter="url(#chartGlow)"
+              />
+            )}
+
+            {/* Y-axis labels */}
+            {gridLines.map((gl, i) => (
               <text
-                x={chartW + 8} y={gl.y + 4}
+                key={`ylbl-${i}`}
+                x={padX - 8} y={gl.y + 3}
+                textAnchor="end"
                 fill="var(--text-muted)"
                 fontSize="10"
                 fontFamily="JetBrains Mono, monospace"
               >
                 {gl.value.toFixed(decimalPlaces)}
               </text>
-            </g>
-          ))}
+            ))}
 
-          {/* Area fill */}
-          <polyline
-            points={`0,${chartH} ${points.join(" ")} ${chartW},${chartH}`}
-            fill={`url(#lineGrad${priceColor === "up" ? "Up" : "Down"})`}
-            stroke="none"
-          />
-
-          {/* Line */}
-          <polyline
-            points={points.join(" ")}
-            fill="none"
-            stroke={priceColor === "up" ? "var(--green)" : "var(--red)"}
-            strokeWidth="1.5"
-            strokeLinejoin="round"
-            strokeLinecap="round"
-            vectorEffect="non-scaling-stroke"
-            filter="url(#lineGlow)"
-            opacity="0.9"
-          />
-
-          {/* Current price dashed line extending to right */}
-          <line
-            x1={data.length > 1 ? chartW : 0} y1={lastY}
-            x2={chartW} y2={lastY}
-            stroke={priceColor === "up" ? "var(--green)" : "var(--red)"}
-            strokeWidth="1"
-            strokeDasharray="6,4"
-            opacity="0.6"
-          />
-
-          {/* Last point dot + label */}
-          {points.length > 0 && (() => {
-            const last = points[points.length - 1].split(",");
-            const lx = parseFloat(last[0]);
-            const ly = parseFloat(last[1]);
-            const label = Number(prices[prices.length - 1]).toFixed(decimalPlaces);
-            const tagW = Math.max(48, label.length * 8 + 16);
-            const placeLeft = lx + tagW > chartW - 4;
-            const tx = placeLeft ? lx - tagW - 6 : lx + 6;
-            const ty = Math.min(Math.max(ly - 11, 2), chartH - 22);
-            const color = priceColor === "up" ? "var(--green)" : "var(--red)";
-            return (
-              <g>
-                <circle cx={lx} cy={ly} r="4" fill={color} />
-                <rect x={tx} y={ty} width={tagW} height={22} rx="4" fill={color} />
-                <text
-                  x={tx + tagW / 2}
-                  y={ty + 15}
-                  textAnchor="middle"
-                  fontSize="13"
-                  fontWeight="bold"
-                  fill="var(--bg)"
-                >
-                  {label}
-                </text>
-              </g>
-            );
-          })()}
-
-          {/* Current price label at right end of dashed line */}
-          {lastPrice != null && (
-            <g>
-              <rect x={chartW + 2} y={lastY - 9} width="60" height="18" rx="3" fill={priceColor === "up" ? "var(--green)" : "var(--red)"} opacity="0.9" />
+            {/* Time labels */}
+            {timeLabels.map((tl, i) => (
               <text
-                x={chartW + 32} y={lastY + 4}
+                key={`time-${i}`}
+                x={tl.x} y={padTop + chartH + 20}
                 textAnchor="middle"
-                fontSize="10"
-                fontWeight="bold"
-                fill="var(--bg)"
+                fill="var(--text-muted)"
+                fontSize="9"
                 fontFamily="JetBrains Mono, monospace"
               >
-                {lastPrice.toFixed(decimalPlaces)}
+                {tl.label}
               </text>
-            </g>
-          )}
-
-          {/* Volume momentum bars */}
-          {segs.length > 0 && segs.map((seg, i) => {
-            const barW = chartW / numSegs;
-            const barX = i * barW;
-            const barMaxH = 40;
-            const barH = (seg.total / maxSegTicks) * barMaxH;
-            const barY = chartH + (barMaxH - barH);
-            const isUp = seg.up >= seg.down;
-            return (
-              <rect
-                key={`vol-${i}`}
-                x={barX + 1}
-                y={barY}
-                width={Math.max(barW - 2, 1)}
-                height={barH}
-                fill={isUp ? "var(--green)" : "var(--red)"}
-                opacity={0.35 + (barH / barMaxH) * 0.4}
-                rx="1"
-              />
-            );
-          })}
-
-          {/* Time labels */}
-          {timeLabels.map((tl, i) => (
-            <text
-              key={`time-${i}`}
-              x={tl.x} y={chartH + 56}
-              textAnchor="middle"
-              fill="var(--text-muted)"
-              fontSize="9"
-              fontFamily="JetBrains Mono, monospace"
-            >
-              {tl.label}
-            </text>
-          ))}
-
-          {/* Divider line between chart and volume */}
-          <line x1="0" y1={chartH} x2={chartW} y2={chartH} stroke="var(--border)" strokeWidth="1" opacity="0.5" />
-        </svg>
-      ) : (
-        <div className="w-full h-64 bg-[var(--surface-dim)] rounded overflow-hidden relative">
-          <div className="empty-state h-full">
-            <div className="w-10 h-10 rounded-full bg-[var(--border-subtle)] shimmer mb-3" />
-            <div className="skeleton skeleton-title mb-2" />
-            <div className="skeleton skeleton-text w-3/4 mx-auto" />
-            <p className="text-micro text-[var(--text-muted)] mt-4 tracking-wider uppercase">Awaiting Tick Data</p>
+            ))}
+          </svg>
+        ) : (
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-2">
+            <div className="w-10 h-10 rounded-full bg-[var(--border-subtle)] shimmer" />
+            <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-widest">Awaiting ticks</p>
           </div>
-        </div>
-      )}
+        )}
+      </div>
 
-      <div className="mt-3 grid grid-cols-3 gap-3 text-body">
-        <div className="bg-[var(--surface-secondary)]/50 p-2 rounded border border-[var(--border-subtle)]">
-          <span className="text-micro text-[var(--text-muted)]">High</span>
-          <p className="text-white font-bold">{maxPrice.toFixed(decimalPlaces)}</p>
+      {/* Stats row */}
+      <div className="mt-3 grid grid-cols-3 gap-3">
+        <div className="bg-[var(--card)] p-2.5 rounded-lg border border-[var(--border-subtle)]">
+          <span className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">High</span>
+          <p className="text-sm font-bold text-[var(--text-primary)] tabular-nums">{maxPrice.toFixed(decimalPlaces)}</p>
         </div>
-        <div className="bg-[var(--surface-secondary)]/50 p-2 rounded border border-[var(--border-subtle)]">
-          <span className="text-micro text-[var(--text-muted)]">Low</span>
-          <p className="text-white font-bold">{minPrice.toFixed(decimalPlaces)}</p>
+        <div className="bg-[var(--card)] p-2.5 rounded-lg border border-[var(--border-subtle)]">
+          <span className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">Low</span>
+          <p className="text-sm font-bold text-[var(--text-primary)] tabular-nums">{minPrice.toFixed(decimalPlaces)}</p>
         </div>
-        <div className="bg-[var(--surface-secondary)]/50 p-2 rounded border border-[var(--border-subtle)]">
-          <span className="text-micro text-[var(--text-muted)]">Ticks</span>
-          <p className="text-white font-bold">{data.length}</p>
+        <div className="bg-[var(--card)] p-2.5 rounded-lg border border-[var(--border-subtle)]">
+          <span className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">Ticks</span>
+          <p className="text-sm font-bold text-[var(--text-primary)] tabular-nums">{data.length}</p>
         </div>
       </div>
     </div>

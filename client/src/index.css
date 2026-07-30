@@ -1176,7 +1176,7 @@
 
   /* ─── Chart Workspace (no-box canvas) ───────────────────── */
   .chart-workspace {
-    background: var(--surface-dim);
+    background: transparent;
     border-radius: var(--radius);
     position: relative;
   }
