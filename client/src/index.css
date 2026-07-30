@@ -990,6 +990,22 @@
   .gap-sections { gap: 32px; }
   .card-padding { padding: 20px; }
 
+  /* ─── A10 Promo Card ────────────────────────────────────── */
+  .promo-card {
+    background: var(--accent);
+    color: var(--bg);
+    border: none;
+    border-radius: var(--radius);
+    padding: 20px;
+  }
+  .promo-card-prominent {
+    background: linear-gradient(135deg, var(--accent) 0%, var(--accent-hover) 100%);
+    color: var(--bg);
+    border: none;
+    border-radius: var(--radius);
+    padding: 24px;
+  }
+
   /* ─── Animations ────────────────────────────────────────── */
   @keyframes fadeIn {
     from { opacity: 0; }
