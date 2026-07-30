@@ -56,6 +56,7 @@ export default function Dashboard() {
   const [takeProfit, setTakeProfit] = useState<number>(0);
   const [tradeBusy, setTradeBusy] = useState(false);
   const [tradeMsg, setTradeMsg] = useState<{ kind: "ok" | "err"; text: string } | null>(null);
+  const [showRiskSettings, setShowRiskSettings] = useState(false);
   const [alertsOpen, setAlertsOpen] = useState(false);
   const [newAlertSym, setNewAlertSym] = useState("");
   const [newAlertDir, setNewAlertDir] = useState<"above" | "below">("above");
@@ -523,15 +524,15 @@ export default function Dashboard() {
                             <tr key={trade.id}>
                               <td className="text-[var(--text-muted)] font-mono">{i + 1}</td>
                               <td><span className="tag">{trade.contractType || "-"}</span></td>
-                              <td>${trade.stake}</td>
-                              <td className="font-mono">{trade.entryPrice}</td>
+                              <td className="tabular-nums">${parseFloat(trade.stake || "0").toFixed(2)}</td>
+                              <td className="font-mono tabular-nums">{parseFloat(trade.entryPrice || "0").toFixed(decimalPlaces)}</td>
                               <td>
-                                <span className={`badge ${trade.result === "win" ? "badge-green" : "badge-red"}`}>
-                                  {trade.result.toUpperCase()}
+                                <span className={`badge ${trade.result === "win" ? "badge-green" : trade.result === "loss" ? "badge-red" : "badge-gray"}`}>
+                                  {trade.result?.toUpperCase() || "-"}
                                 </span>
                               </td>
-                              <td className={`text-right font-bold font-mono ${parseFloat(trade.profitLoss?.toString() || "0") >= 0 ? "text-[var(--green)]" : "text-[var(--red)]"}`}>
-                                {parseFloat(trade.profitLoss?.toString() || "0") >= 0 ? "+" : ""}{trade.profitLoss}
+                              <td className={`text-right font-bold font-mono tabular-nums ${parseFloat(trade.profitLoss?.toString() || "0") >= 0 ? "text-[var(--green)]" : "text-[var(--red)]"}`}>
+                                {parseFloat(trade.profitLoss?.toString() || "0") >= 0 ? "+" : ""}{parseFloat(trade.profitLoss || "0").toFixed(2)}
                               </td>
                             </tr>
                           ))}
@@ -589,14 +590,18 @@ export default function Dashboard() {
         <div className="space-y-6 xl:sticky xl:top-6 xl:self-start">
 
           {/* Trade Studio */}
-          <div className="trade-studio p-6">
-            <div className="flex items-center justify-between mb-5">
-              <h3 className="text-caption font-semibold">Trade Studio</h3>
-              <span className={`badge ${accountType === "real" ? "badge-red" : accountType === "demo" ? "badge-green" : tokenStatus === "invalid" ? "badge-red" : "badge-gray"}`}>
-                {accountType === "real" ? "REAL" : accountType === "demo" ? "DEMO" : tokenStatus === "invalid" ? "UNAUTHORIZED" : "NO TOKEN"}
-              </span>
+          <div className="trade-studio flex flex-col max-h-[calc(100vh-120px)]">
+            <div className="p-4 pb-0">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-caption font-semibold">Trade Studio</h3>
+                <span className={`badge ${accountType === "real" ? "badge-red" : accountType === "demo" ? "badge-green" : tokenStatus === "invalid" ? "badge-red" : "badge-gray"}`}>
+                  {accountType === "real" ? "REAL" : accountType === "demo" ? "DEMO" : tokenStatus === "invalid" ? "UNAUTHORIZED" : "NO TOKEN"}
+                </span>
+              </div>
             </div>
-            <div className="space-y-4">
+
+            {/* Scrollable content */}
+            <div className="flex-1 overflow-y-auto px-4 pb-4 space-y-3">
               <div className="input-group">
                 <label className="input-label">Symbol</label>
                 <div className="input bg-[var(--surface-secondary)] cursor-default">{selectedSymbol}</div>
@@ -613,36 +618,50 @@ export default function Dashboard() {
                   className="input"
                 />
               </div>
-              <div className="grid grid-cols-2 gap-2">
-                <div className="input-group">
-                  <label className="input-label text-[var(--red)]">Stop Loss ($)</label>
-                  <input
-                    type="number"
-                    min={0}
-                    step="0.01"
-                    value={stopLoss || ""}
-                    onChange={(e) => setStopLoss(Math.max(0, parseFloat(e.target.value) || 0))}
-                    className="input border-[var(--red)]/40"
-                    placeholder="Optional"
-                  />
+
+              {/* Risk settings — collapsed by default */}
+              {!showRiskSettings && (stopLoss > 0 || takeProfit > 0) ? (
+                <div className="flex items-center gap-3 text-xs">
+                  {stopLoss > 0 && <span className="text-[var(--red)]">SL: ${stopLoss.toFixed(2)}</span>}
+                  {takeProfit > 0 && <span className="text-[var(--green)]">TP: ${takeProfit.toFixed(2)}</span>}
+                  <button onClick={() => setShowRiskSettings(true)} className="text-[var(--text-muted)] hover:text-[var(--text-secondary)] underline">Edit</button>
                 </div>
-                <div className="input-group">
-                  <label className="input-label text-[var(--green)]">Take Profit ($)</label>
-                  <input
-                    type="number"
-                    min={0}
-                    step="0.01"
-                    value={takeProfit || ""}
-                    onChange={(e) => setTakeProfit(Math.max(0, parseFloat(e.target.value) || 0))}
-                    className="input border-[var(--green)]/40"
-                    placeholder="Optional"
-                  />
+              ) : showRiskSettings ? (
+                <div className="space-y-3">
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="input-group">
+                      <label className="input-label text-[var(--red)]">Stop Loss ($)</label>
+                      <input
+                        type="number"
+                        min={0}
+                        step="0.01"
+                        value={stopLoss || ""}
+                        onChange={(e) => setStopLoss(Math.max(0, parseFloat(e.target.value) || 0))}
+                        className="input border-[var(--red)]/40"
+                        placeholder="Optional"
+                      />
+                    </div>
+                    <div className="input-group">
+                      <label className="input-label text-[var(--green)]">Take Profit ($)</label>
+                      <input
+                        type="number"
+                        min={0}
+                        step="0.01"
+                        value={takeProfit || ""}
+                        onChange={(e) => setTakeProfit(Math.max(0, parseFloat(e.target.value) || 0))}
+                        className="input border-[var(--green)]/40"
+                        placeholder="Optional"
+                      />
+                    </div>
+                  </div>
+                  <button onClick={() => setShowRiskSettings(false)} className="text-xs text-[var(--text-muted)] hover:text-[var(--text-secondary)] underline">Hide risk settings</button>
                 </div>
-              </div>
-              <Button onClick={handleQuickTrade} disabled={tradeBusy} className="btn btn-primary w-full flex items-center justify-center gap-2 py-2.5">
-                {tradeBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : (contract.direction === "fall" ? <TrendingDown className="w-4 h-4" /> : <TrendingUp className="w-4 h-4" />)}
-                {tradeBusy ? "Placing..." : "Buy"}
-              </Button>
+              ) : (
+                <button onClick={() => setShowRiskSettings(true)} className="text-xs text-[var(--accent)] hover:text-[var(--accent-hover)] transition-colors">
+                  + Add stop loss / take profit
+                </button>
+              )}
+
               {tradeMsg && (
                 <p className={`text-xs ${tradeMsg.kind === "ok" ? "text-[var(--green)]" : "text-[var(--red)]"}`}>{tradeMsg.text}</p>
               )}
@@ -650,8 +669,29 @@ export default function Dashboard() {
                 <p className="text-xs text-[var(--text-muted)]">Connect a Deriv token in Settings to enable trading.</p>
               )}
             </div>
-            <div className="mt-6 pt-6 border-t border-[var(--border)]">
-              <DigitProbability symbol={selectedSymbol} decimalPlaces={decimalPlaces} />
+
+            {/* Sticky Buy button */}
+            <div className="flex-shrink-0 px-4 pb-4 pt-2">
+              <Button
+                onClick={handleQuickTrade}
+                disabled={tradeBusy}
+                className="w-full flex items-center justify-center gap-2 h-[52px] text-sm font-bold rounded-lg transition-all"
+                style={{
+                  background: contract.direction === "fall"
+                    ? "linear-gradient(180deg, var(--red) 0%, color-mix(in srgb, var(--red) 85%, black) 100%)"
+                    : "linear-gradient(180deg, var(--green) 0%, color-mix(in srgb, var(--green) 85%, black) 100%)",
+                  color: "white",
+                }}
+              >
+                {tradeBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : (contract.direction === "fall" ? <TrendingDown className="w-4 h-4" /> : <TrendingUp className="w-4 h-4" />)}
+                {tradeBusy ? "Placing..." : contract.direction === "fall" ? "Sell" : "Buy"}
+              </Button>
+            </div>
+
+            <div className="px-4 pb-4">
+              <div className="pt-4 border-t border-[var(--border)]">
+                <DigitProbability symbol={selectedSymbol} decimalPlaces={decimalPlaces} />
+              </div>
             </div>
           </div>
 
