@@ -598,15 +598,15 @@ export default function Dashboard() {
                   {accountType === "real" ? "REAL" : accountType === "demo" ? "DEMO" : tokenStatus === "invalid" ? "UNAUTHORIZED" : "NO TOKEN"}
                 </span>
               </div>
+              <div className="input-group mb-3">
+                <label className="input-label">Symbol</label>
+                <div className="input bg-[var(--surface-secondary)] cursor-default">{selectedDisplay}</div>
+              </div>
+              <ContractTypeSelector selection={contract} onChange={setContract} />
             </div>
 
             {/* Scrollable content */}
-            <div className="flex-1 overflow-y-auto px-4 pb-4 space-y-3">
-              <div className="input-group">
-                <label className="input-label">Symbol</label>
-                <div className="input bg-[var(--surface-secondary)] cursor-default">{selectedSymbol}</div>
-              </div>
-              <ContractTypeSelector selection={contract} onChange={setContract} />
+            <div className="flex-1 overflow-y-auto px-4 pb-4 space-y-3 pt-3">
               <div className="input-group">
                 <label className="input-label">Stake ($)</label>
                 <input
