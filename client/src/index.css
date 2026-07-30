@@ -1168,4 +1168,177 @@
   .elevation-4 { box-shadow: var(--elevation-4); }
   .hover-glow { transition: box-shadow 200ms ease; }
   .hover-glow:hover { box-shadow: 0 0 16px rgba(232,162,14,0.15); }
+
+  /* ─── Glassmorphism ────────────────────────────────────── */
+  .glass {
+    background: rgba(18, 18, 26, 0.6);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+  }
+  .glass-strong {
+    background: rgba(18, 18, 26, 0.8);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+  }
+  .glass-card {
+    background: rgba(18, 18, 26, 0.5);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: var(--radius);
+    transition: all 300ms var(--ease-out-expo);
+  }
+  .glass-card:hover {
+    background: rgba(18, 18, 26, 0.7);
+    border-color: rgba(245, 158, 11, 0.2);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(245, 158, 11, 0.1);
+    transform: translateY(-4px);
+  }
+
+  /* ─── Glow Effects ─────────────────────────────────────── */
+  .glow-border-amber {
+    position: relative;
+  }
+  .glow-border-amber::after {
+    content: '';
+    position: absolute;
+    inset: -1px;
+    border-radius: inherit;
+    background: linear-gradient(135deg, rgba(245, 158, 11, 0.3), transparent 50%, rgba(245, 158, 11, 0.1));
+    z-index: -1;
+    opacity: 0;
+    transition: opacity 300ms ease;
+  }
+  .glow-border-amber:hover::after {
+    opacity: 1;
+  }
+
+  .glow-border-cyan {
+    position: relative;
+  }
+  .glow-border-cyan::after {
+    content: '';
+    position: absolute;
+    inset: -1px;
+    border-radius: inherit;
+    background: linear-gradient(135deg, rgba(6, 182, 212, 0.3), transparent 50%, rgba(6, 182, 212, 0.1));
+    z-index: -1;
+    opacity: 0;
+    transition: opacity 300ms ease;
+  }
+  .glow-border-cyan:hover::after {
+    opacity: 1;
+  }
+
+  .text-glow-amber {
+    text-shadow: 0 0 20px rgba(245, 158, 11, 0.4), 0 0 40px rgba(245, 158, 11, 0.2);
+  }
+  .text-glow-cyan {
+    text-shadow: 0 0 20px rgba(6, 182, 212, 0.4), 0 0 40px rgba(6, 182, 212, 0.2);
+  }
+
+  /* ─── Gradient Buttons ─────────────────────────────────── */
+  .btn-glow {
+    position: relative;
+    overflow: hidden;
+  }
+  .btn-glow::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, rgba(255,255,255,0.1), transparent);
+    opacity: 0;
+    transition: opacity 200ms ease;
+  }
+  .btn-glow:hover::before {
+    opacity: 1;
+  }
+
+  /* ─── Floating Animation ───────────────────────────────── */
+  @keyframes float {
+    0%, 100% { transform: translateY(0px) rotate(0deg); }
+    33% { transform: translateY(-8px) rotate(1deg); }
+    66% { transform: translateY(4px) rotate(-1deg); }
+  }
+  @keyframes float-slow {
+    0%, 100% { transform: translateY(0px); }
+    50% { transform: translateY(-12px); }
+  }
+  @keyframes glow-pulse {
+    0%, 100% { opacity: 0.4; }
+    50% { opacity: 0.8; }
+  }
+  @keyframes gradient-shift {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+  }
+
+  .animate-float { animation: float 6s ease-in-out infinite; }
+  .animate-float-slow { animation: float-slow 8s ease-in-out infinite; }
+  .animate-glow-pulse { animation: glow-pulse 3s ease-in-out infinite; }
+  .animate-gradient {
+    background-size: 200% 200%;
+    animation: gradient-shift 4s ease infinite;
+  }
+
+  /* ─── Particle Container ───────────────────────────────── */
+  .particles-container {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* ─── Hero Enhancements ────────────────────────────────── */
+  .hero-glow {
+    position: relative;
+  }
+  .hero-glow::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 600px;
+    height: 600px;
+    background: radial-gradient(circle, rgba(245, 158, 11, 0.15) 0%, transparent 70%);
+    pointer-events: none;
+    animation: glow-pulse 4s ease-in-out infinite;
+  }
+
+  /* ─── Card Shine Effect ────────────────────────────────── */
+  .card-shine {
+    position: relative;
+    overflow: hidden;
+  }
+  .card-shine::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: linear-gradient(
+      45deg,
+      transparent 40%,
+      rgba(255, 255, 255, 0.03) 50%,
+      transparent 60%
+    );
+    transform: rotate(45deg);
+    transition: all 600ms ease;
+    pointer-events: none;
+  }
+  .card-shine:hover::before {
+    top: -100%;
+    left: -100%;
+  }
+
+  /* ─── Stat Counter Animation ───────────────────────────── */
+  .stat-number {
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum";
+  }
 }
