@@ -315,20 +315,20 @@ export default function Settings() {
         </div>
 
         <div className="flex gap-8">
-          {/* Nav sidebar — 200px */}
-          <nav className="hidden md:block w-[200px] shrink-0 sticky top-20 self-start">
-            <div className="space-y-0.5">
+          {/* Nav sidebar — 200px on desktop, horizontal scrollable on mobile */}
+          <nav className="w-[200px] shrink-0 sticky top-20 self-start max-md:fixed max-md:top-14 max-md:left-0 max-md:right-0 max-md:z-40 max-md:bg-[var(--bg)] max-md:border-b max-md:border-[var(--border)] max-md:w-full max-md:static max-md:self-auto max-md:sticky max-md:top-14">
+            <div className="space-y-0.5 max-md:flex max-md:overflow-x-auto max-md:gap-2 max-md:p-3 max-md:pb-2 max-md:scrollbar-none">
               {sections.map((s) => (
                 <button
                   key={s.id}
                   onClick={() => scrollToSection(s.id)}
-                  className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-left transition-all ${
+                  className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-all whitespace-nowrap max-md:text-xs max-md:py-1.5 ${
                     activeSection === s.id
                       ? "bg-[var(--accent-soft)] text-[var(--accent)] font-semibold"
                       : "text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-white/[0.03]"
-                  }`}
+                  } ${activeSection === s.id ? "max-md:bg-[var(--accent-soft)]" : ""}`}
                 >
-                  <s.icon className="w-4 h-4 shrink-0" />
+                  <s.icon className="w-4 h-4 shrink-0 max-md:w-3.5 max-md:h-3.5" />
                   {s.label}
                 </button>
               ))}
