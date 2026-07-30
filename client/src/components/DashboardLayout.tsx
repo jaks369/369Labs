@@ -306,7 +306,7 @@ function DashboardLayoutContent({
   }, [isResizing, setSidebarWidth]);
 
   return (
-    <div className="flex min-h-screen bg-[var(--bg)]">
+    <div className="flex min-h-screen bg-[var(--bg)] overflow-x-hidden">
       {/* Desktop sidebar — hidden on mobile */}
       <div className="relative hidden md:block" ref={sidebarRef}>
         <Sidebar
@@ -505,7 +505,7 @@ function DashboardLayoutContent({
         </Sidebar>
       </div>
 
-      <SidebarInset className="bg-[var(--bg)] flex flex-col">
+      <SidebarInset className="bg-[var(--bg)] flex flex-col max-w-full">
         {/* Mobile header — no sidebar trigger, just logo */}
         {isMobile && (
           <div className="flex border-b border-[var(--border)] h-12 items-center justify-between bg-[var(--bg)] px-4 sticky top-0 z-40">
