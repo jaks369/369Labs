@@ -4,7 +4,7 @@ import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
-import { Loader2, Save, Brain, AlertCircle, Sun, Moon, Camera, Database, Download, Trash2, Key, Upload } from "lucide-react";
+import { Loader2, Save, Brain, AlertCircle, Sun, Moon, Camera, Database, Download, Trash2, Key, Upload, User, Shield, Bell, Bot, Mail, Lock, Smartphone, Globe, Settings2 } from "lucide-react";
 import { useLocation } from "wouter";
 import { derivWS } from "@/services/derivWebSocket";
 import { pushTimeline } from "@/components/AITimeline";
@@ -264,16 +264,42 @@ export default function Settings() {
     }
   };
 
-  if (!isAuthenticated) {
-    return <div className="text-center py-10">Loading...</div>;
-  }
+  const [activeSection, setActiveSection] = useState("profile");
+
+  const sections = [
+    { id: "profile", label: "Profile", icon: User },
+    { id: "deriv", label: "Deriv API", icon: Globe },
+    { id: "telegram", label: "Telegram", icon: Smartphone },
+    { id: "appearance", label: "Appearance", icon: Sun },
+    { id: "notifications", label: "Notifications", icon: Bell },
+    { id: "memory", label: "AI Memory", icon: Brain },
+    { id: "api-keys", label: "API Keys", icon: Key },
+    { id: "email", label: "Email", icon: Mail },
+    { id: "security", label: "Security", icon: Lock },
+    { id: "2fa", label: "2FA", icon: Shield },
+    { id: "account", label: "Account", icon: Settings2 },
+    { id: "sessions", label: "Sessions", icon: Globe },
+    { id: "data", label: "Data", icon: Database },
+    { id: "danger", label: "Danger Zone", icon: Trash2 },
+  ];
+
+  const sectionRef = useRef<HTMLDivElement>(null);
+
+  const scrollToSection = (id: string) => {
+    setActiveSection(id);
+    const el = sectionRef.current;
+    if (el) {
+      const target = el.querySelector(`[data-section="${id}"]`);
+      if (target) target.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  };
 
   const settingsLoading = derivTokenQuery.isLoading || telegramQuery.isLoading || notificationsQuery.isLoading || memoryQuery.isLoading;
 
   if (settingsLoading) {
     return (
       <div className="min-h-screen bg-[var(--bg)] flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-[var(--amber-hover)]" />
+        <Loader2 className="w-8 h-8 animate-spin text-[var(--accent)]" />
       </div>
     );
   }
@@ -282,11 +308,35 @@ export default function Settings() {
 
   return (
     <div className="min-h-screen bg-[var(--bg)] text-[var(--text-primary)] p-4 md:p-8">
-      <div className="max-w-2xl mx-auto">
+      <div className="max-w-[900px] mx-auto">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-[var(--amber-hover)] mb-2">SETTINGS</h1>
-          <p className="text-[var(--amber)] text-sm">Configure your trading bot platform</p>
+          <h1 className="text-lg font-bold text-[var(--text-primary)] mb-1">Settings</h1>
+          <p className="text-sm text-[var(--text-muted)]">Configure your trading bot platform</p>
         </div>
+
+        <div className="flex gap-8">
+          {/* Nav sidebar — 200px */}
+          <nav className="hidden md:block w-[200px] shrink-0 sticky top-20 self-start">
+            <div className="space-y-0.5">
+              {sections.map((s) => (
+                <button
+                  key={s.id}
+                  onClick={() => scrollToSection(s.id)}
+                  className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-left transition-all ${
+                    activeSection === s.id
+                      ? "bg-[var(--accent-soft)] text-[var(--accent)] font-semibold"
+                      : "text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-white/[0.03]"
+                  }`}
+                >
+                  <s.icon className="w-4 h-4 shrink-0" />
+                  {s.label}
+                </button>
+              ))}
+            </div>
+          </nav>
+
+          {/* Content — max 640px */}
+          <div className="flex-1 min-w-0 max-w-[640px] space-y-6" ref={sectionRef}>
 
         {settingsError && (
           <div className="mb-6 p-4 rounded-lg border border-[var(--red)]/30 bg-[var(--red)]/10 flex items-center gap-3">
@@ -295,15 +345,15 @@ export default function Settings() {
           </div>
         )}
 
-        <SpotlightCard className="mb-6">
-          <h2 className="text-lg font-bold text-[var(--amber-hover)] mb-4">PROFILE</h2>
+        <SpotlightCard className="mb-6" data-section="profile">
+          <h2 className="text-lg font-bold text-[var(--text-primary)] mb-4">PROFILE</h2>
           <div className="space-y-4">
             <div className="flex items-center gap-4">
               <div className="relative">
                 {avatarPreview ? (
-                  <img src={avatarPreview} alt="Avatar" loading="lazy" className="w-16 h-16 rounded-full object-cover border-2 border-[var(--amber-border)]" onError={() => setAvatarPreview("")} />
+                  <img src={avatarPreview} alt="Avatar" loading="lazy" className="w-16 h-16 rounded-full object-cover border-2 border-[var(--accent-border)]" onError={() => setAvatarPreview("")} />
                 ) : (
-                  <div className="w-16 h-16 rounded-full bg-[var(--amber)]/20 border-2 border-[var(--amber-border)] flex items-center justify-center text-xl font-bold text-[var(--amber)]">
+                  <div className="w-16 h-16 rounded-full bg-[var(--accent)]/20 border-2 border-[var(--accent-border)] flex items-center justify-center text-xl font-bold text-[var(--accent)]">
                     {(profileName || user?.name || "T").charAt(0).toUpperCase()}
                   </div>
                 )}
@@ -350,7 +400,7 @@ export default function Settings() {
             <Button
               onClick={handleSaveProfile}
               disabled={updateProfileMutation.isPending}
-              className="w-full bg-[var(--amber)] text-[var(--bg)] hover:bg-[var(--amber)]/80 font-bold py-2 px-4 rounded"
+              className="w-full bg-[var(--cta-fill)] text-[var(--cta-text)] hover:bg-[var(--cta-fill-hover)] font-bold py-2 px-4 rounded"
             >
               {updateProfileMutation.isPending ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />SAVING...</> : <><Save className="w-4 h-4 mr-2" />SAVE PROFILE</>}
             </Button>
@@ -358,7 +408,7 @@ export default function Settings() {
         </SpotlightCard>
 
         <SpotlightCard className="mb-6">
-          <h2 className="text-lg font-bold text-[var(--amber-hover)] mb-4">DERIV API TOKEN</h2>
+          <h2 className="text-lg font-bold text-[var(--text-primary)] mb-4">DERIV API TOKEN</h2>
           <div className="space-y-4">
             <div>
               <label className="text-sm text-[var(--text-secondary)] block mb-2">API Token</label>
@@ -375,14 +425,14 @@ export default function Settings() {
             <div>
               <label className="text-sm text-[var(--text-secondary)] block mb-2">Account Type</label>
               <div className="flex rounded-lg bg-[var(--card)] p-0.5">
-                <button onClick={() => setAccountType("demo")} className={`flex-1 py-2 text-center text-sm font-bold rounded-md transition-all ${accountType === "demo" ? "bg-[var(--amber)] text-[var(--bg)] shadow-sm" : "text-[var(--text-muted)] hover:text-white"}`}>DEMO</button>
+                <button onClick={() => setAccountType("demo")} className={`flex-1 py-2 text-center text-sm font-bold rounded-md transition-all ${accountType === "demo" ? "bg-[var(--accent)] text-[var(--bg)] shadow-sm" : "text-[var(--text-muted)] hover:text-white"}`}>DEMO</button>
                 <button onClick={() => setAccountType("real")} className={`flex-1 py-2 text-center text-sm font-bold rounded-md transition-all ${accountType === "real" ? "bg-[var(--red)] text-white shadow-sm" : "text-[var(--text-muted)] hover:text-white"}`}>REAL</button>
               </div>
             </div>
             <Button
               onClick={handleSaveDerivToken}
               disabled={saveDerivTokenMutation.isPending || !tokenChanged}
-              className="w-full bg-[var(--amber)] text-[var(--bg)] hover:bg-[var(--amber)]/80 font-bold py-2 px-4 rounded"
+              className="w-full bg-[var(--cta-fill)] text-[var(--cta-text)] hover:bg-[var(--cta-fill-hover)] font-bold py-2 px-4 rounded"
             >
               {saveDerivTokenMutation.isPending ? (
                 <><Loader2 className="w-4 h-4 mr-2 animate-spin" />SAVING...</>
@@ -394,7 +444,7 @@ export default function Settings() {
         </SpotlightCard>
 
         <SpotlightCard className="mb-6">
-          <h2 className="text-lg font-bold text-[var(--amber-hover)] mb-4">TELEGRAM NOTIFICATIONS</h2>
+          <h2 className="text-lg font-bold text-[var(--text-primary)] mb-4">TELEGRAM NOTIFICATIONS</h2>
           <div className="space-y-4">
             <div>
               <label className="text-sm text-[var(--text-secondary)] block mb-2">Chat ID</label>
@@ -411,7 +461,7 @@ export default function Settings() {
             <Button
               onClick={handleSaveTelegram}
               disabled={saveTelegramMutation.isPending}
-              className="w-full bg-[var(--amber)] text-[var(--bg)] hover:bg-[var(--amber)]/80 font-bold py-2 px-4 rounded"
+              className="w-full bg-[var(--cta-fill)] text-[var(--cta-text)] hover:bg-[var(--cta-fill-hover)] font-bold py-2 px-4 rounded"
             >
               {saveTelegramMutation.isPending ? (
                 <>
@@ -429,7 +479,7 @@ export default function Settings() {
         </SpotlightCard>
 
         <SpotlightCard className="mb-6">
-          <h2 className="text-lg font-bold text-[var(--amber-hover)] mb-4 flex items-center gap-2">
+          <h2 className="text-lg font-bold text-[var(--text-primary)] mb-4 flex items-center gap-2">
             {theme === "dark" ? <Moon className="w-5 h-5" /> : <Sun className="w-5 h-5" />} APPEARANCE
           </h2>
           <div className="flex items-center justify-between">
@@ -449,7 +499,7 @@ export default function Settings() {
         </SpotlightCard>
 
         <SpotlightCard className="mb-6">
-          <h2 className="text-lg font-bold text-[var(--amber-hover)] mb-4">NOTIFICATION PREFERENCES</h2>
+          <h2 className="text-lg font-bold text-[var(--text-primary)] mb-4">NOTIFICATION PREFERENCES</h2>
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <label className="text-sm text-[var(--text-secondary)]">Trade Executed</label>
@@ -502,7 +552,7 @@ export default function Settings() {
             <Button
               onClick={handleSaveNotifications}
               disabled={saveNotificationsMutation.isPending}
-              className="w-full bg-[var(--amber)] text-[var(--bg)] hover:bg-[var(--amber)]/80 font-bold py-2 px-4 rounded mt-4"
+              className="w-full bg-[var(--cta-fill)] text-[var(--cta-text)] hover:bg-[var(--cta-fill-hover)] font-bold py-2 px-4 rounded mt-4"
             >
               {saveNotificationsMutation.isPending ? (
                 <>
@@ -520,7 +570,7 @@ export default function Settings() {
         </SpotlightCard>
 
         <SpotlightCard className="mb-6">
-          <h2 className="text-lg font-bold text-[var(--amber-hover)] mb-4 flex items-center gap-2">
+          <h2 className="text-lg font-bold text-[var(--text-primary)] mb-4 flex items-center gap-2">
             <Brain className="w-5 h-5" /> AI MEMORY — TRADER PROFILE
           </h2>
           <p className="text-xs text-[var(--text-muted)] mb-4">
@@ -586,7 +636,7 @@ export default function Settings() {
             <Button
               onClick={handleSaveMemory}
               disabled={saveMemoryMutation.isPending}
-              className="w-full bg-[var(--amber-hover)] text-[var(--bg)] hover:bg-[var(--amber-hover)]/80 font-bold py-2 px-4 rounded"
+              className="w-full bg-[var(--accent-hover)] text-[var(--bg)] hover:bg-[var(--accent-hover)]/80 font-bold py-2 px-4 rounded"
             >
               {saveMemoryMutation.isPending ? (
                 <>
@@ -606,7 +656,7 @@ export default function Settings() {
 
 
         <SpotlightCard className="mb-6">
-          <h2 className="text-lg font-bold text-[var(--amber-hover)] mb-4 flex items-center gap-2"><Key className="w-5 h-5" /> EXTERNAL API KEYS</h2>
+          <h2 className="text-lg font-bold text-[var(--text-primary)] mb-4 flex items-center gap-2"><Key className="w-5 h-5" /> EXTERNAL API KEYS</h2>
           <p className="text-xs text-[var(--text-muted)] mb-4">Connect external services for extended features (optional).</p>
           <div className="space-y-3">
             {[
@@ -624,14 +674,14 @@ export default function Settings() {
               />
               </div>
             ))}
-            <Button onClick={async () => { try { await saveMemoryMutation.mutateAsync({ memory: { apiKeys: externalKeys } }); toast("API keys saved.", "success"); } catch { toast("Failed to save API keys.", "error"); } }} className="w-full bg-[var(--amber)] text-[var(--bg)] font-bold py-2 px-4 rounded"><Save className="w-4 h-4 mr-2" /> SAVE KEYS</Button>
+            <Button onClick={async () => { try { await saveMemoryMutation.mutateAsync({ memory: { apiKeys: externalKeys } }); toast("API keys saved.", "success"); } catch { toast("Failed to save API keys.", "error"); } }} className="w-full bg-[var(--cta-fill)] text-[var(--cta-text)] font-bold py-2 px-4 rounded"><Save className="w-4 h-4 mr-2" /> SAVE KEYS</Button>
           </div>
         </SpotlightCard>
 
         <SpotlightCard className="mb-6">
-          <h2 className="text-lg font-bold text-[var(--amber-hover)] mb-4">EMAIL</h2>
+          <h2 className="text-lg font-bold text-[var(--text-primary)] mb-4">EMAIL</h2>
           <div className="space-y-4">
-            <p className="text-sm text-[var(--text-muted)]">Current email: <span className="text-[var(--amber)]">{user?.email}</span></p>
+            <p className="text-sm text-[var(--text-muted)]">Current email: <span className="text-[var(--accent)]">{user?.email}</span></p>
             {emailChanged && <p className="text-xs text-[var(--green)]">Email updated! Check your new inbox for a verification link.</p>}
             {emailError && <p className="text-xs text-[var(--red)]">{emailError}</p>}
             <div>
@@ -656,7 +706,7 @@ export default function Settings() {
             <Button
               onClick={handleChangeEmail}
               disabled={changeEmailMutation.isPending || !newEmail || !emailPwd}
-              className="w-full bg-[var(--amber)]/20 text-[var(--amber)] border border-[var(--amber)]/40 hover:bg-[var(--amber)]/30 font-bold py-2 px-4 rounded"
+              className="w-full bg-[var(--accent)]/20 text-[var(--accent)] border border-[var(--accent)]/40 hover:bg-[var(--accent)]/30 font-bold py-2 px-4 rounded"
             >
               {changeEmailMutation.isPending ? "Updating..." : "CHANGE EMAIL"}
             </Button>
@@ -664,7 +714,7 @@ export default function Settings() {
         </SpotlightCard>
 
         <SpotlightCard className="mb-6">
-          <h2 className="text-lg font-bold text-[var(--amber-hover)] mb-4">SECURITY</h2>
+          <h2 className="text-lg font-bold text-[var(--text-primary)] mb-4">SECURITY</h2>
           <div className="space-y-4">
             <div>
               <label className="text-sm text-[var(--text-secondary)] block mb-2">Current Password</label>
@@ -689,7 +739,7 @@ export default function Settings() {
             <Button
               onClick={handleChangePassword}
               disabled={changePwdMutation.isPending}
-              className="w-full bg-[var(--amber)]/20 text-[var(--amber)] border border-[var(--amber)]/40 hover:bg-[var(--amber)]/30 font-bold py-2 px-4 rounded"
+              className="w-full bg-[var(--accent)]/20 text-[var(--accent)] border border-[var(--accent)]/40 hover:bg-[var(--accent)]/30 font-bold py-2 px-4 rounded"
             >
               {changePwdMutation.isPending ? "Changing..." : "CHANGE PASSWORD"}
             </Button>
@@ -698,14 +748,14 @@ export default function Settings() {
 
         {/* Two-Factor Authentication */}
         <SpotlightCard className="mb-6">
-          <h2 className="text-lg font-bold text-[var(--amber-hover)] mb-4">TWO-FACTOR AUTHENTICATION</h2>
+          <h2 className="text-lg font-bold text-[var(--text-primary)] mb-4">TWO-FACTOR AUTHENTICATION</h2>
           {twoFASetup && twoFASecret ? (
             <div className="space-y-4">
               <p className="text-sm text-[var(--text-muted)]">Scan this QR code in your authenticator app (Google Authenticator, Authy, etc.):</p>
               <div className="flex justify-center">
                 <img src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(twoFASetup)}&format=webp`} alt="2FA QR Code" loading="lazy" className="w-36 h-36 sm:w-48 sm:h-48" />
               </div>
-              <p className="text-xs text-[var(--text-muted)] text-center">Or enter this key manually: <span className="font-mono text-[var(--amber)]">{twoFASecret}</span></p>
+              <p className="text-xs text-[var(--text-muted)] text-center">Or enter this key manually: <span className="font-mono text-[var(--accent)]">{twoFASecret}</span></p>
               <div>
                 <label className="text-sm text-[var(--text-secondary)] block mb-2">Verify Code</label>
                 <Input
@@ -721,7 +771,7 @@ export default function Settings() {
               <Button
                 onClick={handleVerify2FA}
                 disabled={verify2FAMutation.isPending || twoFAToken.length !== 6}
-                className="w-full bg-[var(--amber)]/20 text-[var(--amber)] border border-[var(--amber)]/40 hover:bg-[var(--amber)]/30 font-bold py-2 px-4 rounded"
+                className="w-full bg-[var(--accent)]/20 text-[var(--accent)] border border-[var(--accent)]/40 hover:bg-[var(--accent)]/30 font-bold py-2 px-4 rounded"
               >
                 {verify2FAMutation.isPending ? "Verifying..." : "VERIFY & ENABLE"}
               </Button>
@@ -753,7 +803,7 @@ export default function Settings() {
               <Button
                 onClick={handleSetup2FA}
                 disabled={setup2FAMutation.isPending}
-                className="w-full bg-[var(--amber)]/20 text-[var(--amber)] border border-[var(--amber)]/40 hover:bg-[var(--amber)]/30 font-bold py-2 px-4 rounded"
+                className="w-full bg-[var(--accent)]/20 text-[var(--accent)] border border-[var(--accent)]/40 hover:bg-[var(--accent)]/30 font-bold py-2 px-4 rounded"
               >
                 {setup2FAMutation.isPending ? "Setting up..." : "SET UP 2FA"}
               </Button>
@@ -762,9 +812,9 @@ export default function Settings() {
         </SpotlightCard>
 
         <SpotlightCard className="mb-6">
-          <h2 className="text-lg font-bold text-[var(--amber-hover)] mb-4">ACCOUNT</h2>
+          <h2 className="text-lg font-bold text-[var(--text-primary)] mb-4">ACCOUNT</h2>
           <div className="space-y-4">
-            <p className="text-sm text-[var(--text-secondary)]">Signed in as <span className="text-[var(--amber)] font-semibold">{user?.email || (user as any)?.username || "user"}</span></p>
+            <p className="text-sm text-[var(--text-secondary)]">Signed in as <span className="text-[var(--accent)] font-semibold">{user?.email || (user as any)?.username || "user"}</span></p>
             <Button
               onClick={logout}
               className="w-full bg-[var(--red)]/20 text-[var(--red)] border border-[var(--red)]/40 hover:bg-[var(--red)]/30 font-bold py-2 px-4 rounded"
@@ -775,9 +825,9 @@ export default function Settings() {
         </SpotlightCard>
 
         <SpotlightCard className="mb-6">
-          <h2 className="text-lg font-bold text-[var(--amber-hover)] mb-4">ACTIVE SESSIONS</h2>
+          <h2 className="text-lg font-bold text-[var(--text-primary)] mb-4">ACTIVE SESSIONS</h2>
           {sessionsQuery.isLoading ? (
-            <div className="flex items-center justify-center py-8"><div className="h-6 w-6 border-2 border-[var(--amber)] border-t-transparent rounded-full animate-spin" /></div>
+            <div className="flex items-center justify-center py-8"><div className="h-6 w-6 border-2 border-[var(--accent)] border-t-transparent rounded-full animate-spin" /></div>
           ) : sessionsQuery.isError ? (
             <p className="text-xs text-[var(--red)]">Failed to load sessions.</p>
           ) : (
@@ -804,7 +854,7 @@ export default function Settings() {
         </SpotlightCard>
 
         <SpotlightCard className="mb-6">
-          <h2 className="text-lg font-bold text-[var(--amber)] mb-4 flex items-center gap-2"><Database className="w-5 h-5" /> DATA MANAGEMENT</h2>
+          <h2 className="text-lg font-bold text-[var(--accent)] mb-4 flex items-center gap-2"><Database className="w-5 h-5" /> DATA MANAGEMENT</h2>
           <div className="space-y-4">
             <div>
               <p className="text-sm text-[var(--text-muted)] mb-2">Data retention controls how long your trade history, bot logs, and AI knowledge are kept.</p>
@@ -864,7 +914,7 @@ export default function Settings() {
                   </Button>
                   <Button
                     onClick={() => { setDeleteConfirm(false); setDeleteConfirmText(""); setDeletePwd(""); setDeleteError(""); }}
-                    className="bg-[var(--amber)]/20 text-[var(--amber)] border border-[var(--amber)]/40 hover:bg-[var(--amber)]/30 font-bold py-2 px-4 rounded"
+                    className="bg-[var(--accent)]/20 text-[var(--accent)] border border-[var(--accent)]/40 hover:bg-[var(--accent)]/30 font-bold py-2 px-4 rounded"
                   >
                     CANCEL
                   </Button>
@@ -883,6 +933,8 @@ export default function Settings() {
             )}
           </div>
         </SpotlightCard>
+          </div>
+        </div>
       </div>
     </div>
   );
