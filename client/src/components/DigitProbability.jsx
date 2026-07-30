@@ -4,7 +4,7 @@ import { derivWS } from "@/services/derivWebSocket";
 import { trpc } from "@/lib/trpc";
 
 function DigitCircle({ digit, percent, isCurrent, maxPercent }) {
-  const r = 18;
+  const r = 14;
   const circ = 2 * Math.PI * r;
   const frac = maxPercent > 0 ? percent / maxPercent : 0;
   const arcLen = frac * circ;
@@ -15,20 +15,20 @@ function DigitCircle({ digit, percent, isCurrent, maxPercent }) {
 
   return (
     <div className="flex flex-col items-center gap-1">
-      <div className="relative w-12 h-12 flex items-center justify-center">
-        <svg width="48" height="48" viewBox="0 0 48 48" className="absolute inset-0">
-          <circle cx="24" cy="24" r={r} fill="none" stroke="var(--border)" strokeWidth="3" />
+      <div className="relative w-10 h-10 flex items-center justify-center">
+        <svg width="40" height="40" viewBox="0 0 40 40" className="absolute inset-0">
+          <circle cx="20" cy="20" r={r} fill="none" stroke="var(--border)" strokeWidth="2.5" />
           <motion.circle
-            cx="24" cy="24" r={r}
+            cx="20" cy="20" r={r}
             fill="none"
             stroke={color}
-            strokeWidth="3"
+            strokeWidth="2.5"
             strokeLinecap="round"
             strokeDasharray={circ}
             initial={false}
             animate={{ strokeDashoffset: offset }}
             transition={{ duration: 0.4, ease: [0.19, 1, 0.22, 1] }}
-            transform="rotate(-90 24 24)"
+            transform="rotate(-90 20 20)"
           />
         </svg>
         <motion.span
@@ -140,7 +140,7 @@ export default function DigitProbability({ symbol, decimalPlaces, maxTicks = 100
           {flash === "up" ? "▲" : flash === "down" ? "▼" : "—"}
         </motion.span>
       </div>
-      <div className="grid grid-cols-5 gap-y-3 gap-x-2 justify-items-center">
+      <div className="grid grid-cols-5 gap-y-2 gap-x-1 justify-items-center">
         {percents.map((pct, i) => (
           <DigitCircle
             key={i}
