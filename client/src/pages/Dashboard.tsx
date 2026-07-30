@@ -309,8 +309,9 @@ export default function Dashboard() {
   return (
     <PageContainer className="page-container">
       <PageSection>
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 mb-6">
-          <div className="flex items-center gap-3">
+      <div className="flex flex-col gap-3 mb-6">
+          {/* Top row: balance + buttons */}
+          <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-2 px-3 py-2 rounded-lg panel-secondary">
             <Wallet className="w-4 h-4 text-[var(--green)]" />
             <span className="text-xl font-bold text-[var(--text-primary)] font-mono tabular-nums">
@@ -345,7 +346,7 @@ export default function Dashboard() {
             <ChevronDown className={`w-4 h-4 shrink-0 transition-transform ${showSymbolPicker ? "rotate-180" : ""}`} />
           </Button>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 overflow-x-auto scrollbar-none">
           <button onClick={() => navigate("/bots")} className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-[var(--card)] border border-[var(--border)] hover:bg-[var(--surface-elevated)] transition-all text-caption text-[var(--text-secondary)] hover:text-white cursor-pointer">
             <Bot className="w-5 h-5 text-[var(--accent)]" />
             <span className="hidden sm:inline text-[13px] font-medium">Bots</span>

@@ -979,9 +979,10 @@
       radial-gradient(ellipse 800px 400px at 50% 20%, var(--accent-glow) 0%, transparent 70%),
       var(--bg);
     min-height: 100vh;
+    overflow-x: hidden;
   }
   @media (max-width: 768px) {
-    .page-container { padding: 1.25rem 1rem; padding-bottom: 5rem; }
+    .page-container { padding: 1rem 0.75rem; padding-bottom: 5rem; }
   }
 
   /* ─── Standard Spacing Rhythm ───────────────────────────── */
