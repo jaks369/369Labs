@@ -115,9 +115,9 @@ export default function TickChart({ symbol, maxDataPoints = 100, decimalPlaces =
   const yMin = minPrice - padding;
   const yMax = maxPrice + padding;
 
-  const padX = 56;
-  const padTop = 16;
-  const padBottom = 32;
+  const padX = 48;
+  const padTop = 12;
+  const padBottom = 28;
   const chartW = dims.w - padX;
   const chartH = dims.h - padTop - padBottom;
 
@@ -219,16 +219,24 @@ export default function TickChart({ symbol, maxDataPoints = 100, decimalPlaces =
               />
             )}
 
-            {/* Last point dot */}
-            {points.length > 0 && (
-              <circle
-                cx={points[points.length - 1].x}
-                cy={points[points.length - 1].y}
-                r="4"
-                fill="var(--accent)"
-                filter="url(#chartGlow)"
-              />
-            )}
+            {/* Last point dot + price label */}
+            {points.length > 0 && (() => {
+              const last = points[points.length - 1];
+              const label = lastPrice?.toFixed(decimalPlaces) ?? "";
+              const tagW = Math.max(52, label.length * 7 + 16);
+              const placeLeft = last.x + tagW > padX + chartW - 4;
+              const tx = placeLeft ? last.x - tagW - 8 : last.x + 8;
+              const ty = Math.min(Math.max(last.y - 11, padTop + 2), padTop + chartH - 22);
+              return (
+                <g>
+                  <circle cx={last.x} cy={last.y} r="4" fill="var(--accent)" filter="url(#chartGlow)" />
+                  <rect x={tx} y={ty} width={tagW} height={20} rx="4" fill="var(--accent)" />
+                  <text x={tx + tagW / 2} y={ty + 14} textAnchor="middle" fontSize="11" fontWeight="bold" fill="var(--bg)" fontFamily="JetBrains Mono, monospace">
+                    {label}
+                  </text>
+                </g>
+              );
+            })()}
 
             {/* Y-axis labels */}
             {gridLines.map((gl, i) => (
@@ -264,22 +272,6 @@ export default function TickChart({ symbol, maxDataPoints = 100, decimalPlaces =
             <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-widest">Awaiting ticks</p>
           </div>
         )}
-      </div>
-
-      {/* Stats row */}
-      <div className="mt-3 grid grid-cols-3 gap-3">
-        <div className="bg-[var(--card)] p-2.5 rounded-lg border border-[var(--border-subtle)]">
-          <span className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">High</span>
-          <p className="text-sm font-bold text-[var(--text-primary)] tabular-nums">{maxPrice.toFixed(decimalPlaces)}</p>
-        </div>
-        <div className="bg-[var(--card)] p-2.5 rounded-lg border border-[var(--border-subtle)]">
-          <span className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">Low</span>
-          <p className="text-sm font-bold text-[var(--text-primary)] tabular-nums">{minPrice.toFixed(decimalPlaces)}</p>
-        </div>
-        <div className="bg-[var(--card)] p-2.5 rounded-lg border border-[var(--border-subtle)]">
-          <span className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">Ticks</span>
-          <p className="text-sm font-bold text-[var(--text-primary)] tabular-nums">{data.length}</p>
-        </div>
       </div>
     </div>
   );

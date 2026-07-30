@@ -77,12 +77,14 @@ import { ChevronDown } from "lucide-react";
 function CollapsibleSection({ defaultOpen = false, children }: { defaultOpen?: boolean; children: React.ReactNode }) {
   const [open, setOpen] = useState(defaultOpen);
   return (
-    <div className="rounded-lg border border-[var(--border)] bg-[var(--surface-elevated)]">
-      <button onClick={() => setOpen(!open)} className="w-full flex items-center justify-between px-3 py-2 text-[11px] font-semibold uppercase tracking-wider text-[var(--text-muted)] hover:text-[var(--text-secondary)] transition-colors cursor-pointer">
+    <div className="rounded-lg border border-[var(--border)] overflow-hidden">
+      <button onClick={() => setOpen(!open)} className="w-full flex items-center justify-between px-3 py-2 text-[11px] font-semibold uppercase tracking-wider text-[var(--text-muted)] hover:text-[var(--text-secondary)] hover:bg-white/[0.02] transition-colors cursor-pointer">
         <span>Tools</span>
         <ChevronDown className={`w-3 h-3 transition-transform ${open ? "rotate-180" : ""}`} />
       </button>
-      {open && <div className="px-2 pb-2 space-y-1.5">{children}</div>}
+      <div className={`${open ? "block" : "hidden"} px-2 pb-2 space-y-1.5`}>
+        {children}
+      </div>
     </div>
   );
 }
