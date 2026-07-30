@@ -19,6 +19,7 @@ import {
   SidebarTrigger,
   useSidebar,
 } from "@/components/ui/sidebar";
+import MobileTabBar from "@/components/MobileTabBar";
 import { getLoginUrl } from "@/const";
 import { useIsMobile } from "@/hooks/useMobile";
 import {
@@ -289,7 +290,8 @@ function DashboardLayoutContent({
 
   return (
     <div className="flex min-h-screen bg-[var(--bg)]">
-      <div className="relative" ref={sidebarRef}>
+      {/* Desktop sidebar — hidden on mobile */}
+      <div className="relative hidden md:block" ref={sidebarRef}>
         <Sidebar
           collapsible="icon"
           className="border-r border-[var(--border)] bg-[var(--bg)]"
@@ -485,17 +487,18 @@ function DashboardLayoutContent({
       </div>
 
       <SidebarInset className="bg-[var(--bg)] flex flex-col">
+        {/* Mobile header — no sidebar trigger, just logo */}
         {isMobile && (
           <div className="flex border-b border-[var(--border)] h-12 items-center justify-between bg-[var(--bg)] px-4 sticky top-0 z-40">
-            <div className="flex items-center gap-2.5">
-              <SidebarTrigger className="text-[var(--text-secondary)]" />
-              <span className="font-semibold text-[var(--text-primary)] text-[13px]">
-                {activeMenuItem?.label ?? "Menu"}
-              </span>
+            <div className="flex items-center gap-2">
+              <div className="w-6 h-6 bg-[var(--accent)] rounded flex items-center justify-center">
+                <Activity className="w-3.5 h-3.5 text-[#0A0C10]" />
+              </div>
+              <span className="font-bold text-sm text-[var(--text-primary)]">369Labs</span>
             </div>
           </div>
         )}
-        <main className="flex-1 overflow-y-auto">
+        <main className={`flex-1 overflow-y-auto ${isMobile ? "pb-16" : ""}`}>
           {!riskDismissed && (
             <div className="flex items-center gap-3 bg-[var(--bg)] border-b border-[var(--border)] px-4 py-1.5 text-micro leading-snug text-[var(--text-muted)]">
               <span className="font-semibold uppercase tracking-wider text-[var(--text-muted)]/60 shrink-0 text-[9px]">Risk</span>
@@ -508,6 +511,7 @@ function DashboardLayoutContent({
           {children}
         </main>
       </SidebarInset>
+      {isMobile && <MobileTabBar />}
       <GlobalSearch open={globalSearchOpen} onClose={() => setGlobalSearchOpen(false)} />
       {shortcutsOpen && <KeyboardShortcuts onClose={() => setShortcutsOpen(false)} />}
     </div>

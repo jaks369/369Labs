@@ -1,8 +1,9 @@
 import { useAuth } from "@/_core/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { useLocation } from "wouter";
-import { Brain, Globe, BarChart3, ChevronRight, Activity, Star, CheckCircle2, Shield, Zap, Clock, TrendingUp, Server } from "lucide-react";
+import { Brain, Globe, BarChart3, ChevronRight, Activity, Star, CheckCircle2, Shield, Zap, Clock, TrendingUp, Server, Menu, X } from "lucide-react";
 import { motion } from "framer-motion";
+import { useState } from "react";
 
 const fadeUp = {
   hidden: { opacity: 0, y: 16 },
@@ -16,6 +17,7 @@ const stagger = {
 export default function Home() {
   const { isAuthenticated } = useAuth();
   const [, navigate] = useLocation();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   return (
     <div className="min-h-screen bg-[var(--bg)] text-[var(--text-primary)] selection:bg-[var(--accent)]/20">
@@ -41,10 +43,27 @@ export default function Home() {
             </div>
           </div>
           <div className="flex items-center gap-4">
-            <button onClick={() => navigate("/login")} className="text-sm text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors">Login</button>
-            <button onClick={() => navigate("/login")} className="text-sm font-semibold px-5 py-2 rounded-full bg-[var(--cta-fill)] text-[var(--cta-text)] hover:bg-[var(--cta-fill-hover)] transition-colors">Get Started</button>
+            <button onClick={() => navigate("/login")} className="hidden sm:block text-sm text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors">Login</button>
+            <button onClick={() => navigate("/login")} className="hidden sm:block text-sm font-semibold px-5 py-2 rounded-full bg-[var(--cta-fill)] text-[var(--cta-text)] hover:bg-[var(--cta-fill-hover)] transition-colors">Get Started</button>
+            <button onClick={() => setMobileMenuOpen(!mobileMenuOpen)} className="md:hidden p-2 text-[var(--text-muted)] hover:text-[var(--text-primary)]">
+              {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+            </button>
           </div>
         </div>
+        {/* Mobile full-screen menu */}
+        {mobileMenuOpen && (
+          <div className="md:hidden border-t border-[var(--border)]/50 bg-[var(--bg)]">
+            <div className="px-6 py-4 space-y-2">
+              {[{ label: "Dashboard", path: "/dashboard" }, { label: "Strategy Builder", path: "/strategy-builder" }, { label: "Marketplace", path: "/marketplace" }, { label: "Backtesting", path: "/backtesting" }].map((item) => (
+                <button key={item.path} onClick={() => { navigate(item.path); setMobileMenuOpen(false); }} className="block w-full text-left py-2 text-sm text-[var(--text-secondary)] hover:text-[var(--text-primary)]">{item.label}</button>
+              ))}
+              <div className="pt-3 border-t border-[var(--border)]/50 space-y-2">
+                <button onClick={() => { navigate("/login"); setMobileMenuOpen(false); }} className="block w-full text-left py-2 text-sm text-[var(--text-secondary)]">Login</button>
+                <button onClick={() => { navigate("/login"); setMobileMenuOpen(false); }} className="block w-full text-center py-2.5 text-sm font-semibold rounded-full bg-[var(--cta-fill)] text-[var(--cta-text)]">Get Started</button>
+              </div>
+            </div>
+          </div>
+        )}
       </nav>
 
       <main className="relative z-10">
@@ -76,7 +95,7 @@ export default function Home() {
 
         {/* Stat strip */}
         <section className="max-w-5xl mx-auto px-6 pb-16">
-          <motion.div initial={{ opacity: 0, y: 12 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="grid grid-cols-3 md:grid-cols-6 gap-3">
+          <motion.div initial={{ opacity: 0, y: 12 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="flex md:grid md:grid-cols-6 gap-3 overflow-x-auto pb-2 snap-x snap-mandatory scrollbar-none">
             {[
               { label: "Active Bots", value: "12" },
               { label: "Win Rate", value: "64%" },
@@ -85,7 +104,7 @@ export default function Home() {
               { label: "Signals Today", value: "38" },
               { label: "Uptime", value: "99.9%" },
             ].map((stat, i) => (
-              <div key={i} className="border border-[var(--border)]/50 rounded-lg p-3 text-center">
+              <div key={i} className="border border-[var(--border)]/50 rounded-lg p-3 text-center snap-start shrink-0 w-[120px] md:w-auto">
                 <div className="text-lg font-bold text-[var(--text-primary)] tabular-nums">{stat.value}</div>
                 <div className="text-[11px] text-[var(--text-muted)] mt-0.5">{stat.label}</div>
               </div>
