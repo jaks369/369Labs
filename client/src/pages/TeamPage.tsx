@@ -70,7 +70,91 @@ export default function TeamPage() {
         </div>
 
         <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-6">
-          <h2 className="text-sm font-bold text-white mb-4">Team Members</h2>
+          <h2 className="text-sm font-bold text-white mb-4"
+    param($m)
+    $prefix = $m.Groups[1].Value
+    $text = $m.Groups[2].Value
+    $suffix = $m.Groups[3].Value
+    # Skip nav-only patterns and short abbreviations
+    if ($text -match '^(API|AI|FAQ|SLA|P&L|ROI|VPN|URL|SSH|DNS|IP|UI|UX|CSS|HTML|JSON|SVG|FFT|RSI|EMA|SMA|MACD|P&L|2FA|AI|OK|GO|NO|UP|DO|IT)
+          {isLoading ? (
+            <div className="flex justify-center py-8"><Loader2 className="w-5 h-5 animate-spin text-[var(--accent)]" /></div>
+          ) : (
+            <div className="space-y-2">
+              <div className="flex items-center justify-between p-3 bg-black/20 rounded-lg">
+                <div>
+                  <span className="text-sm font-bold text-white">{user?.email || "You"}</span>
+                  <span className="text-xs text-[var(--text-muted)] ml-2">Owner</span>
+                </div>
+                <span className="text-xs text-[var(--accent)]">Admin</span>
+              </div>
+              {members.length === 0 && <p className="text-xs text-[var(--text-muted)] text-center py-4">No team members yet. Invite someone above.</p>}
+              {members.map((m) => (
+                <div key={m.id} className="flex items-center justify-between p-3 bg-black/20 rounded-lg">
+                  <span className="text-sm text-white">{m.email}</span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-[var(--accent)]">{m.status === "pending" ? "Pending" : "Accepted"}</span>
+                    <button onClick={() => remove(m.id)} className="text-[var(--red)] hover:text-red-300"><XCircle className="w-3.5 h-3.5" /></button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+) { return "$prefix$text$suffix" }
+    # Convert to sentence case
+    $words = $text -split ' '
+    $result = @()
+    $first = $true
+    foreach ($w in $words) {
+      if ($first) {
+        $result += $w.Substring(0,1).ToUpper() + $w.Substring(1).ToLower()
+        $first = $false
+      } else {
+        # Keep small words lowercase unless first word
+        if ($w -match '^(of|the|and|or|for|to|in|on|at|by|a|an|is|it|as|be|do|no|up)
+          {isLoading ? (
+            <div className="flex justify-center py-8"><Loader2 className="w-5 h-5 animate-spin text-[var(--accent)]" /></div>
+          ) : (
+            <div className="space-y-2">
+              <div className="flex items-center justify-between p-3 bg-black/20 rounded-lg">
+                <div>
+                  <span className="text-sm font-bold text-white">{user?.email || "You"}</span>
+                  <span className="text-xs text-[var(--text-muted)] ml-2">Owner</span>
+                </div>
+                <span className="text-xs text-[var(--accent)]">Admin</span>
+              </div>
+              {members.length === 0 && <p className="text-xs text-[var(--text-muted)] text-center py-4">No team members yet. Invite someone above.</p>}
+              {members.map((m) => (
+                <div key={m.id} className="flex items-center justify-between p-3 bg-black/20 rounded-lg">
+                  <span className="text-sm text-white">{m.email}</span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-[var(--accent)]">{m.status === "pending" ? "Pending" : "Accepted"}</span>
+                    <button onClick={() => remove(m.id)} className="text-[var(--red)] hover:text-red-300"><XCircle className="w-3.5 h-3.5" /></button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+) {
+          $result += $w.ToLower()
+        } else {
+          $result += $w.Substring(0,1).ToUpper() + $w.Substring(1).ToLower()
+        }
+      }
+    }
+    $newText = $result -join ' '
+    "$prefix$newText$suffix"
+  
           {isLoading ? (
             <div className="flex justify-center py-8"><Loader2 className="w-5 h-5 animate-spin text-[var(--accent)]" /></div>
           ) : (

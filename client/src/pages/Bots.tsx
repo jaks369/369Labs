@@ -289,7 +289,13 @@ export default function Bots() {
         <div className="lg:col-span-2 space-y-6">
           <div className="panel">
             <div className="p-4 border-b border-[var(--border)] flex items-center justify-between bg-black/20">
-              <h2 className="text-micro">Running Instances</h2>
+              <h2 className="text-micro"
+    param($m)
+    $prefix = $m.Groups[1].Value
+    $text = $m.Groups[2].Value
+    $suffix = $m.Groups[3].Value
+    # Skip nav-only patterns and short abbreviations
+    if ($text -match '^(API|AI|FAQ|SLA|P&L|ROI|VPN|URL|SSH|DNS|IP|UI|UX|CSS|HTML|JSON|SVG|FFT|RSI|EMA|SMA|MACD|P&L|2FA|AI|OK|GO|NO|UP|DO|IT)
               <div className="flex items-center gap-2">
                 <span className="text-caption text-price-up font-bold">{runningBots.length} Active</span>
               </div>
@@ -460,6 +466,800 @@ export default function Bots() {
           <div className="panel p-6">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-micro">Ready to Deploy</h3>
+              {selectedMulti.length > 1 && (
+                <Button onClick={handleMultiDeploy} className="text-caption font-bold bg-[var(--accent)] text-[var(--bg)] px-3 py-1 rounded-lg flex items-center gap-1">
+                  <Play className="w-3 h-3" /> Deploy {selectedMulti.length} Strategies
+                </Button>
+              )}
+            </div>
+            <div className="space-y-3">
+              {strategiesQuery.isLoading ? (
+                <div className="flex items-center justify-center py-8">
+                  <Activity className="w-5 h-5 animate-spin text-[var(--accent)]" />
+                </div>
+              ) : strategiesQuery.isError ? (
+                <p className="text-xs text-[var(--red)] italic text-center py-4">Failed to load strategies. Please try again.</p>
+              ) : (Array.isArray(strategiesQuery.data) ? strategiesQuery.data : []).map((s: any) => {
+                const isSelected = selectedMulti.includes(s.id);
+                const isRunning = runningBots.some((b) => b.strategyId === s.id);
+                return (
+                <div key={s.id} className={`p-4 rounded-xl bg-[var(--card)] border transition-all group ${isSelected ? "border-[var(--accent)]" : "border-[var(--border)] hover:border-[var(--accent)]/50"}`}>
+                  <div className="flex justify-between items-start mb-3">
+                    <div className="flex items-center gap-2">
+                      <input type="checkbox" checked={isSelected} onChange={() => setSelectedMulti((p) => p.includes(s.id) ? p.filter((id) => id !== s.id) : [...p, s.id])} className="accent-[var(--accent)] w-3.5 h-3.5" />
+                      <h4 className="text-xs font-bold text-white">{s.name}</h4>
+                    </div>
+                    <Zap className="w-3 h-3 text-[var(--accent)]" />
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      className="flex-1 h-8 text-caption font-bold bg-[var(--accent-soft)] text-[var(--accent)] hover:bg-[var(--accent)] hover:text-white border border-[var(--accent-border)]"
+                      disabled={deployingId === s.id || isRunning}
+                      onClick={() => handleDeploy(s)}
+                    >
+                      <Play className="w-3 h-3 mr-2 fill-current" />
+                      {isRunning ? "Running" : deployingId === s.id ? "Deploying..." : "Deploy"}
+                    </Button>
+                  </div>
+                </div>
+              );})}
+              {(!strategiesQuery.data || strategiesQuery.data.length === 0) && (
+                <div className="empty-state"><p className="empty-state-desc">No strategies found.</p></div>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+
+
+) { return "$prefix$text$suffix" }
+    # Convert to sentence case
+    $words = $text -split ' '
+    $result = @()
+    $first = $true
+    foreach ($w in $words) {
+      if ($first) {
+        $result += $w.Substring(0,1).ToUpper() + $w.Substring(1).ToLower()
+        $first = $false
+      } else {
+        # Keep small words lowercase unless first word
+        if ($w -match '^(of|the|and|or|for|to|in|on|at|by|a|an|is|it|as|be|do|no|up)
+              <div className="flex items-center gap-2">
+                <span className="text-caption text-price-up font-bold">{runningBots.length} Active</span>
+              </div>
+            </div>
+
+            <div className="p-0">
+              {runningBots.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-20 text-center">
+                  <div className="w-12 h-12 bg-[var(--card)] rounded-full flex items-center justify-center mb-4 border border-[var(--border)]">
+                    <Bot className="w-6 h-6 text-[var(--text-muted)]" />
+                  </div>
+                  <p className="text-[var(--text-muted)] text-sm mb-6">No bots are currently running.</p>
+                  <Button variant="outline" className="btn btn-outline text-xs" onClick={() => navigate("/strategy-builder")}>
+                    Deploy your first strategy
+                  </Button>
+                </div>
+              ) : (
+                <div className="divide-y divide-[var(--border)]">
+                  {runningBots.map((bot) => (
+                    <div key={bot.runId} className="p-6 flex items-center justify-between hover:bg-white/5 transition-colors">
+                      <div className="flex items-center gap-4">
+                        <div className={`w-10 h-10 rounded-lg flex items-center justify-center border ${
+                          bot.status === "error"
+                            ? "bg-[var(--red-soft)] border-[var(--red)]/20"
+                            : "bg-[var(--accent-soft)] border-[var(--accent-border)]"
+                        }`}>
+                          <Activity className={`w-5 h-5 ${bot.status === "error" ? "text-[var(--red)]" : "text-[var(--accent)] animate-pulse"}`} />
+                        </div>
+                        <div>
+                          <h3 className="text-sm font-bold text-white">{bot.name}</h3>
+                          <p className="text-micro">
+                            {bot.symbol} • {bot.trades} trades • {bot.status}
+                          </p>
+                          {bot.lastLog && <p className="text-caption mt-1">{bot.lastLog}</p>}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-8">
+                        <div className="text-right">
+                          <p className="text-micro mb-1">Profit/Loss</p>
+                          <p className={`text-sm font-bold ${bot.pnl >= 0 ? "text-[var(--green)]" : "text-[var(--red)]"}`}>
+                            {bot.pnl >= 0 ? "+" : ""}${Number(bot.pnl).toFixed(2)}
+                          </p>
+                        </div>
+                        {(() => {
+                          const settled = bot.wins + bot.losses;
+                          const liveWinRate = settled > 0 ? (bot.wins / settled) * 100 : null;
+                          if (bot.backtestWinRate == null || liveWinRate == null || settled < 5) return null;
+                          const drift = liveWinRate - bot.backtestWinRate;
+                          const mismatch = drift <= -15 || liveWinRate < bot.backtestWinRate * 0.7;
+                          if (!mismatch) return null;
+                          return (
+                            <div className="max-w-[180px] text-left bg-[var(--red-soft)] border border-[var(--red)]/30 rounded px-2 py-1">
+                              <div className="flex items-center gap-1 text-caption text-price-down font-bold uppercase">
+                                <AlertTriangle className="w-3 h-3" /> Regime mismatch
+                              </div>
+                              <p className="text-caption text-[var(--red)]/80 leading-tight mt-0.5">
+                                Live {liveWinRate.toFixed(0)}% vs backtest {Number(bot.backtestWinRate).toFixed(0)}%
+                              </p>
+                            </div>
+                          );
+                        })()}
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="text-[var(--text-muted)] hover:text-[var(--accent)] border border-[var(--border)] hover:border-[var(--accent)]/30"
+                          onClick={() => setViewLogsFor(bot.runId)}
+                        >
+                          <FileText className="w-3 h-3 mr-1" /> Logs
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          className="bg-[var(--red-soft)] text-[var(--red)] border-[var(--red)]/20 hover:bg-[var(--red)] hover:text-white"
+                          onClick={() => handleStop(bot)}
+                        >
+                          <Square className="w-3 h-3 mr-2 fill-current" /> Stop
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Bot Logs Viewer */}
+        {viewLogsFor !== null && (
+          <div className="fixed inset-0 z-[90] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setViewLogsFor(null)}>
+            <div className="w-full max-w-2xl bg-[var(--card)] border border-[var(--border)] rounded-xl max-h-[80vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+              <div className="flex items-center justify-between p-4 border-b border-[var(--border)]">
+                <h3 className="text-sm font-bold text-white flex items-center gap-2"><FileText className="w-4 h-4" /> Bot Execution Logs</h3>
+                <button onClick={() => setViewLogsFor(null)} className="text-[var(--text-muted)] hover:text-white"><X className="w-4 h-4" /></button>
+              </div>
+              <div className="p-4 space-y-1 max-h-[60vh] overflow-y-auto font-mono text-caption">
+                {botLogsQuery.isLoading ? (
+                  <div className="flex items-center justify-center py-8"><Loader2 className="w-5 h-5 animate-spin text-[var(--accent)]" /></div>
+                ) : botLogsQuery.isError ? (
+                  <div className="space-y-1">
+                    {(() => {
+                      const bot = runningBots.find(b => b.runId === viewLogsFor);
+                      return bot?.lastLog ? (
+                        <div className="flex items-start gap-2 py-1 text-[var(--text-secondary)]">
+                          <span className="text-caption shrink-0">--:--:--</span>
+                          <span className="text-caption font-bold uppercase shrink-0 w-10">[info]</span>
+                          <span>{bot.lastLog}</span>
+                        </div>
+                      ) : (
+                        <p className="text-sm text-[var(--text-muted)] text-center py-8">No logs yet. The database is unavailable — logs are not being persisted.</p>
+                      );
+                    })()}
+                  </div>
+                ) : (botLogsQuery.data || []).length === 0 ? (
+                  <p className="text-sm text-[var(--text-muted)] text-center py-8">No logs for this bot run.</p>
+                ) : (
+                  (botLogsQuery.data || []).map((log: any) => (
+                    <div key={log.id} className={`flex items-start gap-2 py-1 ${log.level === "error" ? "text-[var(--red)]" : log.level === "warn" ? "text-[var(--accent)]" : "text-[var(--text-secondary)]"}`}>
+                      <span className="text-caption shrink-0 w-16">{log.createdAt ? new Date(log.createdAt).toLocaleTimeString() : ""}</span>
+                      <span className="text-caption font-bold uppercase shrink-0 w-10">[{log.level}]</span>
+                      <span>{log.message}</span>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Sidebar - Quick Stats & Available Strategies */}
+        <div className="space-y-8">
+          <div className="panel p-6">
+            <h3 className="text-micro mb-6">System Health</h3>
+            <div className="space-y-3">
+              <div className="flex justify-between items-center">
+                <span className="text-xs text-[var(--text-secondary)]">Active Bots</span>
+                <span className={`text-caption font-bold ${runningBots.length > 0 ? "text-[var(--green)]" : "text-[var(--text-muted)]"}`}>{runningBots.length}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-xs text-[var(--text-secondary)]">Idle Bots</span>
+                <span className="text-caption font-bold text-[var(--text-secondary)]">{idleBots.length}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-xs text-[var(--text-secondary)]">Errors</span>
+                <span className={`text-caption font-bold ${errorBots.length > 0 ? "text-[var(--red)]" : "text-[var(--green)]"}`}>{errorBots.length > 0 ? `${errorBots.length} bot(s)` : "None"}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-xs text-[var(--text-secondary)]">Deriv WS</span>
+                <span className={`text-caption font-bold ${derivWS.isAuthorized() ? "text-[var(--green)]" : "text-[var(--red)]"}`}>{derivWS.isAuthorized() ? "Connected" : "Disconnected"}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-xs text-[var(--text-secondary)]">Total Trades</span>
+                <span className="text-caption font-bold text-[var(--text-secondary)]">{runningBots.reduce((s, b) => s + (b.trades || 0), 0)}</span>
+              </div>
+              {runningBots.length > 0 && (
+                <div className="flex justify-between items-center">
+                  <span className="text-xs text-[var(--text-secondary)]">Avg. Win Rate</span>
+                  <span className="text-caption font-bold text-[var(--text-secondary)]">
+                    {(() => {
+                      const withWR = runningBots.filter(b => b.backtestWinRate != null);
+                      return withWR.length > 0 ? (withWR.reduce((s, b) => s + (b.backtestWinRate || 0), 0) / withWR.length).toFixed(0) + "%" : "—";
+                    })()}
+                  </span>
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="panel p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-micro">Ready to Deploy</h3>
+              {selectedMulti.length > 1 && (
+                <Button onClick={handleMultiDeploy} className="text-caption font-bold bg-[var(--accent)] text-[var(--bg)] px-3 py-1 rounded-lg flex items-center gap-1">
+                  <Play className="w-3 h-3" /> Deploy {selectedMulti.length} Strategies
+                </Button>
+              )}
+            </div>
+            <div className="space-y-3">
+              {strategiesQuery.isLoading ? (
+                <div className="flex items-center justify-center py-8">
+                  <Activity className="w-5 h-5 animate-spin text-[var(--accent)]" />
+                </div>
+              ) : strategiesQuery.isError ? (
+                <p className="text-xs text-[var(--red)] italic text-center py-4">Failed to load strategies. Please try again.</p>
+              ) : (Array.isArray(strategiesQuery.data) ? strategiesQuery.data : []).map((s: any) => {
+                const isSelected = selectedMulti.includes(s.id);
+                const isRunning = runningBots.some((b) => b.strategyId === s.id);
+                return (
+                <div key={s.id} className={`p-4 rounded-xl bg-[var(--card)] border transition-all group ${isSelected ? "border-[var(--accent)]" : "border-[var(--border)] hover:border-[var(--accent)]/50"}`}>
+                  <div className="flex justify-between items-start mb-3">
+                    <div className="flex items-center gap-2">
+                      <input type="checkbox" checked={isSelected} onChange={() => setSelectedMulti((p) => p.includes(s.id) ? p.filter((id) => id !== s.id) : [...p, s.id])} className="accent-[var(--accent)] w-3.5 h-3.5" />
+                      <h4 className="text-xs font-bold text-white">{s.name}</h4>
+                    </div>
+                    <Zap className="w-3 h-3 text-[var(--accent)]" />
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      className="flex-1 h-8 text-caption font-bold bg-[var(--accent-soft)] text-[var(--accent)] hover:bg-[var(--accent)] hover:text-white border border-[var(--accent-border)]"
+                      disabled={deployingId === s.id || isRunning}
+                      onClick={() => handleDeploy(s)}
+                    >
+                      <Play className="w-3 h-3 mr-2 fill-current" />
+                      {isRunning ? "Running" : deployingId === s.id ? "Deploying..." : "Deploy"}
+                    </Button>
+                  </div>
+                </div>
+              );})}
+              {(!strategiesQuery.data || strategiesQuery.data.length === 0) && (
+                <div className="empty-state"><p className="empty-state-desc">No strategies found.</p></div>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+
+
+) {
+          $result += $w.ToLower()
+        } else {
+          $result += $w.Substring(0,1).ToUpper() + $w.Substring(1).ToLower()
+        }
+      }
+    }
+    $newText = $result -join ' '
+    "$prefix$newText$suffix"
+  
+              <div className="flex items-center gap-2">
+                <span className="text-caption text-price-up font-bold">{runningBots.length} Active</span>
+              </div>
+            </div>
+
+            <div className="p-0">
+              {runningBots.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-20 text-center">
+                  <div className="w-12 h-12 bg-[var(--card)] rounded-full flex items-center justify-center mb-4 border border-[var(--border)]">
+                    <Bot className="w-6 h-6 text-[var(--text-muted)]" />
+                  </div>
+                  <p className="text-[var(--text-muted)] text-sm mb-6">No bots are currently running.</p>
+                  <Button variant="outline" className="btn btn-outline text-xs" onClick={() => navigate("/strategy-builder")}>
+                    Deploy your first strategy
+                  </Button>
+                </div>
+              ) : (
+                <div className="divide-y divide-[var(--border)]">
+                  {runningBots.map((bot) => (
+                    <div key={bot.runId} className="p-6 flex items-center justify-between hover:bg-white/5 transition-colors">
+                      <div className="flex items-center gap-4">
+                        <div className={`w-10 h-10 rounded-lg flex items-center justify-center border ${
+                          bot.status === "error"
+                            ? "bg-[var(--red-soft)] border-[var(--red)]/20"
+                            : "bg-[var(--accent-soft)] border-[var(--accent-border)]"
+                        }`}>
+                          <Activity className={`w-5 h-5 ${bot.status === "error" ? "text-[var(--red)]" : "text-[var(--accent)] animate-pulse"}`} />
+                        </div>
+                        <div>
+                          <h3 className="text-sm font-bold text-white">{bot.name}</h3>
+                          <p className="text-micro">
+                            {bot.symbol} • {bot.trades} trades • {bot.status}
+                          </p>
+                          {bot.lastLog && <p className="text-caption mt-1">{bot.lastLog}</p>}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-8">
+                        <div className="text-right">
+                          <p className="text-micro mb-1">Profit/Loss</p>
+                          <p className={`text-sm font-bold ${bot.pnl >= 0 ? "text-[var(--green)]" : "text-[var(--red)]"}`}>
+                            {bot.pnl >= 0 ? "+" : ""}${Number(bot.pnl).toFixed(2)}
+                          </p>
+                        </div>
+                        {(() => {
+                          const settled = bot.wins + bot.losses;
+                          const liveWinRate = settled > 0 ? (bot.wins / settled) * 100 : null;
+                          if (bot.backtestWinRate == null || liveWinRate == null || settled < 5) return null;
+                          const drift = liveWinRate - bot.backtestWinRate;
+                          const mismatch = drift <= -15 || liveWinRate < bot.backtestWinRate * 0.7;
+                          if (!mismatch) return null;
+                          return (
+                            <div className="max-w-[180px] text-left bg-[var(--red-soft)] border border-[var(--red)]/30 rounded px-2 py-1">
+                              <div className="flex items-center gap-1 text-caption text-price-down font-bold uppercase">
+                                <AlertTriangle className="w-3 h-3" /> Regime mismatch
+                              </div>
+                              <p className="text-caption text-[var(--red)]/80 leading-tight mt-0.5">
+                                Live {liveWinRate.toFixed(0)}% vs backtest {Number(bot.backtestWinRate).toFixed(0)}%
+                              </p>
+                            </div>
+                          );
+                        })()}
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="text-[var(--text-muted)] hover:text-[var(--accent)] border border-[var(--border)] hover:border-[var(--accent)]/30"
+                          onClick={() => setViewLogsFor(bot.runId)}
+                        >
+                          <FileText className="w-3 h-3 mr-1" /> Logs
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          className="bg-[var(--red-soft)] text-[var(--red)] border-[var(--red)]/20 hover:bg-[var(--red)] hover:text-white"
+                          onClick={() => handleStop(bot)}
+                        >
+                          <Square className="w-3 h-3 mr-2 fill-current" /> Stop
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Bot Logs Viewer */}
+        {viewLogsFor !== null && (
+          <div className="fixed inset-0 z-[90] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setViewLogsFor(null)}>
+            <div className="w-full max-w-2xl bg-[var(--card)] border border-[var(--border)] rounded-xl max-h-[80vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+              <div className="flex items-center justify-between p-4 border-b border-[var(--border)]">
+                <h3 className="text-sm font-bold text-white flex items-center gap-2"><FileText className="w-4 h-4" /> Bot Execution Logs</h3>
+                <button onClick={() => setViewLogsFor(null)} className="text-[var(--text-muted)] hover:text-white"><X className="w-4 h-4" /></button>
+              </div>
+              <div className="p-4 space-y-1 max-h-[60vh] overflow-y-auto font-mono text-caption">
+                {botLogsQuery.isLoading ? (
+                  <div className="flex items-center justify-center py-8"><Loader2 className="w-5 h-5 animate-spin text-[var(--accent)]" /></div>
+                ) : botLogsQuery.isError ? (
+                  <div className="space-y-1">
+                    {(() => {
+                      const bot = runningBots.find(b => b.runId === viewLogsFor);
+                      return bot?.lastLog ? (
+                        <div className="flex items-start gap-2 py-1 text-[var(--text-secondary)]">
+                          <span className="text-caption shrink-0">--:--:--</span>
+                          <span className="text-caption font-bold uppercase shrink-0 w-10">[info]</span>
+                          <span>{bot.lastLog}</span>
+                        </div>
+                      ) : (
+                        <p className="text-sm text-[var(--text-muted)] text-center py-8">No logs yet. The database is unavailable — logs are not being persisted.</p>
+                      );
+                    })()}
+                  </div>
+                ) : (botLogsQuery.data || []).length === 0 ? (
+                  <p className="text-sm text-[var(--text-muted)] text-center py-8">No logs for this bot run.</p>
+                ) : (
+                  (botLogsQuery.data || []).map((log: any) => (
+                    <div key={log.id} className={`flex items-start gap-2 py-1 ${log.level === "error" ? "text-[var(--red)]" : log.level === "warn" ? "text-[var(--accent)]" : "text-[var(--text-secondary)]"}`}>
+                      <span className="text-caption shrink-0 w-16">{log.createdAt ? new Date(log.createdAt).toLocaleTimeString() : ""}</span>
+                      <span className="text-caption font-bold uppercase shrink-0 w-10">[{log.level}]</span>
+                      <span>{log.message}</span>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Sidebar - Quick Stats & Available Strategies */}
+        <div className="space-y-8">
+          <div className="panel p-6">
+            <h3 className="text-micro mb-6"
+    param($m)
+    $prefix = $m.Groups[1].Value
+    $text = $m.Groups[2].Value
+    $suffix = $m.Groups[3].Value
+    # Skip nav-only patterns and short abbreviations
+    if ($text -match '^(API|AI|FAQ|SLA|P&L|ROI|VPN|URL|SSH|DNS|IP|UI|UX|CSS|HTML|JSON|SVG|FFT|RSI|EMA|SMA|MACD|P&L|2FA|AI|OK|GO|NO|UP|DO|IT)
+            <div className="space-y-3">
+              <div className="flex justify-between items-center">
+                <span className="text-xs text-[var(--text-secondary)]">Active Bots</span>
+                <span className={`text-caption font-bold ${runningBots.length > 0 ? "text-[var(--green)]" : "text-[var(--text-muted)]"}`}>{runningBots.length}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-xs text-[var(--text-secondary)]">Idle Bots</span>
+                <span className="text-caption font-bold text-[var(--text-secondary)]">{idleBots.length}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-xs text-[var(--text-secondary)]">Errors</span>
+                <span className={`text-caption font-bold ${errorBots.length > 0 ? "text-[var(--red)]" : "text-[var(--green)]"}`}>{errorBots.length > 0 ? `${errorBots.length} bot(s)` : "None"}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-xs text-[var(--text-secondary)]">Deriv WS</span>
+                <span className={`text-caption font-bold ${derivWS.isAuthorized() ? "text-[var(--green)]" : "text-[var(--red)]"}`}>{derivWS.isAuthorized() ? "Connected" : "Disconnected"}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-xs text-[var(--text-secondary)]">Total Trades</span>
+                <span className="text-caption font-bold text-[var(--text-secondary)]">{runningBots.reduce((s, b) => s + (b.trades || 0), 0)}</span>
+              </div>
+              {runningBots.length > 0 && (
+                <div className="flex justify-between items-center">
+                  <span className="text-xs text-[var(--text-secondary)]">Avg. Win Rate</span>
+                  <span className="text-caption font-bold text-[var(--text-secondary)]">
+                    {(() => {
+                      const withWR = runningBots.filter(b => b.backtestWinRate != null);
+                      return withWR.length > 0 ? (withWR.reduce((s, b) => s + (b.backtestWinRate || 0), 0) / withWR.length).toFixed(0) + "%" : "—";
+                    })()}
+                  </span>
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="panel p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-micro">Ready to Deploy</h3>
+              {selectedMulti.length > 1 && (
+                <Button onClick={handleMultiDeploy} className="text-caption font-bold bg-[var(--accent)] text-[var(--bg)] px-3 py-1 rounded-lg flex items-center gap-1">
+                  <Play className="w-3 h-3" /> Deploy {selectedMulti.length} Strategies
+                </Button>
+              )}
+            </div>
+            <div className="space-y-3">
+              {strategiesQuery.isLoading ? (
+                <div className="flex items-center justify-center py-8">
+                  <Activity className="w-5 h-5 animate-spin text-[var(--accent)]" />
+                </div>
+              ) : strategiesQuery.isError ? (
+                <p className="text-xs text-[var(--red)] italic text-center py-4">Failed to load strategies. Please try again.</p>
+              ) : (Array.isArray(strategiesQuery.data) ? strategiesQuery.data : []).map((s: any) => {
+                const isSelected = selectedMulti.includes(s.id);
+                const isRunning = runningBots.some((b) => b.strategyId === s.id);
+                return (
+                <div key={s.id} className={`p-4 rounded-xl bg-[var(--card)] border transition-all group ${isSelected ? "border-[var(--accent)]" : "border-[var(--border)] hover:border-[var(--accent)]/50"}`}>
+                  <div className="flex justify-between items-start mb-3">
+                    <div className="flex items-center gap-2">
+                      <input type="checkbox" checked={isSelected} onChange={() => setSelectedMulti((p) => p.includes(s.id) ? p.filter((id) => id !== s.id) : [...p, s.id])} className="accent-[var(--accent)] w-3.5 h-3.5" />
+                      <h4 className="text-xs font-bold text-white">{s.name}</h4>
+                    </div>
+                    <Zap className="w-3 h-3 text-[var(--accent)]" />
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      className="flex-1 h-8 text-caption font-bold bg-[var(--accent-soft)] text-[var(--accent)] hover:bg-[var(--accent)] hover:text-white border border-[var(--accent-border)]"
+                      disabled={deployingId === s.id || isRunning}
+                      onClick={() => handleDeploy(s)}
+                    >
+                      <Play className="w-3 h-3 mr-2 fill-current" />
+                      {isRunning ? "Running" : deployingId === s.id ? "Deploying..." : "Deploy"}
+                    </Button>
+                  </div>
+                </div>
+              );})}
+              {(!strategiesQuery.data || strategiesQuery.data.length === 0) && (
+                <div className="empty-state"><p className="empty-state-desc">No strategies found.</p></div>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+
+
+) { return "$prefix$text$suffix" }
+    # Convert to sentence case
+    $words = $text -split ' '
+    $result = @()
+    $first = $true
+    foreach ($w in $words) {
+      if ($first) {
+        $result += $w.Substring(0,1).ToUpper() + $w.Substring(1).ToLower()
+        $first = $false
+      } else {
+        # Keep small words lowercase unless first word
+        if ($w -match '^(of|the|and|or|for|to|in|on|at|by|a|an|is|it|as|be|do|no|up)
+            <div className="space-y-3">
+              <div className="flex justify-between items-center">
+                <span className="text-xs text-[var(--text-secondary)]">Active Bots</span>
+                <span className={`text-caption font-bold ${runningBots.length > 0 ? "text-[var(--green)]" : "text-[var(--text-muted)]"}`}>{runningBots.length}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-xs text-[var(--text-secondary)]">Idle Bots</span>
+                <span className="text-caption font-bold text-[var(--text-secondary)]">{idleBots.length}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-xs text-[var(--text-secondary)]">Errors</span>
+                <span className={`text-caption font-bold ${errorBots.length > 0 ? "text-[var(--red)]" : "text-[var(--green)]"}`}>{errorBots.length > 0 ? `${errorBots.length} bot(s)` : "None"}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-xs text-[var(--text-secondary)]">Deriv WS</span>
+                <span className={`text-caption font-bold ${derivWS.isAuthorized() ? "text-[var(--green)]" : "text-[var(--red)]"}`}>{derivWS.isAuthorized() ? "Connected" : "Disconnected"}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-xs text-[var(--text-secondary)]">Total Trades</span>
+                <span className="text-caption font-bold text-[var(--text-secondary)]">{runningBots.reduce((s, b) => s + (b.trades || 0), 0)}</span>
+              </div>
+              {runningBots.length > 0 && (
+                <div className="flex justify-between items-center">
+                  <span className="text-xs text-[var(--text-secondary)]">Avg. Win Rate</span>
+                  <span className="text-caption font-bold text-[var(--text-secondary)]">
+                    {(() => {
+                      const withWR = runningBots.filter(b => b.backtestWinRate != null);
+                      return withWR.length > 0 ? (withWR.reduce((s, b) => s + (b.backtestWinRate || 0), 0) / withWR.length).toFixed(0) + "%" : "—";
+                    })()}
+                  </span>
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="panel p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-micro">Ready to Deploy</h3>
+              {selectedMulti.length > 1 && (
+                <Button onClick={handleMultiDeploy} className="text-caption font-bold bg-[var(--accent)] text-[var(--bg)] px-3 py-1 rounded-lg flex items-center gap-1">
+                  <Play className="w-3 h-3" /> Deploy {selectedMulti.length} Strategies
+                </Button>
+              )}
+            </div>
+            <div className="space-y-3">
+              {strategiesQuery.isLoading ? (
+                <div className="flex items-center justify-center py-8">
+                  <Activity className="w-5 h-5 animate-spin text-[var(--accent)]" />
+                </div>
+              ) : strategiesQuery.isError ? (
+                <p className="text-xs text-[var(--red)] italic text-center py-4">Failed to load strategies. Please try again.</p>
+              ) : (Array.isArray(strategiesQuery.data) ? strategiesQuery.data : []).map((s: any) => {
+                const isSelected = selectedMulti.includes(s.id);
+                const isRunning = runningBots.some((b) => b.strategyId === s.id);
+                return (
+                <div key={s.id} className={`p-4 rounded-xl bg-[var(--card)] border transition-all group ${isSelected ? "border-[var(--accent)]" : "border-[var(--border)] hover:border-[var(--accent)]/50"}`}>
+                  <div className="flex justify-between items-start mb-3">
+                    <div className="flex items-center gap-2">
+                      <input type="checkbox" checked={isSelected} onChange={() => setSelectedMulti((p) => p.includes(s.id) ? p.filter((id) => id !== s.id) : [...p, s.id])} className="accent-[var(--accent)] w-3.5 h-3.5" />
+                      <h4 className="text-xs font-bold text-white">{s.name}</h4>
+                    </div>
+                    <Zap className="w-3 h-3 text-[var(--accent)]" />
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      className="flex-1 h-8 text-caption font-bold bg-[var(--accent-soft)] text-[var(--accent)] hover:bg-[var(--accent)] hover:text-white border border-[var(--accent-border)]"
+                      disabled={deployingId === s.id || isRunning}
+                      onClick={() => handleDeploy(s)}
+                    >
+                      <Play className="w-3 h-3 mr-2 fill-current" />
+                      {isRunning ? "Running" : deployingId === s.id ? "Deploying..." : "Deploy"}
+                    </Button>
+                  </div>
+                </div>
+              );})}
+              {(!strategiesQuery.data || strategiesQuery.data.length === 0) && (
+                <div className="empty-state"><p className="empty-state-desc">No strategies found.</p></div>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+
+
+) {
+          $result += $w.ToLower()
+        } else {
+          $result += $w.Substring(0,1).ToUpper() + $w.Substring(1).ToLower()
+        }
+      }
+    }
+    $newText = $result -join ' '
+    "$prefix$newText$suffix"
+  
+            <div className="space-y-3">
+              <div className="flex justify-between items-center">
+                <span className="text-xs text-[var(--text-secondary)]">Active Bots</span>
+                <span className={`text-caption font-bold ${runningBots.length > 0 ? "text-[var(--green)]" : "text-[var(--text-muted)]"}`}>{runningBots.length}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-xs text-[var(--text-secondary)]">Idle Bots</span>
+                <span className="text-caption font-bold text-[var(--text-secondary)]">{idleBots.length}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-xs text-[var(--text-secondary)]">Errors</span>
+                <span className={`text-caption font-bold ${errorBots.length > 0 ? "text-[var(--red)]" : "text-[var(--green)]"}`}>{errorBots.length > 0 ? `${errorBots.length} bot(s)` : "None"}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-xs text-[var(--text-secondary)]">Deriv WS</span>
+                <span className={`text-caption font-bold ${derivWS.isAuthorized() ? "text-[var(--green)]" : "text-[var(--red)]"}`}>{derivWS.isAuthorized() ? "Connected" : "Disconnected"}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-xs text-[var(--text-secondary)]">Total Trades</span>
+                <span className="text-caption font-bold text-[var(--text-secondary)]">{runningBots.reduce((s, b) => s + (b.trades || 0), 0)}</span>
+              </div>
+              {runningBots.length > 0 && (
+                <div className="flex justify-between items-center">
+                  <span className="text-xs text-[var(--text-secondary)]">Avg. Win Rate</span>
+                  <span className="text-caption font-bold text-[var(--text-secondary)]">
+                    {(() => {
+                      const withWR = runningBots.filter(b => b.backtestWinRate != null);
+                      return withWR.length > 0 ? (withWR.reduce((s, b) => s + (b.backtestWinRate || 0), 0) / withWR.length).toFixed(0) + "%" : "—";
+                    })()}
+                  </span>
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="panel p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-micro"
+    param($m)
+    $prefix = $m.Groups[1].Value
+    $text = $m.Groups[2].Value
+    $suffix = $m.Groups[3].Value
+    # Skip nav-only patterns and short abbreviations
+    if ($text -match '^(API|AI|FAQ|SLA|P&L|ROI|VPN|URL|SSH|DNS|IP|UI|UX|CSS|HTML|JSON|SVG|FFT|RSI|EMA|SMA|MACD|P&L|2FA|AI|OK|GO|NO|UP|DO|IT)
+              {selectedMulti.length > 1 && (
+                <Button onClick={handleMultiDeploy} className="text-caption font-bold bg-[var(--accent)] text-[var(--bg)] px-3 py-1 rounded-lg flex items-center gap-1">
+                  <Play className="w-3 h-3" /> Deploy {selectedMulti.length} Strategies
+                </Button>
+              )}
+            </div>
+            <div className="space-y-3">
+              {strategiesQuery.isLoading ? (
+                <div className="flex items-center justify-center py-8">
+                  <Activity className="w-5 h-5 animate-spin text-[var(--accent)]" />
+                </div>
+              ) : strategiesQuery.isError ? (
+                <p className="text-xs text-[var(--red)] italic text-center py-4">Failed to load strategies. Please try again.</p>
+              ) : (Array.isArray(strategiesQuery.data) ? strategiesQuery.data : []).map((s: any) => {
+                const isSelected = selectedMulti.includes(s.id);
+                const isRunning = runningBots.some((b) => b.strategyId === s.id);
+                return (
+                <div key={s.id} className={`p-4 rounded-xl bg-[var(--card)] border transition-all group ${isSelected ? "border-[var(--accent)]" : "border-[var(--border)] hover:border-[var(--accent)]/50"}`}>
+                  <div className="flex justify-between items-start mb-3">
+                    <div className="flex items-center gap-2">
+                      <input type="checkbox" checked={isSelected} onChange={() => setSelectedMulti((p) => p.includes(s.id) ? p.filter((id) => id !== s.id) : [...p, s.id])} className="accent-[var(--accent)] w-3.5 h-3.5" />
+                      <h4 className="text-xs font-bold text-white">{s.name}</h4>
+                    </div>
+                    <Zap className="w-3 h-3 text-[var(--accent)]" />
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      className="flex-1 h-8 text-caption font-bold bg-[var(--accent-soft)] text-[var(--accent)] hover:bg-[var(--accent)] hover:text-white border border-[var(--accent-border)]"
+                      disabled={deployingId === s.id || isRunning}
+                      onClick={() => handleDeploy(s)}
+                    >
+                      <Play className="w-3 h-3 mr-2 fill-current" />
+                      {isRunning ? "Running" : deployingId === s.id ? "Deploying..." : "Deploy"}
+                    </Button>
+                  </div>
+                </div>
+              );})}
+              {(!strategiesQuery.data || strategiesQuery.data.length === 0) && (
+                <div className="empty-state"><p className="empty-state-desc">No strategies found.</p></div>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+
+
+) { return "$prefix$text$suffix" }
+    # Convert to sentence case
+    $words = $text -split ' '
+    $result = @()
+    $first = $true
+    foreach ($w in $words) {
+      if ($first) {
+        $result += $w.Substring(0,1).ToUpper() + $w.Substring(1).ToLower()
+        $first = $false
+      } else {
+        # Keep small words lowercase unless first word
+        if ($w -match '^(of|the|and|or|for|to|in|on|at|by|a|an|is|it|as|be|do|no|up)
+              {selectedMulti.length > 1 && (
+                <Button onClick={handleMultiDeploy} className="text-caption font-bold bg-[var(--accent)] text-[var(--bg)] px-3 py-1 rounded-lg flex items-center gap-1">
+                  <Play className="w-3 h-3" /> Deploy {selectedMulti.length} Strategies
+                </Button>
+              )}
+            </div>
+            <div className="space-y-3">
+              {strategiesQuery.isLoading ? (
+                <div className="flex items-center justify-center py-8">
+                  <Activity className="w-5 h-5 animate-spin text-[var(--accent)]" />
+                </div>
+              ) : strategiesQuery.isError ? (
+                <p className="text-xs text-[var(--red)] italic text-center py-4">Failed to load strategies. Please try again.</p>
+              ) : (Array.isArray(strategiesQuery.data) ? strategiesQuery.data : []).map((s: any) => {
+                const isSelected = selectedMulti.includes(s.id);
+                const isRunning = runningBots.some((b) => b.strategyId === s.id);
+                return (
+                <div key={s.id} className={`p-4 rounded-xl bg-[var(--card)] border transition-all group ${isSelected ? "border-[var(--accent)]" : "border-[var(--border)] hover:border-[var(--accent)]/50"}`}>
+                  <div className="flex justify-between items-start mb-3">
+                    <div className="flex items-center gap-2">
+                      <input type="checkbox" checked={isSelected} onChange={() => setSelectedMulti((p) => p.includes(s.id) ? p.filter((id) => id !== s.id) : [...p, s.id])} className="accent-[var(--accent)] w-3.5 h-3.5" />
+                      <h4 className="text-xs font-bold text-white">{s.name}</h4>
+                    </div>
+                    <Zap className="w-3 h-3 text-[var(--accent)]" />
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      className="flex-1 h-8 text-caption font-bold bg-[var(--accent-soft)] text-[var(--accent)] hover:bg-[var(--accent)] hover:text-white border border-[var(--accent-border)]"
+                      disabled={deployingId === s.id || isRunning}
+                      onClick={() => handleDeploy(s)}
+                    >
+                      <Play className="w-3 h-3 mr-2 fill-current" />
+                      {isRunning ? "Running" : deployingId === s.id ? "Deploying..." : "Deploy"}
+                    </Button>
+                  </div>
+                </div>
+              );})}
+              {(!strategiesQuery.data || strategiesQuery.data.length === 0) && (
+                <div className="empty-state"><p className="empty-state-desc">No strategies found.</p></div>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+
+
+) {
+          $result += $w.ToLower()
+        } else {
+          $result += $w.Substring(0,1).ToUpper() + $w.Substring(1).ToLower()
+        }
+      }
+    }
+    $newText = $result -join ' '
+    "$prefix$newText$suffix"
+  
               {selectedMulti.length > 1 && (
                 <Button onClick={handleMultiDeploy} className="text-caption font-bold bg-[var(--accent)] text-[var(--bg)] px-3 py-1 rounded-lg flex items-center gap-1">
                   <Play className="w-3 h-3" /> Deploy {selectedMulti.length} Strategies

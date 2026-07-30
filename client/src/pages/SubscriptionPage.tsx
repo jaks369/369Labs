@@ -101,7 +101,67 @@ export default function SubscriptionPage() {
         <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-6">
           <div className="flex items-center gap-3 mb-4">
             <CreditCard className="w-5 h-5 text-[var(--accent)]" />
-            <h2 className="text-sm font-bold text-white">Payment</h2>
+            <h2 className="text-sm font-bold text-white"
+    param($m)
+    $prefix = $m.Groups[1].Value
+    $text = $m.Groups[2].Value
+    $suffix = $m.Groups[3].Value
+    # Skip nav-only patterns and short abbreviations
+    if ($text -match '^(API|AI|FAQ|SLA|P&L|ROI|VPN|URL|SSH|DNS|IP|UI|UX|CSS|HTML|JSON|SVG|FFT|RSI|EMA|SMA|MACD|P&L|2FA|AI|OK|GO|NO|UP|DO|IT)
+          </div>
+          <p className="text-xs text-[var(--text-secondary)] mb-4">To upgrade or manage your subscription, visit the billing portal.</p>
+          <Button onClick={() => window.open("https://billing.stripe.com", "_blank")} className="bg-[var(--accent)] text-black text-xs font-bold px-6 py-2.5 rounded-lg">
+            Manage Billing
+          </Button>
+        </div>
+
+        <div className="text-center">
+          <p className="text-xs text-[var(--text-muted)] flex items-center justify-center gap-1">
+            <Sparkles className="w-3 h-3 text-[var(--accent)]" /> All plans include paper trading, basic backtesting, and community strategies.
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+) { return "$prefix$text$suffix" }
+    # Convert to sentence case
+    $words = $text -split ' '
+    $result = @()
+    $first = $true
+    foreach ($w in $words) {
+      if ($first) {
+        $result += $w.Substring(0,1).ToUpper() + $w.Substring(1).ToLower()
+        $first = $false
+      } else {
+        # Keep small words lowercase unless first word
+        if ($w -match '^(of|the|and|or|for|to|in|on|at|by|a|an|is|it|as|be|do|no|up)
+          </div>
+          <p className="text-xs text-[var(--text-secondary)] mb-4">To upgrade or manage your subscription, visit the billing portal.</p>
+          <Button onClick={() => window.open("https://billing.stripe.com", "_blank")} className="bg-[var(--accent)] text-black text-xs font-bold px-6 py-2.5 rounded-lg">
+            Manage Billing
+          </Button>
+        </div>
+
+        <div className="text-center">
+          <p className="text-xs text-[var(--text-muted)] flex items-center justify-center gap-1">
+            <Sparkles className="w-3 h-3 text-[var(--accent)]" /> All plans include paper trading, basic backtesting, and community strategies.
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+) {
+          $result += $w.ToLower()
+        } else {
+          $result += $w.Substring(0,1).ToUpper() + $w.Substring(1).ToLower()
+        }
+      }
+    }
+    $newText = $result -join ' '
+    "$prefix$newText$suffix"
+  
           </div>
           <p className="text-xs text-[var(--text-secondary)] mb-4">To upgrade or manage your subscription, visit the billing portal.</p>
           <Button onClick={() => window.open("https://billing.stripe.com", "_blank")} className="bg-[var(--accent)] text-black text-xs font-bold px-6 py-2.5 rounded-lg">

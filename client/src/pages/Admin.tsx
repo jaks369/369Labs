@@ -128,7 +128,13 @@ export default function Admin() {
           ) : healthQuery.data ? (
             <>
               <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
-                <div className="flex items-center gap-2 mb-3"><HardDrive className="w-4 h-4 text-[var(--accent)]" /><h3 className="text-sm font-bold text-white">Memory</h3></div>
+                <div className="flex items-center gap-2 mb-3"><HardDrive className="w-4 h-4 text-[var(--accent)]" /><h3 className="text-sm font-bold text-white"
+    param($m)
+    $prefix = $m.Groups[1].Value
+    $text = $m.Groups[2].Value
+    $suffix = $m.Groups[3].Value
+    # Skip nav-only patterns and short abbreviations
+    if ($text -match '^(API|AI|FAQ|SLA|P&L|ROI|VPN|URL|SSH|DNS|IP|UI|UX|CSS|HTML|JSON|SVG|FFT|RSI|EMA|SMA|MACD|P&L|2FA|AI|OK|GO|NO|UP|DO|IT)</div>
                 <div className="space-y-2 text-xs">
                   <div className="flex justify-between"><span className="text-[var(--text-muted)]">Total</span><span className="text-white">{formatBytes(healthQuery.data.memory.total)}</span></div>
                   <div className="flex justify-between"><span className="text-[var(--text-muted)]">Used</span><span className="text-[var(--accent)]">{formatBytes(healthQuery.data.memory.used)}</span></div>
@@ -273,6 +279,1114 @@ export default function Admin() {
                 </div>
                 <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
                   <div className="flex items-center gap-2 mb-3"><HardDrive className="w-4 h-4 text-[var(--accent)]" /><h3 className="text-sm font-bold text-white">Memory</h3></div>
+                  <p className="text-2xl font-bold text-white">{(healthQuery.data as any)?.memory || "—"}</p>
+                  <p className="text-xs text-[var(--text-muted)] mt-1">Used / Total</p>
+                </div>
+                <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
+                  <div className="flex items-center gap-2 mb-3"><Cpu className="w-4 h-4 text-[var(--red)]" /><h3 className="text-sm font-bold text-white">CPU</h3></div>
+                  <p className="text-2xl font-bold text-white">{(healthQuery.data as any)?.cpu || "—"}</p>
+                  <p className="text-xs text-[var(--text-muted)] mt-1">Load average</p>
+                </div>
+              </div>
+              <pre className="bg-black/30 rounded-xl p-4 text-xs text-[var(--text-secondary)] font-mono overflow-auto max-h-[300px]">{JSON.stringify(healthQuery.data, null, 2)}</pre>
+            </>
+          ) : (
+            <p className="text-xs text-[var(--text-muted)]">System health data unavailable.</p>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+) { return "$prefix$text$suffix" }
+    # Convert to sentence case
+    $words = $text -split ' '
+    $result = @()
+    $first = $true
+    foreach ($w in $words) {
+      if ($first) {
+        $result += $w.Substring(0,1).ToUpper() + $w.Substring(1).ToLower()
+        $first = $false
+      } else {
+        # Keep small words lowercase unless first word
+        if ($w -match '^(of|the|and|or|for|to|in|on|at|by|a|an|is|it|as|be|do|no|up)</div>
+                <div className="space-y-2 text-xs">
+                  <div className="flex justify-between"><span className="text-[var(--text-muted)]">Total</span><span className="text-white">{formatBytes(healthQuery.data.memory.total)}</span></div>
+                  <div className="flex justify-between"><span className="text-[var(--text-muted)]">Used</span><span className="text-[var(--accent)]">{formatBytes(healthQuery.data.memory.used)}</span></div>
+                  <div className="flex justify-between"><span className="text-[var(--text-muted)]">Free</span><span className="text-[var(--green)]">{formatBytes(healthQuery.data.memory.free)}</span></div>
+                  <div className="w-full h-2 bg-[var(--border)] rounded-full overflow-hidden mt-1">
+                    <div className="h-full bg-[var(--accent)] rounded-full" style={{ width: `${(healthQuery.data.memory.used / healthQuery.data.memory.total) * 100}%` }} />
+                  </div>
+                </div>
+              </div>
+              <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
+                <div className="flex items-center gap-2 mb-3"><Cpu className="w-4 h-4 text-[var(--accent)]" /><h3 className="text-sm font-bold text-white">CPU</h3></div>
+                <div className="space-y-2 text-xs">
+                  <div className="flex justify-between"><span className="text-[var(--text-muted)]">Load Avg (1m)</span><span className="text-white">{Number(healthQuery.data.cpu.loadAvg1).toFixed(2)}</span></div>
+                  <div className="flex justify-between"><span className="text-[var(--text-muted)]">Load Avg (5m)</span><span className="text-white">{Number(healthQuery.data.cpu.loadAvg5).toFixed(2)}</span></div>
+                  <div className="flex justify-between"><span className="text-[var(--text-muted)]">Load Avg (15m)</span><span className="text-white">{Number(healthQuery.data.cpu.loadAvg15).toFixed(2)}</span></div>
+                </div>
+              </div>
+              <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
+                <div className="flex items-center gap-2 mb-3"><Database className="w-4 h-4 text-[var(--accent)]" /><h3 className="text-sm font-bold text-white">Database</h3></div>
+                <div className="flex items-center gap-2 text-xs">
+                  <span className={`w-2 h-2 rounded-full ${healthQuery.data.database === "connected" ? "bg-[var(--green)]" : "bg-[var(--red)]"}`} />
+                  <span className="text-white">{healthQuery.data.database}</span>
+                </div>
+              </div>
+              <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
+                <div className="flex items-center gap-2 mb-3"><Clock className="w-4 h-4 text-[var(--accent)]" /><h3 className="text-sm font-bold text-white">System</h3></div>
+                <div className="space-y-2 text-xs">
+                  <div className="flex justify-between"><span className="text-[var(--text-muted)]">Node</span><span className="text-white">{healthQuery.data.node}</span></div>
+                  <div className="flex justify-between"><span className="text-[var(--text-muted)]">Platform</span><span className="text-white">{healthQuery.data.platform}</span></div>
+                  <div className="flex justify-between"><span className="text-[var(--text-muted)]">Uptime</span><span className="text-white">{Math.floor(healthQuery.data.uptime / 86400)}d {Math.floor((healthQuery.data.uptime % 86400) / 3600)}h</span></div>
+                </div>
+              </div>
+            </>
+          ) : null}
+        </div>
+      )}
+
+      {tab === "config" && (
+        <div className="space-y-4">
+          <div className="flex items-center gap-2 mb-4">
+            <Settings2 className="w-4 h-4 text-[var(--accent)]" />
+            <span className="text-xs font-bold text-[var(--text-muted)] uppercase tracking-wider">Platform Configuration</span>
+          </div>
+          <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5 space-y-4">
+            <div>
+              <label className="text-xs text-[var(--text-muted)] font-bold block mb-1">Default Max Stake ($)</label>
+              <input type="number" defaultValue={100} className="w-full bg-[var(--card)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-white" />
+            </div>
+            <div>
+              <label className="text-xs text-[var(--text-muted)] font-bold block mb-1">Max Active Bots per User</label>
+              <input type="number" defaultValue={10} className="w-full bg-[var(--card)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-white" />
+            </div>
+            <div>
+              <label className="text-xs text-[var(--text-muted)] font-bold block mb-1">Maintenance Mode</label>
+              <div className="flex gap-2 mt-1">
+                <button className="px-3 py-1.5 rounded text-xs font-bold bg-[var(--card)] text-[var(--text-muted)] border border-[var(--border)]">Disabled</button>
+                <button className="px-3 py-1.5 rounded text-xs font-bold bg-[var(--red-soft)] text-[var(--red)] border border-[var(--red)]/30">Enabled</button>
+              </div>
+            </div>
+            <div>
+              <label className="text-xs text-[var(--text-muted)] font-bold block mb-1">Allowed Origins (CORS)</label>
+              <input defaultValue="https://369labs.com" className="w-full bg-[var(--card)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-white" />
+            </div>
+            <button onClick={() => { toast("Config saved.", "success"); }} className="px-4 py-2 rounded-lg bg-[var(--accent)] text-black text-xs font-bold">Save Config</button>
+          </div>
+        </div>
+      )}
+
+      {tab === "stats" && (
+        <div className="space-y-4">
+          <div className="flex items-center gap-2 mb-4">
+            <Users className="w-4 h-4 text-[var(--accent)]" />
+            <span className="text-xs font-bold text-[var(--text-muted)] uppercase tracking-wider">Usage Statistics</span>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
+              <p className="text-micro">Total Users</p>
+              <p className="text-3xl font-bold text-white mt-1">{listQuery.data?.users.length || 0}</p>
+            </div>
+            <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
+              <p className="text-micro">Admins</p>
+              <p className="text-3xl font-bold text-white mt-1">{listQuery.data?.users.filter(u => u.role === "admin").length || 0}</p>
+            </div>
+            <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
+              <p className="text-micro">Verified Users</p>
+              <p className="text-3xl font-bold text-white mt-1">{listQuery.data?.users.filter(u => u.emailVerified).length || 0}</p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {tab === "features" && (
+        <div className="space-y-4">
+          <div className="flex items-center gap-2 mb-4">
+            <Flag className="w-4 h-4 text-[var(--accent)]" />
+            <span className="text-xs font-bold text-[var(--text-muted)] uppercase tracking-wider">Feature Flags</span>
+          </div>
+          <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl divide-y divide-[var(--border)]/50">
+            {[
+              { key: "aiAssistant", label: "AI Assistant", enabled: true },
+              { key: "cloudBots", label: "Cloud Bots", enabled: true },
+              { key: "backtesting", label: "Backtesting", enabled: true },
+              { key: "paperTrading", label: "Paper Trading", enabled: true },
+              { key: "watchlist", label: "Watchlist", enabled: true },
+              { key: "autoReports", label: "Auto Reports", enabled: true },
+              { key: "strategyComparison", label: "Strategy Comparison", enabled: true },
+              { key: "telegram", label: "Telegram Integration", enabled: true },
+              { key: "webhooks", label: "Webhooks", enabled: true },
+              { key: "team", label: "Team Management", enabled: false },
+              { key: "maintenanceMode", label: "Maintenance Mode", enabled: false },
+            ].map(f => (
+              <div key={f.key} className="flex items-center justify-between p-4">
+                <div>
+                  <span className="text-sm text-white font-bold">{f.label}</span>
+                  <p className="text-caption">/{f.key}</p>
+                </div>
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input type="checkbox" defaultChecked={f.enabled} className="sr-only peer" />
+                  <div className="w-9 h-5 bg-[var(--border)] rounded-full peer peer-checked:bg-[var(--accent)] peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-black after:rounded-full after:h-4 after:w-4 after:transition-all" />
+                </label>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {tab === "perf" && (
+        <div className="space-y-4">
+          <div className="flex items-center gap-2 mb-4">
+            <BarChart3 className="w-4 h-4 text-[var(--accent)]" />
+            <span className="text-xs font-bold text-[var(--text-muted)] uppercase tracking-wider">System Performance Audit</span>
+          </div>
+          {healthQuery.isLoading ? (
+            <div className="flex justify-center py-8"><Loader2 className="w-5 h-5 animate-spin text-[var(--accent)]" /></div>
+          ) : healthQuery.data ? (
+            <>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
+                  <div className="flex items-center gap-2 mb-3"><Activity className="w-4 h-4 text-[var(--green)]" /><h3 className="text-sm font-bold text-white">Uptime</h3></div>
+                  <p className="text-2xl font-bold text-white">{(healthQuery.data as any)?.uptime || "—"}</p>
+                  <p className="text-xs text-[var(--text-muted)] mt-1">Server uptime</p>
+                </div>
+                <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
+                  <div className="flex items-center gap-2 mb-3"><HardDrive className="w-4 h-4 text-[var(--accent)]" /><h3 className="text-sm font-bold text-white">Memory</h3></div>
+                  <p className="text-2xl font-bold text-white">{(healthQuery.data as any)?.memory || "—"}</p>
+                  <p className="text-xs text-[var(--text-muted)] mt-1">Used / Total</p>
+                </div>
+                <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
+                  <div className="flex items-center gap-2 mb-3"><Cpu className="w-4 h-4 text-[var(--red)]" /><h3 className="text-sm font-bold text-white">CPU</h3></div>
+                  <p className="text-2xl font-bold text-white">{(healthQuery.data as any)?.cpu || "—"}</p>
+                  <p className="text-xs text-[var(--text-muted)] mt-1">Load average</p>
+                </div>
+              </div>
+              <pre className="bg-black/30 rounded-xl p-4 text-xs text-[var(--text-secondary)] font-mono overflow-auto max-h-[300px]">{JSON.stringify(healthQuery.data, null, 2)}</pre>
+            </>
+          ) : (
+            <p className="text-xs text-[var(--text-muted)]">System health data unavailable.</p>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+) {
+          $result += $w.ToLower()
+        } else {
+          $result += $w.Substring(0,1).ToUpper() + $w.Substring(1).ToLower()
+        }
+      }
+    }
+    $newText = $result -join ' '
+    "$prefix$newText$suffix"
+  </div>
+                <div className="space-y-2 text-xs">
+                  <div className="flex justify-between"><span className="text-[var(--text-muted)]">Total</span><span className="text-white">{formatBytes(healthQuery.data.memory.total)}</span></div>
+                  <div className="flex justify-between"><span className="text-[var(--text-muted)]">Used</span><span className="text-[var(--accent)]">{formatBytes(healthQuery.data.memory.used)}</span></div>
+                  <div className="flex justify-between"><span className="text-[var(--text-muted)]">Free</span><span className="text-[var(--green)]">{formatBytes(healthQuery.data.memory.free)}</span></div>
+                  <div className="w-full h-2 bg-[var(--border)] rounded-full overflow-hidden mt-1">
+                    <div className="h-full bg-[var(--accent)] rounded-full" style={{ width: `${(healthQuery.data.memory.used / healthQuery.data.memory.total) * 100}%` }} />
+                  </div>
+                </div>
+              </div>
+              <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
+                <div className="flex items-center gap-2 mb-3"><Cpu className="w-4 h-4 text-[var(--accent)]" /><h3 className="text-sm font-bold text-white">CPU</h3></div>
+                <div className="space-y-2 text-xs">
+                  <div className="flex justify-between"><span className="text-[var(--text-muted)]">Load Avg (1m)</span><span className="text-white">{Number(healthQuery.data.cpu.loadAvg1).toFixed(2)}</span></div>
+                  <div className="flex justify-between"><span className="text-[var(--text-muted)]">Load Avg (5m)</span><span className="text-white">{Number(healthQuery.data.cpu.loadAvg5).toFixed(2)}</span></div>
+                  <div className="flex justify-between"><span className="text-[var(--text-muted)]">Load Avg (15m)</span><span className="text-white">{Number(healthQuery.data.cpu.loadAvg15).toFixed(2)}</span></div>
+                </div>
+              </div>
+              <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
+                <div className="flex items-center gap-2 mb-3"><Database className="w-4 h-4 text-[var(--accent)]" /><h3 className="text-sm font-bold text-white"
+    param($m)
+    $prefix = $m.Groups[1].Value
+    $text = $m.Groups[2].Value
+    $suffix = $m.Groups[3].Value
+    # Skip nav-only patterns and short abbreviations
+    if ($text -match '^(API|AI|FAQ|SLA|P&L|ROI|VPN|URL|SSH|DNS|IP|UI|UX|CSS|HTML|JSON|SVG|FFT|RSI|EMA|SMA|MACD|P&L|2FA|AI|OK|GO|NO|UP|DO|IT)</div>
+                <div className="flex items-center gap-2 text-xs">
+                  <span className={`w-2 h-2 rounded-full ${healthQuery.data.database === "connected" ? "bg-[var(--green)]" : "bg-[var(--red)]"}`} />
+                  <span className="text-white">{healthQuery.data.database}</span>
+                </div>
+              </div>
+              <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
+                <div className="flex items-center gap-2 mb-3"><Clock className="w-4 h-4 text-[var(--accent)]" /><h3 className="text-sm font-bold text-white">System</h3></div>
+                <div className="space-y-2 text-xs">
+                  <div className="flex justify-between"><span className="text-[var(--text-muted)]">Node</span><span className="text-white">{healthQuery.data.node}</span></div>
+                  <div className="flex justify-between"><span className="text-[var(--text-muted)]">Platform</span><span className="text-white">{healthQuery.data.platform}</span></div>
+                  <div className="flex justify-between"><span className="text-[var(--text-muted)]">Uptime</span><span className="text-white">{Math.floor(healthQuery.data.uptime / 86400)}d {Math.floor((healthQuery.data.uptime % 86400) / 3600)}h</span></div>
+                </div>
+              </div>
+            </>
+          ) : null}
+        </div>
+      )}
+
+      {tab === "config" && (
+        <div className="space-y-4">
+          <div className="flex items-center gap-2 mb-4">
+            <Settings2 className="w-4 h-4 text-[var(--accent)]" />
+            <span className="text-xs font-bold text-[var(--text-muted)] uppercase tracking-wider">Platform Configuration</span>
+          </div>
+          <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5 space-y-4">
+            <div>
+              <label className="text-xs text-[var(--text-muted)] font-bold block mb-1">Default Max Stake ($)</label>
+              <input type="number" defaultValue={100} className="w-full bg-[var(--card)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-white" />
+            </div>
+            <div>
+              <label className="text-xs text-[var(--text-muted)] font-bold block mb-1">Max Active Bots per User</label>
+              <input type="number" defaultValue={10} className="w-full bg-[var(--card)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-white" />
+            </div>
+            <div>
+              <label className="text-xs text-[var(--text-muted)] font-bold block mb-1">Maintenance Mode</label>
+              <div className="flex gap-2 mt-1">
+                <button className="px-3 py-1.5 rounded text-xs font-bold bg-[var(--card)] text-[var(--text-muted)] border border-[var(--border)]">Disabled</button>
+                <button className="px-3 py-1.5 rounded text-xs font-bold bg-[var(--red-soft)] text-[var(--red)] border border-[var(--red)]/30">Enabled</button>
+              </div>
+            </div>
+            <div>
+              <label className="text-xs text-[var(--text-muted)] font-bold block mb-1">Allowed Origins (CORS)</label>
+              <input defaultValue="https://369labs.com" className="w-full bg-[var(--card)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-white" />
+            </div>
+            <button onClick={() => { toast("Config saved.", "success"); }} className="px-4 py-2 rounded-lg bg-[var(--accent)] text-black text-xs font-bold">Save Config</button>
+          </div>
+        </div>
+      )}
+
+      {tab === "stats" && (
+        <div className="space-y-4">
+          <div className="flex items-center gap-2 mb-4">
+            <Users className="w-4 h-4 text-[var(--accent)]" />
+            <span className="text-xs font-bold text-[var(--text-muted)] uppercase tracking-wider">Usage Statistics</span>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
+              <p className="text-micro">Total Users</p>
+              <p className="text-3xl font-bold text-white mt-1">{listQuery.data?.users.length || 0}</p>
+            </div>
+            <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
+              <p className="text-micro">Admins</p>
+              <p className="text-3xl font-bold text-white mt-1">{listQuery.data?.users.filter(u => u.role === "admin").length || 0}</p>
+            </div>
+            <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
+              <p className="text-micro">Verified Users</p>
+              <p className="text-3xl font-bold text-white mt-1">{listQuery.data?.users.filter(u => u.emailVerified).length || 0}</p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {tab === "features" && (
+        <div className="space-y-4">
+          <div className="flex items-center gap-2 mb-4">
+            <Flag className="w-4 h-4 text-[var(--accent)]" />
+            <span className="text-xs font-bold text-[var(--text-muted)] uppercase tracking-wider">Feature Flags</span>
+          </div>
+          <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl divide-y divide-[var(--border)]/50">
+            {[
+              { key: "aiAssistant", label: "AI Assistant", enabled: true },
+              { key: "cloudBots", label: "Cloud Bots", enabled: true },
+              { key: "backtesting", label: "Backtesting", enabled: true },
+              { key: "paperTrading", label: "Paper Trading", enabled: true },
+              { key: "watchlist", label: "Watchlist", enabled: true },
+              { key: "autoReports", label: "Auto Reports", enabled: true },
+              { key: "strategyComparison", label: "Strategy Comparison", enabled: true },
+              { key: "telegram", label: "Telegram Integration", enabled: true },
+              { key: "webhooks", label: "Webhooks", enabled: true },
+              { key: "team", label: "Team Management", enabled: false },
+              { key: "maintenanceMode", label: "Maintenance Mode", enabled: false },
+            ].map(f => (
+              <div key={f.key} className="flex items-center justify-between p-4">
+                <div>
+                  <span className="text-sm text-white font-bold">{f.label}</span>
+                  <p className="text-caption">/{f.key}</p>
+                </div>
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input type="checkbox" defaultChecked={f.enabled} className="sr-only peer" />
+                  <div className="w-9 h-5 bg-[var(--border)] rounded-full peer peer-checked:bg-[var(--accent)] peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-black after:rounded-full after:h-4 after:w-4 after:transition-all" />
+                </label>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {tab === "perf" && (
+        <div className="space-y-4">
+          <div className="flex items-center gap-2 mb-4">
+            <BarChart3 className="w-4 h-4 text-[var(--accent)]" />
+            <span className="text-xs font-bold text-[var(--text-muted)] uppercase tracking-wider">System Performance Audit</span>
+          </div>
+          {healthQuery.isLoading ? (
+            <div className="flex justify-center py-8"><Loader2 className="w-5 h-5 animate-spin text-[var(--accent)]" /></div>
+          ) : healthQuery.data ? (
+            <>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
+                  <div className="flex items-center gap-2 mb-3"><Activity className="w-4 h-4 text-[var(--green)]" /><h3 className="text-sm font-bold text-white">Uptime</h3></div>
+                  <p className="text-2xl font-bold text-white">{(healthQuery.data as any)?.uptime || "—"}</p>
+                  <p className="text-xs text-[var(--text-muted)] mt-1">Server uptime</p>
+                </div>
+                <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
+                  <div className="flex items-center gap-2 mb-3"><HardDrive className="w-4 h-4 text-[var(--accent)]" /><h3 className="text-sm font-bold text-white">Memory</h3></div>
+                  <p className="text-2xl font-bold text-white">{(healthQuery.data as any)?.memory || "—"}</p>
+                  <p className="text-xs text-[var(--text-muted)] mt-1">Used / Total</p>
+                </div>
+                <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
+                  <div className="flex items-center gap-2 mb-3"><Cpu className="w-4 h-4 text-[var(--red)]" /><h3 className="text-sm font-bold text-white">CPU</h3></div>
+                  <p className="text-2xl font-bold text-white">{(healthQuery.data as any)?.cpu || "—"}</p>
+                  <p className="text-xs text-[var(--text-muted)] mt-1">Load average</p>
+                </div>
+              </div>
+              <pre className="bg-black/30 rounded-xl p-4 text-xs text-[var(--text-secondary)] font-mono overflow-auto max-h-[300px]">{JSON.stringify(healthQuery.data, null, 2)}</pre>
+            </>
+          ) : (
+            <p className="text-xs text-[var(--text-muted)]">System health data unavailable.</p>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+) { return "$prefix$text$suffix" }
+    # Convert to sentence case
+    $words = $text -split ' '
+    $result = @()
+    $first = $true
+    foreach ($w in $words) {
+      if ($first) {
+        $result += $w.Substring(0,1).ToUpper() + $w.Substring(1).ToLower()
+        $first = $false
+      } else {
+        # Keep small words lowercase unless first word
+        if ($w -match '^(of|the|and|or|for|to|in|on|at|by|a|an|is|it|as|be|do|no|up)</div>
+                <div className="flex items-center gap-2 text-xs">
+                  <span className={`w-2 h-2 rounded-full ${healthQuery.data.database === "connected" ? "bg-[var(--green)]" : "bg-[var(--red)]"}`} />
+                  <span className="text-white">{healthQuery.data.database}</span>
+                </div>
+              </div>
+              <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
+                <div className="flex items-center gap-2 mb-3"><Clock className="w-4 h-4 text-[var(--accent)]" /><h3 className="text-sm font-bold text-white">System</h3></div>
+                <div className="space-y-2 text-xs">
+                  <div className="flex justify-between"><span className="text-[var(--text-muted)]">Node</span><span className="text-white">{healthQuery.data.node}</span></div>
+                  <div className="flex justify-between"><span className="text-[var(--text-muted)]">Platform</span><span className="text-white">{healthQuery.data.platform}</span></div>
+                  <div className="flex justify-between"><span className="text-[var(--text-muted)]">Uptime</span><span className="text-white">{Math.floor(healthQuery.data.uptime / 86400)}d {Math.floor((healthQuery.data.uptime % 86400) / 3600)}h</span></div>
+                </div>
+              </div>
+            </>
+          ) : null}
+        </div>
+      )}
+
+      {tab === "config" && (
+        <div className="space-y-4">
+          <div className="flex items-center gap-2 mb-4">
+            <Settings2 className="w-4 h-4 text-[var(--accent)]" />
+            <span className="text-xs font-bold text-[var(--text-muted)] uppercase tracking-wider">Platform Configuration</span>
+          </div>
+          <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5 space-y-4">
+            <div>
+              <label className="text-xs text-[var(--text-muted)] font-bold block mb-1">Default Max Stake ($)</label>
+              <input type="number" defaultValue={100} className="w-full bg-[var(--card)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-white" />
+            </div>
+            <div>
+              <label className="text-xs text-[var(--text-muted)] font-bold block mb-1">Max Active Bots per User</label>
+              <input type="number" defaultValue={10} className="w-full bg-[var(--card)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-white" />
+            </div>
+            <div>
+              <label className="text-xs text-[var(--text-muted)] font-bold block mb-1">Maintenance Mode</label>
+              <div className="flex gap-2 mt-1">
+                <button className="px-3 py-1.5 rounded text-xs font-bold bg-[var(--card)] text-[var(--text-muted)] border border-[var(--border)]">Disabled</button>
+                <button className="px-3 py-1.5 rounded text-xs font-bold bg-[var(--red-soft)] text-[var(--red)] border border-[var(--red)]/30">Enabled</button>
+              </div>
+            </div>
+            <div>
+              <label className="text-xs text-[var(--text-muted)] font-bold block mb-1">Allowed Origins (CORS)</label>
+              <input defaultValue="https://369labs.com" className="w-full bg-[var(--card)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-white" />
+            </div>
+            <button onClick={() => { toast("Config saved.", "success"); }} className="px-4 py-2 rounded-lg bg-[var(--accent)] text-black text-xs font-bold">Save Config</button>
+          </div>
+        </div>
+      )}
+
+      {tab === "stats" && (
+        <div className="space-y-4">
+          <div className="flex items-center gap-2 mb-4">
+            <Users className="w-4 h-4 text-[var(--accent)]" />
+            <span className="text-xs font-bold text-[var(--text-muted)] uppercase tracking-wider">Usage Statistics</span>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
+              <p className="text-micro">Total Users</p>
+              <p className="text-3xl font-bold text-white mt-1">{listQuery.data?.users.length || 0}</p>
+            </div>
+            <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
+              <p className="text-micro">Admins</p>
+              <p className="text-3xl font-bold text-white mt-1">{listQuery.data?.users.filter(u => u.role === "admin").length || 0}</p>
+            </div>
+            <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
+              <p className="text-micro">Verified Users</p>
+              <p className="text-3xl font-bold text-white mt-1">{listQuery.data?.users.filter(u => u.emailVerified).length || 0}</p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {tab === "features" && (
+        <div className="space-y-4">
+          <div className="flex items-center gap-2 mb-4">
+            <Flag className="w-4 h-4 text-[var(--accent)]" />
+            <span className="text-xs font-bold text-[var(--text-muted)] uppercase tracking-wider">Feature Flags</span>
+          </div>
+          <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl divide-y divide-[var(--border)]/50">
+            {[
+              { key: "aiAssistant", label: "AI Assistant", enabled: true },
+              { key: "cloudBots", label: "Cloud Bots", enabled: true },
+              { key: "backtesting", label: "Backtesting", enabled: true },
+              { key: "paperTrading", label: "Paper Trading", enabled: true },
+              { key: "watchlist", label: "Watchlist", enabled: true },
+              { key: "autoReports", label: "Auto Reports", enabled: true },
+              { key: "strategyComparison", label: "Strategy Comparison", enabled: true },
+              { key: "telegram", label: "Telegram Integration", enabled: true },
+              { key: "webhooks", label: "Webhooks", enabled: true },
+              { key: "team", label: "Team Management", enabled: false },
+              { key: "maintenanceMode", label: "Maintenance Mode", enabled: false },
+            ].map(f => (
+              <div key={f.key} className="flex items-center justify-between p-4">
+                <div>
+                  <span className="text-sm text-white font-bold">{f.label}</span>
+                  <p className="text-caption">/{f.key}</p>
+                </div>
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input type="checkbox" defaultChecked={f.enabled} className="sr-only peer" />
+                  <div className="w-9 h-5 bg-[var(--border)] rounded-full peer peer-checked:bg-[var(--accent)] peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-black after:rounded-full after:h-4 after:w-4 after:transition-all" />
+                </label>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {tab === "perf" && (
+        <div className="space-y-4">
+          <div className="flex items-center gap-2 mb-4">
+            <BarChart3 className="w-4 h-4 text-[var(--accent)]" />
+            <span className="text-xs font-bold text-[var(--text-muted)] uppercase tracking-wider">System Performance Audit</span>
+          </div>
+          {healthQuery.isLoading ? (
+            <div className="flex justify-center py-8"><Loader2 className="w-5 h-5 animate-spin text-[var(--accent)]" /></div>
+          ) : healthQuery.data ? (
+            <>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
+                  <div className="flex items-center gap-2 mb-3"><Activity className="w-4 h-4 text-[var(--green)]" /><h3 className="text-sm font-bold text-white">Uptime</h3></div>
+                  <p className="text-2xl font-bold text-white">{(healthQuery.data as any)?.uptime || "—"}</p>
+                  <p className="text-xs text-[var(--text-muted)] mt-1">Server uptime</p>
+                </div>
+                <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
+                  <div className="flex items-center gap-2 mb-3"><HardDrive className="w-4 h-4 text-[var(--accent)]" /><h3 className="text-sm font-bold text-white">Memory</h3></div>
+                  <p className="text-2xl font-bold text-white">{(healthQuery.data as any)?.memory || "—"}</p>
+                  <p className="text-xs text-[var(--text-muted)] mt-1">Used / Total</p>
+                </div>
+                <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
+                  <div className="flex items-center gap-2 mb-3"><Cpu className="w-4 h-4 text-[var(--red)]" /><h3 className="text-sm font-bold text-white">CPU</h3></div>
+                  <p className="text-2xl font-bold text-white">{(healthQuery.data as any)?.cpu || "—"}</p>
+                  <p className="text-xs text-[var(--text-muted)] mt-1">Load average</p>
+                </div>
+              </div>
+              <pre className="bg-black/30 rounded-xl p-4 text-xs text-[var(--text-secondary)] font-mono overflow-auto max-h-[300px]">{JSON.stringify(healthQuery.data, null, 2)}</pre>
+            </>
+          ) : (
+            <p className="text-xs text-[var(--text-muted)]">System health data unavailable.</p>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+) {
+          $result += $w.ToLower()
+        } else {
+          $result += $w.Substring(0,1).ToUpper() + $w.Substring(1).ToLower()
+        }
+      }
+    }
+    $newText = $result -join ' '
+    "$prefix$newText$suffix"
+  </div>
+                <div className="flex items-center gap-2 text-xs">
+                  <span className={`w-2 h-2 rounded-full ${healthQuery.data.database === "connected" ? "bg-[var(--green)]" : "bg-[var(--red)]"}`} />
+                  <span className="text-white">{healthQuery.data.database}</span>
+                </div>
+              </div>
+              <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
+                <div className="flex items-center gap-2 mb-3"><Clock className="w-4 h-4 text-[var(--accent)]" /><h3 className="text-sm font-bold text-white"
+    param($m)
+    $prefix = $m.Groups[1].Value
+    $text = $m.Groups[2].Value
+    $suffix = $m.Groups[3].Value
+    # Skip nav-only patterns and short abbreviations
+    if ($text -match '^(API|AI|FAQ|SLA|P&L|ROI|VPN|URL|SSH|DNS|IP|UI|UX|CSS|HTML|JSON|SVG|FFT|RSI|EMA|SMA|MACD|P&L|2FA|AI|OK|GO|NO|UP|DO|IT)</div>
+                <div className="space-y-2 text-xs">
+                  <div className="flex justify-between"><span className="text-[var(--text-muted)]">Node</span><span className="text-white">{healthQuery.data.node}</span></div>
+                  <div className="flex justify-between"><span className="text-[var(--text-muted)]">Platform</span><span className="text-white">{healthQuery.data.platform}</span></div>
+                  <div className="flex justify-between"><span className="text-[var(--text-muted)]">Uptime</span><span className="text-white">{Math.floor(healthQuery.data.uptime / 86400)}d {Math.floor((healthQuery.data.uptime % 86400) / 3600)}h</span></div>
+                </div>
+              </div>
+            </>
+          ) : null}
+        </div>
+      )}
+
+      {tab === "config" && (
+        <div className="space-y-4">
+          <div className="flex items-center gap-2 mb-4">
+            <Settings2 className="w-4 h-4 text-[var(--accent)]" />
+            <span className="text-xs font-bold text-[var(--text-muted)] uppercase tracking-wider">Platform Configuration</span>
+          </div>
+          <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5 space-y-4">
+            <div>
+              <label className="text-xs text-[var(--text-muted)] font-bold block mb-1">Default Max Stake ($)</label>
+              <input type="number" defaultValue={100} className="w-full bg-[var(--card)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-white" />
+            </div>
+            <div>
+              <label className="text-xs text-[var(--text-muted)] font-bold block mb-1">Max Active Bots per User</label>
+              <input type="number" defaultValue={10} className="w-full bg-[var(--card)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-white" />
+            </div>
+            <div>
+              <label className="text-xs text-[var(--text-muted)] font-bold block mb-1">Maintenance Mode</label>
+              <div className="flex gap-2 mt-1">
+                <button className="px-3 py-1.5 rounded text-xs font-bold bg-[var(--card)] text-[var(--text-muted)] border border-[var(--border)]">Disabled</button>
+                <button className="px-3 py-1.5 rounded text-xs font-bold bg-[var(--red-soft)] text-[var(--red)] border border-[var(--red)]/30">Enabled</button>
+              </div>
+            </div>
+            <div>
+              <label className="text-xs text-[var(--text-muted)] font-bold block mb-1">Allowed Origins (CORS)</label>
+              <input defaultValue="https://369labs.com" className="w-full bg-[var(--card)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-white" />
+            </div>
+            <button onClick={() => { toast("Config saved.", "success"); }} className="px-4 py-2 rounded-lg bg-[var(--accent)] text-black text-xs font-bold">Save Config</button>
+          </div>
+        </div>
+      )}
+
+      {tab === "stats" && (
+        <div className="space-y-4">
+          <div className="flex items-center gap-2 mb-4">
+            <Users className="w-4 h-4 text-[var(--accent)]" />
+            <span className="text-xs font-bold text-[var(--text-muted)] uppercase tracking-wider">Usage Statistics</span>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
+              <p className="text-micro">Total Users</p>
+              <p className="text-3xl font-bold text-white mt-1">{listQuery.data?.users.length || 0}</p>
+            </div>
+            <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
+              <p className="text-micro">Admins</p>
+              <p className="text-3xl font-bold text-white mt-1">{listQuery.data?.users.filter(u => u.role === "admin").length || 0}</p>
+            </div>
+            <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
+              <p className="text-micro">Verified Users</p>
+              <p className="text-3xl font-bold text-white mt-1">{listQuery.data?.users.filter(u => u.emailVerified).length || 0}</p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {tab === "features" && (
+        <div className="space-y-4">
+          <div className="flex items-center gap-2 mb-4">
+            <Flag className="w-4 h-4 text-[var(--accent)]" />
+            <span className="text-xs font-bold text-[var(--text-muted)] uppercase tracking-wider">Feature Flags</span>
+          </div>
+          <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl divide-y divide-[var(--border)]/50">
+            {[
+              { key: "aiAssistant", label: "AI Assistant", enabled: true },
+              { key: "cloudBots", label: "Cloud Bots", enabled: true },
+              { key: "backtesting", label: "Backtesting", enabled: true },
+              { key: "paperTrading", label: "Paper Trading", enabled: true },
+              { key: "watchlist", label: "Watchlist", enabled: true },
+              { key: "autoReports", label: "Auto Reports", enabled: true },
+              { key: "strategyComparison", label: "Strategy Comparison", enabled: true },
+              { key: "telegram", label: "Telegram Integration", enabled: true },
+              { key: "webhooks", label: "Webhooks", enabled: true },
+              { key: "team", label: "Team Management", enabled: false },
+              { key: "maintenanceMode", label: "Maintenance Mode", enabled: false },
+            ].map(f => (
+              <div key={f.key} className="flex items-center justify-between p-4">
+                <div>
+                  <span className="text-sm text-white font-bold">{f.label}</span>
+                  <p className="text-caption">/{f.key}</p>
+                </div>
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input type="checkbox" defaultChecked={f.enabled} className="sr-only peer" />
+                  <div className="w-9 h-5 bg-[var(--border)] rounded-full peer peer-checked:bg-[var(--accent)] peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-black after:rounded-full after:h-4 after:w-4 after:transition-all" />
+                </label>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {tab === "perf" && (
+        <div className="space-y-4">
+          <div className="flex items-center gap-2 mb-4">
+            <BarChart3 className="w-4 h-4 text-[var(--accent)]" />
+            <span className="text-xs font-bold text-[var(--text-muted)] uppercase tracking-wider">System Performance Audit</span>
+          </div>
+          {healthQuery.isLoading ? (
+            <div className="flex justify-center py-8"><Loader2 className="w-5 h-5 animate-spin text-[var(--accent)]" /></div>
+          ) : healthQuery.data ? (
+            <>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
+                  <div className="flex items-center gap-2 mb-3"><Activity className="w-4 h-4 text-[var(--green)]" /><h3 className="text-sm font-bold text-white">Uptime</h3></div>
+                  <p className="text-2xl font-bold text-white">{(healthQuery.data as any)?.uptime || "—"}</p>
+                  <p className="text-xs text-[var(--text-muted)] mt-1">Server uptime</p>
+                </div>
+                <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
+                  <div className="flex items-center gap-2 mb-3"><HardDrive className="w-4 h-4 text-[var(--accent)]" /><h3 className="text-sm font-bold text-white">Memory</h3></div>
+                  <p className="text-2xl font-bold text-white">{(healthQuery.data as any)?.memory || "—"}</p>
+                  <p className="text-xs text-[var(--text-muted)] mt-1">Used / Total</p>
+                </div>
+                <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
+                  <div className="flex items-center gap-2 mb-3"><Cpu className="w-4 h-4 text-[var(--red)]" /><h3 className="text-sm font-bold text-white">CPU</h3></div>
+                  <p className="text-2xl font-bold text-white">{(healthQuery.data as any)?.cpu || "—"}</p>
+                  <p className="text-xs text-[var(--text-muted)] mt-1">Load average</p>
+                </div>
+              </div>
+              <pre className="bg-black/30 rounded-xl p-4 text-xs text-[var(--text-secondary)] font-mono overflow-auto max-h-[300px]">{JSON.stringify(healthQuery.data, null, 2)}</pre>
+            </>
+          ) : (
+            <p className="text-xs text-[var(--text-muted)]">System health data unavailable.</p>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+) { return "$prefix$text$suffix" }
+    # Convert to sentence case
+    $words = $text -split ' '
+    $result = @()
+    $first = $true
+    foreach ($w in $words) {
+      if ($first) {
+        $result += $w.Substring(0,1).ToUpper() + $w.Substring(1).ToLower()
+        $first = $false
+      } else {
+        # Keep small words lowercase unless first word
+        if ($w -match '^(of|the|and|or|for|to|in|on|at|by|a|an|is|it|as|be|do|no|up)</div>
+                <div className="space-y-2 text-xs">
+                  <div className="flex justify-between"><span className="text-[var(--text-muted)]">Node</span><span className="text-white">{healthQuery.data.node}</span></div>
+                  <div className="flex justify-between"><span className="text-[var(--text-muted)]">Platform</span><span className="text-white">{healthQuery.data.platform}</span></div>
+                  <div className="flex justify-between"><span className="text-[var(--text-muted)]">Uptime</span><span className="text-white">{Math.floor(healthQuery.data.uptime / 86400)}d {Math.floor((healthQuery.data.uptime % 86400) / 3600)}h</span></div>
+                </div>
+              </div>
+            </>
+          ) : null}
+        </div>
+      )}
+
+      {tab === "config" && (
+        <div className="space-y-4">
+          <div className="flex items-center gap-2 mb-4">
+            <Settings2 className="w-4 h-4 text-[var(--accent)]" />
+            <span className="text-xs font-bold text-[var(--text-muted)] uppercase tracking-wider">Platform Configuration</span>
+          </div>
+          <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5 space-y-4">
+            <div>
+              <label className="text-xs text-[var(--text-muted)] font-bold block mb-1">Default Max Stake ($)</label>
+              <input type="number" defaultValue={100} className="w-full bg-[var(--card)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-white" />
+            </div>
+            <div>
+              <label className="text-xs text-[var(--text-muted)] font-bold block mb-1">Max Active Bots per User</label>
+              <input type="number" defaultValue={10} className="w-full bg-[var(--card)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-white" />
+            </div>
+            <div>
+              <label className="text-xs text-[var(--text-muted)] font-bold block mb-1">Maintenance Mode</label>
+              <div className="flex gap-2 mt-1">
+                <button className="px-3 py-1.5 rounded text-xs font-bold bg-[var(--card)] text-[var(--text-muted)] border border-[var(--border)]">Disabled</button>
+                <button className="px-3 py-1.5 rounded text-xs font-bold bg-[var(--red-soft)] text-[var(--red)] border border-[var(--red)]/30">Enabled</button>
+              </div>
+            </div>
+            <div>
+              <label className="text-xs text-[var(--text-muted)] font-bold block mb-1">Allowed Origins (CORS)</label>
+              <input defaultValue="https://369labs.com" className="w-full bg-[var(--card)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-white" />
+            </div>
+            <button onClick={() => { toast("Config saved.", "success"); }} className="px-4 py-2 rounded-lg bg-[var(--accent)] text-black text-xs font-bold">Save Config</button>
+          </div>
+        </div>
+      )}
+
+      {tab === "stats" && (
+        <div className="space-y-4">
+          <div className="flex items-center gap-2 mb-4">
+            <Users className="w-4 h-4 text-[var(--accent)]" />
+            <span className="text-xs font-bold text-[var(--text-muted)] uppercase tracking-wider">Usage Statistics</span>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
+              <p className="text-micro">Total Users</p>
+              <p className="text-3xl font-bold text-white mt-1">{listQuery.data?.users.length || 0}</p>
+            </div>
+            <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
+              <p className="text-micro">Admins</p>
+              <p className="text-3xl font-bold text-white mt-1">{listQuery.data?.users.filter(u => u.role === "admin").length || 0}</p>
+            </div>
+            <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
+              <p className="text-micro">Verified Users</p>
+              <p className="text-3xl font-bold text-white mt-1">{listQuery.data?.users.filter(u => u.emailVerified).length || 0}</p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {tab === "features" && (
+        <div className="space-y-4">
+          <div className="flex items-center gap-2 mb-4">
+            <Flag className="w-4 h-4 text-[var(--accent)]" />
+            <span className="text-xs font-bold text-[var(--text-muted)] uppercase tracking-wider">Feature Flags</span>
+          </div>
+          <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl divide-y divide-[var(--border)]/50">
+            {[
+              { key: "aiAssistant", label: "AI Assistant", enabled: true },
+              { key: "cloudBots", label: "Cloud Bots", enabled: true },
+              { key: "backtesting", label: "Backtesting", enabled: true },
+              { key: "paperTrading", label: "Paper Trading", enabled: true },
+              { key: "watchlist", label: "Watchlist", enabled: true },
+              { key: "autoReports", label: "Auto Reports", enabled: true },
+              { key: "strategyComparison", label: "Strategy Comparison", enabled: true },
+              { key: "telegram", label: "Telegram Integration", enabled: true },
+              { key: "webhooks", label: "Webhooks", enabled: true },
+              { key: "team", label: "Team Management", enabled: false },
+              { key: "maintenanceMode", label: "Maintenance Mode", enabled: false },
+            ].map(f => (
+              <div key={f.key} className="flex items-center justify-between p-4">
+                <div>
+                  <span className="text-sm text-white font-bold">{f.label}</span>
+                  <p className="text-caption">/{f.key}</p>
+                </div>
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input type="checkbox" defaultChecked={f.enabled} className="sr-only peer" />
+                  <div className="w-9 h-5 bg-[var(--border)] rounded-full peer peer-checked:bg-[var(--accent)] peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-black after:rounded-full after:h-4 after:w-4 after:transition-all" />
+                </label>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {tab === "perf" && (
+        <div className="space-y-4">
+          <div className="flex items-center gap-2 mb-4">
+            <BarChart3 className="w-4 h-4 text-[var(--accent)]" />
+            <span className="text-xs font-bold text-[var(--text-muted)] uppercase tracking-wider">System Performance Audit</span>
+          </div>
+          {healthQuery.isLoading ? (
+            <div className="flex justify-center py-8"><Loader2 className="w-5 h-5 animate-spin text-[var(--accent)]" /></div>
+          ) : healthQuery.data ? (
+            <>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
+                  <div className="flex items-center gap-2 mb-3"><Activity className="w-4 h-4 text-[var(--green)]" /><h3 className="text-sm font-bold text-white">Uptime</h3></div>
+                  <p className="text-2xl font-bold text-white">{(healthQuery.data as any)?.uptime || "—"}</p>
+                  <p className="text-xs text-[var(--text-muted)] mt-1">Server uptime</p>
+                </div>
+                <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
+                  <div className="flex items-center gap-2 mb-3"><HardDrive className="w-4 h-4 text-[var(--accent)]" /><h3 className="text-sm font-bold text-white">Memory</h3></div>
+                  <p className="text-2xl font-bold text-white">{(healthQuery.data as any)?.memory || "—"}</p>
+                  <p className="text-xs text-[var(--text-muted)] mt-1">Used / Total</p>
+                </div>
+                <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
+                  <div className="flex items-center gap-2 mb-3"><Cpu className="w-4 h-4 text-[var(--red)]" /><h3 className="text-sm font-bold text-white">CPU</h3></div>
+                  <p className="text-2xl font-bold text-white">{(healthQuery.data as any)?.cpu || "—"}</p>
+                  <p className="text-xs text-[var(--text-muted)] mt-1">Load average</p>
+                </div>
+              </div>
+              <pre className="bg-black/30 rounded-xl p-4 text-xs text-[var(--text-secondary)] font-mono overflow-auto max-h-[300px]">{JSON.stringify(healthQuery.data, null, 2)}</pre>
+            </>
+          ) : (
+            <p className="text-xs text-[var(--text-muted)]">System health data unavailable.</p>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+) {
+          $result += $w.ToLower()
+        } else {
+          $result += $w.Substring(0,1).ToUpper() + $w.Substring(1).ToLower()
+        }
+      }
+    }
+    $newText = $result -join ' '
+    "$prefix$newText$suffix"
+  </div>
+                <div className="space-y-2 text-xs">
+                  <div className="flex justify-between"><span className="text-[var(--text-muted)]">Node</span><span className="text-white">{healthQuery.data.node}</span></div>
+                  <div className="flex justify-between"><span className="text-[var(--text-muted)]">Platform</span><span className="text-white">{healthQuery.data.platform}</span></div>
+                  <div className="flex justify-between"><span className="text-[var(--text-muted)]">Uptime</span><span className="text-white">{Math.floor(healthQuery.data.uptime / 86400)}d {Math.floor((healthQuery.data.uptime % 86400) / 3600)}h</span></div>
+                </div>
+              </div>
+            </>
+          ) : null}
+        </div>
+      )}
+
+      {tab === "config" && (
+        <div className="space-y-4">
+          <div className="flex items-center gap-2 mb-4">
+            <Settings2 className="w-4 h-4 text-[var(--accent)]" />
+            <span className="text-xs font-bold text-[var(--text-muted)] uppercase tracking-wider">Platform Configuration</span>
+          </div>
+          <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5 space-y-4">
+            <div>
+              <label className="text-xs text-[var(--text-muted)] font-bold block mb-1">Default Max Stake ($)</label>
+              <input type="number" defaultValue={100} className="w-full bg-[var(--card)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-white" />
+            </div>
+            <div>
+              <label className="text-xs text-[var(--text-muted)] font-bold block mb-1">Max Active Bots per User</label>
+              <input type="number" defaultValue={10} className="w-full bg-[var(--card)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-white" />
+            </div>
+            <div>
+              <label className="text-xs text-[var(--text-muted)] font-bold block mb-1">Maintenance Mode</label>
+              <div className="flex gap-2 mt-1">
+                <button className="px-3 py-1.5 rounded text-xs font-bold bg-[var(--card)] text-[var(--text-muted)] border border-[var(--border)]">Disabled</button>
+                <button className="px-3 py-1.5 rounded text-xs font-bold bg-[var(--red-soft)] text-[var(--red)] border border-[var(--red)]/30">Enabled</button>
+              </div>
+            </div>
+            <div>
+              <label className="text-xs text-[var(--text-muted)] font-bold block mb-1">Allowed Origins (CORS)</label>
+              <input defaultValue="https://369labs.com" className="w-full bg-[var(--card)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-white" />
+            </div>
+            <button onClick={() => { toast("Config saved.", "success"); }} className="px-4 py-2 rounded-lg bg-[var(--accent)] text-black text-xs font-bold">Save Config</button>
+          </div>
+        </div>
+      )}
+
+      {tab === "stats" && (
+        <div className="space-y-4">
+          <div className="flex items-center gap-2 mb-4">
+            <Users className="w-4 h-4 text-[var(--accent)]" />
+            <span className="text-xs font-bold text-[var(--text-muted)] uppercase tracking-wider">Usage Statistics</span>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
+              <p className="text-micro">Total Users</p>
+              <p className="text-3xl font-bold text-white mt-1">{listQuery.data?.users.length || 0}</p>
+            </div>
+            <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
+              <p className="text-micro">Admins</p>
+              <p className="text-3xl font-bold text-white mt-1">{listQuery.data?.users.filter(u => u.role === "admin").length || 0}</p>
+            </div>
+            <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
+              <p className="text-micro">Verified Users</p>
+              <p className="text-3xl font-bold text-white mt-1">{listQuery.data?.users.filter(u => u.emailVerified).length || 0}</p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {tab === "features" && (
+        <div className="space-y-4">
+          <div className="flex items-center gap-2 mb-4">
+            <Flag className="w-4 h-4 text-[var(--accent)]" />
+            <span className="text-xs font-bold text-[var(--text-muted)] uppercase tracking-wider">Feature Flags</span>
+          </div>
+          <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl divide-y divide-[var(--border)]/50">
+            {[
+              { key: "aiAssistant", label: "AI Assistant", enabled: true },
+              { key: "cloudBots", label: "Cloud Bots", enabled: true },
+              { key: "backtesting", label: "Backtesting", enabled: true },
+              { key: "paperTrading", label: "Paper Trading", enabled: true },
+              { key: "watchlist", label: "Watchlist", enabled: true },
+              { key: "autoReports", label: "Auto Reports", enabled: true },
+              { key: "strategyComparison", label: "Strategy Comparison", enabled: true },
+              { key: "telegram", label: "Telegram Integration", enabled: true },
+              { key: "webhooks", label: "Webhooks", enabled: true },
+              { key: "team", label: "Team Management", enabled: false },
+              { key: "maintenanceMode", label: "Maintenance Mode", enabled: false },
+            ].map(f => (
+              <div key={f.key} className="flex items-center justify-between p-4">
+                <div>
+                  <span className="text-sm text-white font-bold">{f.label}</span>
+                  <p className="text-caption">/{f.key}</p>
+                </div>
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input type="checkbox" defaultChecked={f.enabled} className="sr-only peer" />
+                  <div className="w-9 h-5 bg-[var(--border)] rounded-full peer peer-checked:bg-[var(--accent)] peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-black after:rounded-full after:h-4 after:w-4 after:transition-all" />
+                </label>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {tab === "perf" && (
+        <div className="space-y-4">
+          <div className="flex items-center gap-2 mb-4">
+            <BarChart3 className="w-4 h-4 text-[var(--accent)]" />
+            <span className="text-xs font-bold text-[var(--text-muted)] uppercase tracking-wider">System Performance Audit</span>
+          </div>
+          {healthQuery.isLoading ? (
+            <div className="flex justify-center py-8"><Loader2 className="w-5 h-5 animate-spin text-[var(--accent)]" /></div>
+          ) : healthQuery.data ? (
+            <>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
+                  <div className="flex items-center gap-2 mb-3"><Activity className="w-4 h-4 text-[var(--green)]" /><h3 className="text-sm font-bold text-white"
+    param($m)
+    $prefix = $m.Groups[1].Value
+    $text = $m.Groups[2].Value
+    $suffix = $m.Groups[3].Value
+    # Skip nav-only patterns and short abbreviations
+    if ($text -match '^(API|AI|FAQ|SLA|P&L|ROI|VPN|URL|SSH|DNS|IP|UI|UX|CSS|HTML|JSON|SVG|FFT|RSI|EMA|SMA|MACD|P&L|2FA|AI|OK|GO|NO|UP|DO|IT)</div>
+                  <p className="text-2xl font-bold text-white">{(healthQuery.data as any)?.uptime || "—"}</p>
+                  <p className="text-xs text-[var(--text-muted)] mt-1">Server uptime</p>
+                </div>
+                <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
+                  <div className="flex items-center gap-2 mb-3"><HardDrive className="w-4 h-4 text-[var(--accent)]" /><h3 className="text-sm font-bold text-white">Memory</h3></div>
+                  <p className="text-2xl font-bold text-white">{(healthQuery.data as any)?.memory || "—"}</p>
+                  <p className="text-xs text-[var(--text-muted)] mt-1">Used / Total</p>
+                </div>
+                <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
+                  <div className="flex items-center gap-2 mb-3"><Cpu className="w-4 h-4 text-[var(--red)]" /><h3 className="text-sm font-bold text-white">CPU</h3></div>
+                  <p className="text-2xl font-bold text-white">{(healthQuery.data as any)?.cpu || "—"}</p>
+                  <p className="text-xs text-[var(--text-muted)] mt-1">Load average</p>
+                </div>
+              </div>
+              <pre className="bg-black/30 rounded-xl p-4 text-xs text-[var(--text-secondary)] font-mono overflow-auto max-h-[300px]">{JSON.stringify(healthQuery.data, null, 2)}</pre>
+            </>
+          ) : (
+            <p className="text-xs text-[var(--text-muted)]">System health data unavailable.</p>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+) { return "$prefix$text$suffix" }
+    # Convert to sentence case
+    $words = $text -split ' '
+    $result = @()
+    $first = $true
+    foreach ($w in $words) {
+      if ($first) {
+        $result += $w.Substring(0,1).ToUpper() + $w.Substring(1).ToLower()
+        $first = $false
+      } else {
+        # Keep small words lowercase unless first word
+        if ($w -match '^(of|the|and|or|for|to|in|on|at|by|a|an|is|it|as|be|do|no|up)</div>
+                  <p className="text-2xl font-bold text-white">{(healthQuery.data as any)?.uptime || "—"}</p>
+                  <p className="text-xs text-[var(--text-muted)] mt-1">Server uptime</p>
+                </div>
+                <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
+                  <div className="flex items-center gap-2 mb-3"><HardDrive className="w-4 h-4 text-[var(--accent)]" /><h3 className="text-sm font-bold text-white">Memory</h3></div>
+                  <p className="text-2xl font-bold text-white">{(healthQuery.data as any)?.memory || "—"}</p>
+                  <p className="text-xs text-[var(--text-muted)] mt-1">Used / Total</p>
+                </div>
+                <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
+                  <div className="flex items-center gap-2 mb-3"><Cpu className="w-4 h-4 text-[var(--red)]" /><h3 className="text-sm font-bold text-white">CPU</h3></div>
+                  <p className="text-2xl font-bold text-white">{(healthQuery.data as any)?.cpu || "—"}</p>
+                  <p className="text-xs text-[var(--text-muted)] mt-1">Load average</p>
+                </div>
+              </div>
+              <pre className="bg-black/30 rounded-xl p-4 text-xs text-[var(--text-secondary)] font-mono overflow-auto max-h-[300px]">{JSON.stringify(healthQuery.data, null, 2)}</pre>
+            </>
+          ) : (
+            <p className="text-xs text-[var(--text-muted)]">System health data unavailable.</p>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+) {
+          $result += $w.ToLower()
+        } else {
+          $result += $w.Substring(0,1).ToUpper() + $w.Substring(1).ToLower()
+        }
+      }
+    }
+    $newText = $result -join ' '
+    "$prefix$newText$suffix"
+  </div>
+                  <p className="text-2xl font-bold text-white">{(healthQuery.data as any)?.uptime || "—"}</p>
+                  <p className="text-xs text-[var(--text-muted)] mt-1">Server uptime</p>
+                </div>
+                <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
+                  <div className="flex items-center gap-2 mb-3"><HardDrive className="w-4 h-4 text-[var(--accent)]" /><h3 className="text-sm font-bold text-white"
+    param($m)
+    $prefix = $m.Groups[1].Value
+    $text = $m.Groups[2].Value
+    $suffix = $m.Groups[3].Value
+    # Skip nav-only patterns and short abbreviations
+    if ($text -match '^(API|AI|FAQ|SLA|P&L|ROI|VPN|URL|SSH|DNS|IP|UI|UX|CSS|HTML|JSON|SVG|FFT|RSI|EMA|SMA|MACD|P&L|2FA|AI|OK|GO|NO|UP|DO|IT)</div>
+                  <p className="text-2xl font-bold text-white">{(healthQuery.data as any)?.memory || "—"}</p>
+                  <p className="text-xs text-[var(--text-muted)] mt-1">Used / Total</p>
+                </div>
+                <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
+                  <div className="flex items-center gap-2 mb-3"><Cpu className="w-4 h-4 text-[var(--red)]" /><h3 className="text-sm font-bold text-white">CPU</h3></div>
+                  <p className="text-2xl font-bold text-white">{(healthQuery.data as any)?.cpu || "—"}</p>
+                  <p className="text-xs text-[var(--text-muted)] mt-1">Load average</p>
+                </div>
+              </div>
+              <pre className="bg-black/30 rounded-xl p-4 text-xs text-[var(--text-secondary)] font-mono overflow-auto max-h-[300px]">{JSON.stringify(healthQuery.data, null, 2)}</pre>
+            </>
+          ) : (
+            <p className="text-xs text-[var(--text-muted)]">System health data unavailable.</p>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+) { return "$prefix$text$suffix" }
+    # Convert to sentence case
+    $words = $text -split ' '
+    $result = @()
+    $first = $true
+    foreach ($w in $words) {
+      if ($first) {
+        $result += $w.Substring(0,1).ToUpper() + $w.Substring(1).ToLower()
+        $first = $false
+      } else {
+        # Keep small words lowercase unless first word
+        if ($w -match '^(of|the|and|or|for|to|in|on|at|by|a|an|is|it|as|be|do|no|up)</div>
+                  <p className="text-2xl font-bold text-white">{(healthQuery.data as any)?.memory || "—"}</p>
+                  <p className="text-xs text-[var(--text-muted)] mt-1">Used / Total</p>
+                </div>
+                <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
+                  <div className="flex items-center gap-2 mb-3"><Cpu className="w-4 h-4 text-[var(--red)]" /><h3 className="text-sm font-bold text-white">CPU</h3></div>
+                  <p className="text-2xl font-bold text-white">{(healthQuery.data as any)?.cpu || "—"}</p>
+                  <p className="text-xs text-[var(--text-muted)] mt-1">Load average</p>
+                </div>
+              </div>
+              <pre className="bg-black/30 rounded-xl p-4 text-xs text-[var(--text-secondary)] font-mono overflow-auto max-h-[300px]">{JSON.stringify(healthQuery.data, null, 2)}</pre>
+            </>
+          ) : (
+            <p className="text-xs text-[var(--text-muted)]">System health data unavailable.</p>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+) {
+          $result += $w.ToLower()
+        } else {
+          $result += $w.Substring(0,1).ToUpper() + $w.Substring(1).ToLower()
+        }
+      }
+    }
+    $newText = $result -join ' '
+    "$prefix$newText$suffix"
+  </div>
                   <p className="text-2xl font-bold text-white">{(healthQuery.data as any)?.memory || "—"}</p>
                   <p className="text-xs text-[var(--text-muted)] mt-1">Used / Total</p>
                 </div>

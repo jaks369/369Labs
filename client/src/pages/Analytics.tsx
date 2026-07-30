@@ -370,7 +370,13 @@ export default function Analytics() {
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-6">
-                <h2 className="text-lg font-bold text-white mb-4">Recent Trades</h2>
+                <h2 className="text-lg font-bold text-white mb-4"
+    param($m)
+    $prefix = $m.Groups[1].Value
+    $text = $m.Groups[2].Value
+    $suffix = $m.Groups[3].Value
+    # Skip nav-only patterns and short abbreviations
+    if ($text -match '^(API|AI|FAQ|SLA|P&L|ROI|VPN|URL|SSH|DNS|IP|UI|UX|CSS|HTML|JSON|SVG|FFT|RSI|EMA|SMA|MACD|P&L|2FA|AI|OK|GO|NO|UP|DO|IT)
                 {trades.length > 0 ? (
                   <div className="space-y-2 max-h-80 overflow-y-auto">
                     {trades.slice(0, 20).map(t => (
@@ -391,6 +397,208 @@ export default function Analytics() {
               </div>
               <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-6">
                 <h2 className="text-lg font-bold text-white mb-4">Summary</h2>
+                <div className="space-y-4">
+                  <div className="flex justify-between p-3 bg-black/20 rounded-lg">
+                    <span className="text-[var(--text-secondary)]">Wins</span>
+                    <span className="text-[var(--green)] font-bold">{wins}</span>
+                  </div>
+                  <div className="flex justify-between p-3 bg-black/20 rounded-lg">
+                    <span className="text-[var(--text-secondary)]">Losses</span>
+                    <span className="text-[var(--red)] font-bold">{losses}</span>
+                  </div>
+                  <div className="flex justify-between p-3 bg-black/20 rounded-lg">
+                    <span className="text-[var(--text-secondary)]">Win Rate</span>
+                    <span className="text-[var(--green)] font-bold">{winRate}%</span>
+                  </div>
+                  <div className="flex justify-between p-3 bg-black/20 rounded-lg border border-[var(--border)]">
+                    <span className="text-white font-bold">Total P&L</span>
+                    <span className={`font-bold ${totalPnl >= 0 ? "text-[var(--green)]" : "text-[var(--red)]"}`}>
+                      {totalPnl >= 0 ? "+" : ""}${totalPnl.toFixed(2)}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+) { return "$prefix$text$suffix" }
+    # Convert to sentence case
+    $words = $text -split ' '
+    $result = @()
+    $first = $true
+    foreach ($w in $words) {
+      if ($first) {
+        $result += $w.Substring(0,1).ToUpper() + $w.Substring(1).ToLower()
+        $first = $false
+      } else {
+        # Keep small words lowercase unless first word
+        if ($w -match '^(of|the|and|or|for|to|in|on|at|by|a|an|is|it|as|be|do|no|up)
+                {trades.length > 0 ? (
+                  <div className="space-y-2 max-h-80 overflow-y-auto">
+                    {trades.slice(0, 20).map(t => (
+                      <div key={t.id} className="flex items-center justify-between p-3 bg-black/20 rounded-lg">
+                        <div className="flex items-center gap-3">
+                          <span className={`w-2 h-2 rounded-full ${(t as any).result === "win" ? "bg-[var(--green)]" : "bg-[var(--red)]"}`} />
+                          <span className="text-sm text-[var(--text-secondary)]">${t.stake} {(t as any).result}</span>
+                        </div>
+                        <span className={`text-sm font-bold ${parseFloat(t.profitLoss?.toString() || "0") >= 0 ? "text-[var(--green)]" : "text-[var(--red)]"}`}>
+                          {parseFloat(t.profitLoss?.toString() || "0") >= 0 ? "+" : ""}${t.profitLoss}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="empty-state"><p className="empty-state-desc">No trades yet — deploy a bot.</p></div>
+                )}
+              </div>
+              <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-6">
+                <h2 className="text-lg font-bold text-white mb-4">Summary</h2>
+                <div className="space-y-4">
+                  <div className="flex justify-between p-3 bg-black/20 rounded-lg">
+                    <span className="text-[var(--text-secondary)]">Wins</span>
+                    <span className="text-[var(--green)] font-bold">{wins}</span>
+                  </div>
+                  <div className="flex justify-between p-3 bg-black/20 rounded-lg">
+                    <span className="text-[var(--text-secondary)]">Losses</span>
+                    <span className="text-[var(--red)] font-bold">{losses}</span>
+                  </div>
+                  <div className="flex justify-between p-3 bg-black/20 rounded-lg">
+                    <span className="text-[var(--text-secondary)]">Win Rate</span>
+                    <span className="text-[var(--green)] font-bold">{winRate}%</span>
+                  </div>
+                  <div className="flex justify-between p-3 bg-black/20 rounded-lg border border-[var(--border)]">
+                    <span className="text-white font-bold">Total P&L</span>
+                    <span className={`font-bold ${totalPnl >= 0 ? "text-[var(--green)]" : "text-[var(--red)]"}`}>
+                      {totalPnl >= 0 ? "+" : ""}${totalPnl.toFixed(2)}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+) {
+          $result += $w.ToLower()
+        } else {
+          $result += $w.Substring(0,1).ToUpper() + $w.Substring(1).ToLower()
+        }
+      }
+    }
+    $newText = $result -join ' '
+    "$prefix$newText$suffix"
+  
+                {trades.length > 0 ? (
+                  <div className="space-y-2 max-h-80 overflow-y-auto">
+                    {trades.slice(0, 20).map(t => (
+                      <div key={t.id} className="flex items-center justify-between p-3 bg-black/20 rounded-lg">
+                        <div className="flex items-center gap-3">
+                          <span className={`w-2 h-2 rounded-full ${(t as any).result === "win" ? "bg-[var(--green)]" : "bg-[var(--red)]"}`} />
+                          <span className="text-sm text-[var(--text-secondary)]">${t.stake} {(t as any).result}</span>
+                        </div>
+                        <span className={`text-sm font-bold ${parseFloat(t.profitLoss?.toString() || "0") >= 0 ? "text-[var(--green)]" : "text-[var(--red)]"}`}>
+                          {parseFloat(t.profitLoss?.toString() || "0") >= 0 ? "+" : ""}${t.profitLoss}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="empty-state"><p className="empty-state-desc">No trades yet — deploy a bot.</p></div>
+                )}
+              </div>
+              <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-6">
+                <h2 className="text-lg font-bold text-white mb-4"
+    param($m)
+    $prefix = $m.Groups[1].Value
+    $text = $m.Groups[2].Value
+    $suffix = $m.Groups[3].Value
+    # Skip nav-only patterns and short abbreviations
+    if ($text -match '^(API|AI|FAQ|SLA|P&L|ROI|VPN|URL|SSH|DNS|IP|UI|UX|CSS|HTML|JSON|SVG|FFT|RSI|EMA|SMA|MACD|P&L|2FA|AI|OK|GO|NO|UP|DO|IT)
+                <div className="space-y-4">
+                  <div className="flex justify-between p-3 bg-black/20 rounded-lg">
+                    <span className="text-[var(--text-secondary)]">Wins</span>
+                    <span className="text-[var(--green)] font-bold">{wins}</span>
+                  </div>
+                  <div className="flex justify-between p-3 bg-black/20 rounded-lg">
+                    <span className="text-[var(--text-secondary)]">Losses</span>
+                    <span className="text-[var(--red)] font-bold">{losses}</span>
+                  </div>
+                  <div className="flex justify-between p-3 bg-black/20 rounded-lg">
+                    <span className="text-[var(--text-secondary)]">Win Rate</span>
+                    <span className="text-[var(--green)] font-bold">{winRate}%</span>
+                  </div>
+                  <div className="flex justify-between p-3 bg-black/20 rounded-lg border border-[var(--border)]">
+                    <span className="text-white font-bold">Total P&L</span>
+                    <span className={`font-bold ${totalPnl >= 0 ? "text-[var(--green)]" : "text-[var(--red)]"}`}>
+                      {totalPnl >= 0 ? "+" : ""}${totalPnl.toFixed(2)}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+) { return "$prefix$text$suffix" }
+    # Convert to sentence case
+    $words = $text -split ' '
+    $result = @()
+    $first = $true
+    foreach ($w in $words) {
+      if ($first) {
+        $result += $w.Substring(0,1).ToUpper() + $w.Substring(1).ToLower()
+        $first = $false
+      } else {
+        # Keep small words lowercase unless first word
+        if ($w -match '^(of|the|and|or|for|to|in|on|at|by|a|an|is|it|as|be|do|no|up)
+                <div className="space-y-4">
+                  <div className="flex justify-between p-3 bg-black/20 rounded-lg">
+                    <span className="text-[var(--text-secondary)]">Wins</span>
+                    <span className="text-[var(--green)] font-bold">{wins}</span>
+                  </div>
+                  <div className="flex justify-between p-3 bg-black/20 rounded-lg">
+                    <span className="text-[var(--text-secondary)]">Losses</span>
+                    <span className="text-[var(--red)] font-bold">{losses}</span>
+                  </div>
+                  <div className="flex justify-between p-3 bg-black/20 rounded-lg">
+                    <span className="text-[var(--text-secondary)]">Win Rate</span>
+                    <span className="text-[var(--green)] font-bold">{winRate}%</span>
+                  </div>
+                  <div className="flex justify-between p-3 bg-black/20 rounded-lg border border-[var(--border)]">
+                    <span className="text-white font-bold">Total P&L</span>
+                    <span className={`font-bold ${totalPnl >= 0 ? "text-[var(--green)]" : "text-[var(--red)]"}`}>
+                      {totalPnl >= 0 ? "+" : ""}${totalPnl.toFixed(2)}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+) {
+          $result += $w.ToLower()
+        } else {
+          $result += $w.Substring(0,1).ToUpper() + $w.Substring(1).ToLower()
+        }
+      }
+    }
+    $newText = $result -join ' '
+    "$prefix$newText$suffix"
+  
                 <div className="space-y-4">
                   <div className="flex justify-between p-3 bg-black/20 rounded-lg">
                     <span className="text-[var(--text-secondary)]">Wins</span>

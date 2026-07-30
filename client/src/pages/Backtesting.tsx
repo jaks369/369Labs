@@ -154,7 +154,13 @@ export default function Backtesting() {
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-1 bg-[var(--card)] border border-[var(--border)] rounded-xl p-6 space-y-4">
-            <h2 className="text-lg font-bold text-white">Parameters</h2>
+            <h2 className="text-lg font-bold text-white"
+    param($m)
+    $prefix = $m.Groups[1].Value
+    $text = $m.Groups[2].Value
+    $suffix = $m.Groups[3].Value
+    # Skip nav-only patterns and short abbreviations
+    if ($text -match '^(API|AI|FAQ|SLA|P&L|ROI|VPN|URL|SSH|DNS|IP|UI|UX|CSS|HTML|JSON|SVG|FFT|RSI|EMA|SMA|MACD|P&L|2FA|AI|OK|GO|NO|UP|DO|IT)
 
             <div>
               <label className="text-xs text-[var(--text-muted)] font-bold uppercase tracking-wider">Symbol</label>
@@ -383,6 +389,1112 @@ export default function Backtesting() {
 
                 <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-6">
                   <h3 className="text-sm font-bold text-white mb-1">Parameter Sweep</h3>
+                  <p className="text-xs text-[var(--text-muted)] mb-4">Stress-test one parameter across a range on the same tick window. Cells show win rate (green = strong, red = weak).</p>
+                  <div className="flex items-center gap-2 mb-4">
+                    <select value={sweepParam} onChange={(e) => setSweepParam(e.target.value as any)} className="bg-[var(--card)] border border-[var(--border)] rounded-lg px-3 py-2 text-white text-sm">
+                      <option value="barrier">Barrier digit (0-9)</option>
+                      <option value="count">Count / frequency (1-10)</option>
+                      <option value="stake">Stake ($)</option>
+                    </select>
+                    <Button onClick={runSweep} disabled={sweepRunning} className="bg-[var(--accent)] hover:bg-[var(--accent)] text-white">
+                      {sweepRunning ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Sweeping...</> : <><Search className="w-4 h-4 mr-2" /> Run Sweep</>}
+                    </Button>
+                  </div>
+                  {sweepError && <p className="text-sm text-[var(--red)] mb-3">{sweepError}</p>}
+                  {sweepGrid && (() => {
+                    const bestIdx = sweepGrid.reduce((best, c, i, arr) => c.pnl > arr[best].pnl ? i : best, 0);
+                    const best = sweepGrid[bestIdx];
+                    const applyBest = () => {
+                      if (sweepParam === "stake") { setStake(best.value); }
+                      else if (result) {
+                        toast(`Best ${sweepParam}=${best.value} (${best.winRate.toFixed(1)}%, $${best.pnl.toFixed(2)} P&L). Update your strategy rule manually.`, "success");
+                      }
+                    };
+                    return (
+                    <div>
+                      {best && (
+                        <div className="mb-3 p-2 rounded-lg bg-[var(--green-soft)]/20 border border-[var(--green)]/20 text-caption text-price-up flex items-center justify-between">
+                          <span>Best: {sweepParam}={best.value} ({best.winRate.toFixed(1)}%, ${best.pnl.toFixed(2)} P&L)</span>
+                          <button onClick={applyBest} className="px-2 py-0.5 rounded bg-[var(--green)] text-black text-[9px] font-bold">Apply</button>
+                        </div>
+                      )}
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-left text-xs">
+                          <thead>
+                            <tr className="text-[var(--text-muted)] border-b border-[var(--border)]">
+                              <th className="pb-2 font-bold">{sweepParam}</th>
+                              <th className="pb-2 font-bold">Win Rate</th>
+                              <th className="pb-2 font-bold">Trades</th>
+                              <th className="pb-2 font-bold text-right">P&L</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-[var(--border)]">
+                            {sweepGrid.map((c, i) => (
+                              <tr key={c.value} className={`hover:bg-white/5 ${i === bestIdx ? "bg-[var(--green-soft)]/10" : ""}`}>
+                                <td className="py-2 font-bold text-white">{c.value}{i === bestIdx ? " ← best" : ""}</td>
+                                <td className={`py-2 px-2 rounded font-bold ${heatColor(c.winRate)}`}>{c.winRate.toFixed(1)}%</td>
+                                <td className="py-2 text-[var(--text-secondary)]">{c.trades}</td>
+                                <td className={`py-2 text-right font-bold ${c.pnl >= 0 ? "text-[var(--green)]" : "text-[var(--red)]"}`}>{c.pnl >= 0 ? "+" : ""}${c.pnl.toFixed(2)}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                    );
+                  })()}
+                </div>
+              </>
+            )}
+
+            {!result && !running && !error && (
+              <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-8 flex items-center justify-center h-64">
+                <div className="text-center">
+                  <BarChart3 className="w-12 h-12 mx-auto mb-4 text-[var(--border)]" />
+                  <p className="text-[var(--text-muted)]">Configure parameters and run a backtest to see results</p>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+) { return "$prefix$text$suffix" }
+    # Convert to sentence case
+    $words = $text -split ' '
+    $result = @()
+    $first = $true
+    foreach ($w in $words) {
+      if ($first) {
+        $result += $w.Substring(0,1).ToUpper() + $w.Substring(1).ToLower()
+        $first = $false
+      } else {
+        # Keep small words lowercase unless first word
+        if ($w -match '^(of|the|and|or|for|to|in|on|at|by|a|an|is|it|as|be|do|no|up)
+
+            <div>
+              <label className="text-xs text-[var(--text-muted)] font-bold uppercase tracking-wider">Symbol</label>
+              <select value={symbol} onChange={e => setSymbol(e.target.value)} className="w-full mt-1 bg-[var(--surface-secondary)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-white focus:border-[var(--accent)] outline-none [&>option]:bg-[var(--surface-secondary)] [&>option]:text-white">
+                {IT_SYMBOLS.map(s => <option key={s} value={s}>{s}</option>)}
+              </select>
+            </div>
+
+            <div>
+              <label className="text-xs text-[var(--text-muted)] font-bold uppercase tracking-wider">Strategy</label>
+              {loadedSignal && (
+              <div className="mb-4 p-3 rounded-lg bg-[var(--accent-soft)] border border-[var(--accent-border)] flex items-start gap-2">
+                <CandlestickChart className="w-4 h-4 text-[var(--accent)] mt-0.5" />
+                <div className="text-xs text-[var(--text-secondary)]">
+                  <b className="text-[var(--accent)]">Backtesting AI signal:</b> {loadedSignal.title} (win rate {loadedSignal.winRate}%, {loadedSignal.sampleSize} samples). Rule loaded automatically.
+                </div>
+              </div>
+            )}
+            <select value={selectedStrategyId || ""} onChange={e => setSelectedStrategyId(Number(e.target.value))} className="w-full mt-1 bg-[var(--card)] border border-[var(--border)] rounded-lg px-3 py-2 text-white text-sm">
+                <option value="">{strategiesQuery.isLoading ? "Loading..." : strategiesQuery.isError ? "Failed to load" : "Select a strategy..."}</option>
+                {(strategiesQuery.data || []).filter(s => (s.config as any)?.rule).map(s => (
+                  <option key={s.id} value={s.id}>{s.name}</option>
+                ))}
+              </select>
+              {strategiesQuery.isError && <p className="text-xs text-[var(--red)] mt-1">Failed to load strategies.</p>}
+              {(!strategiesQuery.isLoading && !strategiesQuery.isError && (!strategiesQuery.data || strategiesQuery.data.length === 0)) && (
+                <div className="empty-state"><p className="empty-state-desc">No strategies found.</p></div>
+              )}
+            </div>
+
+            <div>
+              <label className="text-xs text-[var(--text-muted)] font-bold uppercase tracking-wider">Start Date</label>
+              <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} className="w-full mt-1 bg-[var(--card)] border border-[var(--border)] rounded-lg px-3 py-2 text-white text-sm" />
+            </div>
+
+            <div>
+              <label className="text-xs text-[var(--text-muted)] font-bold uppercase tracking-wider">End Date</label>
+              <input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} className="w-full mt-1 bg-[var(--card)] border border-[var(--border)] rounded-lg px-3 py-2 text-white text-sm" />
+            </div>
+
+            <div>
+              <label className="text-xs text-[var(--text-muted)] font-bold uppercase tracking-wider">Stake ($)</label>
+              <input type="number" value={stake} onChange={e => setStake(Number(e.target.value))} min={0.35} step={0.5} className="w-full mt-1 bg-[var(--card)] border border-[var(--border)] rounded-lg px-3 py-2 text-white text-sm" />
+            </div>
+
+            <Button onClick={runBacktestHandler} disabled={running || !selectedStrategyId} className="w-full bg-[var(--accent)] hover:bg-[var(--accent)] text-white">
+              {running ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Fetching ticks...</> : <><Play className="w-4 h-4 mr-2" /> Run Backtest</>}
+            </Button>
+          </div>
+
+          <div className="lg:col-span-2 space-y-6">
+            {error && (
+              <div className="bg-[var(--red-soft)] border border-[var(--red)]/30 rounded-xl p-4 flex items-start gap-3">
+                <AlertCircle className="w-5 h-5 text-[var(--red)] shrink-0 mt-0.5" />
+                <p className="text-sm text-[var(--red)]">{error}</p>
+              </div>
+            )}
+
+            {running && (
+              <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-8 flex items-center justify-center">
+                <div className="text-center">
+                  <Loader2 className="w-10 h-10 animate-spin text-[var(--accent)] mx-auto mb-4" />
+                  <p className="text-[var(--text-secondary)]">Fetching historical ticks from Deriv and running simulation...</p>
+                </div>
+              </div>
+            )}
+
+            {result && !running && (
+              <>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4">
+                    <p className="text-micro">Total Trades</p>
+                    <p className="text-2xl font-bold text-white mt-1">{result.totalTrades}</p>
+                  </div>
+                  <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4">
+                    <p className="text-micro">Win Rate</p>
+                    <p className={`text-2xl font-bold mt-1 ${result.winRate >= 50 ? "text-[var(--green)]" : "text-[var(--red)]"}`}>{result.winRate.toFixed(1)}%</p>
+                  </div>
+                  <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4">
+                    <p className="text-micro">Total P&L</p>
+                    <p className={`text-2xl font-bold mt-1 ${result.totalPnl >= 0 ? "text-[var(--green)]" : "text-[var(--red)]"}`}>
+                      {result.totalPnl >= 0 ? "+" : ""}${result.totalPnl.toFixed(2)}
+                    </p>
+                  </div>
+                  <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4">
+                    <p className="text-micro">Max Drawdown</p>
+                    <p className="text-2xl font-bold text-[var(--red)] mt-1">-${result.maxDrawdown.toFixed(2)}</p>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  {(() => {
+                    const wins = result.trades.filter((t: any) => t.result === "win").length;
+                    const losses = result.trades.filter((t: any) => t.result === "loss").length;
+                    const avgWin = wins > 0 ? result.trades.filter((t: any) => t.result === "win").reduce((s: number, t: any) => s + t.pnl, 0) / wins : 0;
+                    const avgLoss = losses > 0 ? result.trades.filter((t: any) => t.result === "loss").reduce((s: number, t: any) => s + Math.abs(t.pnl), 0) / losses : 0;
+                    const profitFactor = avgLoss > 0 ? avgWin / avgLoss : avgWin > 0 ? 99 : 0;
+                    const avgWinLoss = wins > 0 && losses > 0 ? (result.trades.filter((t: any) => t.result === "win").reduce((s: number, t: any) => s + t.pnl, 0) / wins) / (result.trades.filter((t: any) => t.result === "loss").reduce((s: number, t: any) => s + Math.abs(t.pnl), 0) / losses) : 0;
+                    return (
+                      <>
+                        <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4">
+                          <p className="text-micro">Avg Win</p>
+                          <p className="text-2xl font-bold text-[var(--green)] mt-1">+${avgWin.toFixed(2)}</p>
+                        </div>
+                        <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4">
+                          <p className="text-micro">Avg Loss</p>
+                          <p className="text-2xl font-bold text-[var(--red)] mt-1">-${avgLoss.toFixed(2)}</p>
+                        </div>
+                        <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4">
+                          <p className="text-micro">Profit Factor</p>
+                          <p className={`text-2xl font-bold mt-1 ${profitFactor >= 1.5 ? "text-[var(--green)]" : profitFactor >= 1 ? "text-[var(--accent)]" : "text-[var(--red)]"}`}>{profitFactor.toFixed(2)}</p>
+                        </div>
+                        <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4">
+                          <p className="text-micro">Avg Win/Loss</p>
+                          <p className={`text-2xl font-bold mt-1 ${avgWinLoss >= 1 ? "text-[var(--green)]" : "text-[var(--red)]"}`}>{avgWinLoss.toFixed(2)}</p>
+                        </div>
+                      </>
+                    );
+                  })()}
+                </div>
+
+                <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-6">
+                  <h3 className="text-sm font-bold text-white mb-4">Equity Curve (cumulative P&L)</h3>
+                  <Sparkline data={(result.equityCurve || []).map((v: number) => ({ value: v }))} />
+                </div>
+
+                <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-6">
+                  <h3 className="text-sm font-bold text-white mb-4">Trade Log ({result.trades.length} trades)</h3>
+                  <div className="overflow-x-auto max-h-80 overflow-y-auto">
+                    <table className="w-full text-left text-xs">
+                      <thead>
+                        <tr className="text-[var(--text-muted)] border-b border-[var(--border)]">
+                          <th className="pb-3 font-bold">#</th>
+                          <th className="pb-3 font-bold">ENTRY</th>
+                          <th className="pb-3 font-bold">EXIT</th>
+                          <th className="pb-3 font-bold">TYPE</th>
+                          <th className="pb-3 font-bold">RESULT</th>
+                          <th className="pb-3 font-bold text-right">P&L</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-[var(--border)]">
+                        {result.trades.slice(0, 100).map((t, i) => (
+                          <tr key={i} className="hover:bg-white/5">
+                            <td className="py-3 text-[var(--text-muted)]">{i + 1}</td>
+                            <td className="py-3 text-[var(--text-secondary)]">${t.entryPrice.toFixed(2)}</td>
+                            <td className="py-3 text-[var(--text-secondary)]">${t.exitPrice.toFixed(2)}</td>
+                            <td className="py-3 text-[var(--text-secondary)]">{t.contractType}</td>
+                            <td className="py-3">
+                              {t.result === "win" ? <CheckCircle2 className="w-4 h-4 text-[var(--green)]" /> : <XCircle className="w-4 h-4 text-[var(--red)]" />}
+                            </td>
+                            <td className={`py-3 text-right font-bold ${t.pnl >= 0 ? "text-[var(--green)]" : "text-[var(--red)]"}`}>
+                              {t.pnl >= 0 ? "+" : ""}${t.pnl.toFixed(2)}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-6">
+                  <h3 className="text-sm font-bold text-white mb-4">Equity Curve</h3>
+                  <div className="h-48 flex items-end gap-0.5">
+                    {result.equityCurve.map((val, i) => {
+                      const min = Math.min(...result.equityCurve, 0);
+                      const max = Math.max(...result.equityCurve, 1);
+                      const h = ((val - min) / (max - min)) * 100;
+                      return (
+                        <div
+                          key={i}
+                          className="flex-1 rounded-t"
+                          style={{
+                            height: `${Math.max(h, 2)}%`,
+                            backgroundColor: val >= 0 ? "var(--green)" : "var(--red)",
+                            opacity: 0.7,
+                          }}
+                          title={`$${val.toFixed(2)}`}
+                        />
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-6">
+                  <h3 className="text-sm font-bold text-white mb-1 flex items-center gap-2"><GitCompare className="w-4 h-4 text-[var(--accent)]" /> Strategy Comparison</h3>
+                  <p className="text-xs text-[var(--text-muted)] mb-4">Compare up to 4 strategies side-by-side on the same tick window.</p>
+                  {!compareMode ? (
+                    <Button onClick={() => setCompareMode(true)} className="bg-[var(--accent)]/20 text-[var(--accent)] border border-[var(--accent)]/30 text-xs">Select Strategies</Button>
+                  ) : (
+                    <div className="space-y-3">
+                      <div className="flex flex-wrap gap-2">
+                        {(strategiesQuery.data || []).filter(s => (s.config as any)?.rule).map((s) => (
+                          <button key={s.id} onClick={() => setCompareIds((prev) => prev.includes(s.id) ? prev.filter((id) => id !== s.id) : prev.length < 4 ? [...prev, s.id] : prev)} className={`px-3 py-1.5 rounded-lg text-xs border transition-all ${compareIds.includes(s.id) ? "bg-[var(--accent)]/20 text-[var(--accent)] border-[var(--accent)]/30" : "bg-[var(--card)] text-[var(--text-muted)] border-[var(--border)]"}`}>{s.name}</button>
+                        ))}
+                      </div>
+                      {compareIds.length >= 2 && (
+                        <Button onClick={async () => {
+                          setCompareRunning(true);
+                          try { const res = await backtestCompareMutation.mutateAsync({ strategyIds: compareIds }); setCompareResults(res.comparisons); } catch (e: any) { toast(e?.message || "Comparison failed", "error"); }
+                          setCompareRunning(false);
+                        }} disabled={compareRunning} className="bg-[var(--accent)] text-[var(--bg)] text-xs">
+                          {compareRunning ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Running...</> : <>Compare</>}
+                        </Button>
+                      )}
+                      <button onClick={() => { setCompareMode(false); setCompareIds([]); setCompareResults(null); }} className="text-xs text-[var(--text-muted)] hover:text-white ml-2">Cancel</button>
+                    </div>
+                  )}
+                  {compareResults && (
+                    <div className="mt-4 overflow-x-auto">
+                      <table className="w-full text-left text-xs">
+                        <thead><tr className="text-[var(--text-muted)] border-b border-[var(--border)]"><th className="pb-2 font-bold">Strategy</th><th className="pb-2 font-bold">Trades</th><th className="pb-2 font-bold">Win Rate</th><th className="pb-2 font-bold text-right">P&L</th><th className="pb-2 font-bold text-right">Drawdown</th></tr></thead>
+                        <tbody className="divide-y divide-[var(--border)]">
+                          {compareResults.map((r: any) => (
+                            <tr key={r.strategyId} className="hover:bg-white/5">
+                              <td className="py-2 font-bold text-white">{r.name}</td>
+                              <td className="py-2 text-[var(--text-secondary)]">{r.totalTrades ?? 0}</td>
+                              <td className={`py-2 ${(r.winRate ?? 0) >= 50 ? "text-[var(--green)]" : "text-[var(--red)]"}`}>{(r.winRate ?? 0).toFixed(1)}%</td>
+                              <td className={`py-2 text-right font-bold ${(r.totalPnl ?? 0) >= 0 ? "text-[var(--green)]" : "text-[var(--red)]"}`}>${(r.totalPnl ?? 0).toFixed(2)}</td>
+                              <td className="py-2 text-right text-[var(--red)]">-${(r.maxDrawdown ?? 0).toFixed(2)}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+
+                <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-6">
+                  <h3 className="text-sm font-bold text-white mb-1">Parameter Sweep</h3>
+                  <p className="text-xs text-[var(--text-muted)] mb-4">Stress-test one parameter across a range on the same tick window. Cells show win rate (green = strong, red = weak).</p>
+                  <div className="flex items-center gap-2 mb-4">
+                    <select value={sweepParam} onChange={(e) => setSweepParam(e.target.value as any)} className="bg-[var(--card)] border border-[var(--border)] rounded-lg px-3 py-2 text-white text-sm">
+                      <option value="barrier">Barrier digit (0-9)</option>
+                      <option value="count">Count / frequency (1-10)</option>
+                      <option value="stake">Stake ($)</option>
+                    </select>
+                    <Button onClick={runSweep} disabled={sweepRunning} className="bg-[var(--accent)] hover:bg-[var(--accent)] text-white">
+                      {sweepRunning ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Sweeping...</> : <><Search className="w-4 h-4 mr-2" /> Run Sweep</>}
+                    </Button>
+                  </div>
+                  {sweepError && <p className="text-sm text-[var(--red)] mb-3">{sweepError}</p>}
+                  {sweepGrid && (() => {
+                    const bestIdx = sweepGrid.reduce((best, c, i, arr) => c.pnl > arr[best].pnl ? i : best, 0);
+                    const best = sweepGrid[bestIdx];
+                    const applyBest = () => {
+                      if (sweepParam === "stake") { setStake(best.value); }
+                      else if (result) {
+                        toast(`Best ${sweepParam}=${best.value} (${best.winRate.toFixed(1)}%, $${best.pnl.toFixed(2)} P&L). Update your strategy rule manually.`, "success");
+                      }
+                    };
+                    return (
+                    <div>
+                      {best && (
+                        <div className="mb-3 p-2 rounded-lg bg-[var(--green-soft)]/20 border border-[var(--green)]/20 text-caption text-price-up flex items-center justify-between">
+                          <span>Best: {sweepParam}={best.value} ({best.winRate.toFixed(1)}%, ${best.pnl.toFixed(2)} P&L)</span>
+                          <button onClick={applyBest} className="px-2 py-0.5 rounded bg-[var(--green)] text-black text-[9px] font-bold">Apply</button>
+                        </div>
+                      )}
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-left text-xs">
+                          <thead>
+                            <tr className="text-[var(--text-muted)] border-b border-[var(--border)]">
+                              <th className="pb-2 font-bold">{sweepParam}</th>
+                              <th className="pb-2 font-bold">Win Rate</th>
+                              <th className="pb-2 font-bold">Trades</th>
+                              <th className="pb-2 font-bold text-right">P&L</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-[var(--border)]">
+                            {sweepGrid.map((c, i) => (
+                              <tr key={c.value} className={`hover:bg-white/5 ${i === bestIdx ? "bg-[var(--green-soft)]/10" : ""}`}>
+                                <td className="py-2 font-bold text-white">{c.value}{i === bestIdx ? " ← best" : ""}</td>
+                                <td className={`py-2 px-2 rounded font-bold ${heatColor(c.winRate)}`}>{c.winRate.toFixed(1)}%</td>
+                                <td className="py-2 text-[var(--text-secondary)]">{c.trades}</td>
+                                <td className={`py-2 text-right font-bold ${c.pnl >= 0 ? "text-[var(--green)]" : "text-[var(--red)]"}`}>{c.pnl >= 0 ? "+" : ""}${c.pnl.toFixed(2)}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                    );
+                  })()}
+                </div>
+              </>
+            )}
+
+            {!result && !running && !error && (
+              <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-8 flex items-center justify-center h-64">
+                <div className="text-center">
+                  <BarChart3 className="w-12 h-12 mx-auto mb-4 text-[var(--border)]" />
+                  <p className="text-[var(--text-muted)]">Configure parameters and run a backtest to see results</p>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+) {
+          $result += $w.ToLower()
+        } else {
+          $result += $w.Substring(0,1).ToUpper() + $w.Substring(1).ToLower()
+        }
+      }
+    }
+    $newText = $result -join ' '
+    "$prefix$newText$suffix"
+  
+
+            <div>
+              <label className="text-xs text-[var(--text-muted)] font-bold uppercase tracking-wider">Symbol</label>
+              <select value={symbol} onChange={e => setSymbol(e.target.value)} className="w-full mt-1 bg-[var(--surface-secondary)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-white focus:border-[var(--accent)] outline-none [&>option]:bg-[var(--surface-secondary)] [&>option]:text-white">
+                {IT_SYMBOLS.map(s => <option key={s} value={s}>{s}</option>)}
+              </select>
+            </div>
+
+            <div>
+              <label className="text-xs text-[var(--text-muted)] font-bold uppercase tracking-wider">Strategy</label>
+              {loadedSignal && (
+              <div className="mb-4 p-3 rounded-lg bg-[var(--accent-soft)] border border-[var(--accent-border)] flex items-start gap-2">
+                <CandlestickChart className="w-4 h-4 text-[var(--accent)] mt-0.5" />
+                <div className="text-xs text-[var(--text-secondary)]">
+                  <b className="text-[var(--accent)]">Backtesting AI signal:</b> {loadedSignal.title} (win rate {loadedSignal.winRate}%, {loadedSignal.sampleSize} samples). Rule loaded automatically.
+                </div>
+              </div>
+            )}
+            <select value={selectedStrategyId || ""} onChange={e => setSelectedStrategyId(Number(e.target.value))} className="w-full mt-1 bg-[var(--card)] border border-[var(--border)] rounded-lg px-3 py-2 text-white text-sm">
+                <option value="">{strategiesQuery.isLoading ? "Loading..." : strategiesQuery.isError ? "Failed to load" : "Select a strategy..."}</option>
+                {(strategiesQuery.data || []).filter(s => (s.config as any)?.rule).map(s => (
+                  <option key={s.id} value={s.id}>{s.name}</option>
+                ))}
+              </select>
+              {strategiesQuery.isError && <p className="text-xs text-[var(--red)] mt-1">Failed to load strategies.</p>}
+              {(!strategiesQuery.isLoading && !strategiesQuery.isError && (!strategiesQuery.data || strategiesQuery.data.length === 0)) && (
+                <div className="empty-state"><p className="empty-state-desc">No strategies found.</p></div>
+              )}
+            </div>
+
+            <div>
+              <label className="text-xs text-[var(--text-muted)] font-bold uppercase tracking-wider">Start Date</label>
+              <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} className="w-full mt-1 bg-[var(--card)] border border-[var(--border)] rounded-lg px-3 py-2 text-white text-sm" />
+            </div>
+
+            <div>
+              <label className="text-xs text-[var(--text-muted)] font-bold uppercase tracking-wider">End Date</label>
+              <input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} className="w-full mt-1 bg-[var(--card)] border border-[var(--border)] rounded-lg px-3 py-2 text-white text-sm" />
+            </div>
+
+            <div>
+              <label className="text-xs text-[var(--text-muted)] font-bold uppercase tracking-wider">Stake ($)</label>
+              <input type="number" value={stake} onChange={e => setStake(Number(e.target.value))} min={0.35} step={0.5} className="w-full mt-1 bg-[var(--card)] border border-[var(--border)] rounded-lg px-3 py-2 text-white text-sm" />
+            </div>
+
+            <Button onClick={runBacktestHandler} disabled={running || !selectedStrategyId} className="w-full bg-[var(--accent)] hover:bg-[var(--accent)] text-white">
+              {running ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Fetching ticks...</> : <><Play className="w-4 h-4 mr-2" /> Run Backtest</>}
+            </Button>
+          </div>
+
+          <div className="lg:col-span-2 space-y-6">
+            {error && (
+              <div className="bg-[var(--red-soft)] border border-[var(--red)]/30 rounded-xl p-4 flex items-start gap-3">
+                <AlertCircle className="w-5 h-5 text-[var(--red)] shrink-0 mt-0.5" />
+                <p className="text-sm text-[var(--red)]">{error}</p>
+              </div>
+            )}
+
+            {running && (
+              <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-8 flex items-center justify-center">
+                <div className="text-center">
+                  <Loader2 className="w-10 h-10 animate-spin text-[var(--accent)] mx-auto mb-4" />
+                  <p className="text-[var(--text-secondary)]">Fetching historical ticks from Deriv and running simulation...</p>
+                </div>
+              </div>
+            )}
+
+            {result && !running && (
+              <>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4">
+                    <p className="text-micro">Total Trades</p>
+                    <p className="text-2xl font-bold text-white mt-1">{result.totalTrades}</p>
+                  </div>
+                  <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4">
+                    <p className="text-micro">Win Rate</p>
+                    <p className={`text-2xl font-bold mt-1 ${result.winRate >= 50 ? "text-[var(--green)]" : "text-[var(--red)]"}`}>{result.winRate.toFixed(1)}%</p>
+                  </div>
+                  <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4">
+                    <p className="text-micro">Total P&L</p>
+                    <p className={`text-2xl font-bold mt-1 ${result.totalPnl >= 0 ? "text-[var(--green)]" : "text-[var(--red)]"}`}>
+                      {result.totalPnl >= 0 ? "+" : ""}${result.totalPnl.toFixed(2)}
+                    </p>
+                  </div>
+                  <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4">
+                    <p className="text-micro">Max Drawdown</p>
+                    <p className="text-2xl font-bold text-[var(--red)] mt-1">-${result.maxDrawdown.toFixed(2)}</p>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  {(() => {
+                    const wins = result.trades.filter((t: any) => t.result === "win").length;
+                    const losses = result.trades.filter((t: any) => t.result === "loss").length;
+                    const avgWin = wins > 0 ? result.trades.filter((t: any) => t.result === "win").reduce((s: number, t: any) => s + t.pnl, 0) / wins : 0;
+                    const avgLoss = losses > 0 ? result.trades.filter((t: any) => t.result === "loss").reduce((s: number, t: any) => s + Math.abs(t.pnl), 0) / losses : 0;
+                    const profitFactor = avgLoss > 0 ? avgWin / avgLoss : avgWin > 0 ? 99 : 0;
+                    const avgWinLoss = wins > 0 && losses > 0 ? (result.trades.filter((t: any) => t.result === "win").reduce((s: number, t: any) => s + t.pnl, 0) / wins) / (result.trades.filter((t: any) => t.result === "loss").reduce((s: number, t: any) => s + Math.abs(t.pnl), 0) / losses) : 0;
+                    return (
+                      <>
+                        <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4">
+                          <p className="text-micro">Avg Win</p>
+                          <p className="text-2xl font-bold text-[var(--green)] mt-1">+${avgWin.toFixed(2)}</p>
+                        </div>
+                        <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4">
+                          <p className="text-micro">Avg Loss</p>
+                          <p className="text-2xl font-bold text-[var(--red)] mt-1">-${avgLoss.toFixed(2)}</p>
+                        </div>
+                        <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4">
+                          <p className="text-micro">Profit Factor</p>
+                          <p className={`text-2xl font-bold mt-1 ${profitFactor >= 1.5 ? "text-[var(--green)]" : profitFactor >= 1 ? "text-[var(--accent)]" : "text-[var(--red)]"}`}>{profitFactor.toFixed(2)}</p>
+                        </div>
+                        <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4">
+                          <p className="text-micro">Avg Win/Loss</p>
+                          <p className={`text-2xl font-bold mt-1 ${avgWinLoss >= 1 ? "text-[var(--green)]" : "text-[var(--red)]"}`}>{avgWinLoss.toFixed(2)}</p>
+                        </div>
+                      </>
+                    );
+                  })()}
+                </div>
+
+                <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-6">
+                  <h3 className="text-sm font-bold text-white mb-4">Equity Curve (cumulative P&L)</h3>
+                  <Sparkline data={(result.equityCurve || []).map((v: number) => ({ value: v }))} />
+                </div>
+
+                <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-6">
+                  <h3 className="text-sm font-bold text-white mb-4">Trade Log ({result.trades.length} trades)</h3>
+                  <div className="overflow-x-auto max-h-80 overflow-y-auto">
+                    <table className="w-full text-left text-xs">
+                      <thead>
+                        <tr className="text-[var(--text-muted)] border-b border-[var(--border)]">
+                          <th className="pb-3 font-bold">#</th>
+                          <th className="pb-3 font-bold">ENTRY</th>
+                          <th className="pb-3 font-bold">EXIT</th>
+                          <th className="pb-3 font-bold">TYPE</th>
+                          <th className="pb-3 font-bold">RESULT</th>
+                          <th className="pb-3 font-bold text-right">P&L</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-[var(--border)]">
+                        {result.trades.slice(0, 100).map((t, i) => (
+                          <tr key={i} className="hover:bg-white/5">
+                            <td className="py-3 text-[var(--text-muted)]">{i + 1}</td>
+                            <td className="py-3 text-[var(--text-secondary)]">${t.entryPrice.toFixed(2)}</td>
+                            <td className="py-3 text-[var(--text-secondary)]">${t.exitPrice.toFixed(2)}</td>
+                            <td className="py-3 text-[var(--text-secondary)]">{t.contractType}</td>
+                            <td className="py-3">
+                              {t.result === "win" ? <CheckCircle2 className="w-4 h-4 text-[var(--green)]" /> : <XCircle className="w-4 h-4 text-[var(--red)]" />}
+                            </td>
+                            <td className={`py-3 text-right font-bold ${t.pnl >= 0 ? "text-[var(--green)]" : "text-[var(--red)]"}`}>
+                              {t.pnl >= 0 ? "+" : ""}${t.pnl.toFixed(2)}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-6">
+                  <h3 className="text-sm font-bold text-white mb-4"
+    param($m)
+    $prefix = $m.Groups[1].Value
+    $text = $m.Groups[2].Value
+    $suffix = $m.Groups[3].Value
+    # Skip nav-only patterns and short abbreviations
+    if ($text -match '^(API|AI|FAQ|SLA|P&L|ROI|VPN|URL|SSH|DNS|IP|UI|UX|CSS|HTML|JSON|SVG|FFT|RSI|EMA|SMA|MACD|P&L|2FA|AI|OK|GO|NO|UP|DO|IT)
+                  <div className="h-48 flex items-end gap-0.5">
+                    {result.equityCurve.map((val, i) => {
+                      const min = Math.min(...result.equityCurve, 0);
+                      const max = Math.max(...result.equityCurve, 1);
+                      const h = ((val - min) / (max - min)) * 100;
+                      return (
+                        <div
+                          key={i}
+                          className="flex-1 rounded-t"
+                          style={{
+                            height: `${Math.max(h, 2)}%`,
+                            backgroundColor: val >= 0 ? "var(--green)" : "var(--red)",
+                            opacity: 0.7,
+                          }}
+                          title={`$${val.toFixed(2)}`}
+                        />
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-6">
+                  <h3 className="text-sm font-bold text-white mb-1 flex items-center gap-2"><GitCompare className="w-4 h-4 text-[var(--accent)]" /> Strategy Comparison</h3>
+                  <p className="text-xs text-[var(--text-muted)] mb-4">Compare up to 4 strategies side-by-side on the same tick window.</p>
+                  {!compareMode ? (
+                    <Button onClick={() => setCompareMode(true)} className="bg-[var(--accent)]/20 text-[var(--accent)] border border-[var(--accent)]/30 text-xs">Select Strategies</Button>
+                  ) : (
+                    <div className="space-y-3">
+                      <div className="flex flex-wrap gap-2">
+                        {(strategiesQuery.data || []).filter(s => (s.config as any)?.rule).map((s) => (
+                          <button key={s.id} onClick={() => setCompareIds((prev) => prev.includes(s.id) ? prev.filter((id) => id !== s.id) : prev.length < 4 ? [...prev, s.id] : prev)} className={`px-3 py-1.5 rounded-lg text-xs border transition-all ${compareIds.includes(s.id) ? "bg-[var(--accent)]/20 text-[var(--accent)] border-[var(--accent)]/30" : "bg-[var(--card)] text-[var(--text-muted)] border-[var(--border)]"}`}>{s.name}</button>
+                        ))}
+                      </div>
+                      {compareIds.length >= 2 && (
+                        <Button onClick={async () => {
+                          setCompareRunning(true);
+                          try { const res = await backtestCompareMutation.mutateAsync({ strategyIds: compareIds }); setCompareResults(res.comparisons); } catch (e: any) { toast(e?.message || "Comparison failed", "error"); }
+                          setCompareRunning(false);
+                        }} disabled={compareRunning} className="bg-[var(--accent)] text-[var(--bg)] text-xs">
+                          {compareRunning ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Running...</> : <>Compare</>}
+                        </Button>
+                      )}
+                      <button onClick={() => { setCompareMode(false); setCompareIds([]); setCompareResults(null); }} className="text-xs text-[var(--text-muted)] hover:text-white ml-2">Cancel</button>
+                    </div>
+                  )}
+                  {compareResults && (
+                    <div className="mt-4 overflow-x-auto">
+                      <table className="w-full text-left text-xs">
+                        <thead><tr className="text-[var(--text-muted)] border-b border-[var(--border)]"><th className="pb-2 font-bold">Strategy</th><th className="pb-2 font-bold">Trades</th><th className="pb-2 font-bold">Win Rate</th><th className="pb-2 font-bold text-right">P&L</th><th className="pb-2 font-bold text-right">Drawdown</th></tr></thead>
+                        <tbody className="divide-y divide-[var(--border)]">
+                          {compareResults.map((r: any) => (
+                            <tr key={r.strategyId} className="hover:bg-white/5">
+                              <td className="py-2 font-bold text-white">{r.name}</td>
+                              <td className="py-2 text-[var(--text-secondary)]">{r.totalTrades ?? 0}</td>
+                              <td className={`py-2 ${(r.winRate ?? 0) >= 50 ? "text-[var(--green)]" : "text-[var(--red)]"}`}>{(r.winRate ?? 0).toFixed(1)}%</td>
+                              <td className={`py-2 text-right font-bold ${(r.totalPnl ?? 0) >= 0 ? "text-[var(--green)]" : "text-[var(--red)]"}`}>${(r.totalPnl ?? 0).toFixed(2)}</td>
+                              <td className="py-2 text-right text-[var(--red)]">-${(r.maxDrawdown ?? 0).toFixed(2)}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+
+                <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-6">
+                  <h3 className="text-sm font-bold text-white mb-1">Parameter Sweep</h3>
+                  <p className="text-xs text-[var(--text-muted)] mb-4">Stress-test one parameter across a range on the same tick window. Cells show win rate (green = strong, red = weak).</p>
+                  <div className="flex items-center gap-2 mb-4">
+                    <select value={sweepParam} onChange={(e) => setSweepParam(e.target.value as any)} className="bg-[var(--card)] border border-[var(--border)] rounded-lg px-3 py-2 text-white text-sm">
+                      <option value="barrier">Barrier digit (0-9)</option>
+                      <option value="count">Count / frequency (1-10)</option>
+                      <option value="stake">Stake ($)</option>
+                    </select>
+                    <Button onClick={runSweep} disabled={sweepRunning} className="bg-[var(--accent)] hover:bg-[var(--accent)] text-white">
+                      {sweepRunning ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Sweeping...</> : <><Search className="w-4 h-4 mr-2" /> Run Sweep</>}
+                    </Button>
+                  </div>
+                  {sweepError && <p className="text-sm text-[var(--red)] mb-3">{sweepError}</p>}
+                  {sweepGrid && (() => {
+                    const bestIdx = sweepGrid.reduce((best, c, i, arr) => c.pnl > arr[best].pnl ? i : best, 0);
+                    const best = sweepGrid[bestIdx];
+                    const applyBest = () => {
+                      if (sweepParam === "stake") { setStake(best.value); }
+                      else if (result) {
+                        toast(`Best ${sweepParam}=${best.value} (${best.winRate.toFixed(1)}%, $${best.pnl.toFixed(2)} P&L). Update your strategy rule manually.`, "success");
+                      }
+                    };
+                    return (
+                    <div>
+                      {best && (
+                        <div className="mb-3 p-2 rounded-lg bg-[var(--green-soft)]/20 border border-[var(--green)]/20 text-caption text-price-up flex items-center justify-between">
+                          <span>Best: {sweepParam}={best.value} ({best.winRate.toFixed(1)}%, ${best.pnl.toFixed(2)} P&L)</span>
+                          <button onClick={applyBest} className="px-2 py-0.5 rounded bg-[var(--green)] text-black text-[9px] font-bold">Apply</button>
+                        </div>
+                      )}
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-left text-xs">
+                          <thead>
+                            <tr className="text-[var(--text-muted)] border-b border-[var(--border)]">
+                              <th className="pb-2 font-bold">{sweepParam}</th>
+                              <th className="pb-2 font-bold">Win Rate</th>
+                              <th className="pb-2 font-bold">Trades</th>
+                              <th className="pb-2 font-bold text-right">P&L</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-[var(--border)]">
+                            {sweepGrid.map((c, i) => (
+                              <tr key={c.value} className={`hover:bg-white/5 ${i === bestIdx ? "bg-[var(--green-soft)]/10" : ""}`}>
+                                <td className="py-2 font-bold text-white">{c.value}{i === bestIdx ? " ← best" : ""}</td>
+                                <td className={`py-2 px-2 rounded font-bold ${heatColor(c.winRate)}`}>{c.winRate.toFixed(1)}%</td>
+                                <td className="py-2 text-[var(--text-secondary)]">{c.trades}</td>
+                                <td className={`py-2 text-right font-bold ${c.pnl >= 0 ? "text-[var(--green)]" : "text-[var(--red)]"}`}>{c.pnl >= 0 ? "+" : ""}${c.pnl.toFixed(2)}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                    );
+                  })()}
+                </div>
+              </>
+            )}
+
+            {!result && !running && !error && (
+              <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-8 flex items-center justify-center h-64">
+                <div className="text-center">
+                  <BarChart3 className="w-12 h-12 mx-auto mb-4 text-[var(--border)]" />
+                  <p className="text-[var(--text-muted)]">Configure parameters and run a backtest to see results</p>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+) { return "$prefix$text$suffix" }
+    # Convert to sentence case
+    $words = $text -split ' '
+    $result = @()
+    $first = $true
+    foreach ($w in $words) {
+      if ($first) {
+        $result += $w.Substring(0,1).ToUpper() + $w.Substring(1).ToLower()
+        $first = $false
+      } else {
+        # Keep small words lowercase unless first word
+        if ($w -match '^(of|the|and|or|for|to|in|on|at|by|a|an|is|it|as|be|do|no|up)
+                  <div className="h-48 flex items-end gap-0.5">
+                    {result.equityCurve.map((val, i) => {
+                      const min = Math.min(...result.equityCurve, 0);
+                      const max = Math.max(...result.equityCurve, 1);
+                      const h = ((val - min) / (max - min)) * 100;
+                      return (
+                        <div
+                          key={i}
+                          className="flex-1 rounded-t"
+                          style={{
+                            height: `${Math.max(h, 2)}%`,
+                            backgroundColor: val >= 0 ? "var(--green)" : "var(--red)",
+                            opacity: 0.7,
+                          }}
+                          title={`$${val.toFixed(2)}`}
+                        />
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-6">
+                  <h3 className="text-sm font-bold text-white mb-1 flex items-center gap-2"><GitCompare className="w-4 h-4 text-[var(--accent)]" /> Strategy Comparison</h3>
+                  <p className="text-xs text-[var(--text-muted)] mb-4">Compare up to 4 strategies side-by-side on the same tick window.</p>
+                  {!compareMode ? (
+                    <Button onClick={() => setCompareMode(true)} className="bg-[var(--accent)]/20 text-[var(--accent)] border border-[var(--accent)]/30 text-xs">Select Strategies</Button>
+                  ) : (
+                    <div className="space-y-3">
+                      <div className="flex flex-wrap gap-2">
+                        {(strategiesQuery.data || []).filter(s => (s.config as any)?.rule).map((s) => (
+                          <button key={s.id} onClick={() => setCompareIds((prev) => prev.includes(s.id) ? prev.filter((id) => id !== s.id) : prev.length < 4 ? [...prev, s.id] : prev)} className={`px-3 py-1.5 rounded-lg text-xs border transition-all ${compareIds.includes(s.id) ? "bg-[var(--accent)]/20 text-[var(--accent)] border-[var(--accent)]/30" : "bg-[var(--card)] text-[var(--text-muted)] border-[var(--border)]"}`}>{s.name}</button>
+                        ))}
+                      </div>
+                      {compareIds.length >= 2 && (
+                        <Button onClick={async () => {
+                          setCompareRunning(true);
+                          try { const res = await backtestCompareMutation.mutateAsync({ strategyIds: compareIds }); setCompareResults(res.comparisons); } catch (e: any) { toast(e?.message || "Comparison failed", "error"); }
+                          setCompareRunning(false);
+                        }} disabled={compareRunning} className="bg-[var(--accent)] text-[var(--bg)] text-xs">
+                          {compareRunning ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Running...</> : <>Compare</>}
+                        </Button>
+                      )}
+                      <button onClick={() => { setCompareMode(false); setCompareIds([]); setCompareResults(null); }} className="text-xs text-[var(--text-muted)] hover:text-white ml-2">Cancel</button>
+                    </div>
+                  )}
+                  {compareResults && (
+                    <div className="mt-4 overflow-x-auto">
+                      <table className="w-full text-left text-xs">
+                        <thead><tr className="text-[var(--text-muted)] border-b border-[var(--border)]"><th className="pb-2 font-bold">Strategy</th><th className="pb-2 font-bold">Trades</th><th className="pb-2 font-bold">Win Rate</th><th className="pb-2 font-bold text-right">P&L</th><th className="pb-2 font-bold text-right">Drawdown</th></tr></thead>
+                        <tbody className="divide-y divide-[var(--border)]">
+                          {compareResults.map((r: any) => (
+                            <tr key={r.strategyId} className="hover:bg-white/5">
+                              <td className="py-2 font-bold text-white">{r.name}</td>
+                              <td className="py-2 text-[var(--text-secondary)]">{r.totalTrades ?? 0}</td>
+                              <td className={`py-2 ${(r.winRate ?? 0) >= 50 ? "text-[var(--green)]" : "text-[var(--red)]"}`}>{(r.winRate ?? 0).toFixed(1)}%</td>
+                              <td className={`py-2 text-right font-bold ${(r.totalPnl ?? 0) >= 0 ? "text-[var(--green)]" : "text-[var(--red)]"}`}>${(r.totalPnl ?? 0).toFixed(2)}</td>
+                              <td className="py-2 text-right text-[var(--red)]">-${(r.maxDrawdown ?? 0).toFixed(2)}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+
+                <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-6">
+                  <h3 className="text-sm font-bold text-white mb-1">Parameter Sweep</h3>
+                  <p className="text-xs text-[var(--text-muted)] mb-4">Stress-test one parameter across a range on the same tick window. Cells show win rate (green = strong, red = weak).</p>
+                  <div className="flex items-center gap-2 mb-4">
+                    <select value={sweepParam} onChange={(e) => setSweepParam(e.target.value as any)} className="bg-[var(--card)] border border-[var(--border)] rounded-lg px-3 py-2 text-white text-sm">
+                      <option value="barrier">Barrier digit (0-9)</option>
+                      <option value="count">Count / frequency (1-10)</option>
+                      <option value="stake">Stake ($)</option>
+                    </select>
+                    <Button onClick={runSweep} disabled={sweepRunning} className="bg-[var(--accent)] hover:bg-[var(--accent)] text-white">
+                      {sweepRunning ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Sweeping...</> : <><Search className="w-4 h-4 mr-2" /> Run Sweep</>}
+                    </Button>
+                  </div>
+                  {sweepError && <p className="text-sm text-[var(--red)] mb-3">{sweepError}</p>}
+                  {sweepGrid && (() => {
+                    const bestIdx = sweepGrid.reduce((best, c, i, arr) => c.pnl > arr[best].pnl ? i : best, 0);
+                    const best = sweepGrid[bestIdx];
+                    const applyBest = () => {
+                      if (sweepParam === "stake") { setStake(best.value); }
+                      else if (result) {
+                        toast(`Best ${sweepParam}=${best.value} (${best.winRate.toFixed(1)}%, $${best.pnl.toFixed(2)} P&L). Update your strategy rule manually.`, "success");
+                      }
+                    };
+                    return (
+                    <div>
+                      {best && (
+                        <div className="mb-3 p-2 rounded-lg bg-[var(--green-soft)]/20 border border-[var(--green)]/20 text-caption text-price-up flex items-center justify-between">
+                          <span>Best: {sweepParam}={best.value} ({best.winRate.toFixed(1)}%, ${best.pnl.toFixed(2)} P&L)</span>
+                          <button onClick={applyBest} className="px-2 py-0.5 rounded bg-[var(--green)] text-black text-[9px] font-bold">Apply</button>
+                        </div>
+                      )}
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-left text-xs">
+                          <thead>
+                            <tr className="text-[var(--text-muted)] border-b border-[var(--border)]">
+                              <th className="pb-2 font-bold">{sweepParam}</th>
+                              <th className="pb-2 font-bold">Win Rate</th>
+                              <th className="pb-2 font-bold">Trades</th>
+                              <th className="pb-2 font-bold text-right">P&L</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-[var(--border)]">
+                            {sweepGrid.map((c, i) => (
+                              <tr key={c.value} className={`hover:bg-white/5 ${i === bestIdx ? "bg-[var(--green-soft)]/10" : ""}`}>
+                                <td className="py-2 font-bold text-white">{c.value}{i === bestIdx ? " ← best" : ""}</td>
+                                <td className={`py-2 px-2 rounded font-bold ${heatColor(c.winRate)}`}>{c.winRate.toFixed(1)}%</td>
+                                <td className="py-2 text-[var(--text-secondary)]">{c.trades}</td>
+                                <td className={`py-2 text-right font-bold ${c.pnl >= 0 ? "text-[var(--green)]" : "text-[var(--red)]"}`}>{c.pnl >= 0 ? "+" : ""}${c.pnl.toFixed(2)}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                    );
+                  })()}
+                </div>
+              </>
+            )}
+
+            {!result && !running && !error && (
+              <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-8 flex items-center justify-center h-64">
+                <div className="text-center">
+                  <BarChart3 className="w-12 h-12 mx-auto mb-4 text-[var(--border)]" />
+                  <p className="text-[var(--text-muted)]">Configure parameters and run a backtest to see results</p>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+) {
+          $result += $w.ToLower()
+        } else {
+          $result += $w.Substring(0,1).ToUpper() + $w.Substring(1).ToLower()
+        }
+      }
+    }
+    $newText = $result -join ' '
+    "$prefix$newText$suffix"
+  
+                  <div className="h-48 flex items-end gap-0.5">
+                    {result.equityCurve.map((val, i) => {
+                      const min = Math.min(...result.equityCurve, 0);
+                      const max = Math.max(...result.equityCurve, 1);
+                      const h = ((val - min) / (max - min)) * 100;
+                      return (
+                        <div
+                          key={i}
+                          className="flex-1 rounded-t"
+                          style={{
+                            height: `${Math.max(h, 2)}%`,
+                            backgroundColor: val >= 0 ? "var(--green)" : "var(--red)",
+                            opacity: 0.7,
+                          }}
+                          title={`$${val.toFixed(2)}`}
+                        />
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-6">
+                  <h3 className="text-sm font-bold text-white mb-1 flex items-center gap-2"><GitCompare className="w-4 h-4 text-[var(--accent)]" /> Strategy Comparison</h3>
+                  <p className="text-xs text-[var(--text-muted)] mb-4">Compare up to 4 strategies side-by-side on the same tick window.</p>
+                  {!compareMode ? (
+                    <Button onClick={() => setCompareMode(true)} className="bg-[var(--accent)]/20 text-[var(--accent)] border border-[var(--accent)]/30 text-xs">Select Strategies</Button>
+                  ) : (
+                    <div className="space-y-3">
+                      <div className="flex flex-wrap gap-2">
+                        {(strategiesQuery.data || []).filter(s => (s.config as any)?.rule).map((s) => (
+                          <button key={s.id} onClick={() => setCompareIds((prev) => prev.includes(s.id) ? prev.filter((id) => id !== s.id) : prev.length < 4 ? [...prev, s.id] : prev)} className={`px-3 py-1.5 rounded-lg text-xs border transition-all ${compareIds.includes(s.id) ? "bg-[var(--accent)]/20 text-[var(--accent)] border-[var(--accent)]/30" : "bg-[var(--card)] text-[var(--text-muted)] border-[var(--border)]"}`}>{s.name}</button>
+                        ))}
+                      </div>
+                      {compareIds.length >= 2 && (
+                        <Button onClick={async () => {
+                          setCompareRunning(true);
+                          try { const res = await backtestCompareMutation.mutateAsync({ strategyIds: compareIds }); setCompareResults(res.comparisons); } catch (e: any) { toast(e?.message || "Comparison failed", "error"); }
+                          setCompareRunning(false);
+                        }} disabled={compareRunning} className="bg-[var(--accent)] text-[var(--bg)] text-xs">
+                          {compareRunning ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Running...</> : <>Compare</>}
+                        </Button>
+                      )}
+                      <button onClick={() => { setCompareMode(false); setCompareIds([]); setCompareResults(null); }} className="text-xs text-[var(--text-muted)] hover:text-white ml-2">Cancel</button>
+                    </div>
+                  )}
+                  {compareResults && (
+                    <div className="mt-4 overflow-x-auto">
+                      <table className="w-full text-left text-xs">
+                        <thead><tr className="text-[var(--text-muted)] border-b border-[var(--border)]"><th className="pb-2 font-bold">Strategy</th><th className="pb-2 font-bold">Trades</th><th className="pb-2 font-bold">Win Rate</th><th className="pb-2 font-bold text-right">P&L</th><th className="pb-2 font-bold text-right">Drawdown</th></tr></thead>
+                        <tbody className="divide-y divide-[var(--border)]">
+                          {compareResults.map((r: any) => (
+                            <tr key={r.strategyId} className="hover:bg-white/5">
+                              <td className="py-2 font-bold text-white">{r.name}</td>
+                              <td className="py-2 text-[var(--text-secondary)]">{r.totalTrades ?? 0}</td>
+                              <td className={`py-2 ${(r.winRate ?? 0) >= 50 ? "text-[var(--green)]" : "text-[var(--red)]"}`}>{(r.winRate ?? 0).toFixed(1)}%</td>
+                              <td className={`py-2 text-right font-bold ${(r.totalPnl ?? 0) >= 0 ? "text-[var(--green)]" : "text-[var(--red)]"}`}>${(r.totalPnl ?? 0).toFixed(2)}</td>
+                              <td className="py-2 text-right text-[var(--red)]">-${(r.maxDrawdown ?? 0).toFixed(2)}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+
+                <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-6">
+                  <h3 className="text-sm font-bold text-white mb-1"
+    param($m)
+    $prefix = $m.Groups[1].Value
+    $text = $m.Groups[2].Value
+    $suffix = $m.Groups[3].Value
+    # Skip nav-only patterns and short abbreviations
+    if ($text -match '^(API|AI|FAQ|SLA|P&L|ROI|VPN|URL|SSH|DNS|IP|UI|UX|CSS|HTML|JSON|SVG|FFT|RSI|EMA|SMA|MACD|P&L|2FA|AI|OK|GO|NO|UP|DO|IT)
+                  <p className="text-xs text-[var(--text-muted)] mb-4">Stress-test one parameter across a range on the same tick window. Cells show win rate (green = strong, red = weak).</p>
+                  <div className="flex items-center gap-2 mb-4">
+                    <select value={sweepParam} onChange={(e) => setSweepParam(e.target.value as any)} className="bg-[var(--card)] border border-[var(--border)] rounded-lg px-3 py-2 text-white text-sm">
+                      <option value="barrier">Barrier digit (0-9)</option>
+                      <option value="count">Count / frequency (1-10)</option>
+                      <option value="stake">Stake ($)</option>
+                    </select>
+                    <Button onClick={runSweep} disabled={sweepRunning} className="bg-[var(--accent)] hover:bg-[var(--accent)] text-white">
+                      {sweepRunning ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Sweeping...</> : <><Search className="w-4 h-4 mr-2" /> Run Sweep</>}
+                    </Button>
+                  </div>
+                  {sweepError && <p className="text-sm text-[var(--red)] mb-3">{sweepError}</p>}
+                  {sweepGrid && (() => {
+                    const bestIdx = sweepGrid.reduce((best, c, i, arr) => c.pnl > arr[best].pnl ? i : best, 0);
+                    const best = sweepGrid[bestIdx];
+                    const applyBest = () => {
+                      if (sweepParam === "stake") { setStake(best.value); }
+                      else if (result) {
+                        toast(`Best ${sweepParam}=${best.value} (${best.winRate.toFixed(1)}%, $${best.pnl.toFixed(2)} P&L). Update your strategy rule manually.`, "success");
+                      }
+                    };
+                    return (
+                    <div>
+                      {best && (
+                        <div className="mb-3 p-2 rounded-lg bg-[var(--green-soft)]/20 border border-[var(--green)]/20 text-caption text-price-up flex items-center justify-between">
+                          <span>Best: {sweepParam}={best.value} ({best.winRate.toFixed(1)}%, ${best.pnl.toFixed(2)} P&L)</span>
+                          <button onClick={applyBest} className="px-2 py-0.5 rounded bg-[var(--green)] text-black text-[9px] font-bold">Apply</button>
+                        </div>
+                      )}
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-left text-xs">
+                          <thead>
+                            <tr className="text-[var(--text-muted)] border-b border-[var(--border)]">
+                              <th className="pb-2 font-bold">{sweepParam}</th>
+                              <th className="pb-2 font-bold">Win Rate</th>
+                              <th className="pb-2 font-bold">Trades</th>
+                              <th className="pb-2 font-bold text-right">P&L</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-[var(--border)]">
+                            {sweepGrid.map((c, i) => (
+                              <tr key={c.value} className={`hover:bg-white/5 ${i === bestIdx ? "bg-[var(--green-soft)]/10" : ""}`}>
+                                <td className="py-2 font-bold text-white">{c.value}{i === bestIdx ? " ← best" : ""}</td>
+                                <td className={`py-2 px-2 rounded font-bold ${heatColor(c.winRate)}`}>{c.winRate.toFixed(1)}%</td>
+                                <td className="py-2 text-[var(--text-secondary)]">{c.trades}</td>
+                                <td className={`py-2 text-right font-bold ${c.pnl >= 0 ? "text-[var(--green)]" : "text-[var(--red)]"}`}>{c.pnl >= 0 ? "+" : ""}${c.pnl.toFixed(2)}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                    );
+                  })()}
+                </div>
+              </>
+            )}
+
+            {!result && !running && !error && (
+              <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-8 flex items-center justify-center h-64">
+                <div className="text-center">
+                  <BarChart3 className="w-12 h-12 mx-auto mb-4 text-[var(--border)]" />
+                  <p className="text-[var(--text-muted)]">Configure parameters and run a backtest to see results</p>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+) { return "$prefix$text$suffix" }
+    # Convert to sentence case
+    $words = $text -split ' '
+    $result = @()
+    $first = $true
+    foreach ($w in $words) {
+      if ($first) {
+        $result += $w.Substring(0,1).ToUpper() + $w.Substring(1).ToLower()
+        $first = $false
+      } else {
+        # Keep small words lowercase unless first word
+        if ($w -match '^(of|the|and|or|for|to|in|on|at|by|a|an|is|it|as|be|do|no|up)
+                  <p className="text-xs text-[var(--text-muted)] mb-4">Stress-test one parameter across a range on the same tick window. Cells show win rate (green = strong, red = weak).</p>
+                  <div className="flex items-center gap-2 mb-4">
+                    <select value={sweepParam} onChange={(e) => setSweepParam(e.target.value as any)} className="bg-[var(--card)] border border-[var(--border)] rounded-lg px-3 py-2 text-white text-sm">
+                      <option value="barrier">Barrier digit (0-9)</option>
+                      <option value="count">Count / frequency (1-10)</option>
+                      <option value="stake">Stake ($)</option>
+                    </select>
+                    <Button onClick={runSweep} disabled={sweepRunning} className="bg-[var(--accent)] hover:bg-[var(--accent)] text-white">
+                      {sweepRunning ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Sweeping...</> : <><Search className="w-4 h-4 mr-2" /> Run Sweep</>}
+                    </Button>
+                  </div>
+                  {sweepError && <p className="text-sm text-[var(--red)] mb-3">{sweepError}</p>}
+                  {sweepGrid && (() => {
+                    const bestIdx = sweepGrid.reduce((best, c, i, arr) => c.pnl > arr[best].pnl ? i : best, 0);
+                    const best = sweepGrid[bestIdx];
+                    const applyBest = () => {
+                      if (sweepParam === "stake") { setStake(best.value); }
+                      else if (result) {
+                        toast(`Best ${sweepParam}=${best.value} (${best.winRate.toFixed(1)}%, $${best.pnl.toFixed(2)} P&L). Update your strategy rule manually.`, "success");
+                      }
+                    };
+                    return (
+                    <div>
+                      {best && (
+                        <div className="mb-3 p-2 rounded-lg bg-[var(--green-soft)]/20 border border-[var(--green)]/20 text-caption text-price-up flex items-center justify-between">
+                          <span>Best: {sweepParam}={best.value} ({best.winRate.toFixed(1)}%, ${best.pnl.toFixed(2)} P&L)</span>
+                          <button onClick={applyBest} className="px-2 py-0.5 rounded bg-[var(--green)] text-black text-[9px] font-bold">Apply</button>
+                        </div>
+                      )}
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-left text-xs">
+                          <thead>
+                            <tr className="text-[var(--text-muted)] border-b border-[var(--border)]">
+                              <th className="pb-2 font-bold">{sweepParam}</th>
+                              <th className="pb-2 font-bold">Win Rate</th>
+                              <th className="pb-2 font-bold">Trades</th>
+                              <th className="pb-2 font-bold text-right">P&L</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-[var(--border)]">
+                            {sweepGrid.map((c, i) => (
+                              <tr key={c.value} className={`hover:bg-white/5 ${i === bestIdx ? "bg-[var(--green-soft)]/10" : ""}`}>
+                                <td className="py-2 font-bold text-white">{c.value}{i === bestIdx ? " ← best" : ""}</td>
+                                <td className={`py-2 px-2 rounded font-bold ${heatColor(c.winRate)}`}>{c.winRate.toFixed(1)}%</td>
+                                <td className="py-2 text-[var(--text-secondary)]">{c.trades}</td>
+                                <td className={`py-2 text-right font-bold ${c.pnl >= 0 ? "text-[var(--green)]" : "text-[var(--red)]"}`}>{c.pnl >= 0 ? "+" : ""}${c.pnl.toFixed(2)}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                    );
+                  })()}
+                </div>
+              </>
+            )}
+
+            {!result && !running && !error && (
+              <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-8 flex items-center justify-center h-64">
+                <div className="text-center">
+                  <BarChart3 className="w-12 h-12 mx-auto mb-4 text-[var(--border)]" />
+                  <p className="text-[var(--text-muted)]">Configure parameters and run a backtest to see results</p>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+) {
+          $result += $w.ToLower()
+        } else {
+          $result += $w.Substring(0,1).ToUpper() + $w.Substring(1).ToLower()
+        }
+      }
+    }
+    $newText = $result -join ' '
+    "$prefix$newText$suffix"
+  
                   <p className="text-xs text-[var(--text-muted)] mb-4">Stress-test one parameter across a range on the same tick window. Cells show win rate (green = strong, red = weak).</p>
                   <div className="flex items-center gap-2 mb-4">
                     <select value={sweepParam} onChange={(e) => setSweepParam(e.target.value as any)} className="bg-[var(--card)] border border-[var(--border)] rounded-lg px-3 py-2 text-white text-sm">
