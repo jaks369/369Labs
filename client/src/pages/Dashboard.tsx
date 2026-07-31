@@ -826,15 +826,21 @@ export default function Dashboard() {
             </div>
             {(() => {
               const sigs = Array.isArray(signalsQuery.data) ? signalsQuery.data : [];
-              const latest = sigs[0];
+              const forSymbol = sigs.filter((s: any) => s.symbol === selectedSymbol);
+              const latest = forSymbol[0] || sigs[0];
               if (!latest) {
-                return <div className="empty-state py-6"><p className="empty-state-desc">No signals yet. Ask 369AI to watch a market, or wait for the always-on scanner to surface a pattern.</p></div>;
+                return <div className="empty-state py-6"><p className="empty-state-desc">No signals for {selectedDisplay} yet. Ask 369AI to watch a market, or wait for the always-on scanner to surface a pattern.</p></div>;
               }
               return (
                 <div>
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="ai-badge">{latest.symbol}</span>
+                    {latest.symbol === selectedSymbol && (
+                      <span className="text-[10px] uppercase tracking-wider text-[var(--accent)] font-bold">● Live context</span>
+                    )}
+                  </div>
                   <p className="text-sm text-[var(--text-secondary)] leading-relaxed">{latest.description}</p>
                   <div className="flex items-center gap-3 mt-3 text-xs">
-                    <span className="ai-badge">{latest.symbol}</span>
                     <span className="text-[var(--text-muted)]">win rate <b className="text-[var(--green)]">{latest.winRate}%</b></span>
                     <span className="text-[var(--text-muted)]">{new Date((latest.discoveredAt || 0) * 1000).toLocaleString()}</span>
                   </div>

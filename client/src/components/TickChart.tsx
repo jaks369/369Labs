@@ -1,6 +1,7 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { derivWS, Tick } from "@/services/derivWebSocket";
 import { trpc } from "@/lib/trpc";
+import { LineChart, AreaChart, Maximize, Minimize } from "lucide-react";
 
 interface ChartData {
   time: string;
@@ -29,6 +30,25 @@ export default function TickChart({ symbol, maxDataPoints = 100, decimalPlaces =
   const [data, setData] = useState<ChartData[]>([]);
   const containerRef = useRef<HTMLDivElement>(null);
   const [dims, setDims] = useState({ w: 800, h: 320 });
+  const [mode, setMode] = useState<"line" | "area">("area");
+  const [fullscreen, setFullscreen] = useState(false);
+  const [timeframe, setTimeframe] = useState<number>(50);
+
+  const toggleFullscreen = useCallback(() => {
+    if (!document.fullscreenElement) {
+      containerRef.current?.requestFullscreen?.().catch(() => {});
+      setFullscreen(true);
+    } else {
+      document.exitFullscreen?.().catch(() => {});
+      setFullscreen(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    const h = () => setFullscreen(Boolean(document.fullscreenElement));
+    document.addEventListener("fullscreenchange", h);
+    return () => document.removeEventListener("fullscreenchange", h);
+  }, []);
 
   useEffect(() => {
     const el = containerRef.current;
@@ -41,24 +61,24 @@ export default function TickChart({ symbol, maxDataPoints = 100, decimalPlaces =
     return () => ro.disconnect();
   }, []);
 
-  const historyQuery = trpc.market.getHistory.useQuery({ symbol, limit: n }, { enabled: Boolean(symbol) });
+  const historyQuery = trpc.market.getHistory.useQuery({ symbol, limit: timeframe }, { enabled: Boolean(symbol) });
   useEffect(() => {
     const ticks = historyQuery.data?.ticks;
     if (!ticks || !ticks.length) return;
-    const hist = ticks.slice(-n).map((t) => ({
+    const hist = ticks.slice(-timeframe).map((t) => ({
       time: new Date((t.epoch || 0) * 1000).toLocaleTimeString(),
       price: Number(t.price),
     }));
     if (hist.length) setData(hist);
-  }, [historyQuery.data, symbol, n]);
+  }, [historyQuery.data, symbol, timeframe]);
   const [error, setError] = useState<string | null>(null);
   const [currentPrice, setCurrentPrice] = useState<number | null>(null);
   const [priceColor, setPriceColor] = useState<"up" | "down">("up");
 
   useEffect(() => {
-    const buffered = derivWS.getRecentTicks(symbol, n);
+    const buffered = derivWS.getRecentTicks(symbol, timeframe);
     if (buffered.length) {
-      setData(buffered.slice(-n).map((t) => ({
+      setData(buffered.slice(-timeframe).map((t) => ({
         time: new Date(t.timestamp).toLocaleTimeString(),
         price: t.price,
       })));
@@ -81,7 +101,7 @@ export default function TickChart({ symbol, maxDataPoints = 100, decimalPlaces =
               time: new Date(tick.timestamp).toLocaleTimeString(),
               price: tick.price,
             },
-          ].slice(-n);
+          ].slice(-timeframe);
           return next;
         });
         setCurrentPrice((prev) => {
@@ -106,7 +126,7 @@ export default function TickChart({ symbol, maxDataPoints = 100, decimalPlaces =
       derivWS.removeListener(listener);
       derivWS.unsubscribe(id);
     };
-  }, [symbol, n]);
+  }, [symbol, timeframe]);
 
   const prices = data.map((d) => d.price);
   const minPrice = prices.length ? Math.min(...prices) : 0;
@@ -141,6 +161,16 @@ export default function TickChart({ symbol, maxDataPoints = 100, decimalPlaces =
   const lastPrice = prices.length ? prices[prices.length - 1] : null;
   const lastY = lastPrice != null ? padTop + chartH - ((lastPrice - scale.start) / yRange) * chartH : 0;
 
+  const ohlc = (() => {
+    if (!data.length) return null;
+    const first = data[0].price;
+    const open = first;
+    const high = Math.max(...prices);
+    const low = Math.min(...prices);
+    const close = data[data.length - 1].price;
+    return { open, high, low, close };
+  })();
+
   const uniqueTimes = new Set(data.map((d) => d.time));
   const timeLabels: { label: string; x: number }[] = [];
   if (data.length > 1 && uniqueTimes.size > 1) {
@@ -153,7 +183,47 @@ export default function TickChart({ symbol, maxDataPoints = 100, decimalPlaces =
 
   return (
     <div className="w-full">
-      <div ref={containerRef} className="w-full h-[280px] md:h-[340px] relative rounded-xl overflow-hidden border border-[var(--border-subtle)]"
+      {/* Chart toolbar */}
+      <div className="flex items-center justify-between gap-2 px-1 pb-2">
+        <div className="flex items-center gap-1">
+          {[25, 50, 100, 200].map((t) => (
+            <button
+              key={t}
+              onClick={() => setTimeframe(t)}
+              className={`px-2 py-0.5 rounded text-[10px] font-bold transition-colors cursor-pointer ${
+                timeframe === t ? "bg-[var(--accent-soft)] text-[var(--accent-hover)] border border-[var(--accent-border)]" : "text-[var(--text-muted)] hover:text-[var(--text-primary)] border border-transparent"
+              }`}
+            >
+              {t}
+            </button>
+          ))}
+        </div>
+        <div className="flex items-center gap-1">
+          <button
+            onClick={() => setMode("line")}
+            title="Line"
+            className={`p-1.5 rounded transition-colors cursor-pointer ${mode === "line" ? "bg-[var(--accent-soft)] text-[var(--accent-hover)]" : "text-[var(--text-muted)] hover:text-[var(--text-primary)]"}`}
+          >
+            <LineChart className="w-3.5 h-3.5" />
+          </button>
+          <button
+            onClick={() => setMode("area")}
+            title="Area"
+            className={`p-1.5 rounded transition-colors cursor-pointer ${mode === "area" ? "bg-[var(--accent-soft)] text-[var(--accent-hover)]" : "text-[var(--text-muted)] hover:text-[var(--text-primary)]"}`}
+          >
+            <AreaChart className="w-3.5 h-3.5" />
+          </button>
+          <button
+            onClick={toggleFullscreen}
+            title={fullscreen ? "Exit fullscreen" : "Fullscreen"}
+            className="p-1.5 rounded transition-colors cursor-pointer text-[var(--text-muted)] hover:text-[var(--text-primary)]"
+          >
+            {fullscreen ? <Minimize className="w-3.5 h-3.5" /> : <Maximize className="w-3.5 h-3.5" />}
+          </button>
+        </div>
+      </div>
+
+      <div ref={containerRef} className={`w-full relative rounded-xl overflow-hidden border border-[var(--border-subtle)] ${fullscreen ? "h-full min-h-[80vh]" : "h-[280px] md:h-[340px]"}`}
         style={{ background: "linear-gradient(180deg, rgba(45,217,196,0.04) 0%, rgba(45,217,196,0.01) 60%, transparent 100%)" }}>
         {error ? (
           <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 p-6">
@@ -193,7 +263,7 @@ export default function TickChart({ symbol, maxDataPoints = 100, decimalPlaces =
             ))}
 
             {/* Area fill */}
-            <path d={areaD} fill="url(#chartAreaGrad)" />
+            {mode === "area" && <path d={areaD} fill="url(#chartAreaGrad)" />}
 
             {/* Line */}
             <path
@@ -275,18 +345,22 @@ export default function TickChart({ symbol, maxDataPoints = 100, decimalPlaces =
       </div>
 
       {/* Stats row */}
-      <div className="mt-3 grid grid-cols-3 gap-3">
+      <div className="mt-3 grid grid-cols-4 gap-2 md:gap-3">
+        <div className="bg-[var(--card)] p-2.5 rounded-lg border border-[var(--border-subtle)]">
+          <span className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">Open</span>
+          <p className="text-sm font-bold text-[var(--text-primary)] tabular-nums">{ohlc ? ohlc.open.toFixed(decimalPlaces) : "—"}</p>
+        </div>
         <div className="bg-[var(--card)] p-2.5 rounded-lg border border-[var(--border-subtle)]">
           <span className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">High</span>
-          <p className="text-sm font-bold text-[var(--text-primary)] tabular-nums">{maxPrice.toFixed(decimalPlaces)}</p>
+          <p className="text-sm font-bold text-[var(--green)] tabular-nums">{ohlc ? ohlc.high.toFixed(decimalPlaces) : "—"}</p>
         </div>
         <div className="bg-[var(--card)] p-2.5 rounded-lg border border-[var(--border-subtle)]">
           <span className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">Low</span>
-          <p className="text-sm font-bold text-[var(--text-primary)] tabular-nums">{minPrice.toFixed(decimalPlaces)}</p>
+          <p className="text-sm font-bold text-[var(--red)] tabular-nums">{ohlc ? ohlc.low.toFixed(decimalPlaces) : "—"}</p>
         </div>
         <div className="bg-[var(--card)] p-2.5 rounded-lg border border-[var(--border-subtle)]">
-          <span className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">Ticks</span>
-          <p className="text-sm font-bold text-[var(--text-primary)] tabular-nums">{data.length}</p>
+          <span className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">Close</span>
+          <p className="text-sm font-bold text-[var(--text-primary)] tabular-nums">{ohlc ? ohlc.close.toFixed(decimalPlaces) : "—"}</p>
         </div>
       </div>
     </div>
