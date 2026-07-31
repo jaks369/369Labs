@@ -3,6 +3,7 @@ import { aiMemory } from "./AIMemory";
 import { AIKnowledgeType } from "./knowledgeTypes";
 import { getAITradingCopilot } from "./AITradingCopilot";
 import { getAIExplainabilityEngine } from "./AIExplainability";
+import { lastDigitOf, getDecimalPlaces } from "@shared/lastDigit";
 
 export interface ChatResponse {
   answer: string;
@@ -241,6 +242,33 @@ async function handleMarket(userId: number, message: string): Promise<ChatRespon
 
   const symbolMatch = m.match(/\b(r_\d{2,3}|1hz\d+v)\b/i);
   const targetSymbol = symbolMatch ? symbolMatch[0].toUpperCase() : null;
+
+  if (targetSymbol && /\b(digit|hottest|probability|percent|even|odd|last)\b/.test(m)) {
+    try {
+      const decimals = getDecimalPlaces(targetSymbol);
+      const ticks = await db.getTickHistory(targetSymbol, 100);
+      const prices = ticks.map((t: any) => Number(t.price)).filter((p: number) => !isNaN(p));
+      const digits = prices.map((p: number) => lastDigitOf(p, decimals));
+      if (digits.length >= 20) {
+        const digitCounts: Record<number, number> = {};
+        for (const d of digits) digitCounts[d] = (digitCounts[d] || 0) + 1;
+        const sorted = Object.entries(digitCounts).sort((a, b) => b[1] - a[1]);
+        const hottest = sorted[0];
+        const pct = (n: number) => ((n / digits.length) * 100).toFixed(1) + "%";
+        evidence.push(`${targetSymbol} digit distribution (${digits.length} ticks): ${sorted.map(([d, c]) => `${d}=${pct(c)}`).join(", ")}`);
+        const evenCount = digits.filter((d) => d % 2 === 0).length;
+        const oddCount = digits.length - evenCount;
+        const evenPct = Math.round((evenCount / digits.length) * 100);
+        const last = digits[digits.length - 1];
+        const answer = hottest
+          ? `${targetSymbol} last digit was ${last}. Hottest digit: ${hottest[0]} (${pct(hottest[1])} of ${digits.length} ticks). Even/Odd split: ${evenPct}% / ${100 - evenPct}%.`
+          : `${targetSymbol} last digit was ${last}. Even/Odd split: ${evenPct}% / ${100 - evenPct}%.`;
+        return { answer, confidence: 85, evidence, enginesUsed: engines, timestamp: Date.now() };
+      }
+    } catch {
+      /* fall through to health */
+    }
+  }
 
   if (targetSymbol) {
     const health = aiOrchestrator.getHealthFor(targetSymbol);
