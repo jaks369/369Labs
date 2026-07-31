@@ -5,7 +5,7 @@ import { Sparkles, Activity, Bot, BarChart3, ChevronRight, ChevronLeft, Check } 
 import { toast } from "@/components/Toast";
 
 const STEPS = [
-  { icon: Sparkles, title: "Welcome to 369Labs", description: "AI-powered trading automation platform. Let's get you set up in under 2 minutes." },
+  { icon: Sparkles, title: "Welcome to 369Labs", description: "Trading isn't the product — the system is. Discover, analyze, build, test, review, execute, automate, and learn in one loop. Let's get you set up in under 2 minutes." },
   { icon: Activity, title: "Connect to Markets", description: "Add your Deriv API token from Settings to connect to live markets. You can also start with paper trading." },
   { icon: Bot, title: "Build Your First Strategy", description: "Use the visual Strategy Builder or describe your idea to 369AI and let it create the rules." },
   { icon: BarChart3, title: "Test & Deploy", description: "Backtest against historical data, then deploy as a cloud bot that runs 24/7." },
@@ -33,8 +33,10 @@ export default function Onboarding() {
   const Icon = s.icon;
 
   return (
-    <div className="min-h-screen bg-[var(--card)] flex items-center justify-center p-6">
-      <div className="w-full max-w-lg">
+    <div className="min-h-screen bg-[var(--card)] flex items-center justify-center p-6 relative overflow-hidden">
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[400px] h-[300px] bg-[var(--accent)] blur-[180px] rounded-full opacity-[0.1] pointer-events-none" />
+      <div className="absolute bottom-0 right-0 w-[300px] h-[260px] bg-[var(--green)] blur-[180px] rounded-full opacity-[0.05] pointer-events-none" />
+      <div className="w-full max-w-lg relative">
         <div className="flex gap-1.5 mb-12 justify-center">
           {STEPS.map((_, i) => (
             <div key={i} className={`h-1.5 w-12 rounded-full transition-all ${i <= step ? "bg-[var(--accent)]" : "bg-[var(--border)]"}`} />
