@@ -70,6 +70,14 @@ function parseDbUrl(url: string) {
     user: parsed.username,
     password: parsed.password,
     database: parsed.pathname.replace("/", ""),
+    // Connection pool limits - prevent connection exhaustion
+    waitForConnections: true,
+    connectionLimit: Number(process.env.DB_POOL_LIMIT) || 10,
+    maxIdle: Number(process.env.DB_POOL_MAX_IDLE) || 5,
+    idleTimeout: Number(process.env.DB_POOL_IDLE_TIMEOUT) || 60000, // 60 seconds
+    queueLimit: Number(process.env.DB_POOL_QUEUE_LIMIT) || 20,
+    enableKeepAlive: true,
+    keepAliveInitialDelay: 10000,
   };
   if (parsed.hostname.includes("tidbcloud.com")) {
     config.ssl = { rejectUnauthorized: false };

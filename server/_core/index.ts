@@ -11,12 +11,13 @@ import { runWatch } from "../signalScanner";
 import { ENV } from "./env";
 import { oauthRouter } from "./oauth";
 import { getStandardVolatilitySymbols } from "@shared/symbols";
+import { logger, createRequestLogger, addCorrelationIdHeader } from "./logger";
 
 process.on("unhandledRejection", (reason) => {
-  console.error("[Startup] Unhandled promise rejection:", reason);
+  logger.error("[Startup] Unhandled promise rejection", { error: String(reason) });
 });
 process.on("uncaughtException", (err) => {
-  console.error("[Startup] Uncaught exception:", err);
+  logger.error("[Startup] Uncaught exception", { error: err.message, stack: err.stack });
 });
 
 function logStartupChecks() {
@@ -26,10 +27,7 @@ function logStartupChecks() {
   if (!ENV.ENCRYPTION_KEY) missing.push("ENCRYPTION_KEY");
 
   if (missing.length > 0) {
-    console.error(
-      `[Startup] WARNING: Missing required environment variables: ${missing.join(", ")}. ` +
-      `The app may not function correctly.`
-    );
+    logger.warn(`[Startup] WARNING: Missing required environment variables: ${missing.join(", ")}. The app may not function correctly.`);
   }
 }
 
@@ -40,20 +38,34 @@ export async function createApp() {
   try {
     db = await getDb();
   } catch (e) {
-    console.error("[Startup] Database connection failed (continuing without DB):", e);
+    logger.error("[Startup] Database connection failed (continuing without DB)", { error: String(e) });
   }
   if (!db) {
-    console.error(
-      "[Startup] Database is not available. API endpoints requiring the database will fail."
-    );
+    logger.error("[Startup] Database is not available. API endpoints requiring the database will fail.");
   }
 
   const app = express();
   app.use(express.json({ limit: "50mb" }));
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
 
+  // Correlation ID middleware - must be first
+  app.use((req: any, res: any, next: any) => {
+    const correlationId = addCorrelationIdHeader(res);
+    req.correlationId = correlationId;
+    req.log = createRequestLogger(req);
+    const start = Date.now();
+    res.on("finish", () => {
+      const durationMs = Date.now() - start;
+      req.log.info("HTTP request completed", {
+        statusCode: res.statusCode,
+        durationMs,
+      });
+    });
+    next();
+  });
+
   // Security headers
-  app.use((_req, res, next) => {
+  app.use((_req: any, res: any, next: any) => {
     res.setHeader("X-Content-Type-Options", "nosniff");
     res.setHeader("X-Frame-Options", "DENY");
     res.setHeader("X-XSS-Protection", "0");
@@ -75,7 +87,7 @@ export async function createApp() {
 
   app.use("/api/auth", oauthRouter);
 
-  // Lightweight in-memory rate limiter (per-IP + per-key). Stricter caps on auth/trading/AI paths.
+  // Lightweight in-memory rate limiter (per-IP + per-key). Stricter caps on auth/trading/bot endpoints.
   const rateBuckets: Record<string, { count: number; reset: number }> = {};
   const RATE = (limit: number, windowMs: number) => (req: any, res: any, next: any) => {
     const ip = req.headers["x-forwarded-for"]?.toString().split(",")[0]?.trim() || req.socket?.remoteAddress || "unknown";
@@ -86,7 +98,11 @@ export async function createApp() {
     if (now > b.reset) { b.count = 0; b.reset = now + windowMs; }
     b.count++;
     rateBuckets[key] = b;
-    if (b.count > limit) { res.status(429).json({ error: "Too many requests, slow down." }); return; }
+    if (b.count > limit) { 
+      req.log?.warn("Rate limit exceeded", { limit, windowMs, ip });
+      res.status(429).json({ error: "Too many requests, slow down." }); 
+      return; 
+    }
     next();
   };
   app.use("/api/trpc", (req: any, res: any, next: any) => {
@@ -99,6 +115,12 @@ export async function createApp() {
     }
     if (url.includes("ai.") || url.includes("aiMarket") || url.includes("aiChat") || url.includes("aiPerformance") || url.includes("aiExplainability") || url.includes("aiCopilot") || url.includes("tradingCopilot")) {
       return RATE(60, 60_000)(req, res, next); // 60 AI requests per minute
+    }
+    if (url.includes("bot") || url.includes("deploy") || url.includes("stopRun")) {
+      return RATE(20, 60_000)(req, res, next); // 20 bot management requests per minute
+    }
+    if (url.includes("settlement") || url.includes("reconcile")) {
+      return RATE(10, 60_000)(req, res, next); // 10 settlement requests per minute
     }
     return RATE(120, 60_000)(req, res, next); // 120 general requests per minute
   });
@@ -117,33 +139,33 @@ export async function createApp() {
     // Bind the port FIRST so Render's port scanner always sees an open port,
     // even if later startup work (DB hygiene, collectors) fails.
     app.listen(port, () => {
-      console.log(`[Startup] Server listening on 0.0.0.0:${port} (NODE_ENV=${process.env.NODE_ENV})`);
+      logger.info(`[Startup] Server listening on 0.0.0.0:${port} (NODE_ENV=${process.env.NODE_ENV})`);
     });
     // Non-critical startup work - fully isolated so a failure can never
     // take the server (and its open port) down.
     (async () => {
-      try { startTickCollector(); } catch (e) { console.error("[startup] startTickCollector failed", e); }
-      try { startAlwaysOnScanner(); } catch (e) { console.error("[startup] startAlwaysOnScanner failed", e); }
-      try { await ensureSessionsTable(); } catch (e) { console.error("[startup] ensureSessionsTable failed", e); }
-      try { await ensureUsersColumns(); } catch (e) { console.error("[startup] ensureUsersColumns failed", e); }
-      try { await ensureSignalsTable(); } catch (e) { console.error("[startup] ensureSignalsTable failed", e); }
-      try { await ensureSignalExpiryColumn(); } catch (e) { console.error("[startup] ensureSignalExpiryColumn failed", e); }
-      try { await ensureNotificationSettingsColumns(); } catch (e) { console.error("[startup] ensureNotificationSettingsColumns failed", e); }
-      try { await ensureAuditLogsTable(); } catch (e) { console.error("[startup] ensureAuditLogsTable failed", e); }
-      try { await ensureIpWhitelistTable(); } catch (e) { console.error("[startup] ensureIpWhitelistTable failed", e); }
-      try { await ensureTradesTable(); } catch (e) { console.error("[startup] ensureTradesTable failed", e); }
-      try { await ensureStrategiesTable(); } catch (e) { console.error("[startup] ensureStrategiesTable failed", e); }
-      try { await ensureTickHistoryTable(); } catch (e) { console.error("[startup] ensureTickHistoryTable failed", e); }
-      try { await ensurePriceAlertsTable(); } catch (e) { console.error("[startup] ensurePriceAlertsTable failed", e); }
-      try { await pruneBadTicks(); } catch (e) { console.error("[startup] pruneBadTicks failed", e); }
-      try { await recomputeLastDigits(); } catch (e) { console.error("[startup] recomputeLastDigits failed", e); }
-      try { await ensureUserMemoryTable(); } catch (e) { console.error("[startup] ensureUserMemoryTable failed", e); }
-      try { await ensurePluginsTable(); } catch (e) { console.error("[startup] ensurePluginsTable failed", e); }
-      try { await ensureWebhooksTable(); } catch (e) { console.error("[startup] ensureWebhooksTable failed", e); }
-      try { await ensureAiKnowledgeTable(); } catch (e) { console.error("[startup] ensureAiKnowledgeTable failed", e); }
-      try { await ensureVerificationTokensTable(); } catch (e) { console.error("[startup] ensureVerificationTokensTable failed", e); }
-      try { await ensurePasswordResetTokensTable(); } catch (e) { console.error("[startup] ensurePasswordResetTokensTable failed", e); }
-      try { await ensureBotLogsTable(); } catch (e) { console.error("[startup] ensureBotLogsTable failed", e); }
+      try { startTickCollector(); } catch (e) { logger.error("[startup] startTickCollector failed", { error: String(e) }); }
+      try { startAlwaysOnScanner(); } catch (e) { logger.error("[startup] startAlwaysOnScanner failed", { error: String(e) }); }
+      try { await ensureSessionsTable(); } catch (e) { logger.error("[startup] ensureSessionsTable failed", { error: String(e) }); }
+      try { await ensureUsersColumns(); } catch (e) { logger.error("[startup] ensureUsersColumns failed", { error: String(e) }); }
+      try { await ensureSignalsTable(); } catch (e) { logger.error("[startup] ensureSignalsTable failed", { error: String(e) }); }
+      try { await ensureSignalExpiryColumn(); } catch (e) { logger.error("[startup] ensureSignalExpiryColumn failed", { error: String(e) }); }
+      try { await ensureNotificationSettingsColumns(); } catch (e) { logger.error("[startup] ensureNotificationSettingsColumns failed", { error: String(e) }); }
+      try { await ensureAuditLogsTable(); } catch (e) { logger.error("[startup] ensureAuditLogsTable failed", { error: String(e) }); }
+      try { await ensureIpWhitelistTable(); } catch (e) { logger.error("[startup] ensureIpWhitelistTable failed", { error: String(e) }); }
+      try { await ensureTradesTable(); } catch (e) { logger.error("[startup] ensureTradesTable failed", { error: String(e) }); }
+      try { await ensureStrategiesTable(); } catch (e) { logger.error("[startup] ensureStrategiesTable failed", { error: String(e) }); }
+      try { await ensureTickHistoryTable(); } catch (e) { logger.error("[startup] ensureTickHistoryTable failed", { error: String(e) }); }
+      try { await ensurePriceAlertsTable(); } catch (e) { logger.error("[startup] ensurePriceAlertsTable failed", { error: String(e) }); }
+      try { await pruneBadTicks(); } catch (e) { logger.error("[startup] pruneBadTicks failed", { error: String(e) }); }
+      try { await recomputeLastDigits(); } catch (e) { logger.error("[startup] recomputeLastDigits failed", { error: String(e) }); }
+      try { await ensureUserMemoryTable(); } catch (e) { logger.error("[startup] ensureUserMemoryTable failed", { error: String(e) }); }
+      try { await ensurePluginsTable(); } catch (e) { logger.error("[startup] ensurePluginsTable failed", { error: String(e) }); }
+      try { await ensureWebhooksTable(); } catch (e) { logger.error("[startup] ensureWebhooksTable failed", { error: String(e) }); }
+      try { await ensureAiKnowledgeTable(); } catch (e) { logger.error("[startup] ensureAiKnowledgeTable failed", { error: String(e) }); }
+      try { await ensureVerificationTokensTable(); } catch (e) { logger.error("[startup] ensureVerificationTokensTable failed", { error: String(e) }); }
+      try { await ensurePasswordResetTokensTable(); } catch (e) { logger.error("[startup] ensurePasswordResetTokensTable failed", { error: String(e) }); }
+      try { await ensureBotLogsTable(); } catch (e) { logger.error("[startup] ensureBotLogsTable failed", { error: String(e) }); }
       try {
         const { aiOrchestrator } = await import("../ai/AIOrchestrator");
         aiOrchestrator.start();
@@ -159,24 +181,29 @@ export async function createApp() {
             });
           } catch {}
         });
-        console.log("[startup] AI Intelligence Hub started");
-      } catch (e) { console.error("[startup] AI Intelligence Hub failed", e); }
+        logger.info("[startup] AI Intelligence Hub started");
+      } catch (e) { logger.error("[startup] AI Intelligence Hub failed", { error: String(e) }); }
       try {
         const { settlementTracker } = await import("../SettlementTracker");
         settlementTracker.start();
-      } catch (e) { console.error("[startup] SettlementTracker failed", e); }
+      } catch (e) { logger.error("[startup] SettlementTracker failed", { error: String(e) }); }
       try {
         const { startExecutionEngine } = await import("../executionEngine");
         startExecutionEngine();
-      } catch (e) { console.error("[startup] ExecutionEngine failed", e); }
+      } catch (e) { logger.error("[startup] ExecutionEngine failed", { error: String(e) }); }
     })();
   }
 
   // Global error handler
   app.use((err: any, _req: any, res: any, _next: any) => {
-    console.error("[ErrorHandler]", err?.message || err);
+    const correlationId = _req.correlationId;
+    logger.error("[ErrorHandler]", { 
+      error: err?.message || err, 
+      stack: err?.stack,
+      correlationId 
+    });
     const status = err?.status || err?.statusCode || 500;
-    res.status(status).json({ error: err?.message || "Internal server error" });
+    res.status(status).json({ error: err?.message || "Internal server error", correlationId });
   });
 
   return app;
