@@ -1,7 +1,7 @@
 import { useAuth } from "@/_core/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { useLocation } from "wouter";
-import { Brain, Globe, BarChart3, ChevronRight, Activity, Star, CheckCircle2, Shield, Zap, Clock, TrendingUp, Server, Menu, X } from "lucide-react";
+import { Brain, Globe, BarChart3, ChevronRight, Activity, Star, CheckCircle2, Shield, Zap, Clock, TrendingUp, Server, Menu, X, Radar, Wrench, FlaskConical, SearchCheck, MousePointerClick, Bot, GraduationCap, LineChart } from "lucide-react";
 import { motion } from "framer-motion";
 import { useState } from "react";
 
@@ -14,6 +14,17 @@ const stagger = {
   visible: { transition: { staggerChildren: 0.08 } },
 };
 
+const SYSTEM_FLOW = [
+  { icon: Radar, label: "Discover", desc: "Scan live markets" },
+  { icon: LineChart, label: "Analyze", desc: "Health & patterns" },
+  { icon: Wrench, label: "Build", desc: "Visual strategy lab" },
+  { icon: FlaskConical, label: "Test", desc: "Backtest & replay" },
+  { icon: SearchCheck, label: "Review", desc: "AI risk critique" },
+  { icon: MousePointerClick, label: "Execute", desc: "One-tap trading" },
+  { icon: Bot, label: "Automate", desc: "24/7 cloud bots" },
+  { icon: GraduationCap, label: "Learn", desc: "Journal & improve" },
+];
+
 export default function Home() {
   const { isAuthenticated } = useAuth();
   const [, navigate] = useLocation();
@@ -23,7 +34,9 @@ export default function Home() {
     <div className="min-h-screen bg-[var(--bg)] text-[var(--text-primary)] selection:bg-[var(--accent)]/20">
       {/* Subtle accent glow */}
       <div className="fixed inset-0 pointer-events-none">
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[500px] h-[350px] bg-[var(--accent)] blur-[200px] rounded-full opacity-[0.07]" />
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[500px] h-[350px] bg-[var(--accent)] blur-[200px] rounded-full opacity-[0.08]" />
+        <div className="absolute bottom-0 right-0 w-[420px] h-[320px] bg-[var(--green)] blur-[220px] rounded-full opacity-[0.05]" />
+        <div className="absolute top-1/3 left-0 w-[360px] h-[300px] bg-[var(--accent)] blur-[200px] rounded-full opacity-[0.04]" />
       </div>
 
       {/* Nav */}
@@ -136,6 +149,94 @@ export default function Home() {
                 <p className="text-sm text-[var(--text-muted)] leading-relaxed">{feature.desc}</p>
               </motion.div>
             ))}
+          </motion.div>
+        </section>
+
+        {/* The System — the full 369Labs loop */}
+        <section className="max-w-6xl mx-auto px-6 py-20">
+          <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={stagger}>
+            <motion.div variants={fadeUp} className="text-center mb-12">
+              <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium text-[var(--accent)] border border-[var(--accent-border)] bg-[var(--accent-soft)] mb-4">
+                <Activity className="w-3 h-3" /> The System
+              </span>
+              <h2 className="text-3xl md:text-4xl font-bold text-[var(--text-primary)] tracking-tight mb-3">
+                Trading isn't the product.<br className="hidden md:block" /> <span className="text-[var(--accent)]">The System is.</span>
+              </h2>
+              <p className="text-sm text-[var(--text-secondary)] max-w-xl mx-auto leading-relaxed">
+                ﻿369Labs is a complete loop — from market discovery to automated execution to measurable learning. Every stage feeds the next.
+              </p>
+            </motion.div>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              {SYSTEM_FLOW.map((step, i) => (
+                <motion.div key={step.label} variants={fadeUp} className="relative group">
+                  <div className="p-4 border border-[var(--border)]/50 rounded-xl bg-[var(--card)]/40 hover:border-[var(--accent-border)] hover:bg-[var(--card)] transition-all duration-300 h-full">
+                    <div className="flex items-center justify-between mb-3">
+                      <step.icon className="w-5 h-5 text-[var(--accent)]" />
+                      <span className="text-[10px] font-mono text-[var(--text-disabled)]">0{i + 1}</span>
+                    </div>
+                    <h3 className="text-sm font-bold text-[var(--text-primary)]">{step.label}</h3>
+                    <p className="text-xs text-[var(--text-muted)] mt-0.5">{step.desc}</p>
+                  </div>
+                  {i < SYSTEM_FLOW.length - 1 && (
+                    <ChevronRight className="hidden md:block absolute -right-2.5 top-1/2 -translate-y-1/2 w-5 h-5 text-[var(--accent)]/40 z-10" />
+                  )}
+                </motion.div>
+              ))}
+            </div>
+          </motion.div>
+        </section>
+
+        {/* 369AI Introduction */}
+        <section className="max-w-6xl mx-auto px-6 py-16">
+          <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={stagger} className="relative overflow-hidden rounded-2xl border border-[var(--accent-border)]/50 bg-[var(--card)]/40 p-8 md:p-12">
+            <div className="absolute -top-16 right-0 w-[300px] h-[300px] bg-[var(--accent)] blur-[160px] rounded-full opacity-[0.1] pointer-events-none" />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-10 items-center relative">
+              <div>
+                <motion.div variants={fadeUp} className="flex items-center gap-2 mb-4">
+                  <div className="w-9 h-9 bg-[var(--accent)] rounded-xl flex items-center justify-center">
+                    <Brain className="w-5 h-5 text-[var(--bg)]" />
+                  </div>
+                  <span className="text-sm font-bold text-[var(--accent)]">369AI</span>
+                </motion.div>
+                <motion.h2 variants={fadeUp} className="text-3xl md:text-4xl font-bold text-[var(--text-primary)] tracking-tight mb-4">
+                  Your intelligence layer,<br />embedded where you trade.
+                </motion.h2>
+                <motion.p variants={fadeUp} className="text-sm text-[var(--text-secondary)] leading-relaxed mb-6">
+                  369AI doesn't live in a corner of the app. It watches the market beside your chart, reviews your strategies before you deploy them, and scores every decision you make — turning raw market data into a calm, contextual edge.
+                </motion.p>
+                <motion.div variants={fadeUp} className="grid grid-cols-2 gap-3 max-w-md">
+                  {[
+                    { icon: Radar, text: "Market health, live" },
+                    { icon: SearchCheck, text: "Strategy critique" },
+                    { icon: LineChart, text: "Digit intelligence" },
+                    { icon: Bot, text: "Trade review" },
+                  ].map((item) => (
+                    <div key={item.text} className="flex items-center gap-2 text-xs text-[var(--text-secondary)]">
+                      <item.icon className="w-3.5 h-3.5 text-[var(--accent)] shrink-0" />
+                      {item.text}
+                    </div>
+                  ))}
+                </motion.div>
+              </div>
+              <motion.div variants={fadeUp} className="space-y-3">
+                {[
+                  { label: "Market Health", value: "78 / 100", note: "V75 · Strong momentum", pct: 78 },
+                  { label: "Strategy Review", value: "2 findings", note: "Risk check passed", pct: 66 },
+                  { label: "Verdict", value: "+$4.20", note: "Top symbol this session", pct: 100 },
+                ].map((row) => (
+                  <div key={row.label} className="rounded-xl border border-[var(--border)]/50 bg-[var(--card)]/60 p-4">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-[11px] uppercase tracking-widest text-[var(--text-muted)] font-bold">{row.label}</span>
+                      <span className="text-sm font-bold font-mono tabular-nums text-[var(--accent)]">{row.value}</span>
+                    </div>
+                    <div className="h-1 rounded-full bg-[var(--surface-elevated)] overflow-hidden mb-2">
+                      <motion.div initial={{ width: 0 }} whileInView={{ width: `${row.pct}%` }} viewport={{ once: true }} transition={{ duration: 0.9, ease: "easeOut" }} className="h-full bg-[var(--accent)] rounded-full" />
+                    </div>
+                    <p className="text-xs text-[var(--text-muted)]">{row.note}</p>
+                  </div>
+                ))}
+              </motion.div>
+            </div>
           </motion.div>
         </section>
 
