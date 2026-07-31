@@ -148,6 +148,43 @@ export default function Dashboard() {
   // Use live ticks if streaming, else fall back to the DB snapshot.
   const displayTicks = liveTicks.length ? liveTicks : (priceQuery.data?.ticks || []).slice(0, 50);
 
+  const allTrades = (tradesQuery.data || []) as any[];
+  const settled = allTrades.filter((t: any) => t.result === "win" || t.result === "loss");
+  const todayKey = new Date().toDateString();
+  const todayTrades = allTrades.filter((t: any) => new Date(t.entryTime).toDateString() === todayKey);
+  const todaySettled = todayTrades.filter((t: any) => t.result === "win" || t.result === "loss");
+  const todayPnl = todaySettled.reduce((a: number, t: any) => a + parseFloat(t.profitLoss?.toString() || "0"), 0);
+  const todayWinRate = todaySettled.length ? Math.round((todaySettled.filter((t: any) => t.result === "win").length / todaySettled.length) * 100) : 0;
+  const bestSymbol = (() => {
+    const bySym: Record<string, number> = {};
+    for (const t of settled) {
+      const s = t.symbol || "-";
+      bySym[s] = (bySym[s] || 0) + parseFloat(t.profitLoss?.toString() || "0");
+    }
+    return Object.entries(bySym).sort((a, b) => b[1] - a[1])[0] || null;
+  })();
+  const bestType = (() => {
+    const byType: Record<string, { pnl: number; n: number }> = {};
+    for (const t of settled) {
+      const ty = t.contractType || "-";
+      byType[ty] = byType[ty] || { pnl: 0, n: 0 };
+      byType[ty].pnl += parseFloat(t.profitLoss?.toString() || "0");
+      byType[ty].n += 1;
+    }
+    const ranked = Object.entries(byType).filter(([, v]) => v.n >= 2).sort((a, b) => b[1].pnl - a[1].pnl)[0] || null;
+    return ranked;
+  })();
+  const avgWin = (() => {
+    const wins = settled.filter((t: any) => t.result === "win");
+    if (!wins.length) return 0;
+    return wins.reduce((a, t) => a + parseFloat(t.profitLoss?.toString() || "0"), 0) / wins.length;
+  })();
+  const avgLoss = (() => {
+    const losses = settled.filter((t: any) => t.result === "loss");
+    if (!losses.length) return 0;
+    return losses.reduce((a, t) => a + parseFloat(t.profitLoss?.toString() || "0"), 0) / losses.length;
+  })();
+
   const handleQuickTrade = async () => {
     if (!derivWS.isAuthorized()) { addTradeLog("err", "Connect a Deriv token first (Settings)."); return; }
     const dailyLossLimit = (memoryQuery.data?.memory as any)?.dailyLossLimit;
@@ -545,6 +582,43 @@ export default function Dashboard() {
             )}
           </div>
 
+          {/* Session stats strip — dense table-like cells */}
+          <div className="panel px-3 py-2">
+            <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-xs">
+              <div className="flex items-center gap-2 min-w-[140px]">
+                <span className="text-[10px] uppercase tracking-widest text-[var(--text-muted)] font-bold">Session P&L</span>
+                <span className={`font-mono tabular-nums font-bold text-[13px] ${todayPnl >= 0 ? "text-[var(--green)]" : "text-[var(--red)]"}`}>
+                  {todayPnl >= 0 ? "+" : ""}{todayPnl.toFixed(2)}
+                </span>
+              </div>
+              <div className="flex items-center gap-2 min-w-[110px]">
+                <span className="text-[10px] uppercase tracking-widest text-[var(--text-muted)] font-bold">Win Rate</span>
+                <span className="font-mono tabular-nums font-bold text-[13px] text-white">{todaySettled.length ? `${todayWinRate}%` : "—"}</span>
+              </div>
+              <div className="flex items-center gap-2 min-w-[100px]">
+                <span className="text-[10px] uppercase tracking-widest text-[var(--text-muted)] font-bold">Trades</span>
+                <span className="font-mono tabular-nums font-bold text-[13px] text-white">{todayTrades.length}</span>
+              </div>
+              <div className="flex items-center gap-2 min-w-[130px]">
+                <span className="text-[10px] uppercase tracking-widest text-[var(--text-muted)] font-bold">Best Symbol</span>
+                <span className="font-mono tabular-nums font-bold text-[13px] text-[var(--accent)]">{bestSymbol ? bestSymbol[0] : "—"}</span>
+                {bestSymbol && <span className={`font-mono tabular-nums ${Number(bestSymbol[1]) >= 0 ? "text-[var(--green)]" : "text-[var(--red)]"}`}>({Number(bestSymbol[1]).toFixed(1)})</span>}
+              </div>
+              <div className="flex items-center gap-2 min-w-[120px]">
+                <span className="text-[10px] uppercase tracking-widest text-[var(--text-muted)] font-bold">Best Type</span>
+                <span className="font-mono tabular-nums font-bold text-[13px] text-white">{bestType ? bestType[0] : "—"}</span>
+              </div>
+              <div className="flex items-center gap-2 min-w-[120px]">
+                <span className="text-[10px] uppercase tracking-widest text-[var(--text-muted)] font-bold">Avg W/L</span>
+                <span className="font-mono tabular-nums font-bold text-[13px]">
+                  <span className="text-[var(--green)]">+{avgWin.toFixed(2)}</span>
+                  <span className="text-[var(--text-muted)]"> / </span>
+                  <span className="text-[var(--red)]">{avgLoss.toFixed(2)}</span>
+                </span>
+              </div>
+            </div>
+          </div>
+
           {/* Positions / Trades / Price panel */}
           <div className="panel">
             <div className="panel-header">
@@ -637,32 +711,38 @@ export default function Dashboard() {
                 })()}
                 <div className="table-container border-0 rounded-none">
                   {(() => {
-                    const symTrades = (tradesQuery.data || []).filter((t: any) => (t.symbol || "") === selectedSymbol);
-                    if (symTrades.length === 0) {
-                      return <div className="empty-state"><p className="empty-state-desc">No trades for {selectedSymbol} yet.</p></div>;
+                    const rows = allTrades.slice(0, 20);
+                    if (rows.length === 0) {
+                      return <div className="empty-state"><p className="empty-state-desc">No trades yet. Place a trade to build your history.</p></div>;
                     }
                     return (
                       <table className="table">
                         <thead>
-                          <tr><th>#</th><th>TYPE</th><th>STAKE</th><th>ENTRY</th><th>RESULT</th><th className="text-right">P&L</th></tr>
+                          <tr><th>TIME</th><th>SYMBOL</th><th>TYPE</th><th className="text-right">STAKE</th><th className="text-right">ENTRY</th><th>RESULT</th><th className="text-right">P&L</th></tr>
                         </thead>
                         <tbody>
-                          {symTrades.slice(0, 10).map((trade: any, i: number) => (
-                            <tr key={trade.id}>
-                              <td className="text-[var(--text-muted)] font-mono">{i + 1}</td>
-                              <td><span className="tag">{trade.contractType || "-"}</span></td>
-                              <td className="tabular-nums">${parseFloat(trade.stake || "0").toFixed(2)}</td>
-                              <td className="font-mono tabular-nums">{parseFloat(trade.entryPrice || "0").toFixed(decimalPlaces)}</td>
-                              <td>
-                                <span className={`badge ${trade.result === "win" ? "badge-green" : trade.result === "loss" ? "badge-red" : "badge-gray"}`}>
-                                  {trade.result?.toUpperCase() || "-"}
-                                </span>
-                              </td>
-                              <td className={`text-right font-bold font-mono tabular-nums ${parseFloat(trade.profitLoss?.toString() || "0") >= 0 ? "text-[var(--green)]" : "text-[var(--red)]"}`}>
-                                {parseFloat(trade.profitLoss?.toString() || "0") >= 0 ? "+" : ""}{parseFloat(trade.profitLoss || "0").toFixed(2)}
-                              </td>
-                            </tr>
-                          ))}
+                          {rows.map((trade: any) => {
+                            const pl = parseFloat(trade.profitLoss?.toString() || "0");
+                            return (
+                              <tr key={trade.id}>
+                                <td className="tabular-nums text-[var(--text-muted)]">
+                                  {trade.entryTime ? new Date(trade.entryTime).toLocaleString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }) : "—"}
+                                </td>
+                                <td className={`font-mono font-bold ${(trade.symbol || "") === selectedSymbol ? "text-[var(--accent)]" : "text-white"}`}>{trade.symbol || "—"}</td>
+                                <td><span className="tag">{trade.contractType || "-"}</span></td>
+                                <td className="text-right tabular-nums">${parseFloat(trade.stake || "0").toFixed(2)}</td>
+                                <td className="text-right font-mono tabular-nums">{parseFloat(trade.entryPrice || "0").toFixed(decimalPlaces)}</td>
+                                <td>
+                                  <span className={`badge ${trade.result === "win" ? "badge-green" : trade.result === "loss" ? "badge-red" : "badge-gray"}`}>
+                                    {trade.result?.toUpperCase() || "-"}
+                                  </span>
+                                </td>
+                                <td className={`text-right font-bold font-mono tabular-nums ${pl >= 0 ? "text-[var(--green)]" : "text-[var(--red)]"}`}>
+                                  {pl >= 0 ? "+" : ""}{pl.toFixed(2)}
+                                </td>
+                              </tr>
+                            );
+                          })}
                         </tbody>
                       </table>
                     );
