@@ -46,6 +46,73 @@ const summarizeRuleSafe = (r: any): string => {
   try { return summarizeRule(r as StrategyRule); } catch { return "—"; }
 };
 
+const PIPELINE_STAGES: { type: StrategyBlock["type"]; label: string }[] = [
+  { type: "market", label: "Market" },
+  { type: "condition", label: "Condition" },
+  { type: "indicator", label: "Indicator" },
+  { type: "risk", label: "Risk" },
+  { type: "trade", label: "Entry" },
+  { type: "exit", label: "Exit" },
+];
+
+const SYMBOL_OPTIONS = ["R_10", "R_25", "R_50", "R_75", "R_100", "1HZ10V", "1HZ25V", "1HZ50V", "1HZ75V", "1HZ100V"];
+
+const CONDITION_OPTIONS = [
+  "Digit over 5",
+  "Digit under 5",
+  "Digit even",
+  "Digit odd",
+  "Consecutive rise",
+  "Consecutive fall",
+  "Trend up",
+  "Trend down",
+];
+
+const INDICATOR_OPTIONS = [
+  "Momentum (5 ticks)",
+  "Volatility regime",
+  "Mean reversion",
+  "Breakout (20 ticks)",
+];
+
+const TRADE_OPTIONS = ["CALL", "PUT", "DIGITMATCH", "DIGITOVER", "DIGITUNDER"];
+
+function blockValueOptions(type: StrategyBlock["type"]): string[] | null {
+  switch (type) {
+    case "market": return SYMBOL_OPTIONS;
+    case "condition": return CONDITION_OPTIONS;
+    case "indicator": return INDICATOR_OPTIONS;
+    case "trade": return TRADE_OPTIONS;
+    default: return null;
+  }
+}
+
+function blocksToRule(blocks: StrategyBlock[]): StrategyRule {
+  const market = blocks.find((b) => b.type === "market")?.value || "R_100";
+  const condition = blocks.find((b) => b.type === "condition")?.value || "Digit over 5";
+  const trade = blocks.find((b) => b.type === "trade")?.value || "CALL";
+  const stakeStr = blocks.find((b) => b.type === "risk")?.value || "1";
+  const stake = parseFloat(stakeStr) || 1;
+
+  const conditionMap: Record<string, any> = {
+    "Digit over 5": { indicator: "digit_over", barrier: 5 },
+    "Digit under 5": { indicator: "digit_under", barrier: 5 },
+    "Digit even": { indicator: "digit_even" },
+    "Digit odd": { indicator: "digit_odd" },
+    "Consecutive rise": { indicator: "consecutive_rise", count: 2, comparison: "appears_consecutively" },
+    "Consecutive fall": { indicator: "consecutive_fall", count: 2, comparison: "appears_consecutively" },
+    "Trend up": { indicator: "last_digit", comparison: "greater_than", barrier: 5, count: 1 },
+    "Trend down": { indicator: "last_digit", comparison: "less_than", barrier: 5, count: 1 },
+  };
+
+  return {
+    symbol: market,
+    condition: conditionMap[condition] || conditionMap["Digit over 5"],
+    action: { tradeType: trade === "PUT" ? "buy_fall" : "buy_rise" },
+    params: { stake, stopLoss: 0, takeProfit: 0 },
+  };
+}
+
 export function StrategyBuilderContent({ embedded = false, onClose, onSaved }: StrategyBuilderContentProps) {
   const { user, isAuthenticated } = useAuth();
   const [, navigate] = useLocation();
@@ -64,6 +131,8 @@ export function StrategyBuilderContent({ embedded = false, onClose, onSaved }: S
   const [compareIdx, setCompareIdx] = useState<[number, number] | null>(null);
   const [showTemplates, setShowTemplates] = useState(false);
   const [importJson, setImportJson] = useState("");
+  const [liveCritique, setLiveCritique] = useState<any>(null);
+  const [liveCritiqueLoading, setLiveCritiqueLoading] = useState(false);
 
   const saveStrategyMutation = trpc.strategies.save.useMutation();
   const duplicateMutation = trpc.strategies.duplicate.useMutation({
@@ -97,6 +166,22 @@ export function StrategyBuilderContent({ embedded = false, onClose, onSaved }: S
       navigate("/");
     }
   }, [isAuthenticated, navigate]);
+
+  useEffect(() => {
+    if (builderMode !== "blocks") return;
+    const t = setTimeout(() => {
+      if (blocks.length === 0) { setLiveCritique(null); setLiveCritiqueLoading(false); return; }
+      setLiveCritiqueLoading(true);
+      critiqueMutation.mutate(
+        { rule: blocksToRule(blocks) },
+        {
+          onSuccess: (d) => { setLiveCritique(d); setLiveCritiqueLoading(false); },
+          onError: () => { setLiveCritiqueLoading(false); },
+        }
+      );
+    }, 800);
+    return () => clearTimeout(t);
+  }, [blocks, builderMode]);
 
   const addBlock = (type: StrategyBlock["type"]) => {
     const newBlock: StrategyBlock = {
@@ -436,6 +521,28 @@ export function StrategyBuilderContent({ embedded = false, onClose, onSaved }: S
                   </div>
                 )}
 
+                {liveCritique && (
+                  <div className="border-b border-[var(--border)] p-4 bg-black/20">
+                    <div className="flex items-center gap-2 mb-2">
+                      {liveCritiqueLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin text-[var(--green)]" /> : <ShieldCheck className="w-4 h-4 text-[var(--green)]" />}
+                      <span className="text-caption font-bold text-[var(--green)] uppercase tracking-widest">Live AI Review</span>
+                      <span className="text-caption text-[var(--text-muted)] ml-auto flex items-center gap-1">
+                        <span className={`w-1.5 h-1.5 rounded-full ${liveCritiqueLoading ? "bg-[var(--accent)] animate-pulse" : "bg-[var(--green)]"}`} />
+                        {liveCritiqueLoading ? "analyzing…" : "auto"}
+                      </span>
+                    </div>
+                    <p className="text-xs text-[var(--text-secondary)] mb-2">{liveCritique.summary}</p>
+                    <div className="space-y-1.5">
+                      {(Array.isArray(liveCritique?.findings) ? liveCritique.findings : []).map((f: any, i: number) => (
+                        <div key={i} className="flex items-start gap-2 text-xs">
+                          <span className={`px-1.5 py-0.5 rounded font-bold uppercase ${f.severity === "high" ? "bg-[var(--red)]/30 text-[var(--red)]" : f.severity === "medium" ? "bg-[var(--accent)]/30 text-[var(--accent-hover)]" : "bg-[var(--text-muted)]/30 text-[var(--text-secondary)]"}`}>{f.severity}</span>
+                          <div><b className="text-white">{f.title}</b> <span className="text-[var(--text-secondary)]">— {f.detail}</span></div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
                 <div className="flex-1 p-8 space-y-4">
                 {builderMode === "visual" ? (
                   <div className="max-w-2xl mx-auto py-10">
@@ -475,13 +582,25 @@ export function StrategyBuilderContent({ embedded = false, onClose, onSaved }: S
                         <p className="text-sm" style={{color: "var(--text-muted)"}}>Add blocks from the library to start building your workflow.</p>
                       </div>
                     ) : (
-                      <div className="space-y-4 relative">
+                      <div className="space-y-3 relative">
+                        <div className="flex items-center gap-2 overflow-x-auto pb-2 -mx-1 px-1">
+                          {PIPELINE_STAGES.map((stage, i) => (
+                            <div key={stage.type} className="flex items-center gap-2 shrink-0">
+                              <span className={`text-caption uppercase tracking-widest px-2 py-1 rounded border ${blocks.some(b => b.type === stage.type) ? "border-[var(--accent)]/50 text-[var(--accent)] bg-[var(--accent)]/10" : "border-[var(--border)] text-[var(--text-muted)]"}`}>
+                                {i + 1}. {stage.label}
+                              </span>
+                              {i < PIPELINE_STAGES.length - 1 && <ChevronRight className="w-3 h-3 text-[var(--text-muted)]" />}
+                            </div>
+                          ))}
+                        </div>
                         {blocks.map((block, index) => {
                           const typeInfo = blockTypes.find(bt => bt.type === block.type)!;
+                          const options = blockValueOptions(block.type);
+                          const stageIdx = PIPELINE_STAGES.findIndex(s => s.type === block.type);
                           return (
                             <div key={block.id} className="relative group">
                               {index < blocks.length - 1 && (
-                                <div className="absolute left-6 top-12 w-0.5 h-8 bg-[var(--border)]" />
+                                <div className="absolute left-6 top-14 w-0.5 h-6 bg-[var(--border)]" />
                               )}
                               <div className="flex gap-4 items-start bg-[var(--card)] border border-[var(--border)] p-4 rounded-xl group-hover:border-[var(--accent)]/50 transition-all">
                                 <div className={`w-12 h-12 rounded-lg flex items-center justify-center shrink-0 bg-[var(--card)] border border-white/5`}>
@@ -489,19 +608,42 @@ export function StrategyBuilderContent({ embedded = false, onClose, onSaved }: S
                                 </div>
                                 <div className="flex-1 space-y-1">
                                   <div className="flex items-center justify-between">
-                                    <span className="text-micro">{block.type}</span>
+                                    <span className="text-micro flex items-center gap-2">
+                                      {stageIdx >= 0 && <span className="w-4 h-4 rounded-full bg-white/5 text-[var(--text-muted)] text-[10px] flex items-center justify-center font-bold">{stageIdx + 1}</span>}
+                                      {block.type}
+                                    </span>
                                     <div className="flex items-center gap-1">
                                       <button onClick={() => moveBlock(block.id, -1)} disabled={index === 0} className="text-[var(--text-muted)] hover:text-[var(--accent)] disabled:opacity-25 transition-colors" aria-label="Move up"><ArrowUp className="w-3 h-3" /></button>
                                       <button onClick={() => moveBlock(block.id, 1)} disabled={index === blocks.length - 1} className="text-[var(--text-muted)] hover:text-[var(--accent)] disabled:opacity-25 transition-colors" aria-label="Move down"><ArrowDown className="w-3 h-3" /></button>
                                       <button onClick={() => removeBlock(block.id)} className="text-[var(--text-muted)] hover:text-[var(--red)] transition-colors"><Trash2 className="w-3 h-3" /></button>
                                     </div>
                                   </div>
-                                  <Input 
-                                    value={block.value}
-                                    onChange={e => updateBlock(block.id, e.target.value)}
-                                    placeholder={`Configure ${block.type} parameters...`}
-                                    className="bg-transparent border-none p-0 text-sm focus-visible:ring-0 h-auto text-white placeholder:text-[var(--border)]"
-                                  />
+                                  {options ? (
+                                    <select
+                                      value={block.value}
+                                      onChange={e => updateBlock(block.id, e.target.value)}
+                                      className="bg-transparent border border-[var(--border)] rounded-md px-2 py-1.5 text-sm w-full text-white focus:outline-none focus:border-[var(--accent)]"
+                                    >
+                                      <option value="" disabled className="bg-[var(--card)]">Select {block.type}...</option>
+                                      {options.map(o => (
+                                        <option key={o} value={o} className="bg-[var(--card)]">{o}</option>
+                                      ))}
+                                    </select>
+                                  ) : block.type === "risk" || block.type === "exit" ? (
+                                    <Input
+                                      value={block.value}
+                                      onChange={e => updateBlock(block.id, e.target.value)}
+                                      placeholder={block.type === "risk" ? "Stake amount (e.g. 1.00)" : "Ticks / conditions to exit (e.g. 5)"}
+                                      className="bg-transparent border border-[var(--border)] rounded-md px-2 py-1.5 text-sm focus-visible:ring-0 h-auto text-white placeholder:text-[var(--border)]"
+                                    />
+                                  ) : (
+                                    <Input
+                                      value={block.value}
+                                      onChange={e => updateBlock(block.id, e.target.value)}
+                                      placeholder={`Configure ${block.type} parameters...`}
+                                      className="bg-transparent border-none p-0 text-sm focus-visible:ring-0 h-auto text-white placeholder:text-[var(--border)]"
+                                    />
+                                  )}
                                 </div>
                               </div>
                             </div>
