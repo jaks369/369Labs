@@ -6,19 +6,11 @@ import { CurrencyStat, PercentStat, IntegerStat, SignedCurrencyStat } from "@/co
 import { PageContainer, PageSection } from "@/components/PageSection";
 import {
   Loader2,
-  TrendingUp,
-  TrendingDown,
   Activity,
-  ArrowRight,
   Zap,
   ChevronDown,
   Wallet,
-  Sparkles,
   AlertCircle,
-  Bell,
-  BellOff,
-  Plus,
-  X,
   BookOpen,
   BarChart3,
   Bot,
@@ -26,16 +18,14 @@ import {
 } from "lucide-react";
 import { useLocation } from "wouter";
 import TickChart from "@/components/TickChart";
-import DigitProbability from "@/components/DigitProbability";
-import SymbolInsights from "@/components/SymbolInsights";
 import { derivWS, DerivSymbol } from "@/services/derivWebSocket";
 import { useDerivStatus } from "@/hooks/useDerivStatus";
 import DerivTokenModal from "@/components/DerivTokenModal";
-import ContractTypeSelector, { ContractSelection } from "@/components/ContractTypeSelector";
+import { ContractSelection } from "@/components/ContractTypeSelector";
 import { VOLATILITY_SYMBOLS } from "@/lib/symbols";
 import { getDecimalPlaces } from "@shared/lastDigit";
 import WatchlistPanel from "@/components/WatchlistPanel";
-import AIVerdicts from "@/components/AIVerdicts";
+import TerminalContextPanel, { ContextMode } from "@/components/TerminalContextPanel";
 
 const ALL_FALLBACK: DerivSymbol[] = VOLATILITY_SYMBOLS.map(s => ({ ...s, decimalPlaces: 2 }));
 
@@ -62,7 +52,6 @@ export default function Dashboard() {
   const addTradeLog = (kind: "ok" | "err", text: string) => {
     setTradeLogs(prev => [{ kind, text, time: new Date() }, ...prev].slice(0, 50));
   };
-  const [showRiskSettings, setShowRiskSettings] = useState(false);
   const [alertsOpen, setAlertsOpen] = useState(false);
   const [newAlertSym, setNewAlertSym] = useState("");
   const [newAlertDir, setNewAlertDir] = useState<"above" | "below">("above");
@@ -82,6 +71,7 @@ export default function Dashboard() {
     onSuccess: () => alertsQuery.refetch(),
   });
   const [historyTab, setHistoryTab] = useState<"positions" | "trades" | "prices">("positions");
+  const [contextMode, setContextMode] = useState<ContextMode>("execution");
   const priceQuery = trpc.market.getHistory.useQuery({ symbol: selectedSymbol, limit: 200 }, { enabled: historyTab === "prices", refetchInterval: historyTab === "prices" ? 3000 : false, staleTime: 30000, gcTime: 60000 });
 
   // Live tick buffer: stream ticks from the Deriv WS so the Price History table
@@ -186,7 +176,8 @@ export default function Dashboard() {
     return losses.reduce((a, t) => a + parseFloat(t.profitLoss?.toString() || "0"), 0) / losses.length;
   })();
 
-  const handleQuickTrade = async () => {
+  const handleQuickTrade = async (dir?: "rise" | "fall") => {
+    const direction = dir || contract.direction;
     if (!derivWS.isAuthorized()) { addTradeLog("err", "Connect a Deriv token first (Settings)."); return; }
     const dailyLossLimit = (memoryQuery.data?.memory as any)?.dailyLossLimit;
     if (dailyLossLimit > 0) {
@@ -203,7 +194,7 @@ export default function Dashboard() {
       if (!ok) return;
     }
     const map: Record<string, string> = {
-      "rise_fall": contract.direction === "fall" ? "PUT" : "CALL",
+      "rise_fall": direction === "fall" ? "PUT" : "CALL",
       "over_under": contract.overUnder === "under" ? "DIGITUNDER" : "DIGITOVER",
       "even_odd": contract.digitMatch === "differ" ? "DIGITODD" : "DIGITEVEN",
       "digits": "DIGITMATCH",
@@ -325,6 +316,15 @@ export default function Dashboard() {
     }, 1000);
     return () => { clearInterval(interval); };
   }, [tokenError]);
+
+  const prevOpenCountRef = useRef(0);
+  useEffect(() => {
+    const open = (tradesQuery.data || []).filter((t: any) => t.result === "pending");
+    if (open.length > prevOpenCountRef.current && prevOpenCountRef.current >= 0) {
+      setContextMode("positions");
+    }
+    prevOpenCountRef.current = open.length;
+  }, [tradesQuery.data]);
 
   const [symbols, setSymbols] = useState<DerivSymbol[]>([]);
   const [widgets, setWidgets] = useState<string[]>(["trades", "signals", "chart", "history", "alerts"]);
@@ -794,209 +794,50 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Order column - Trade Studio, AI, Alerts */}
-        <div className="space-y-4 xl:space-y-6 lg:col-span-12 xl:col-span-3 xl:sticky xl:top-4 xl:self-start">
-
-          {/* Trade Studio */}
-          <div className="trade-studio flex flex-col max-h-[calc(100vh-120px)]">
-            <div className="p-4 pb-0">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-caption font-semibold">Trade Studio</h3>
-                <span className={`badge ${accountType === "real" ? "badge-red" : accountType === "demo" ? "badge-green" : tokenStatus === "invalid" ? "badge-red" : "badge-gray"}`}>
-                  {accountType === "real" ? "REAL" : accountType === "demo" ? "DEMO" : tokenStatus === "invalid" ? "UNAUTHORIZED" : "NO TOKEN"}
-                </span>
-              </div>
-              <div className="input-group mb-3">
-                <label className="input-label">Symbol</label>
-                <div className="input bg-[var(--surface-secondary)] cursor-default">{selectedDisplay}</div>
-              </div>
-              <ContractTypeSelector selection={contract} onChange={setContract} />
-            </div>
-
-            {/* Scrollable content */}
-            <div className="flex-1 overflow-y-auto px-4 pb-4 space-y-3 pt-3">
-              <div className="input-group">
-                <label className="input-label">Stake ($)</label>
-                <input
-                  type="number"
-                  min={0.35}
-                  step="0.01"
-                  value={stake}
-                  onChange={(e) => setStake(Math.max(0, parseFloat(e.target.value) || 0))}
-                  className="input"
-                />
-              </div>
-
-              {/* Risk settings — collapsed by default */}
-              {!showRiskSettings && (stopLoss > 0 || takeProfit > 0) ? (
-                <div className="flex items-center gap-3 text-xs">
-                  {stopLoss > 0 && <span className="text-[var(--red)]">SL: ${stopLoss.toFixed(2)}</span>}
-                  {takeProfit > 0 && <span className="text-[var(--green)]">TP: ${takeProfit.toFixed(2)}</span>}
-                  <button onClick={() => setShowRiskSettings(true)} className="text-[var(--text-muted)] hover:text-[var(--text-secondary)] underline">Edit</button>
-                </div>
-              ) : showRiskSettings ? (
-                <div className="space-y-3">
-                  <div className="grid grid-cols-2 gap-2">
-                    <div className="input-group">
-                      <label className="input-label text-[var(--red)]">Stop Loss ($)</label>
-                      <input
-                        type="number"
-                        min={0}
-                        step="0.01"
-                        value={stopLoss || ""}
-                        onChange={(e) => setStopLoss(Math.max(0, parseFloat(e.target.value) || 0))}
-                        className="input border-[var(--red)]/40"
-                        placeholder="Optional"
-                      />
-                    </div>
-                    <div className="input-group">
-                      <label className="input-label text-[var(--green)]">Take Profit ($)</label>
-                      <input
-                        type="number"
-                        min={0}
-                        step="0.01"
-                        value={takeProfit || ""}
-                        onChange={(e) => setTakeProfit(Math.max(0, parseFloat(e.target.value) || 0))}
-                        className="input border-[var(--green)]/40"
-                        placeholder="Optional"
-                      />
-                    </div>
-                  </div>
-                  <button onClick={() => setShowRiskSettings(false)} className="text-xs text-[var(--text-muted)] hover:text-[var(--text-secondary)] underline">Hide risk settings</button>
-                </div>
-              ) : (
-                <button onClick={() => setShowRiskSettings(true)} className="text-xs text-[var(--accent)] hover:text-[var(--accent-hover)] transition-colors">
-                  + Add stop loss / take profit
-                </button>
-              )}
-
-              {!derivWS.isAuthorized() && (
-                <p className="text-xs text-[var(--text-muted)]">Connect a Deriv token in Settings to enable trading.</p>
-              )}            </div>
-
-            {/* Sticky Buy button */}
-            <div className="flex-shrink-0 px-4 pb-4 pt-2 max-md:fixed max-md:bottom-16 max-md:left-0 max-md:right-0 max-md:z-40 max-md:bg-[var(--card)] max-md:border-t max-md:border-[var(--border)] max-md:p-3">
-              <Button
-                onClick={handleQuickTrade}
-                disabled={tradeBusy}
-                className="w-full flex items-center justify-center gap-2 h-[52px] text-sm font-bold rounded-lg transition-all"
-                style={{
-                  background: contract.direction === "fall"
-                    ? "linear-gradient(180deg, var(--red) 0%, color-mix(in srgb, var(--red) 85%, black) 100%)"
-                    : "linear-gradient(180deg, var(--green) 0%, color-mix(in srgb, var(--green) 85%, black) 100%)",
-                  color: "white",
-                }}
-              >
-                {tradeBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : (contract.direction === "fall" ? <TrendingDown className="w-4 h-4" /> : <TrendingUp className="w-4 h-4" />)}
-                {tradeBusy ? "Placing..." : contract.direction === "fall" ? "Sell" : "Buy"}
-              </Button>
-            </div>
-
-            <div className="px-4 pb-4">
-              <div className="pt-4 border-t border-[var(--border)]">
-                <DigitProbability symbol={selectedSymbol} decimalPlaces={decimalPlaces} />
-              </div>
-            </div>
-          </div>
-
-          {/* 369AI Insight */}
-          <div className="ai-panel p-6 ai-alive">
-            <div className="flex items-center gap-2 mb-4">
-              <Sparkles className="w-4 h-4 text-[var(--accent)] animate-breathe" />
-              <h3 className="text-caption font-semibold">369AI Insight</h3>
-            </div>
-            {(() => {
-              const sigs = Array.isArray(signalsQuery.data) ? signalsQuery.data : [];
-              const forSymbol = sigs.filter((s: any) => s.symbol === selectedSymbol);
-              const latest = forSymbol[0] || sigs[0];
-              if (!latest) {
-                return <div className="empty-state py-6"><p className="empty-state-desc">No signals for {selectedDisplay} yet. Ask 369AI to watch a market, or wait for the always-on scanner to surface a pattern.</p></div>;
-              }
-              return (
-                <div>
-                  <div className="flex items-center gap-2 mb-2">
-                    <span className="ai-badge">{latest.symbol}</span>
-                    {latest.symbol === selectedSymbol && (
-                      <span className="text-[10px] uppercase tracking-wider text-[var(--accent)] font-bold">● Live context</span>
-                    )}
-                  </div>
-                  <p className="text-sm text-[var(--text-secondary)] leading-relaxed">{latest.description}</p>
-                  <div className="flex items-center gap-3 mt-3 text-xs">
-                    <span className="text-[var(--text-muted)]">win rate <b className="text-[var(--green)]">{latest.winRate}%</b></span>
-                    <span className="text-[var(--text-muted)]">{new Date((latest.discoveredAt || 0) * 1000).toLocaleString()}</span>
-                  </div>
-                  <button onClick={() => navigate("/marketplace")} className="mt-3 text-xs text-[var(--accent)] hover:text-[var(--accent)]/80 transition-colors flex items-center gap-1">
-                    View all signals <ArrowRight className="w-3 h-3" />
-                  </button>
-                </div>
-              );
-            })()}
-          </div>
-
-          <SymbolInsights symbol={selectedSymbol} ticks={displayTicks} trades={tradesQuery.data || []} decimalPlaces={decimalPlaces} />
-
-          <AIVerdicts symbol={selectedSymbol} ticks={displayTicks} trades={tradesQuery.data || []} decimalPlaces={decimalPlaces} />
-
-          {/* Price Alerts */}
-          <div className="panel">
-            <div className="panel-header flex items-center justify-between">
-        <div className="flex items-center gap-2 overflow-x-auto scrollbar-none max-md:-mx-4 max-md:px-4">
-                <Bell className="w-3.5 h-3.5 text-[var(--accent)]" />
-                <h3 className="text-micro">Price Alerts</h3>
-              </div>
-              <button onClick={() => setAlertsOpen(!alertsOpen)} className="text-[var(--text-muted)] hover:text-[var(--accent)] transition-colors">
-                {alertsOpen ? <X className="w-3.5 h-3.5" /> : <Plus className="w-3.5 h-3.5" />}
-              </button>
-            </div>
-            {alertsOpen && (
-              <div className="p-4 border-b border-[var(--border)] space-y-3">
-                <input
-                  type="text" value={newAlertSym || selectedSymbol} onChange={(e) => setNewAlertSym(e.target.value)}
-                  placeholder="Symbol (e.g. R_100)" className="w-full bg-[var(--card)] border border-[var(--border)] rounded-lg px-3 py-2 text-xs text-white"
-                />
-                <div className="flex rounded-lg bg-[var(--card)] p-0.5">
-                  <button onClick={() => setNewAlertDir("above")} className={`flex-1 py-1.5 text-center text-xs font-bold rounded-md transition-all ${newAlertDir === "above" ? "bg-[var(--green)]/20 text-[var(--green)]" : "text-[var(--text-muted)] hover:text-white"}`}>Above</button>
-                  <button onClick={() => setNewAlertDir("below")} className={`flex-1 py-1.5 text-center text-xs font-bold rounded-md transition-all ${newAlertDir === "below" ? "bg-[var(--red)]/20 text-[var(--red)]" : "text-[var(--text-muted)] hover:text-white"}`}>Below</button>
-                </div>
-                <input
-                  type="number" value={newAlertPrice} onChange={(e) => setNewAlertPrice(e.target.value)}
-                  placeholder="Target price" className="w-full bg-[var(--card)] border border-[var(--border)] rounded-lg px-3 py-2 text-xs text-white"
-                />
-                <Button onClick={() => {
-                  if (!newAlertPrice) return;
-                  createAlertMutation.mutate({ symbol: newAlertSym || selectedSymbol, direction: newAlertDir, targetPrice: Number(newAlertPrice) });
-                }} disabled={createAlertMutation.isPending} className="w-full text-xs font-bold bg-[var(--cta-fill)] text-[var(--cta-text)] py-2 rounded-lg">
-                  {createAlertMutation.isPending ? "Creating..." : "Create Alert"}
-                </Button>
-              </div>
-            )}
-            <div className="p-4 space-y-2">
-              {alertsQuery.isLoading ? (
-                <Loader2 className="w-4 h-4 animate-spin text-[var(--accent)]" />
-              ) : (alertsQuery.data || []).length === 0 ? (
-                <div className="empty-state"><p className="empty-state-desc">No price alerts set.</p></div>
-              ) : (
-                (alertsQuery.data || []).slice(0, 5).map((a: any) => (
-                  <div key={a.id} className="flex items-center justify-between py-2 border-b border-[var(--border)] last:border-0">
-                    <div>
-                      <span className="text-xs font-bold text-white">{a.symbol}</span>
-                      <span className={`text-caption ml-2 ${a.direction === "above" ? "text-[var(--green)]" : "text-[var(--red)]"}`}>
-                        {a.direction === "above" ? "↑" : "↓"} {a.targetPrice}
-                      </span>
-                      <span className={`text-caption ml-2 ${a.status === "triggered" ? "text-[var(--accent)]" : "text-[var(--text-muted)]"}`}>
-                        {a.status}
-                      </span>
-                    </div>
-                    {a.status === "active" && (
-                      <button onClick={() => disableAlertMutation.mutate({ id: a.id })} className="text-[var(--text-muted)] hover:text-[var(--red)] transition-colors">
-                        <BellOff className="w-3 h-3" />
-                      </button>
-                    )}
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
+        {/* Context panel — changes by task (Linear-style) */}
+        <div className="lg:col-span-12 xl:col-span-3 xl:sticky xl:top-4 xl:self-start">
+          <TerminalContextPanel
+            mode={contextMode}
+            onModeChange={setContextMode}
+            selectedSymbol={selectedSymbol}
+            selectedDisplay={selectedDisplay}
+            decimalPlaces={decimalPlaces}
+            accountType={accountType}
+            tokenStatus={tokenStatus}
+            isAuthorized={derivWS.isAuthorized()}
+            contract={contract}
+            onContractChange={setContract}
+            stake={stake}
+            onStakeChange={setStake}
+            stopLoss={stopLoss}
+            takeProfit={takeProfit}
+            onStopLossChange={setStopLoss}
+            onTakeProfitChange={setTakeProfit}
+            onQuickTrade={handleQuickTrade}
+            tradeBusy={tradeBusy}
+            openPositions={(tradesQuery.data || []).filter((t: any) => t.result === "pending")}
+            onSelectSymbol={(s) => { setSelectedSymbol(s); setShowSymbolPicker(false); }}
+            signals={signalsQuery.data || []}
+            ticks={displayTicks}
+            trades={tradesQuery.data || []}
+            onViewSignals={() => navigate("/marketplace")}
+            alerts={alertsQuery.data || []}
+            alertsLoading={alertsQuery.isLoading}
+            alertsOpen={alertsOpen}
+            onToggleAlerts={() => setAlertsOpen((v) => !v)}
+            newAlertSym={newAlertSym}
+            newAlertDir={newAlertDir}
+            newAlertPrice={newAlertPrice}
+            onNewAlertSym={setNewAlertSym}
+            onNewAlertDir={setNewAlertDir}
+            onNewAlertPrice={setNewAlertPrice}
+            onCreateAlert={() => {
+              if (!newAlertPrice) return;
+              createAlertMutation.mutate({ symbol: newAlertSym || selectedSymbol, direction: newAlertDir, targetPrice: Number(newAlertPrice) });
+            }}
+            createAlertPending={createAlertMutation.isPending}
+            onDisableAlert={(id) => disableAlertMutation.mutate({ id })}
+          />
         </div>
       </div>
       </PageSection>
