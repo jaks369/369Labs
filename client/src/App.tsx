@@ -61,6 +61,8 @@ const LazyLoad = ({ children }: { children: React.ReactNode }) => (
   <Suspense fallback={<div className="flex items-center justify-center min-h-[60vh]"><div className="h-8 w-8 border-2 border-[var(--accent)] border-t-transparent rounded-full animate-spin" /></div>}>{children}</Suspense>
 );
 
+const LazyMarkets = lazy(() => import("./pages/Markets"));
+
 function AppLayout({ children }: { children: React.ReactNode }) {
   return <DashboardLayout>{children}</DashboardLayout>;
 }
@@ -77,6 +79,7 @@ function Router() {
       <Route path={"/onboarding"} component={Onboarding} />
       <Route path={"/500"} component={ServerError} />
       <Route path={"/dashboard"}><AppLayout><Dashboard /></AppLayout></Route>
+      <Route path={"/markets"}><AppLayout><LazyLoad><LazyMarkets /></LazyLoad></AppLayout></Route>
       <Route path={"/bots"}><AppLayout><Bots /></AppLayout></Route>
       <Route path={"/portfolio"}><AppLayout><LazyLoad><LazyPortfolio /></LazyLoad></AppLayout></Route>
       <Route path={"/strategy-builder"}><AppLayout><LazyLoad><LazyStrategyBuilder /></LazyLoad></AppLayout></Route>

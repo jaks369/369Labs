@@ -99,6 +99,7 @@ const navGroups: NavGroup[] = [
     icon: Zap,
     items: [
       { icon: LayoutDashboard, label: "Terminal", path: "/dashboard" },
+      { icon: CandlestickChart, label: "Markets", path: "/markets" },
       { icon: Star, label: "Watchlist", path: "/watchlist" },
       { icon: Wallet, label: "Portfolio", path: "/portfolio" },
       { icon: BarChart3, label: "Trade History", path: "/trades" },

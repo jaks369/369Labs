@@ -16,7 +16,7 @@ import {
   Bot,
   Brain,
 } from "lucide-react";
-import { useLocation } from "wouter";
+import { useLocation, useSearch } from "wouter";
 import TickChart from "@/components/TickChart";
 import { derivWS, DerivSymbol } from "@/services/derivWebSocket";
 import { useDerivStatus } from "@/hooks/useDerivStatus";
@@ -72,6 +72,12 @@ export default function Dashboard() {
   });
   const [historyTab, setHistoryTab] = useState<"positions" | "trades" | "prices">("positions");
   const [contextMode, setContextMode] = useState<ContextMode>("execution");
+
+  const urlSearch = useSearch();
+  useEffect(() => {
+    const sym = new URLSearchParams(urlSearch).get("symbol");
+    if (sym) { setSelectedSymbol(sym); setShowSymbolPicker(false); }
+  }, [urlSearch]);
   const priceQuery = trpc.market.getHistory.useQuery({ symbol: selectedSymbol, limit: 200 }, { enabled: historyTab === "prices", refetchInterval: historyTab === "prices" ? 3000 : false, staleTime: 30000, gcTime: 60000 });
 
   // Live tick buffer: stream ticks from the Deriv WS so the Price History table
