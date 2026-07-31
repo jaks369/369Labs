@@ -59,6 +59,7 @@ import {
   GitCommit,
   Megaphone,
   HardDrive,
+  PanelLeftClose,
 } from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState, useMemo } from "react";
 import { useLocation } from "wouter";
@@ -97,18 +98,28 @@ const navGroups: NavGroup[] = [
     title: "Trade",
     icon: Zap,
     items: [
-      { icon: LayoutDashboard, label: "Trading Terminal", path: "/dashboard" },
-      { icon: Bot, label: "Bots", path: "/bots" },
+      { icon: LayoutDashboard, label: "Terminal", path: "/dashboard" },
+      { icon: Star, label: "Watchlist", path: "/watchlist" },
       { icon: Wallet, label: "Portfolio", path: "/portfolio" },
       { icon: BarChart3, label: "Trade History", path: "/trades" },
-      { icon: Star, label: "Watchlist", path: "/watchlist" },
+    ],
+  },
+  {
+    title: "Automate",
+    icon: Workflow,
+    items: [
+      { icon: Zap, label: "Strategy Builder", path: "/strategy-builder" },
+      { icon: Bot, label: "Bots", path: "/bots" },
+      { icon: FlaskConical, label: "Backtesting", path: "/backtesting" },
+      { icon: RotateCcw, label: "Replay", path: "/replay" },
+      { icon: Workflow, label: "Workflows", path: "/workflow" },
     ],
   },
   {
     title: "Intelligence",
     icon: Brain,
     items: [
-      { icon: Brain, label: "AI Assistant", path: "/ai-assistant" },
+      { icon: Brain, label: "369AI", path: "/ai-assistant" },
       { icon: MessageSquare, label: "AI Chat", path: "/ai-chat" },
       { icon: Bot, label: "AI Copilot", path: "/trading-copilot" },
       { icon: Activity, label: "Market Intel", path: "/market-intelligence" },
@@ -118,24 +129,13 @@ const navGroups: NavGroup[] = [
     ],
   },
   {
-    title: "Build",
-    icon: Code2,
-    items: [
-      { icon: Zap, label: "Strategy Builder", path: "/strategy-builder" },
-      { icon: CandlestickChart, label: "AI Builder", path: "/marketplace" },
-      { icon: Code2, label: "AI Coding", path: "/coding" },
-      { icon: Workflow, label: "Workflows", path: "/workflow" },
-      { icon: Plug, label: "Plugins", path: "/plugins" },
-    ],
-  },
-  {
     title: "Analyze",
     icon: BarChart3,
     items: [
       { icon: BarChart3, label: "Analytics", path: "/analytics" },
-      { icon: RotateCcw, label: "Replay", path: "/replay" },
-      { icon: FlaskConical, label: "Backtesting", path: "/backtesting" },
       { icon: BarChart3, label: "Strategy Comparison", path: "/strategy-comparison" },
+      { icon: Code2, label: "AI Coding", path: "/coding" },
+      { icon: Plug, label: "Plugins", path: "/plugins" },
     ],
   },
   {
@@ -337,6 +337,9 @@ function DashboardLayoutContent({
                   <Search className="w-3.5 h-3.5" />
                 </button>
               )}
+              <button onClick={toggleSidebar} className="w-6 h-6 rounded-md flex items-center justify-center text-[var(--text-muted)] hover:text-white hover:bg-white/5 transition-all" title={isCollapsed ? "Expand sidebar (Ctrl+B)" : "Collapse sidebar (Ctrl+B)"}>
+                <PanelLeftClose className="w-3.5 h-3.5" />
+              </button>
             </div>
           </SidebarHeader>
 
@@ -506,10 +509,11 @@ function DashboardLayoutContent({
       </div>
 
       <SidebarInset className="bg-[var(--bg)] flex flex-col max-w-full">
-        {/* Mobile header — no sidebar trigger, just logo */}
+        {/* Mobile header — hamburger opens sidebar sheet */}
         {isMobile && (
           <div className="flex border-b border-[var(--border)] h-12 items-center justify-between bg-[var(--bg)] px-4 sticky top-0 z-40">
             <div className="flex items-center gap-2">
+              <SidebarTrigger className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-white/5 rounded-md" />
               <div className="w-6 h-6 bg-[var(--accent)] rounded flex items-center justify-center">
                 <Activity className="w-3.5 h-3.5 text-[#0A0C10]" />
               </div>

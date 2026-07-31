@@ -1209,6 +1209,14 @@
   }
   .chart-workspace-header > * { pointer-events: auto; }
 
+  /* ─── Terminal Watchlist Column ─────────────────────────── */
+  .watchlist-terminal {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+  }
+
   /* ─── Floating Surface (Trade Studio terminal) ──────────── */
   .surface-floating {
     background: var(--card);

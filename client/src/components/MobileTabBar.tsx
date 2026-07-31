@@ -1,11 +1,11 @@
 import { useLocation } from "wouter";
-import { Home, TrendingUp, Brain, MoreHorizontal, Activity } from "lucide-react";
+import { Home, TrendingUp, Brain, Bot } from "lucide-react";
 
 const tabs = [
   { icon: Home, label: "Home", path: "/" },
   { icon: TrendingUp, label: "Trade", path: "/dashboard" },
   { icon: Brain, label: "Intelligence", path: "/ai-assistant" },
-  { icon: MoreHorizontal, label: "More", path: "/more" },
+  { icon: Bot, label: "Automate", path: "/bots" },
 ];
 
 export default function MobileTabBar() {

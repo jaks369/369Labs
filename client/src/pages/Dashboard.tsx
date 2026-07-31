@@ -34,6 +34,7 @@ import DerivTokenModal from "@/components/DerivTokenModal";
 import ContractTypeSelector, { ContractSelection } from "@/components/ContractTypeSelector";
 import { VOLATILITY_SYMBOLS } from "@/lib/symbols";
 import { getDecimalPlaces } from "@shared/lastDigit";
+import WatchlistPanel from "@/components/WatchlistPanel";
 
 const ALL_FALLBACK: DerivSymbol[] = VOLATILITY_SYMBOLS.map(s => ({ ...s, decimalPlaces: 2 }));
 
@@ -79,7 +80,7 @@ export default function Dashboard() {
   const disableAlertMutation = trpc.alerts.disable.useMutation({
     onSuccess: () => alertsQuery.refetch(),
   });
-  const [historyTab, setHistoryTab] = useState<"trades" | "prices">("trades");
+  const [historyTab, setHistoryTab] = useState<"positions" | "trades" | "prices">("positions");
   const priceQuery = trpc.market.getHistory.useQuery({ symbol: selectedSymbol, limit: 200 }, { enabled: historyTab === "prices", refetchInterval: historyTab === "prices" ? 3000 : false, staleTime: 30000, gcTime: 60000 });
 
   // Live tick buffer: stream ticks from the Deriv WS so the Price History table
@@ -394,10 +395,20 @@ export default function Dashboard() {
       )}
 
       <PageSection>
-      {/* Main grid */}
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
-        {/* Left column - Chart & History */}
-        <div className="xl:col-span-2 space-y-8">
+      {/* Workstation grid: watchlist | chart+history | order+intelligence */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 xl:gap-6">
+        {/* Watchlist column — dense, sticky on desktop, hidden on mobile (sheet available) */}
+        <div className="hidden lg:block lg:col-span-3 xl:col-span-2 xl:sticky xl:top-4 xl:self-start xl:max-h-[calc(100vh-120px)]">
+          <WatchlistPanel
+            compact
+            header={false}
+            selectedSymbol={selectedSymbol}
+            onSelect={(s) => { setSelectedSymbol(s); setShowSymbolPicker(false); }}
+          />
+        </div>
+
+        {/* Chart & History — the workspace */}
+        <div className="lg:col-span-9 xl:col-span-7 space-y-4 xl:space-y-6">
 
           {/* Chart workspace — the heart of the OS */}
           <div className={showSymbolPicker ? "bg-[var(--card)] rounded-xl p-4 elevation-1" : "chart-workspace"}>
@@ -534,16 +545,46 @@ export default function Dashboard() {
             )}
           </div>
 
-          {/* History panel */}
+          {/* Positions / Trades / Price panel */}
           <div className="panel">
             <div className="panel-header">
-              <h2 className="text-lg font-bold">History</h2>
+              <h2 className="text-lg font-bold">Positions</h2>
               <div className="tabs">
-                <button onClick={() => setHistoryTab("trades")} className={`tab ${historyTab === "trades" ? "active" : ""}`}>Trades</button>
+                <button onClick={() => setHistoryTab("positions")} className={`tab ${historyTab === "positions" ? "active" : ""}`}>Positions</button>
+                <button onClick={() => setHistoryTab("trades")} className={`tab ${historyTab === "trades" ? "active" : ""}`}>History</button>
                 <button onClick={() => setHistoryTab("prices")} className={`tab ${historyTab === "prices" ? "active" : ""}`}>Price History</button>
               </div>
             </div>
-            {historyTab === "trades" ? (
+            {historyTab === "positions" ? (
+              <div>
+                {(() => {
+                  const allTrades = tradesQuery.data || [];
+                  const open = allTrades.filter((t: any) => t.result === "pending");
+                  if (open.length === 0) {
+                    return <div className="p-4"><div className="empty-state"><p className="empty-state-desc">No open positions. Place a trade to see it live here.</p></div></div>;
+                  }
+                  return (
+                    <div>
+                      {open.map((t: any) => (
+                        <div key={t.id} className="flex items-center justify-between px-4 py-3 border-b border-[var(--border)] last:border-0">
+                          <div className="flex items-center gap-3 min-w-0">
+                            <span className="w-1.5 h-1.5 rounded-full bg-[var(--accent)] animate-live-pulse shrink-0" />
+                            <div className="min-w-0">
+                              <p className="text-sm font-bold text-white truncate">{t.symbol} <span className="text-[var(--text-muted)] font-medium">{t.contractType}</span></p>
+                              <p className="text-xs text-[var(--text-muted)]">#{t.contractId} · {new Date(t.entryTime).toLocaleTimeString()}</p>
+                            </div>
+                          </div>
+                          <div className="text-right shrink-0">
+                            <p className="text-sm font-bold text-[var(--accent)] font-mono tabular-nums">${Number(t.stake).toFixed(2)}</p>
+                            <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">entry {Number(t.entryPrice).toFixed(decimalPlaces)}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  );
+                })()}
+              </div>
+            ) : historyTab === "trades" ? (
               <div>
                 {/* Live trade activity log */}
                 <div className="p-4 border-b border-[var(--border)]">
@@ -672,8 +713,8 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Right column - Trade Studio, AI, Alerts */}
-        <div className="space-y-6 xl:sticky xl:top-6 xl:self-start">
+        {/* Order column - Trade Studio, AI, Alerts */}
+        <div className="space-y-4 xl:space-y-6 lg:col-span-12 xl:col-span-3 xl:sticky xl:top-4 xl:self-start">
 
           {/* Trade Studio */}
           <div className="trade-studio flex flex-col max-h-[calc(100vh-120px)]">
