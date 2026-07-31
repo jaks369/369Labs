@@ -235,6 +235,31 @@ export default function Replay() {
 
               <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-6">
                 <h2 className="text-sm font-bold text-white mb-4">Your Decisions</h2>
+                {(() => {
+                  const wins = results.filter((r) => r.pnl >= 0).length;
+                  const loss = results.length - wins;
+                  const net = results.reduce((a, r) => a + r.pnl, 0);
+                  const wr = results.length ? Math.round((wins / results.length) * 100) : 0;
+                  return results.length > 0 ? (
+                    <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-xs mb-3 px-2 py-2 bg-black/20 rounded-lg border border-[var(--border)]">
+                      <span className="flex items-center gap-2">
+                        <span className="text-[9px] uppercase tracking-widest text-[var(--text-muted)] font-bold">Replay P&L</span>
+                        <span className={`font-mono tabular-nums font-bold text-[13px] ${net >= 0 ? "text-[var(--green)]" : "text-[var(--red)]"}`}>{net >= 0 ? "+" : ""}{net.toFixed(2)}</span>
+                      </span>
+                      <span className="flex items-center gap-2">
+                        <span className="text-[9px] uppercase tracking-widest text-[var(--text-muted)] font-bold">Win Rate</span>
+                        <span className="font-mono tabular-nums font-bold text-[13px] text-white">{wr}%</span>
+                      </span>
+                      <span className="flex items-center gap-2">
+                        <span className="text-[9px] uppercase tracking-widest text-[var(--text-muted)] font-bold">Decisions</span>
+                        <span className="font-mono tabular-nums font-bold text-[13px] text-white">{wins}W / {loss}L</span>
+                      </span>
+                      <span className="text-[10px] text-[var(--text-secondary)] ml-auto">
+                        {wr >= 60 ? "▲ 369AI: disciplined play — keep it." : wr >= 40 ? "◉ 369AI: average — tighten entries." : "▼ 369AI: negative edge — reduce size."}
+                      </span>
+                    </div>
+                  ) : null;
+                })()}
                 {results.length === 0 ? <div className="empty-state"><p className="empty-state-desc">No trades yet.</p></div> : (
                   <div className="space-y-1.5 max-h-64 overflow-y-auto font-mono text-xs">
                     {results.map((r, i) => (
