@@ -401,8 +401,7 @@ export default function Dashboard() {
 
           {/* Chart workspace — the heart of the OS */}
           <div className={showSymbolPicker ? "bg-[var(--card)] rounded-xl p-4 elevation-1" : "chart-workspace"}>
-            {showSymbolPicker ? (
-              <div className="max-h-[300px] md:max-h-[420px] overflow-y-auto space-y-5">
+            {showSymbolPicker ? (              <div className="max-h-[300px] md:max-h-[420px] overflow-y-auto space-y-5">
                 <div className="sticky top-0 z-10 pb-2 -mt-2 pt-2">
                   <input
                     type="text"
@@ -477,7 +476,60 @@ export default function Dashboard() {
               </div>
             ) : (
               <div className="chart-plot" style={{ minHeight: "520px" }}>
-                <TickChart symbol={selectedSymbol} maxDataPoints={50} decimalPlaces={decimalPlaces} />
+                {(() => {
+                  const ticks = displayTicks;
+                  const last = ticks[0];
+                  const prev = ticks[1] || ticks[0];
+                  const price = last?.price;
+                  const digits = ticks.filter((t: any) => typeof t.lastDigit === "number").map((t: any) => t.lastDigit);
+                  const digitCounts: Record<number, number> = {};
+                  for (const d of digits) digitCounts[d] = (digitCounts[d] || 0) + 1;
+                  const hottest = digits.length >= 10 ? Object.entries(digitCounts).sort((a, b) => b[1] - a[1])[0] : null;
+                  const hotPct = hottest ? Math.round((Number(hottest[1]) / digits.length) * 100) : 0;
+                  const up = prev && price !== undefined ? price >= prev : null;
+                  return (
+                    <>
+                      <div className="flex flex-wrap items-center justify-between gap-3 px-5 pt-4 pb-3 border-b border-[var(--border)]">
+                        <div className="flex items-center gap-3">
+                          <div className="flex items-center gap-2">
+                            <span className="w-2 h-2 rounded-full bg-[var(--green)] animate-live-pulse" />
+                            <span className="text-[10px] font-bold uppercase tracking-widest text-[var(--text-muted)]">Live</span>
+                          </div>
+                          <div className="flex items-baseline gap-2">
+                            <span className="text-xl font-bold font-mono tabular-nums text-white" style={{ color: up === null ? undefined : up ? "var(--green)" : "var(--red)" }}>
+                              {price !== undefined ? Number(price).toFixed(decimalPlaces) : "—"}
+                            </span>
+                            {up !== null && (
+                              <span className={`text-sm font-bold ${up ? "text-[var(--green)]" : "text-[var(--red)]"}`}>
+                                {up ? "▲" : "▼"}
+                              </span>
+                            )}
+                          </div>
+                          <div className="hidden sm:flex items-center gap-2 px-2.5 py-1 rounded-lg bg-white/5 border border-[var(--border)]">
+                            <span className="text-[10px] uppercase tracking-wider text-[var(--text-muted)] font-bold">Last Digit</span>
+                            <span className="text-sm font-bold font-mono" style={{ color: last?.lastDigit >= 5 ? "var(--green)" : "var(--red)" }}>{last?.lastDigit ?? "—"}</span>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {hottest && (
+                            <div className="hidden md:flex items-center gap-2 px-2.5 py-1 rounded-lg bg-[var(--accent-soft)] border border-[var(--accent-border)]">
+                              <span className="text-[10px] uppercase tracking-wider text-[var(--accent-hover)] font-bold">Hottest Digit</span>
+                              <span className="text-sm font-bold font-mono text-[var(--accent-hover)]">{hottest[0]}</span>
+                              <span className="text-xs font-mono text-[var(--accent-hover)]/70">{hotPct}%</span>
+                            </div>
+                          )}
+                          <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg border ${derivStatus === "connected" ? "bg-[var(--green-soft)] border-[var(--green)]/25" : "bg-white/5 border-[var(--border)]"}`}>
+                            <span className={`w-1.5 h-1.5 rounded-full ${derivStatus === "connected" ? "bg-[var(--green)] animate-live-pulse" : "bg-[var(--text-disabled)]"}`} />
+                            <span className={`text-[10px] font-bold uppercase tracking-wider ${derivStatus === "connected" ? "text-[var(--green)]" : "text-[var(--text-muted)]"}`}>
+                              {derivStatus === "connected" ? "Feed Connected" : derivStatus === "needs_token" ? "Token Required" : "Reconnecting"}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                      <TickChart symbol={selectedSymbol} maxDataPoints={50} decimalPlaces={decimalPlaces} />
+                    </>
+                  );
+                })()}
               </div>
             )}
           </div>
