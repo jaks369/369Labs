@@ -1,11 +1,18 @@
 # 369Labs
 
-Automated Trading Bot Platform built for the Deriv API.
+**A world-class AI-assistant trading platform.** Real-time, intelligence-driven trading terminal built on the Deriv API — combining a professional live dashboard, AI market copilot, no-code strategy automation, and high-frequency tick execution in one cohesive experience.
+
+## Highlights
+
+- **AI Assistant that reads the market** — answers live questions about digit probabilities, even/odd splits, hottest markets, volatility, health scores, and trend strength using real tick data — every answer backed by evidence and confidence.
+- **Live at the current tick** — manual trades, AI orders, and bots all execute at the live spot price, with the entry price shown in a realtime activity log the moment the order fills.
+- **Hot-market intelligence** — the AI ranks which symbols are being traded most across the last 24 hours, with win rates, and weaves that context into market analysis.
+- **Near-real-time settlement** — server-side bots settle trades every 2 seconds and evaluate strategies every 500ms, so the platform reacts to the market, not to a poll timer.
 
 ## Features
-- Cyberpunk-themed trading dashboard
+- Cyberpunk-themed trading dashboard with a live price ticker, feed status, and realtime trade activity log
+- AI assistant: market analysis, digit probability, hot markets, trade journaling, explainable predictions
 - No-code strategy builder (visual IF/THEN, blocks, ensemble modes)
-- AI-powered strategy generation, analysis, and journaling
 - Real-time tick streaming and visualization (TradingView Lightweight Charts)
 - Automated bot deployment (paper + live via Deriv API)
 - Backtesting engine with PnL, win rate, Sharpe, drawdown metrics
@@ -16,8 +23,8 @@ Automated Trading Bot Platform built for the Deriv API.
 
 ## Tech Stack
 - **Frontend:** React 19 + TypeScript, Tailwind CSS, tRPC React Query, Monaco Editor, TradingView Lightweight Charts
-- **Backend:** tRPC v11, Node.js, PostgreSQL (via Drizzle ORM + postgres.js/mysql2)
-- **AI:** OpenAI/Groq-compatible API, ReAct agent routing, strategy intelligence, market analysis
+- **Backend:** tRPC v11, Node.js, MySQL (via Drizzle ORM + mysql2)
+- **AI:** OpenAI/Groq-compatible API, ReAct agent routing, strategy intelligence, market analysis, hot-market + digit-probability engines
 - **Infrastructure:** Redis (sessions/cache), Vercel-ready deployment
 
 ## Local Development
@@ -62,9 +69,11 @@ Automated Trading Bot Platform built for the Deriv API.
 │   ├── routers.ts   # All tRPC endpoints
 │   ├── db.ts        # Database access layer
 │   ├── _core/       # Auth, cookies, encryption, env, session
-│   ├── ai/          # AI engine, agents, intelligence, memory
+│   ├── ai/          # AI engine, agents, intelligence, memory, hot markets
 │   ├── aitools.ts   # AI tool definitions (tick history, stats, etc.)
 │   ├── botRunner.ts # Server-side bot execution
+│   ├── executionEngine.ts  # Near-live bot evaluation (500ms poll)
+│   ├── SettlementTracker.ts # Fast contract settlement (2s poll)
 │   └── signalScanner.ts  # Automatic pattern detection
 ├── drizzle/         # Database schema (Drizzle ORM)
 │   └── schema.ts    # All table definitions
@@ -79,7 +88,7 @@ Automated Trading Bot Platform built for the Deriv API.
 - `tsc --noEmit` — Type-check without emitting
 
 ## Deployment
-This project is ready for deployment on Vercel. Set the environment variables in your Vercel project dashboard and deploy from the `master` branch.
+This project is ready for deployment on Vercel. Set the environment variables in your Vercel project dashboard and deploy from the `main` branch.
 
 ## RuFlo Agent Orchestration
 RuFlo is available as a server-side AI agent orchestration layer. See `docs/ruflo.md` for configuration, local usage, GitHub CI, and Vercel deployment notes.
