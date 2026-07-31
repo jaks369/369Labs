@@ -277,6 +277,22 @@ async function handleMarket(userId: number, message: string): Promise<ChatRespon
     };
   }
 
+  if (/\b(hot|active|most traded|busiest|popular|traded)\b/.test(m)) {
+    const hot = aiOrchestrator.getHotMarkets();
+    if (hot.length === 0) {
+      return { answer: "No recent trading activity recorded yet. Once trades settle, I'll rank the hottest markets.", confidence: 80, evidence, enginesUsed: engines, timestamp: Date.now() };
+    }
+    hot.forEach((h) => evidence.push(`${h.symbol}: ${h.tradeCount} trades in last 24h, ${h.winRate}% win rate`));
+    const top = hot[0];
+    return {
+      answer: `Hottest markets right now: ${hot.map((h) => `${h.symbol} (${h.tradeCount} trades)`).join(", ")}. Most traded is ${top.symbol} with ${top.tradeCount} trades and a ${top.winRate}% win rate in the last 24h.`,
+      confidence: 90,
+      evidence,
+      enginesUsed: engines,
+      timestamp: Date.now(),
+    };
+  }
+
   if (/\b(volatility|volatile|high)\b/.test(m)) {
     const allHealth = aiOrchestrator.getHealth();
     const highVol = allHealth.filter((h) => h.volatility === "High");

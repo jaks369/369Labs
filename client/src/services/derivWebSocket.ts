@@ -69,6 +69,7 @@ class DerivWebSocketService {
   private pendingSubscriptionSymbols: string[] = [];
   private pendingRequests: Map<number, { resolve: (v: any) => void; reject: (e: Error) => void }> = new Map();
   private contractListeners: Map<number, (c: ContractUpdate) => void> = new Map();
+  private contractSettledListeners: Set<(contractId: number, update: ContractUpdate, meta: any) => void> = new Set();
   private subSymbolById: Map<number, string> = new Map();
   private subErrors: Map<string, string> = new Map();
   private retryTimers: Map<string, ReturnType<typeof setTimeout>> = new Map();
@@ -483,6 +484,7 @@ class DerivWebSocketService {
     if (params.barrier !== undefined) proposalPayload.barrier = String(params.barrier);
     if (params.stopLoss !== undefined) proposalPayload.stop_loss = String(params.stopLoss);
     if (params.takeProfit !== undefined) proposalPayload.take_profit = String(params.takeProfit);
+    let lastError: Error | null = null;
     for (const symField of ["symbol", "underlying", "underlying_symbol"]) {
       try {
         proposalPayload[symField] = params.symbol;
@@ -495,11 +497,9 @@ class DerivWebSocketService {
           this.notifyBalance(this.lastBalance);
           return { contractId: buyRes.buy.contract_id, buyPrice: buyRes.buy.buy_price, longcode: buyRes.buy.longcode, balanceAfter: b };
         }
-        if (proposalRes.error?.message?.includes("Properties not allowed")) continue;
-        throw new Error("No proposal returned: " + JSON.stringify(proposalRes).slice(0, 200));
+        lastError = new Error("No proposal returned: " + JSON.stringify(proposalRes).slice(0, 200));
       } catch (e: any) {
-        if (e.message?.includes("Properties not allowed") && symField !== "underlying_symbol") continue;
-        throw e;
+        lastError = e;
       }
     }
     throw new Error("Trade failed: symbol field not accepted by Deriv API");
@@ -510,6 +510,13 @@ class DerivWebSocketService {
     if (!this.ws || this.ws.readyState !== WebSocket.OPEN) return;
     try { this.ws.send(JSON.stringify({ proposal_open_contract: 1, contract_id: contractId, subscribe: 1, req_id: this.msgId++ })); }
     catch (error) { console.error("[Deriv WS] Failed to subscribe to contract:", error); }
+  }
+
+  public onContractSettled(cb: (contractId: number, update: ContractUpdate, meta: any) => void): void {
+    this.contractSettledListeners.add(cb);
+  }
+  public removeContractSettledListener(cb: (contractId: number, update: ContractUpdate, meta: any) => void): void {
+    this.contractSettledListeners.delete(cb);
   }
 
   public resubscribeToContracts(): void {
@@ -567,6 +574,12 @@ class DerivWebSocketService {
           const contractId = parseInt(key.replace("pendingTrade_", ""));
           if (!isNaN(contractId) && !this.contractListeners.has(contractId)) {
             restored.push(contractId);
+            const meta = this.getContractMeta(contractId);
+            this.subscribeToContract(contractId, (update) => {
+              if (update.is_sold) {
+                this.contractSettledListeners.forEach(cb => { try { cb(contractId, update, meta); } catch {} });
+              }
+            });
           }
         }
       }

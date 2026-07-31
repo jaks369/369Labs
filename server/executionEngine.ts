@@ -4,7 +4,7 @@ import { derivManager } from "./derivConnection";
 import { getRecentTicks, isFeedStale } from "./tickCollector";
 import { fireWebhookEvent } from "./webhookExecutor";
 
-const POLL_INTERVAL = 2_000; // 2 seconds
+const POLL_INTERVAL = 500; // 500ms — near-live bot evaluation
 const MAX_PIPELINE_TRADES = 50; // max trades in one cycle
 
 let intervalId: ReturnType<typeof setInterval> | null = null;
@@ -171,7 +171,7 @@ async function executeBotCycle(): Promise<void> {
 
 export function startExecutionEngine(): void {
   if (intervalId) return;
-  console.log("[ExecutionEngine] Starting — polling every 2s for active bots");
+  console.log("[ExecutionEngine] Starting — polling every 500ms for active bots");
   intervalId = setInterval(() => {
     executeBotCycle().catch(() => {});
   }, POLL_INTERVAL);

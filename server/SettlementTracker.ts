@@ -1,7 +1,7 @@
 import * as db from "./db";
 import { derivManager } from "./derivConnection";
 
-const POLL_INTERVAL = 30_000;
+const POLL_INTERVAL = 2_000;
 const MAX_RETRIES = 100;
 
 export class SettlementTracker {
@@ -13,7 +13,7 @@ export class SettlementTracker {
     if (this.intervalId) return;
     this.tick();
     this.intervalId = setInterval(() => this.tick(), POLL_INTERVAL);
-    console.log("[SettlementTracker] Started — polling pending trades every 30s");
+    console.log("[SettlementTracker] Started — polling pending trades every 2s");
   }
 
   stop(): void {

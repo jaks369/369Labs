@@ -55,7 +55,10 @@ export default function Dashboard() {
   const [stopLoss, setStopLoss] = useState<number>(0);
   const [takeProfit, setTakeProfit] = useState<number>(0);
   const [tradeBusy, setTradeBusy] = useState(false);
-  const [tradeMsg, setTradeMsg] = useState<{ kind: "ok" | "err"; text: string } | null>(null);
+  const [tradeLogs, setTradeLogs] = useState<{ kind: "ok" | "err"; text: string; time: Date }[]>([]);
+  const addTradeLog = (kind: "ok" | "err", text: string) => {
+    setTradeLogs(prev => [{ kind, text, time: new Date() }, ...prev].slice(0, 50));
+  };
   const [showRiskSettings, setShowRiskSettings] = useState(false);
   const [alertsOpen, setAlertsOpen] = useState(false);
   const [newAlertSym, setNewAlertSym] = useState("");
@@ -144,14 +147,14 @@ export default function Dashboard() {
   const displayTicks = liveTicks.length ? liveTicks : (priceQuery.data?.ticks || []).slice(0, 50);
 
   const handleQuickTrade = async () => {
-    if (!derivWS.isAuthorized()) { setTradeMsg({ kind: "err", text: "Connect a Deriv token first (Settings)." }); return; }
+    if (!derivWS.isAuthorized()) { addTradeLog("err", "Connect a Deriv token first (Settings)."); return; }
     const dailyLossLimit = (memoryQuery.data?.memory as any)?.dailyLossLimit;
     if (dailyLossLimit > 0) {
       const today = new Date().toDateString();
       const todayTrades = (tradesQuery.data || []).filter((t: any) => new Date(t.entryTime).toDateString() === today);
       const todayPnl = todayTrades.reduce((sum, t) => sum + parseFloat(t.profitLoss?.toString() || "0"), 0);
       if (todayPnl <= -dailyLossLimit) {
-        setTradeMsg({ kind: "err", text: `Daily loss limit of $${dailyLossLimit} reached. Trading blocked until tomorrow.` });
+        addTradeLog("err", `Daily loss limit of $${dailyLossLimit} reached. Trading blocked until tomorrow.`);
         return;
       }
     }
@@ -167,8 +170,8 @@ export default function Dashboard() {
       "accumulator": "ACCU",
     };
     const contractType = map[contract.category];
-    if (!contractType) { setTradeMsg({ kind: "err", text: "Unsupported contract type." }); return; }
-    setTradeBusy(true); setTradeMsg(null);
+    if (!contractType) { addTradeLog("err", "Unsupported contract type."); return; }
+    setTradeBusy(true);
     try {
       const purchase = await derivWS.purchaseContract({
         symbol: selectedSymbol,
@@ -181,8 +184,8 @@ export default function Dashboard() {
         ...(stopLoss > 0 ? { stopLoss } : {}),
         ...(takeProfit > 0 ? { takeProfit } : {}),
       });
-      setTradeMsg({ kind: "ok", text: "Trade placed (contract #" + purchase.contractId + "). Tracking settlement…" });
-      setBalance(purchase.balanceAfter);
+      addTradeLog("ok", "Trade placed — contract #" + purchase.contractId + " on " + selectedSymbol);
+      if (typeof purchase.balanceAfter === "number") setBalance(purchase.balanceAfter);
 
       // Save an initial pending trade so it shows in history immediately.
       const entryTime = new Date();
@@ -221,7 +224,7 @@ export default function Dashboard() {
         }
       });
     } catch (e: any) {
-      setTradeMsg({ kind: "err", text: "Trade failed: " + (e?.message || e) });
+      addTradeLog("err", "Trade failed: " + (e?.message || e));
     } finally { setTradeBusy(false); }
   };
 
@@ -484,6 +487,30 @@ export default function Dashboard() {
             </div>
             {historyTab === "trades" ? (
               <div>
+                {/* Live trade activity log */}
+                <div className="p-4 border-b border-[var(--border)]">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-micro font-bold text-[var(--text-muted)] uppercase tracking-wider">Live Activity</span>
+                    <span className="inline-flex items-center gap-1.5">
+                      <span className="w-1.5 h-1.5 rounded-full bg-[var(--green)] animate-pulse-dot" />
+                      <span className="text-[10px] text-[var(--text-muted)]">realtime</span>
+                    </span>
+                  </div>
+                  {tradeLogs.length === 0 ? (
+                    <p className="text-xs text-[var(--text-muted)]">No trade activity yet. Place a trade to see live logs here.</p>
+                  ) : (
+                    <div className="space-y-1.5 max-h-[160px] overflow-y-auto">
+                      {tradeLogs.map((log, i) => (
+                        <div key={i} className="flex items-center gap-2 text-xs font-mono">
+                          <span className={`shrink-0 w-1.5 h-1.5 rounded-full ${log.kind === "ok" ? "bg-[var(--green)]" : "bg-[var(--red)]"}`} />
+                          <span className="text-[var(--text-muted)] shrink-0">{log.time.toLocaleTimeString()}</span>
+                          <span className={`truncate ${log.kind === "ok" ? "text-[var(--green)]" : "text-[var(--red)]"}`}>{log.text}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
                 {(() => {
                   const allTrades = tradesQuery.data || [];
                   const wins = allTrades.filter((t: any) => t.result === "win").length;
@@ -663,13 +690,9 @@ export default function Dashboard() {
                 </button>
               )}
 
-              {tradeMsg && (
-                <p className={`text-xs ${tradeMsg.kind === "ok" ? "text-[var(--green)]" : "text-[var(--red)]"}`}>{tradeMsg.text}</p>
-              )}
               {!derivWS.isAuthorized() && (
                 <p className="text-xs text-[var(--text-muted)]">Connect a Deriv token in Settings to enable trading.</p>
-              )}
-            </div>
+              )}            </div>
 
             {/* Sticky Buy button */}
             <div className="flex-shrink-0 px-4 pb-4 pt-2 max-md:fixed max-md:bottom-16 max-md:left-0 max-md:right-0 max-md:z-40 max-md:bg-[var(--card)] max-md:border-t max-md:border-[var(--border)] max-md:p-3">

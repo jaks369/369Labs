@@ -36,6 +36,7 @@ export class AIOrchestrator {
   private lastRiskAlert = new Map<string, number>();
   private lastAdvisoryLevel = new Map<string, string>();
   private lastHealthScores = new Map<string, number>();
+  private hotMarkets: { symbol: string; tradeCount: number; winRate: number }[] = [];
 
   start(): void {
     if (this.intervalId) return;
@@ -78,8 +79,14 @@ export class AIOrchestrator {
     return Array.from(this.state.riskAdvisories.values());
   }
 
+  getHotMarkets(): { symbol: string; tradeCount: number; winRate: number }[] {
+    return this.hotMarkets;
+  }
+
   private async tick(): Promise<void> {
     try {
+      this.hotMarkets = await db.getHotMarkets(24, 10).catch(() => []);
+
       const insights = await this.insightEngine.generateAll();
       for (const insight of insights) {
         if (!this.lastInsightKeys.has(insight.id)) {

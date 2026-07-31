@@ -676,6 +676,45 @@ export async function getTradesByUserId(userId: number, limit: number = 50): Pro
   }
 }
 
+export async function getHotMarkets(hours: number = 24, limit: number = 10): Promise<{ symbol: string; tradeCount: number; winRate: number }[]> {
+  const db = await getDb();
+  if (!db) return [];
+  const since = new Date(Date.now() - hours * 3600 * 1000);
+  try {
+    const rows = await db.select({
+      symbol: trades.symbol,
+      count: sql<number>`COUNT(*)`,
+      wins: sql<number>`SUM(CASE WHEN ${trades.result} = 'win' THEN 1 ELSE 0 END)`,
+    })
+      .from(trades)
+      .where(sql`${trades.entryTime} >= ${since}`)
+      .groupBy(trades.symbol)
+      .orderBy(desc(sql`COUNT(*)`))
+      .limit(limit);
+    return rows.map((r: any) => ({
+      symbol: r.symbol ?? "R_100",
+      tradeCount: Number(r.count || 0),
+      winRate: Number(r.count || 0) > 0 ? Math.round((Number(r.wins || 0) / Number(r.count)) * 100) : 0,
+    }));
+  } catch {
+    const pool = getRawPool();
+    if (!pool) return [];
+    try {
+      const [rows] = await pool.execute(
+        "SELECT symbol, COUNT(*) AS tradeCount, SUM(CASE WHEN result='win' THEN 1 ELSE 0 END) AS wins FROM trades WHERE entryTime >= ? GROUP BY symbol ORDER BY tradeCount DESC LIMIT ?",
+        [since, limit]
+      );
+      return (rows as any[]).map((r) => ({
+        symbol: r.symbol ?? "R_100",
+        tradeCount: Number(r.tradeCount || 0),
+        winRate: Number(r.tradeCount || 0) > 0 ? Math.round((Number(r.wins || 0) / Number(r.tradeCount)) * 100) : 0,
+      }));
+    } catch {
+      return [];
+    }
+  }
+}
+
 export async function getAccountByUserId(userId: number): Promise<{ balance: string } | null> {
   return null;
 }
