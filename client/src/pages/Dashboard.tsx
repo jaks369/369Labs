@@ -35,6 +35,7 @@ import ContractTypeSelector, { ContractSelection } from "@/components/ContractTy
 import { VOLATILITY_SYMBOLS } from "@/lib/symbols";
 import { getDecimalPlaces } from "@shared/lastDigit";
 import WatchlistPanel from "@/components/WatchlistPanel";
+import AIVerdicts from "@/components/AIVerdicts";
 
 const ALL_FALLBACK: DerivSymbol[] = VOLATILITY_SYMBOLS.map(s => ({ ...s, decimalPlaces: 2 }));
 
@@ -933,6 +934,8 @@ export default function Dashboard() {
           </div>
 
           <SymbolInsights symbol={selectedSymbol} ticks={displayTicks} trades={tradesQuery.data || []} decimalPlaces={decimalPlaces} />
+
+          <AIVerdicts symbol={selectedSymbol} ticks={displayTicks} trades={tradesQuery.data || []} decimalPlaces={decimalPlaces} />
 
           {/* Price Alerts */}
           <div className="panel">
