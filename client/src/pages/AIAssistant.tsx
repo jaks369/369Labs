@@ -122,7 +122,8 @@ export default function AIAssistant() {
           durationUnit: "t",
           barrier: a.params.barrier !== undefined ? Number(a.params.barrier) : undefined,
         });
-        setMessages(prev => [...prev, { role: "ai", content: `Order filled: ${a.params.symbol} ${a.params.contractType} (contract ${r.contractId}).` }]);
+        const entrySuffix = r.entrySpot !== undefined ? ` at ${Number(r.entrySpot).toFixed(2)}` : "";
+        setMessages(prev => [...prev, { role: "ai", content: `Order filled: ${a.params.symbol} ${a.params.contractType} (contract ${r.contractId})${entrySuffix}.` }]);
       } else if (a.action === "deployBot") {
         try {
           const saved = await saveStrategyMutation.mutateAsync({

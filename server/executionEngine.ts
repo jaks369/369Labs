@@ -108,23 +108,25 @@ async function executeBotCycle(): Promise<void> {
       const contractType = actionToContractType(rule.action);
       const entryPrice = prices[triggerIdx];
       const tickAfter = prices[triggerIdx + 1];
+      const isDigit = ["DIGITMATCH", "DIGITOVER", "DIGITUNDER", "DIGITEVEN", "DIGITODD"].includes(contractType);
       // Use Deriv proposal/buy flow to place the actual trade
-      const proposal = await (conn as any).sendRaw({
+      const proposalPayload: Record<string, any> = {
         proposal: 1,
         amount: stake,
-        barrier: rule.condition.barrier,
         basis: "stake",
-        contract_type: contractType === "CALL" ? "CALL" : "PUT",
+        contract_type: contractType,
         currency: "USD",
         duration: 1,
         duration_unit: "t",
         symbol,
-      }).catch(() => null);
+      };
+      if (isDigit && rule.condition.barrier !== undefined) proposalPayload.barrier = String(rule.condition.barrier);
+      const proposal = await (conn as any).sendRaw(proposalPayload).catch(() => null);
       if (!proposal?.proposal?.id) continue;
 
       const buy = await (conn as any).sendRaw({
         buy: proposal.proposal.id,
-        price: stake,
+        price: proposal.proposal.ask_price,
       }).catch(() => null);
       if (!buy?.buy?.contract_id) {
         // Paper/simulation fallback if Deriv API not available
@@ -136,6 +138,7 @@ async function executeBotCycle(): Promise<void> {
             symbol,
             contractType,
             stake: String(stake),
+            entryPrice: String(entryPrice),
             result,
             profitLoss: String(pnl),
             entryTime: new Date(ticks[triggerIdx].epoch * 1000),
@@ -156,6 +159,7 @@ async function executeBotCycle(): Promise<void> {
         symbol,
         contractType,
         stake: String(stake),
+        entryPrice: String(entryPrice),
         result: "pending",
         contractId: String(buy.buy.contract_id),
         entryTime: new Date(),

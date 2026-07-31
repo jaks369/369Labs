@@ -29,6 +29,9 @@ export interface PurchaseResult {
   buyPrice: number;
   longcode: string;
   balanceAfter: number;
+  entryTick?: number;
+  entrySpot?: number;
+  entryTime?: number;
 }
 export interface ContractUpdate {
   contract_id: number;
@@ -424,6 +427,7 @@ class DerivWebSocketService {
         const pending = new Map<number, { res: (v: any) => void; rej: (e: Error) => void }>();
         let proposalId = "";
         let askPrice = 0;
+        let spot = 0;
         ws.onopen = () => {
           ws.send(JSON.stringify({ authorize: this.apiToken, req_id: reqId++ }));
         };
@@ -436,13 +440,14 @@ class DerivWebSocketService {
           } else if (data.msg_type === "proposal") {
             proposalId = data.proposal.id;
             askPrice = data.proposal.ask_price;
+            spot = Number(data.proposal.spot ?? 0);
             ws.send(JSON.stringify({ buy: proposalId, price: askPrice, req_id: reqId++ }));
           } else if (data.msg_type === "buy") {
             ws.close(); clearTimeout(timeout);
             const b = data.buy;
             this.lastBalance = { ...(this.lastBalance || {}), balance: b.balance_after ?? (this.lastBalance?.balance ?? 0) - params.amount };
             this.notifyBalance(this.lastBalance);
-            resolve({ contractId: b.contract_id, buyPrice: b.buy_price, longcode: b.longcode || "", balanceAfter: b.balance_after ?? 0 });
+            resolve({ contractId: b.contract_id, buyPrice: b.buy_price, longcode: b.longcode || "", balanceAfter: b.balance_after ?? 0, entrySpot: spot > 0 ? spot : undefined, entryTime: Date.now() });
           }
         };
         ws.onerror = () => { clearTimeout(timeout); reject(new Error("v3 WS connection failed")); };
@@ -468,7 +473,8 @@ class DerivWebSocketService {
             const b = buyRes.buy.balance_after ?? (this.lastBalance?.balance ?? 0) - params.amount;
             this.lastBalance = { ...(this.lastBalance || {}), balance: b };
             this.notifyBalance(this.lastBalance);
-            return { contractId: buyRes.buy.contract_id, buyPrice: buyRes.buy.buy_price, longcode: buyRes.buy.longcode, balanceAfter: b };
+            const entrySpot = Number(proposalRes.proposal.spot ?? 0);
+            return { contractId: buyRes.buy.contract_id, buyPrice: buyRes.buy.buy_price, longcode: buyRes.buy.longcode, balanceAfter: b, entrySpot: entrySpot > 0 ? entrySpot : undefined, entryTime: Date.now() };
           }
         }
         console.warn("[Deriv WS] v1 proposal failed all formats");
@@ -495,7 +501,8 @@ class DerivWebSocketService {
           const b = buyRes.buy.balance_after ?? (this.lastBalance?.balance ?? 0) - params.amount;
           this.lastBalance = { ...(this.lastBalance || {}), balance: b };
           this.notifyBalance(this.lastBalance);
-          return { contractId: buyRes.buy.contract_id, buyPrice: buyRes.buy.buy_price, longcode: buyRes.buy.longcode, balanceAfter: b };
+          const entrySpot = Number(proposalRes.proposal.spot ?? 0);
+          return { contractId: buyRes.buy.contract_id, buyPrice: buyRes.buy.buy_price, longcode: buyRes.buy.longcode, balanceAfter: b, entrySpot: entrySpot > 0 ? entrySpot : undefined, entryTime: Date.now() };
         }
         lastError = new Error("No proposal returned: " + JSON.stringify(proposalRes).slice(0, 200));
       } catch (e: any) {

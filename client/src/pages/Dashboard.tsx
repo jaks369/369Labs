@@ -33,6 +33,7 @@ import { useDerivStatus } from "@/hooks/useDerivStatus";
 import DerivTokenModal from "@/components/DerivTokenModal";
 import ContractTypeSelector, { ContractSelection } from "@/components/ContractTypeSelector";
 import { VOLATILITY_SYMBOLS } from "@/lib/symbols";
+import { getDecimalPlaces } from "@shared/lastDigit";
 
 const ALL_FALLBACK: DerivSymbol[] = VOLATILITY_SYMBOLS.map(s => ({ ...s, decimalPlaces: 2 }));
 
@@ -184,15 +185,18 @@ export default function Dashboard() {
         ...(stopLoss > 0 ? { stopLoss } : {}),
         ...(takeProfit > 0 ? { takeProfit } : {}),
       });
-      addTradeLog("ok", "Trade placed — contract #" + purchase.contractId + " on " + selectedSymbol);
+      const entrySpot = purchase.entrySpot;
+      const entrySuffix = entrySpot !== undefined ? ` @ ${Number(entrySpot).toFixed(getDecimalPlaces(selectedSymbol))}` : "";
+      addTradeLog("ok", `Trade placed — contract #${purchase.contractId} on ${selectedSymbol}${entrySuffix}`);
       if (typeof purchase.balanceAfter === "number") setBalance(purchase.balanceAfter);
 
       // Save an initial pending trade so it shows in history immediately.
       const entryTime = new Date();
+      const entryPrice = String(entrySpot ?? purchase.buyPrice ?? stake);
       saveTradeMutation.mutate({
         result: "pending" as any,
         stake: String(stake),
-        entryPrice: String(purchase.buyPrice ?? stake),
+        entryPrice,
         entryTime,
         symbol: selectedSymbol,
         contractType: contractType,
@@ -201,7 +205,7 @@ export default function Dashboard() {
 
       derivWS.registerContractMeta(purchase.contractId, {
         stake: String(stake),
-        entryPrice: String(purchase.buyPrice ?? ""),
+        entryPrice,
         entryTime: entryTime.toISOString(),
         symbol: selectedSymbol,
         contractType: contractType,
@@ -209,10 +213,12 @@ export default function Dashboard() {
       derivWS.subscribeToContract(purchase.contractId, (c: any) => {
         if (c.status !== "open") {
           const profit = parseFloat(c.profit || c.profit_loss || "0");
+          const resultLabel = profit >= 0 ? "WIN" : "LOSS";
+          addTradeLog(profit >= 0 ? "ok" : "err", `Contract #${purchase.contractId} settled — ${resultLabel} ${profit >= 0 ? "+" : ""}${profit.toFixed(2)}`);
           saveTradeMutation.mutate({
             result: (profit >= 0 ? "win" : "loss") as any,
             stake: String(stake),
-            entryPrice: String(purchase.buyPrice ?? stake),
+            entryPrice,
             profitLoss: profit.toFixed(2),
             entryTime,
             exitTime: new Date(),
