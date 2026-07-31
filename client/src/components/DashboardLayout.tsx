@@ -248,7 +248,10 @@ function DashboardLayoutContent({
   const sidebarRef = useRef<HTMLDivElement>(null);
   const activeMenuItem = menuItems.find(item => item.path === location);
   const isMobile = useIsMobile();
-  const [riskDismissed, setRiskDismissed] = useState(false);
+  const [riskDismissed, setRiskDismissed] = useState(() => {
+    const saved = localStorage.getItem("risk-dismissed");
+    return saved ? JSON.parse(saved) : false;
+  });
   const voice = useVoiceCommands(true);
   const [globalSearchOpen, setGlobalSearchOpen] = useState(false);
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
@@ -256,12 +259,20 @@ function DashboardLayoutContent({
 
   // Collapsible groups state — auto-expand group containing active page
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>(() => {
+    const saved = localStorage.getItem("sidebar-expanded-groups");
+    if (saved) {
+      try { return JSON.parse(saved); } catch {}
+    }
     const activeGroup = navGroups.find(g => g.items.some(item => item.path === location));
     return activeGroup ? { [activeGroup.title]: true } : { "Trade": true };
   });
 
   const toggleGroup = (title: string) => {
-    setExpandedGroups(prev => ({ ...prev, [title]: !prev[title] }));
+    setExpandedGroups(prev => {
+      const next = { ...prev, [title]: !prev[title] };
+      localStorage.setItem("sidebar-expanded-groups", JSON.stringify(next));
+      return next;
+    });
   };
 
   useEffect(() => {
@@ -529,7 +540,7 @@ function DashboardLayoutContent({
               <span className="flex-1">
                 Trading involves substantial risk. 369Labs is an analysis tool, not financial advice.
               </span>
-              <button onClick={() => setRiskDismissed(true)} className="text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors font-semibold px-2 shrink-0 text-xs cursor-pointer">✕</button>
+              <button onClick={() => { setRiskDismissed(true); localStorage.setItem("risk-dismissed", "true"); }} className="text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors font-semibold px-2 shrink-0 text-xs cursor-pointer">✕</button>
             </div>
           )}
           {children}

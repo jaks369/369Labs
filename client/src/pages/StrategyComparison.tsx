@@ -1,6 +1,8 @@
 import { useState, useMemo, useEffect, useRef } from "react";
 import { Loader2, GitCompare, AlertCircle } from "lucide-react";
 import { trpc } from "@/lib/trpc";
+import { useAuth } from "@/_core/hooks/useAuth";
+import { useLocation } from "wouter";
 
 type StrategyMetrics = {
   winRate: number;
@@ -54,6 +56,9 @@ const METRICS: { key: keyof StrategyMetrics; label: string; format: (v: number) 
 ];
 
 export default function StrategyComparison() {
+  const { isAuthenticated } = useAuth();
+  const [, navigate] = useLocation();
+  if (!isAuthenticated) { navigate("/login"); return null; }
   const strategiesQuery = trpc.strategies.list.useQuery();
   const tradesQuery = trpc.trades.list.useQuery({ limit: 5000 });
   const strategies = strategiesQuery.data || [];

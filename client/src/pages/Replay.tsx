@@ -6,9 +6,9 @@ import { Play, Pause, RotateCcw, FastForward, TrendingUp, TrendingDown, Loader2,
 import Sparkline from "@/components/Sparkline";
 import { getValidSymbols } from "@/lib/symbols";
 
-type Tick = { epoch: number; price: number; lastDigit: number };
-type CondOrder = { id: string; type: "stop" | "limit" | "oco_buy" | "oco_sell"; price: number; triggered: boolean };
-type TrailingStop = { active: boolean; distance: number; activationPrice: number | null };
+type Tick = { epoch: number; price: number; lastDigit: number; timestamp?: number };
+type CondOrder = { id: string; type: "stop" | "limit" | "oco_buy" | "oco_sell"; price: number; triggered: boolean; ocoPair?: string };
+type TrailingStop = { active: boolean; distance: number; activationPrice: number | null; direction?: "rise" | "fall" };
 
 export default function Replay() {
   const { isAuthenticated } = useAuth();
@@ -20,24 +20,38 @@ export default function Replay() {
   const [speed, setSpeed] = useState(4);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [trade, setTrade] = useState<{ type: "rise" | "fall"; entryIdx: number; entryPrice: number } | null>(null);
+  const [stake, setStake] = useState(1);
+  const [duration, setDuration] = useState(5);
+  const [trade, setTrade] = useState<{ type: "rise" | "fall"; entryIdx: number; entryPrice: number; stake: number; duration: number } | null>(null);
   const [results, setResults] = useState<{ type: string; pnl: number; at: string }[]>([]);
   const [condOrders, setCondOrders] = useState<CondOrder[]>([]);
-  const [trailing, setTrailing] = useState<TrailingStop>({ active: false, distance: 10, activationPrice: null });
+  const [trailing, setTrailing] = useState<TrailingStop>({ active: false, distance: 10, activationPrice: null, direction: undefined });
   const [showOrders, setShowOrders] = useState(false);
   const timer = useRef<number | null>(null);
+  const abortRef = useRef<AbortController | null>(null);
 
   const SYMBOLS = getValidSymbols();
 
   const load = useCallback(async () => {
     setLoading(true); setError(null); setTicks([]); setIdx(0); setPlaying(false);
+    // Cancel any in-flight request
+    if (abortRef.current) abortRef.current.abort();
+    abortRef.current = new AbortController();
     try {
       const start = Math.floor(Date.now() / 1000) - 3 * 24 * 3600;
       const end = Math.floor(Date.now() / 1000);
       const raw = await derivWS.fetchTickHistory(symbol, start, end);
-      if (!raw || raw.length < 50) throw new Error("Not enough historical ticks for this symbol.");
-      setTicks(raw.map((t: any) => ({ epoch: t.epoch, price: Number(t.price), lastDigit: t.lastDigit })));
+      if (!raw || raw.length === 0) throw new Error("No historical ticks returned for this symbol.");
+      if (raw.length < 50) console.warn(`Only ${raw.length} ticks returned; may be insufficient.`);
+      // Normalize: derivWS returns {price, timestamp(ms)} — convert to epoch(seconds) + compute lastDigit
+      const normalized = raw.map((t: any) => {
+        const ts = t.timestamp ?? t.epoch ?? Date.now();
+        const epochSec = typeof ts === "number" && ts > 1e12 ? ts / 1000 : ts; // handle ms or sec
+        return { epoch: epochSec, price: Number(t.price), lastDigit: t.lastDigit ?? Math.abs(Math.round(Number(t.price) * 10)) % 10, timestamp: ts };
+      });
+      setTicks(normalized);
     } catch (e) {
+      if (e instanceof Error && e.name === "AbortError") return; // ignore cancelled
       setError(e instanceof Error ? e.message : "Failed to load ticks");
     } finally { setLoading(false); }
   }, [symbol]);
@@ -61,68 +75,97 @@ export default function Replay() {
 
   const takeTrade = (type: "rise" | "fall") => {
     if (!cur) return;
-    if (trade) { scoreTrade(type); return; }
-    setTrade({ type, entryIdx: idx, entryPrice: cur.price });
+    if (trade) {
+      // Early close - score immediately
+      const win = (trade.type === "rise" && cur.price > trade.entryPrice) || (trade.type === "fall" && cur.price < trade.entryPrice);
+      const payout = 0.95;
+      const pnl = win ? trade.stake * payout : -trade.stake;
+      setResults((r) => [{ type: `${trade.type} (early close, ${idx - trade.entryIdx}t)`, pnl, at: cur.timestamp ? new Date(cur.timestamp).toLocaleTimeString() : "—" }, ...r].slice(0, 20));
+      setTrade(null);
+      return;
+    }
+    setTrade({ type, entryIdx: idx, entryPrice: cur.price, stake, duration });
   };
 
-  const scoreTrade = (closeType: "rise" | "fall") => {
+  // Auto-score when duration expires
+  useEffect(() => {
     if (!trade || !cur) return;
-    const win = (closeType === "rise" && cur.price > trade.entryPrice) || (closeType === "fall" && cur.price < trade.entryPrice);
-    const pnl = win ? 0.95 : -1;
-    setResults((r) => [{ type: `${trade.type} → close ${closeType}`, pnl, at: cur.epoch ? new Date(cur.epoch * 1000).toLocaleTimeString() : "—" }, ...r].slice(0, 20));
-    setTrade(null);
-  };
+    if (idx >= trade.entryIdx + trade.duration) {
+      const win = (trade.type === "rise" && cur.price > trade.entryPrice) || (trade.type === "fall" && cur.price < trade.entryPrice);
+      const payout = 0.95; // TODO: import from BacktestEngine or compute from symbol/duration
+      const pnl = win ? trade.stake * payout : -trade.stake;
+      setResults((r) => [{ type: `${trade.type} (${trade.duration}t)`, pnl, at: cur.timestamp ? new Date(cur.timestamp).toLocaleTimeString() : "—" }, ...r].slice(0, 20));
+      setTrade(null);
+    }
+  }, [idx, trade, cur]);
 
   const orderIdRef = useRef(0);
   const addCondOrder = (type: CondOrder["type"]) => {
     if (!cur) return;
+    // For stop/limit, direction depends on position; oco_buy/oco_sell are direction-specific
     const price = type === "stop" ? cur.price * 0.98 : type === "limit" ? cur.price * 1.02 : cur.price;
     orderIdRef.current++;
-    setCondOrders((o) => [...o, { id: `cond_${Date.now()}_${orderIdRef.current}`, type, price: Math.round(price * 10000) / 10000, triggered: false }]);
+    const ocoPair = type === "oco_buy" || type === "oco_sell" ? `oco_${Date.now()}_${orderIdRef.current}` : undefined;
+    setCondOrders((o) => [...o, { id: `cond_${Date.now()}_${orderIdRef.current}`, type, price: Math.round(price * 10000) / 10000, triggered: false, ocoPair }]);
   };
 
   useEffect(() => {
-    if (!cur) return;
-    let updated = false;
-    setCondOrders((prev) =>
-      prev.map((o) => {
+    if (!cur || !trade) return;
+    const isRise = trade.type === "rise";
+    setCondOrders((prev) => {
+      const updated: CondOrder[] = [];
+      const triggeredIds = new Set<string>();
+      const newOrders = prev.map((o) => {
         if (o.triggered) return o;
-        if ((o.type === "stop" || o.type === "oco_sell") && cur.price <= o.price) {
-          updated = true;
-          const pnl = -1;
-          setResults((r) => [{ type: `⚠ Stop triggered @ ${o.price}`, pnl, at: new Date(cur.epoch * 1000).toLocaleTimeString() }, ...r].slice(0, 20));
-          setTrade(null);
-          return { ...o, triggered: true };
+        let triggered = false;
+        // Stop: RISE (long) triggers on price DROP; FALL (short) triggers on price RISE
+        if ((o.type === "stop" || o.type === "oco_sell")) {
+          const shouldTrigger = isRise ? cur.price <= o.price : cur.price >= o.price;
+          if (shouldTrigger) triggered = true;
         }
-        if ((o.type === "limit" || o.type === "oco_buy") && cur.price >= o.price) {
-          updated = true;
-          const pnl = 0.95;
-          setResults((r) => [{ type: `✓ Limit triggered @ ${o.price}`, pnl, at: new Date(cur.epoch * 1000).toLocaleTimeString() }, ...r].slice(0, 20));
-          setTrade(null);
-          return { ...o, triggered: true };
+        // Limit: RISE triggers on price RISE; FALL triggers on price DROP
+        if ((o.type === "limit" || o.type === "oco_buy")) {
+          const shouldTrigger = isRise ? cur.price >= o.price : cur.price <= o.price;
+          if (shouldTrigger) triggered = true;
         }
-        return o;
-      })
-    );
-    if (updated) setCondOrders((o) => o.filter((x) => !x.triggered));
-  }, [cur]);
+        if (triggered) {
+          const payout = 0.95;
+          const pnl = o.type === "stop" || o.type === "oco_sell" ? -trade.stake : trade.stake * payout;
+          const label = o.type === "stop" || o.type === "oco_sell" ? "Stop" : "Limit";
+          updated.push({ ...o, triggered: true });
+          triggeredIds.add(o.id);
+          if (o.ocoPair) triggeredIds.add(o.ocoPair); // cancel OCO counterpart
+          setResults((r) => [{ type: `⚡ ${label} triggered @ ${o.price}`, pnl, at: cur.timestamp ? new Date(cur.timestamp).toLocaleTimeString() : "—" }, ...r].slice(0, 20));
+          setTrade(null);
+        }
+        return triggered ? { ...o, triggered: true } : o;
+      });
+      // Remove triggered + their OCO counterparts
+      return newOrders.filter((o) => !triggeredIds.has(o.id) && !triggeredIds.has(o.ocoPair || ""));
+    });
+  }, [cur, trade]);
 
   useEffect(() => {
     if (!trailing.active || !cur || !trade) return;
+    // Initialize activation price at trade entry price, not current price
     if (trailing.activationPrice === null) {
-      setTrailing((t) => ({ ...t, activationPrice: cur.price }));
+      setTrailing((t) => ({ ...t, activationPrice: trade.entryPrice, direction: trade.type }));
       return;
     }
     const direction = trade.type === "rise" ? 1 : -1;
+    // Get decimal places for proper distance scaling
+    const decimals = symbol.startsWith("1HZ") ? 3 : symbol.startsWith("R_") ? 2 : 2;
+    const distanceValue = trailing.distance / Math.pow(10, decimals);
     const bestPrice = direction > 0 ? Math.max(trailing.activationPrice, cur.price) : Math.min(trailing.activationPrice, cur.price);
-    const stopPrice = direction > 0 ? bestPrice - trailing.distance / 10000 : bestPrice + trailing.distance / 10000;
+    const stopPrice = direction > 0 ? bestPrice - distanceValue : bestPrice + distanceValue;
     if ((direction > 0 && cur.price <= stopPrice) || (direction < 0 && cur.price >= stopPrice)) {
-      const pnl = -0.5;
-      setResults((r) => [{ type: `🔄 Trailing stop closed @ ${cur.price.toFixed(4)}`, pnl, at: new Date(cur.epoch * 1000).toLocaleTimeString() }, ...r].slice(0, 20));
+      const payout = 0.95;
+      const pnl = trade.stake * (payout - 1); // trailing stop closes at slight loss/win
+      setResults((r) => [{ type: `🔄 Trailing stop closed @ ${cur.price.toFixed(decimals)}`, pnl, at: cur.timestamp ? new Date(cur.timestamp).toLocaleTimeString() : "—" }, ...r].slice(0, 20));
       setTrade(null);
-      setTrailing({ active: false, distance: 10, activationPrice: null });
+      setTrailing({ active: false, distance: 10, activationPrice: null, direction: undefined });
     }
-  }, [cur, trailing.active, trade]);
+  }, [cur, trailing.active, trade, symbol]);
 
   return (
     <div className="min-h-screen bg-[var(--card)] p-6">
@@ -160,14 +203,14 @@ export default function Replay() {
               <Sparkline data={windowTicks.map((t) => ({ value: t.price }))} />
 
               <div className="flex items-center gap-3 mt-4">
-                <button onClick={() => { setIdx(0); setPlaying(false); }} className="p-2 rounded-lg bg-white/5 text-[var(--text-secondary)] hover:bg-white/10"><RotateCcw className="w-4 h-4" /></button>
-                <button onClick={() => setPlaying((p) => !p)} className="p-2 rounded-lg bg-[var(--accent)] text-white hover:bg-[var(--accent)]">
-                  {playing ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
+                <button onClick={() => { setIdx(0); setPlaying(false); }} className="min-w-[44px] min-h-[44px] p-3 rounded-lg bg-white/5 text-[var(--text-secondary)] hover:bg-white/10"><RotateCcw className="w-5 h-5" /></button>
+                <button onClick={() => setPlaying((p) => !p)} className="min-w-[44px] min-h-[44px] p-3 rounded-lg bg-[var(--accent)] text-white hover:bg-[var(--accent)]">
+                  {playing ? <Pause className="w-5 h-5" /> : <Play className="w-5 h-5" />}
                 </button>
-                <input type="range" min={0} max={ticks.length - 1} value={idx} onChange={(e) => { setPlaying(false); setIdx(Number(e.target.value)); }} className="flex-1" />
+                <input type="range" min={0} max={ticks.length - 1} value={idx} onChange={(e) => { setPlaying(false); setIdx(Number(e.target.value)); }} className="flex-1 min-h-[44px]" />
                 <div className="flex items-center gap-1">
-                  <FastForward className="w-4 h-4 text-[var(--text-muted)]" />
-                  <select value={speed} onChange={(e) => setSpeed(Number(e.target.value))} className="bg-[var(--card)] border border-[var(--border)] rounded px-2 py-1 text-xs text-white">
+                  <FastForward className="w-5 h-5 text-[var(--text-muted)]" />
+                  <select value={speed} onChange={(e) => setSpeed(Number(e.target.value))} className="min-h-[44px] min-w-[80px] bg-[var(--card)] border border-[var(--border)] rounded px-3 py-1 text-sm text-white">
                     {[1, 2, 4, 8, 16].map((s) => <option key={s} value={s}>{s}x</option>)}
                   </select>
                 </div>
@@ -178,11 +221,11 @@ export default function Replay() {
               <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-6">
                 <h2 className="text-sm font-bold text-white mb-4">Manual Trade</h2>
                 <div className="flex gap-3">
-                  <button onClick={() => takeTrade("rise")} className={`flex-1 py-3 rounded-lg flex items-center justify-center gap-2 font-bold ${trade?.type === "rise" ? "bg-[var(--green)] text-white" : "bg-[var(--green-soft)] text-[var(--green)] border border-[var(--green)]/30"}`}>
-                    <TrendingUp className="w-4 h-4" /> {trade ? "Close" : "Buy Rise"}
+                  <button onClick={() => takeTrade("rise")} className={`flex-1 min-h-[44px] py-4 rounded-lg flex items-center justify-center gap-2 font-bold ${trade?.type === "rise" ? "bg-[var(--green)] text-white" : "bg-[var(--green-soft)] text-[var(--green)] border border-[var(--green)]/30"}`}>
+                    <TrendingUp className="w-5 h-5" /> {trade ? "Close" : "Buy Rise"}
                   </button>
-                  <button onClick={() => takeTrade("fall")} className={`flex-1 py-3 rounded-lg flex items-center justify-center gap-2 font-bold ${trade?.type === "fall" ? "bg-[var(--red)] text-white" : "bg-[var(--red-soft)] text-[var(--red)] border border-[var(--red)]/30"}`}>
-                    <TrendingDown className="w-4 h-4" /> {trade ? "Close" : "Buy Fall"}
+                  <button onClick={() => takeTrade("fall")} className={`flex-1 min-h-[44px] py-4 rounded-lg flex items-center justify-center gap-2 font-bold ${trade?.type === "fall" ? "bg-[var(--red)] text-white" : "bg-[var(--red-soft)] text-[var(--red)] border border-[var(--red)]/30"}`}>
+                    <TrendingDown className="w-5 h-5" /> {trade ? "Close" : "Buy Fall"}
                   </button>
                 </div>
                 {trade && <p className="text-xs text-[var(--text-secondary)] mt-3">Open {trade.type} at {trade.entryPrice.toFixed(4)}. Press again to close and score.</p>}
@@ -194,14 +237,14 @@ export default function Replay() {
                   {showOrders && (
                     <div className="mt-3 space-y-3">
                       <div className="flex gap-2">
-                        <button onClick={() => addCondOrder("stop")} className="flex-1 py-2 rounded-lg text-xs font-bold bg-[var(--red-soft)] text-[var(--red)] border border-[var(--red)]/30 hover:bg-[var(--red)]/20">
+                        <button onClick={() => addCondOrder("stop")} className="flex-1 min-h-[44px] py-3 rounded-lg text-sm font-bold bg-[var(--red-soft)] text-[var(--red)] border border-[var(--red)]/30 hover:bg-[var(--red)]/20">
                           Add Stop Loss
                         </button>
-                        <button onClick={() => addCondOrder("limit")} className="flex-1 py-2 rounded-lg text-xs font-bold bg-[var(--green-soft)] text-[var(--green)] border border-[var(--green)]/30 hover:bg-[var(--green)]/20">
+                        <button onClick={() => addCondOrder("limit")} className="flex-1 min-h-[44px] py-3 rounded-lg text-sm font-bold bg-[var(--green-soft)] text-[var(--green)] border border-[var(--green)]/30 hover:bg-[var(--green)]/20">
                           Add Take Profit
                         </button>
-                        <button onClick={() => addCondOrder("oco_buy")} className="flex-1 py-2 rounded-lg text-xs font-bold bg-[var(--accent)]/20 text-[var(--accent)] border border-[var(--accent)]/30 hover:bg-[var(--accent)]/30">
-                          <ArrowRightLeft className="w-3 h-3 inline mr-1" />OCO
+                        <button onClick={() => addCondOrder("oco_buy")} className="flex-1 min-h-[44px] py-3 rounded-lg text-sm font-bold bg-[var(--accent)]/20 text-[var(--accent)] border border-[var(--accent)]/30 hover:bg-[var(--accent)]/30">
+                          <ArrowRightLeft className="w-4 h-4 inline mr-1" />OCO
                         </button>
                       </div>
                       {condOrders.length > 0 && (

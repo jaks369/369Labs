@@ -2,6 +2,8 @@ import { useState } from "react";
 import { FileText, Download, Calendar, Loader2, BarChart3, TrendingUp, PieChart, X, Eye, Activity } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { toast } from "@/components/Toast";
+import { useAuth } from "@/_core/hooks/useAuth";
+import { useLocation } from "wouter";
 
 const REPORT_TEMPLATES = [
   { id: "weekly" as const, name: "Weekly Performance", icon: BarChart3, description: "Win rate, profit/loss, trade count for the past week" },
@@ -114,6 +116,9 @@ function ReportViewer({ report, onClose }: { report: any; onClose: () => void })
 }
 
 export default function AutoReports() {
+  const { isAuthenticated } = useAuth();
+  const [, navigate] = useLocation();
+  if (!isAuthenticated) { navigate("/login"); return null; }
   const [generating, setGenerating] = useState<string | null>(null);
   const [viewReportId, setViewReportId] = useState<number | null>(null);
 

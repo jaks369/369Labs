@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, KeyboardEvent } from "react";
+﻿import { useState, useRef, useEffect, KeyboardEvent } from "react";
 import { Send, Loader2 } from "lucide-react";
 
 interface AIChatInputProps {
@@ -38,8 +38,7 @@ export default function AIChatInput({ onSend, loading, disabled }: AIChatInputPr
 
   return (
     <div className="flex items-end gap-2 border-t border-[var(--border)] bg-[var(--bg)] p-3">
-      <textarea
-        ref={inputRef}
+      <textarea data-chat-input="true" ref={inputRef}
         value={input}
         onChange={(e) => setInput(e.target.value)}
         onKeyDown={handleKeyDown}
@@ -62,3 +61,4 @@ export default function AIChatInput({ onSend, loading, disabled }: AIChatInputPr
     </div>
   );
 }
+

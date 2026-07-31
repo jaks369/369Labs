@@ -1,9 +1,9 @@
-import { useAuth } from "@/_core/hooks/useAuth";
+﻿import { useAuth } from "@/_core/hooks/useAuth";
 import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { Bot, TrendingUp, Activity, BarChart3, BrainCircuit, Loader2, Sparkles } from "lucide-react";
 import AIChatWindow from "@/components/AIChatWindow";
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { derivWS } from "@/services/derivWebSocket";
 import { getValidSymbols } from "@/lib/symbols";
 
@@ -14,12 +14,14 @@ export default function TradingCopilot() {
 
   const [symbol, setSymbol] = useState("R_100");
   const [tick, setTick] = useState<{ price: number; change: number } | null>(null);
+  const listenerRef = useRef<{ onTick: (t: any) => void } | null>(null);
 
   useEffect(() => {
     const id = derivWS.subscribe(symbol);
     const listener = {
-      onTick: (t: any) => setTick({ price: Number(t.price), change: tick ? ((Number(t.price) - tick!.price) / tick!.price) * 100 : 0 }),
+      onTick: (t: any) => setTick(prev => prev ? { price: Number(t.price), change: ((Number(t.price) - prev.price) / prev.price) * 100 } : { price: Number(t.price), change: 0 }),
     };
+    listenerRef.current = listener;
     derivWS.addListener(listener);
     return () => { derivWS.removeListener(listener); derivWS.unsubscribe(id); };
   }, [symbol]);
@@ -62,7 +64,7 @@ export default function TradingCopilot() {
           <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4 md:col-span-2">
             <div className="flex items-center justify-between mb-2">
               <span className="text-micro">{symbol} Live</span>
-              {tick && <span className={`text-caption font-bold ${tick.change >= 0 ? "text-[var(--green)]" : "text-[var(--red)]}"}`}>{tick.change >= 0 ? "+" : ""}{Number(tick.change).toFixed(2)}%</span>}
+              {tick && <span className={`text-caption font-bold ${tick.change >= 0 ? "text-[var(--green)]" : "text-[var(--red)]"}`}>{tick.change >= 0 ? "+" : ""}{Number(tick.change).toFixed(2)}%</span>}
             </div>
             <p className="text-3xl font-bold text-white font-mono">
               {tick ? Number(tick.price).toFixed(dp) : <Loader2 className="w-5 h-5 animate-spin text-[var(--text-muted)] inline" />}
@@ -70,7 +72,7 @@ export default function TradingCopilot() {
           </div>
           <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4">
             <span className="text-micro">Total P&L</span>
-            <p className={`text-xl font-bold mt-1 font-mono ${stats.pnl >= 0 ? "text-[var(--green)]" : "text-[var(--red)]}"}`}>
+            <p className={`text-xl font-bold mt-1 font-mono ${stats.pnl >= 0 ? "text-[var(--green)]" : "text-[var(--red)]"}`}>
               {stats.pnl >= 0 ? "+" : ""}${Number(stats.pnl).toFixed(2)}
             </p>
           </div>
@@ -121,7 +123,7 @@ export default function TradingCopilot() {
                   {(strategiesQuery.data || []).slice(0, 5).map(s => (
                     <div key={s.id} className="flex items-center justify-between py-1.5 px-2 rounded-lg bg-white/5">
                       <span className="text-xs text-white truncate">{s.name}</span>
-                      <span className={`text-[9px] font-bold ${s.isActive ? "text-[var(--green)]" : "text-[var(--text-muted)]]"}`}>{s.isActive ? "Active" : "Inactive"}</span>
+                      <span className={`text-[9px] font-bold ${s.isActive ? "text-[var(--green)]" : "text-[var(--text-muted)]"}`}>{s.isActive ? "Active" : "Inactive"}</span>
                     </div>
                   ))}
                 </div>

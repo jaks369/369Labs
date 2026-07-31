@@ -80,6 +80,6 @@ export function normalizeSymbol(input: string): string {
 
 // Filter a list of symbols to only those in our known list
 export function filterValidSymbols(symbols: string[]): string[] {
-  const known = new Set(VOLATILITY_SYMBOLS.map(s => s.symbol));
+  const known = new Set<string>(VOLATILITY_SYMBOLS.map(s => s.symbol));
   return symbols.filter(s => known.has(s));
 }

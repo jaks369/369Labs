@@ -182,7 +182,7 @@ export default function MobileTerminal() {
   const accountBadge = accountType === "real" ? "REAL" : accountType === "demo" ? "DEMO" : !derivWS.isAuthorized() ? "NO TOKEN" : "LIVE";
 
   return (
-    <div className="min-h-screen bg-[var(--card)] pb-20 md:hidden">
+    <div className="min-h-screen bg-[var(--card)] pb-20 lg:hidden">
       {/* Header: symbol · live price · LIVE */}
       <div className="sticky top-0 z-30 bg-[var(--card)]/95 backdrop-blur border-b border-[var(--border)] px-4 pt-3 pb-2">
         <div className="flex items-center justify-between gap-3">
@@ -216,7 +216,7 @@ export default function MobileTerminal() {
         {/* Timeframes */}
         <div className="flex gap-1.5 mt-2">
           {TIMEFRAMES.map((tf, i) => (
-            <button key={tf.label} onClick={() => setTimeframe(i)} className={`flex-1 py-1 rounded-md text-[11px] font-bold transition-colors cursor-pointer ${timeframe === i ? "bg-[var(--accent)] text-black" : "bg-white/5 text-[var(--text-muted)]"}`}>{tf.label}</button>
+            <button key={tf.label} onClick={() => setTimeframe(i)} className={`flex-1 py-3 rounded-md text-[11px] font-bold transition-colors cursor-pointer min-h-[44px] ${timeframe === i ? "bg-[var(--accent)] text-black" : "bg-white/5 text-[var(--text-muted)]"}`}>{tf.label}</button>
           ))}
         </div>
       </div>
@@ -225,7 +225,7 @@ export default function MobileTerminal() {
         <div className="px-4 py-2 bg-black/20 border-b border-[var(--border)] max-h-56 overflow-y-auto">
           <div className="grid grid-cols-2 gap-1.5">
             {symbols.map((s) => (
-              <button key={s.symbol} onClick={() => { setSymbol(s.symbol); setShowSymbolPicker(false); }} className={`text-left px-2.5 py-2 rounded-lg text-xs font-bold cursor-pointer ${symbol === s.symbol ? "bg-[var(--accent-soft)] text-[var(--accent-hover)] border border-[var(--accent-border)]" : "bg-white/5 text-[var(--text-secondary)] border border-transparent"}`}>
+              <button key={s.symbol} onClick={() => { setSymbol(s.symbol); setShowSymbolPicker(false); }} className={`text-left px-2.5 py-3 rounded-lg text-xs font-bold cursor-pointer min-h-[44px] ${symbol === s.symbol ? "bg-[var(--accent-soft)] text-[var(--accent-hover)] border border-[var(--accent-border)]" : "bg-white/5 text-[var(--text-secondary)] border border-transparent"}`}>
                 <span className="block font-mono">{s.symbol}</span>
                 <span className="text-[9px] text-[var(--text-muted)] truncate">{s.displayName}</span>
               </button>
@@ -279,7 +279,7 @@ export default function MobileTerminal() {
           </div>
           <div className="flex gap-1.5">
             {[1, 5, 10].map((p) => (
-              <button key={p} onClick={() => setStake(p)} className={`flex-1 py-1.5 rounded-md text-caption font-bold cursor-pointer ${stake === p ? "bg-[var(--accent)] text-black" : "bg-[var(--surface-secondary)] text-[var(--text-muted)]"}`}>${p}</button>
+              <button key={p} onClick={() => setStake(p)} className={`flex-1 py-3 rounded-md text-caption font-bold cursor-pointer min-h-[44px] ${stake === p ? "bg-[var(--accent)] text-black" : "bg-[var(--surface-secondary)] text-[var(--text-muted)]"}`}>${p}</button>
             ))}
           </div>
           {isRiseFall ? (

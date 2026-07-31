@@ -101,13 +101,17 @@ export async function runBacktest(ticks: Tick[], strategy: any, stake: number, s
   let balance = 0;
 
   const { contractType, barrier } = actionToContractType(strategy.action);
+  const duration = strategy.params?.duration || 5; // Default 5 ticks like live bot
+  const stopLoss = strategy.params?.stopLoss || 0;
+  const takeProfit = strategy.params?.takeProfit || 0;
 
   for (let i = 0; i < ticks.length; i++) {
-    history.push(ticks[i]);
+    // Evaluate condition using ONLY past ticks (history), NOT current tick
+    // history contains ticks[0] through ticks[i-1]
     if (evaluateCondition(strategy, ticks[i], history, decimals)) {
       const entryTime = ticks[i].timestamp;
       const entryPrice = ticks[i].price;
-      const exitIdx = i + 1;
+      const exitIdx = i + duration;
       if (exitIdx >= ticks.length) break;
       const exitPrice = ticks[exitIdx].price;
       const result = simulateTradeOutcome(entryPrice, exitPrice, contractType, barrier, decimals);
@@ -116,6 +120,8 @@ export async function runBacktest(ticks: Tick[], strategy: any, stake: number, s
       trades.push({ entryTime, entryPrice, exitTime: ticks[exitIdx].timestamp, exitPrice, contractType, result, pnl });
       i = exitIdx;
     }
+    // Add current tick to history AFTER evaluation (for next iteration)
+    history.push(ticks[i]);
   }
 
   const wins = trades.filter((t) => t.result === "win").length;

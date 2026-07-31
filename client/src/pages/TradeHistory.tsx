@@ -1,47 +1,51 @@
 import { useState } from "react";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { trpc } from "@/lib/trpc";
-import { Loader2, Download, AlertCircle, BarChart3, TrendingUp, TrendingDown } from "lucide-react";
+import { Loader2, Download, AlertCircle, BarChart3, TrendingUp, TrendingDown, ChevronLeft, ChevronRight } from "lucide-react";
 import { useLocation } from "wouter";
 
 export default function TradeHistory() {
   const { isAuthenticated } = useAuth();
   const [, navigate] = useLocation();
-  const tradesQuery = trpc.trades.list.useQuery({ limit: 100 });
+  const [page, setPage] = useState(1);
+  const pageSize = 50;
+  const tradesQuery = trpc.trades.list.useQuery({ limit: pageSize, offset: (page - 1) * pageSize });
+  const exportQuery = trpc.trades.exportCsv.useQuery();
 
   if (!isAuthenticated) {
     navigate("/login");
     return null;
   }
 
-  const totalTrades = tradesQuery.data?.length || 0;
-  const wins = tradesQuery.data?.filter(t => (t as any).result === "win").length || 0;
-  const losses = tradesQuery.data?.filter(t => (t as any).result === "loss").length || 0;
-  const totalPnL = tradesQuery.data?.reduce((sum, t) => sum + parseFloat(t.profitLoss?.toString() || "0"), 0) || 0;
-  const winRate = totalTrades > 0 ? (wins / totalTrades) * 100 : 0;
-  const avgTrade = totalTrades > 0 ? totalPnL / totalTrades : 0;
+  const trades = tradesQuery.data || [];
+  const totalTrades = trades.length;
+  // Filter settled trades only for stats
+  const settledTrades = trades.filter(t => (t as any).result !== "pending");
+  const wins = settledTrades.filter(t => (t as any).result === "win").length;
+  const losses = settledTrades.filter(t => (t as any).result === "loss").length;
+  const totalPnL = settledTrades.reduce((sum, t) => sum + parseFloat(t.profitLoss?.toString() || "0"), 0);
+  const winRate = settledTrades.length > 0 ? (wins / settledTrades.length) * 100 : 0;
+  const avgTrade = settledTrades.length > 0 ? totalPnL / settledTrades.length : 0;
 
-  const exportToCSV = () => {
-    if (!tradesQuery.data) return;
-    const headers = ["ID", "Entry Time", "Exit Time", "Entry Price", "Exit Price", "Stake", "P&L", "Result"];
-    const rows = tradesQuery.data.map((trade) => [
-      trade.id,
-      new Date(trade.entryTime).toLocaleString(),
-      trade.exitTime ? new Date(trade.exitTime).toLocaleString() : "N/A",
-      trade.entryPrice,
-      trade.exitPrice || "N/A",
-      trade.stake,
-      trade.profitLoss || "N/A",
-      (trade as any).result,
-    ]);
-    const csv = [headers, ...rows].map((row) => row.join(",")).join("\n");
-    const blob = new Blob([csv], { type: "text/csv" });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `trades-${new Date().toISOString()}.csv`;
-    a.click();
+  const handleExportCSV = async () => {
+    try {
+      const result = await exportQuery.refetch();
+      if (result.data) {
+        const blob = new Blob([result.data.csv], { type: "text/csv" });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `trades-${new Date().toISOString()}.csv`;
+        a.click();
+      }
+    } catch (error) {
+      console.error("Export failed:", error);
+    }
   };
+
+  const hasMore = trades.length === pageSize;
+  const goNext = () => setPage(p => p + 1);
+  const goPrev = () => setPage(p => Math.max(1, p - 1));
 
   return (
     <div className="min-h-screen" style={{ background: "var(--bg)" }}>
@@ -53,8 +57,8 @@ export default function TradeHistory() {
             <p className="text-body">View and analyze all your executed trades</p>
           </div>
           <button
-            onClick={exportToCSV}
-            disabled={!tradesQuery.data?.length}
+            onClick={handleExportCSV}
+            disabled={exportQuery.isFetching || !trades.length}
             className="btn btn-outline btn-sm"
           >
             <Download className="w-4 h-4" />
@@ -192,6 +196,31 @@ export default function TradeHistory() {
                 </tbody>
               </table>
             </div>
+            {hasMore || page > 1 && (
+              <div className="flex items-center justify-between px-4 py-3 border-t border-[var(--border)]">
+                <span className="text-sm text-[var(--text-muted)]">
+                  Page {page} &middot; showing {trades.length} trades
+                </span>
+                <div className="flex gap-2">
+                  <button
+                    onClick={goPrev}
+                    disabled={page === 1 || tradesQuery.isLoading}
+                    className="btn btn-outline btn-sm"
+                    aria-label="Previous page"
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={goNext}
+                    disabled={!hasMore || tradesQuery.isLoading}
+                    className="btn btn-outline btn-sm"
+                    aria-label="Next page"
+                  >
+                    <ChevronRight className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>

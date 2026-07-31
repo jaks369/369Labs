@@ -6,50 +6,49 @@ import {
   User,
   InsertUser,
   derivTokens,
+  InsertDerivToken,
   strategies,
+  InsertStrategy,
   chatMessages,
   botRuns,
+  BotRun,
+  InsertBotRun,
+  botLogs,
+  BotLog,
+  InsertBotLog,
   signals,
+  Signal,
+  InsertSignal,
   aiKnowledge,
+  AiKnowledgeResult,
+  InsertAiKnowledge,
   jobs,
   userMemory,
   pluginInstalls,
   passwordResetTokens,
-  verificationTokens,
-  auditLogs,
-  telegramSettings,
-  notificationSettings,
-  oauthAccounts,
-  trades, 
-  botRuns, 
-  telegramSettings, 
-  notificationSettings,
-  tickHistory,
-  DerivToken,
-  Strategy,
-  Trade,
-  BotRun,
-  TelegramSettings,
-  NotificationSettings,
-  InsertUser,
-  InsertDerivToken,
-  InsertStrategy,
-  InsertTrade,
-  InsertBotRun,
-  InsertTelegramSettings,
-  InsertNotificationSettings,
-  trades,
-  signals,
-  strategies,
-  botRuns,
-  derivTokens,
-  users,
-  passwordResetTokens,
   PasswordResetToken,
+  InsertPasswordResetToken,
   verificationTokens,
   VerificationToken,
+  InsertVerificationToken,
+  auditLogs,
+  telegramSettings,
+  TelegramSettings,
+  InsertTelegramSettings,
+  notificationSettings,
+  NotificationSettings,
+  InsertNotificationSettings,
   oauthAccounts,
   OAuthAccount,
+  InsertOAuthAccount,
+  trades, 
+  Trade,
+  InsertTrade,
+  tickHistory,
+  InsertTickHistory,
+  TickHistoryRow,
+  DerivToken,
+  Strategy,
   sessions,
   Session,
   InsertSession,
@@ -59,14 +58,6 @@ import {
   priceAlerts,
   PriceAlert,
   InsertPriceAlert,
-  botLogs,
-  BotLog,
-  InsertBotLog,
-  chatMessages,
-  aiKnowledge,
-  AiKnowledge,
-  InsertAiKnowledge,
-  AiKnowledgeResult,
 } from "../drizzle/schema";
 import { ENV } from './_core/env';
 import { encrypt, decrypt } from './_core/encryption';
@@ -99,7 +90,7 @@ export async function getDb() {
       try {
         const cfg = parseDbUrl(process.env.DATABASE_URL);
         _pool = mysql.createPool(cfg);
-        _db = drizzle(_pool);
+        _db = drizzle(_pool) as any;
         console.log("[Database] Connected successfully");
       } catch (error) {
         _dbError = String(error);
@@ -656,18 +647,18 @@ export async function getTradeById(tradeId: number): Promise<Trade | undefined> 
   }
 }
 
-export async function getTradesByUserId(userId: number, limit: number = 50): Promise<Trade[]> {
+export async function getTradesByUserId(userId: number, limit: number = 50, offset: number = 0): Promise<Trade[]> {
   const db = await getDb();
   if (!db) return [];
   try {
-    return await db.select().from(trades).where(eq(trades.userId, userId)).orderBy(desc(trades.updatedAt)).limit(limit);
+    return await db.select().from(trades).where(eq(trades.userId, userId)).orderBy(desc(trades.updatedAt)).limit(limit).offset(offset);
   } catch {
     const pool = getRawPool();
     if (!pool) return [];
     try {
       const [rows] = await pool.execute(
-        "SELECT id, userId, botRunId, strategyId, entryTime, exitTime, entryPrice, exitPrice, stake, profitLoss, contractType, result, contractId, updatedAt FROM trades WHERE userId=? ORDER BY updatedAt DESC LIMIT ?",
-        [userId, limit]
+        "SELECT id, userId, botRunId, strategyId, entryTime, exitTime, entryPrice, exitPrice, stake, profitLoss, contractType, result, contractId, updatedAt FROM trades WHERE userId=? ORDER BY updatedAt DESC LIMIT ? OFFSET ?",
+        [userId, limit, offset]
       );
       return rows as Trade[];
     } catch {
@@ -833,6 +824,12 @@ export async function deleteAiKnowledgeEntry(id: number, userId: number): Promis
   const db = await getDb();
   if (!db) return;
   await db.delete(aiKnowledge).where(and(eq(aiKnowledge.id, id), eq(aiKnowledge.userId, userId)));
+}
+
+export async function updateAiKnowledgeEntry(id: number, userId: number, data: Partial<InsertAiKnowledge>): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(aiKnowledge).set(data).where(and(eq(aiKnowledge.id, id), eq(aiKnowledge.userId, userId)));
 }
 
 export async function updateKnowledgeRelatedTrade(knowledgeId: number, tradeId: number, userId: number): Promise<void> {
@@ -1669,7 +1666,14 @@ export async function importUserData(userId: number, data: Record<string, any>):
         const cols = Object.keys(rest).filter(c => SAFE_COL_RE.test(c));
         if (cols.length === 0) continue;
         const vals = cols.map(c => (rest as any)[c]);
-        await db.execute(sql`INSERT INTO ${sql.raw(table)} (${sql.raw(cols.join(", "))}, userId) VALUES (${sql.raw(vals.map(() => "?").join(", "))}, ${userId})`, vals);
+        const placeholders = vals.map(() => "?").join(", ");
+        const pool = getRawPool();
+        if (pool) {
+          await pool.execute(
+            `INSERT INTO ${table} (${cols.join(", ")}, userId) VALUES (${placeholders}, ?)`,
+            [...vals, userId]
+          );
+        }
         imported++;
       } catch { /* skip dupes */ }
     }

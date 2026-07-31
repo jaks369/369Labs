@@ -71,7 +71,7 @@ class BotRunner {
 
   stopAll(userId: number): number {
     let count = 0;
-    for (const [, bot] of this.bots) {
+    for (const [, bot] of Array.from(this.bots)) {
       if (bot.def.userId === userId && bot.status === "running") {
         bot.status = "stopped";
         count++;
@@ -90,6 +90,10 @@ class BotRunner {
     return Array.from(this.bots.values()).filter(b => b.def.userId === userId);
   }
 
+  listAll(): BotRuntime[] {
+    return Array.from(this.bots.values());
+  }
+
   updateTradeStats(id: string, userId: number, pnl: number): void {
     const bot = this.bots.get(id);
     if (!bot || bot.def.userId !== userId) return;
@@ -106,7 +110,7 @@ class BotRunner {
   }
 
   cleanupUser(userId: number): void {
-    for (const [id, bot] of this.bots) {
+    for (const [id, bot] of Array.from(this.bots)) {
       if (bot.def.userId === userId) this.bots.delete(id);
     }
   }

@@ -1,6 +1,8 @@
-import { Brain, Lightbulb, Loader2, AlertCircle, BarChart3, Target, Activity, RefreshCw } from "lucide-react";
+﻿import { Brain, Lightbulb, Loader2, AlertCircle, BarChart3, Target, Activity, RefreshCw } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { useMemo, useState } from "react";
+import { useAuth } from "@/_core/hooks/useAuth";
+import { useLocation } from "wouter";
 
 type Slot = "prediction" | "entry" | "risk";
 
@@ -61,6 +63,9 @@ function pickSignal(data: any, knowledgeType: string): string {
 }
 
 export default function AIExplainability() {
+  const { isAuthenticated } = useAuth();
+  const [, navigate] = useLocation();
+  if (!isAuthenticated) { navigate("/login"); return null; }
   const memoryQuery = trpc.ai.memory.useQuery({ limit: 20 });
   const [slotIdx, setSlotIdx] = useState<Record<Slot, number>>({ prediction: 0, entry: 0, risk: 0 });
 
@@ -78,7 +83,8 @@ export default function AIExplainability() {
   const slotEntry = (slot: Slot) => {
     const pref = preferredFor[slot];
     const pool = pref.length > 0 ? pref : allEntries;
-    const idx = slotIdx[slot] % (pool.length || 1);
+    if (pool.length === 0) return null;
+    const idx = slotIdx[slot] % pool.length;
     return pool[idx] || null;
   };
 
@@ -135,7 +141,7 @@ export default function AIExplainability() {
                       <div>
                         <h3 className="text-sm font-bold text-white">{cfg.title}</h3>
                         <span className={`text-xs font-bold ${isPositive ? "text-[var(--green)]" : "text-[var(--red)]"}`}>
-                          {signal} · {confidence}% confidence
+                          {signal} Â· {confidence}% confidence
                           <span className="text-[var(--text-muted)] font-normal ml-2">({typeLabel})</span>
                         </span>
                       </div>
@@ -179,3 +185,5 @@ export default function AIExplainability() {
     </div>
   );
 }
+
+

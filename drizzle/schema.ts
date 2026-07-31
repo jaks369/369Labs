@@ -162,6 +162,7 @@ export const notificationSettings = mysqlTable("notificationSettings", {
   takeProfitHit: boolean("takeProfitHit").default(true).notNull(),
   stopLossHit: boolean("stopLossHit").default(true).notNull(),
   botError: boolean("botError").default(true).notNull(),
+  signalDetected: boolean("signalDetected").default(true).notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
@@ -200,7 +201,8 @@ export const signals = mysqlTable("signals", {
   discoveredAt: bigint("discoveredAt", { mode: "number" }).notNull(),
   startEpoch: bigint("startEpoch", { mode: "number" }).notNull(),
   endEpoch: bigint("endEpoch", { mode: "number" }).notNull(),
-  source: varchar("source", { length: 16 }).notNull().default("watch"), // "watch" | "always-on"
+source: varchar("source", { length: 16 }).notNull().default("watch"), // "watch" | "always-on"
+  expiresAt: bigint("expiresAt", { mode: "number" }).notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
 

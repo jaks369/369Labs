@@ -58,9 +58,10 @@ export class SettlementTracker {
         const tradeId = trade.id;
         if ((this.retryCount.get(tradeId) || 0) >= MAX_RETRIES) {
           try {
-            const { getDb, trades, eq } = await import("./db");
-            const db = await getDb();
-            if (db) await db.update(trades).set({ result: "loss", profitLoss: "0", exitTime: new Date() }).where(eq(trades.id, tradeId));
+            const { trades } = await import("../drizzle/schema");
+            const { eq } = await import("drizzle-orm");
+            const dbConn = await db.getDb();
+            if (dbConn) await dbConn.update(trades).set({ result: "stuck", profitLoss: trade.profitLoss || "0", exitTime: new Date() }).where(eq(trades.id, tradeId));
           } catch {}
           console.warn(`[SettlementTracker] Trade #${tradeId} marked stuck after ${MAX_RETRIES} retries`);
           continue;
@@ -97,7 +98,7 @@ export class SettlementTracker {
     const profit = parseFloat(c.profit) || 0;
     const outcome: "win" | "loss" = profit >= 0 ? "win" : "loss";
     const exitTick = c.exit_tick ? parseInt(c.exit_tick) : null;
-    const exitPrice = c.sell_price?.toString() || c.exit_tick?.toString() || "0";
+    const exitPrice = c.sell_price?.toString() || "0";
 
     const updated = await db.settleTrade(trade.id, {
       result: outcome,

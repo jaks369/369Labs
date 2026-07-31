@@ -118,7 +118,7 @@ export async function authenticateRequest(req: Request): Promise<{ user: Sanitiz
 
   let user: User | null = null;
   try {
-    user = await db.getUserById(payload.userId);
+    user = (await db.getUserById(payload.userId)) ?? null;
   } catch (e: any) {
     console.log(`[auth] FAIL getUserById: ${e?.message || e}`);
     throw ForbiddenError("User not found");
@@ -144,5 +144,5 @@ export async function authenticateRequest(req: Request): Promise<{ user: Sanitiz
     }
   }
 
-  return { user: sanitizeUser(user), sessionId: payload.sessionId || null };
+  return { user: sanitizeUser(user)!, sessionId: payload.sessionId || null };
 }

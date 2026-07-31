@@ -60,8 +60,7 @@ function actionToContractType(action: any): string {
 async function executeBotCycle(): Promise<void> {
   if (isFeedStale()) return;
 
-  // For now, evaluate in-memory bots (botRunner). In future, also load from DB.
-  const allBots = Array.from((botRunner as any).bots?.entries() || []).map(([id, b]: any) => ({ id, ...b }));
+  const allBots = botRunner.listAll();
 
   let traded = 0;
   for (const bot of allBots) {
@@ -118,7 +117,7 @@ async function executeBotCycle(): Promise<void> {
         currency: "USD",
         duration: 1,
         duration_unit: "t",
-        symbol,
+        underlying_symbol: symbol,
       };
       if (isDigit && rule.condition.barrier !== undefined) proposalPayload.barrier = String(rule.condition.barrier);
       const proposal = await (conn as any).sendRaw(proposalPayload).catch(() => null);
@@ -143,7 +142,13 @@ async function executeBotCycle(): Promise<void> {
             profitLoss: String(pnl),
             entryTime: new Date(ticks[triggerIdx].epoch * 1000),
             exitTime: new Date(ticks[triggerIdx + 1]?.epoch * 1000 || Date.now()),
-            botRunId: parseInt(bot.def.id) || undefined,
+botRunId: (() => {
+              const id = bot.def.id;
+              if (typeof id === "string" && id.startsWith("bot_")) {
+                return parseInt(id.replace("bot_", ""), 10) || undefined;
+              }
+              return parseInt(id, 10) || undefined;
+            })(),
           });
           botRunner.updateTradeStats(bot.def.id, bot.def.userId, pnl);
           fireWebhookEvent(bot.def.userId, "trade.settled", { botId: bot.def.id, symbol, stake, result, profitLoss: pnl }).catch(() => {});

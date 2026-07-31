@@ -118,6 +118,11 @@ export default function Bots() {
       toast("This strategy was built in freeform notes mode and can't be deployed yet — rebuild it using the visual IF/THEN rule builder.", "error");
       return;
     }
+    // Prevent double-deploy: check if this strategy is already running
+    if (runningBots.some((b) => b.strategyId === strategy.id)) {
+      toast(`${strategy.name} is already running`, "error");
+      return;
+    }
     if (!derivTokenQuery.data?.token) {
       toast("Add your Deriv API token in Settings before deploying a bot.", "error");
       navigate("/settings");
@@ -169,6 +174,9 @@ export default function Bots() {
         },
       });
 
+      // Start engine BEFORE adding to state - if start fails, we don't add orphaned entry
+      engine.start({ symbol: rule.symbol || DEFAULT_SYMBOL, strategy: rule });
+
       const newBot: RunningBot = {
         runId: botRun.id,
         strategyId: strategy.id,
@@ -183,10 +191,8 @@ export default function Bots() {
         backtestWinRate: null,
       };
       setRunningBots((prev) => [...prev, newBot]);
-
-      engine.start({ symbol: rule.symbol || DEFAULT_SYMBOL, strategy: rule });
       pushTimeline({ icon: "bot", text: `Bot started: ${strategy.name} on ${rule.symbol || DEFAULT_SYMBOL}` });
-      alertTg(`ðŸš€ Bot deployed: ${strategy.name} on ${rule.symbol || DEFAULT_SYMBOL}`);
+      alertTg(`🚀 Bot deployed: ${strategy.name} on ${rule.symbol || DEFAULT_SYMBOL}`);
 
       // Capture the expected win rate via backtest so we can flag regime drift live.
       const stake = Number(rule.params?.stake ?? 1);

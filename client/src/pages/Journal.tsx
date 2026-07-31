@@ -23,7 +23,9 @@ export default function Journal() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const strategiesQuery = trpc.strategies.list.useQuery();
   const journalMutation = trpc.ai.journal.useMutation();
-  const journalSearchQuery = trpc.ai.journalSearch.useQuery({ query: searchQuery, limit: 20 }, { enabled: true });
+  const journalSearchQuery = trpc.ai.journalSearch.useQuery({ query: searchQuery, limit: 20 }, { enabled: searchQuery.length >= 2 });
+  const journalUpdateMutation = trpc.ai.journalUpdate.useMutation();
+  const journalDeleteMutation = trpc.ai.journalDelete.useMutation();
   const saveManualMutation = trpc.ai.journalSaveManual.useMutation();
   const importCsvMutation = trpc.trades.importCsv.useMutation();
   const tradesQuery = trpc.trades.list.useQuery({ limit: 100 }, { enabled: showStats });
@@ -177,6 +179,8 @@ export default function Journal() {
               (journalSearchQuery.data || []).map((entry: any) => {
                 const d = entry.data as any;
                 const isManual = d?.manual;
+                const [isEditing, setIsEditing] = useState(false);
+                const [editContent, setEditContent] = useState(d?.analysis || "");
                 return (
                   <div key={entry.id} className={`bg-[var(--card)] border ${isManual ? "border-[var(--accent)]/30" : "border-[var(--border)]"} rounded-xl p-4`}>
                     <div className="flex items-center gap-2 mb-2">
@@ -184,8 +188,24 @@ export default function Journal() {
                       <span className="text-micro">{entry.createdAt ? new Date(entry.createdAt).toLocaleString() : ""}</span>
                       {!isManual && d?.sampleSize && <span className="text-body">{d.sampleSize} trades · {d.wins}W / {d.losses}L</span>}
                     </div>
-                    <div className="text-sm text-[var(--text-secondary)] leading-relaxed whitespace-pre-wrap line-clamp-6">{d?.analysis || ""}</div>
-                    <button onClick={() => { setLinkKnowledgeId(entry.id); setLinkTradeId(""); setShowLinkTrade(true); }} className="mt-2 text-caption text-[var(--accent)] hover:text-white flex items-center gap-1"><Link2 className="w-3 h-3" /> Link Trade</button>
+                    {isEditing ? (
+                      <div className="space-y-2">
+                        <textarea value={editContent} onChange={(e) => setEditContent(e.target.value)} rows={4} className="w-full bg-[var(--card)] border border-[var(--border)] rounded-lg p-2 text-sm text-white placeholder-[var(--text-muted)] outline-none resize-none" />
+                        <div className="flex gap-2">
+                          <button onClick={async () => { await journalUpdateMutation.mutateAsync({ id: entry.id, data: { content: editContent } }); journalSearchQuery.refetch(); setIsEditing(false); }} className="px-3 py-1.5 rounded-lg bg-[var(--accent)] text-[var(--bg)] text-xs font-bold hover:bg-[var(--accent)] disabled:opacity-40" disabled={journalUpdateMutation.isPending}>Save</button>
+                          <button onClick={() => setIsEditing(false)} className="px-3 py-1.5 rounded-lg border border-[var(--border)] text-xs text-[var(--text-secondary)] hover:text-white">Cancel</button>
+                        </div>
+                      </div>
+                    ) : (
+                      <>
+                        <div className="text-sm text-[var(--text-secondary)] leading-relaxed whitespace-pre-wrap line-clamp-6">{d?.analysis || ""}</div>
+                        <div className="flex items-center gap-2 mt-2">
+                          <button onClick={() => { setLinkKnowledgeId(entry.id); setLinkTradeId(""); setShowLinkTrade(true); }} className="text-caption text-[var(--accent)] hover:text-white flex items-center gap-1"><Link2 className="w-3 h-3" /> Link Trade</button>
+                          <button onClick={() => setIsEditing(true)} className="text-caption text-[var(--text-muted)] hover:text-white flex items-center gap-1"><span className="text-[10px]">✏️</span> Edit</button>
+                          <button onClick={async () => { if (confirm("Delete this journal entry?")) { await journalDeleteMutation.mutateAsync({ id: entry.id }); journalSearchQuery.refetch(); } }} className="text-caption text-[var(--red)] hover:text-white flex items-center gap-1"><span className="text-[10px]">🗑️</span> Delete</button>
+                        </div>
+                      </>
+                    )}
                   </div>
                 );
               })

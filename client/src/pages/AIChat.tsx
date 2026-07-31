@@ -8,7 +8,7 @@ export default function AIChatPage() {
   const [, navigate] = useLocation();
 
   useEffect(() => {
-    if (!isAuthenticated) navigate("/");
+    if (!isAuthenticated) navigate("/login");
   }, [isAuthenticated, navigate]);
 
   return (

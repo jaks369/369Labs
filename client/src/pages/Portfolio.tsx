@@ -45,26 +45,33 @@ export default function Portfolio() {
   }
 
   const trades = (tradesQuery.data || []) as any[];
-  const totalTrades = trades.length;
-  const wins = trades.filter(t => t.result === "win").length;
-  const losses = trades.filter(t => t.result === "loss").length;
+  // Filter only settled trades (exclude pending) for accurate P&L and stats
+  const settledTrades = trades.filter(t => t.result !== "pending" && t.profitLoss != null);
+  const totalTrades = settledTrades.length;
+  const wins = settledTrades.filter(t => t.result === "win").length;
+  const losses = settledTrades.filter(t => t.result === "loss").length;
   const winRate = totalTrades > 0 ? ((wins / totalTrades) * 100).toFixed(1) : "0.0";
-  const totalPnl = trades.reduce((sum, t) => sum + parseFloat(t.profitLoss?.toString() || "0"), 0);
+  const totalPnl = settledTrades.reduce((sum, t) => sum + parseFloat(t.profitLoss?.toString() || "0"), 0);
   const avgTrade = totalTrades > 0 ? (totalPnl / totalTrades) : 0;
-  const bestTrade = trades.length > 0 ? Math.max(...trades.map(t => parseFloat(t.profitLoss?.toString() || "0"))) : 0;
-  const worstTrade = trades.length > 0 ? Math.min(...trades.map(t => parseFloat(t.profitLoss?.toString() || "0"))) : 0;
+  const bestTrade = totalTrades > 0 ? Math.max(...settledTrades.map(t => parseFloat(t.profitLoss?.toString() || "0"))) : 0;
+  const worstTrade = totalTrades > 0 ? Math.min(...settledTrades.map(t => parseFloat(t.profitLoss?.toString() || "0"))) : 0;
 
   // Equity curve
-  const ordered = [...trades].sort((a, b) => new Date(a.entryTime).getTime() - new Date(b.entryTime).getTime());
+  const ordered = [...settledTrades].sort((a, b) => new Date(a.entryTime).getTime() - new Date(b.entryTime).getTime());
   let runningPnl = 0;
+  let peak = 0;
+  let maxDrawdown = 0;
   const equityData = ordered.map((t, i) => {
     runningPnl += parseFloat(t.profitLoss?.toString() || "0");
+    if (runningPnl > peak) peak = runningPnl;
+    const dd = peak - runningPnl;
+    if (dd > maxDrawdown) maxDrawdown = dd;
     return { name: `#${i + 1}`, equity: parseFloat(runningPnl.toFixed(2)) };
   });
 
   // Per-symbol breakdown
   const bySymbol: Record<string, { trades: number; wins: number; pnl: number }> = {};
-  for (const t of trades) {
+  for (const t of settledTrades) {
     const sym = t.symbol || "UNKNOWN";
     if (!bySymbol[sym]) bySymbol[sym] = { trades: 0, wins: 0, pnl: 0 };
     bySymbol[sym].trades++;
@@ -110,7 +117,7 @@ export default function Portfolio() {
         ) : (
           <PageSection>
             <>
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
               <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
                 <div className="flex items-center justify-between mb-3">
                   <span className="text-micro">Total P&L</span>
@@ -141,6 +148,15 @@ export default function Portfolio() {
                 </div>
                 <p className={`text-2xl font-bold ${avgTrade >= 0 ? "text-[var(--green)]" : "text-[var(--red)]"}`}>
                   <SignedCurrencyStat value={avgTrade} />
+                </p>
+              </div>
+              <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-micro">Max Drawdown</span>
+                  <AlertCircle className="w-5 h-5 text-[var(--red)]" />
+                </div>
+                <p className="text-2xl font-bold text-[var(--red)]">
+                  <SignedCurrencyStat value={-maxDrawdown} />
                 </p>
               </div>
             </div>

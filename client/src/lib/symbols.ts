@@ -1,8 +1,8 @@
 // Client-side symbol utilities — re-exports shared symbols and adds derivWebSocket integration
-import { getAllVolatilitySymbols as sharedAll, getStandardVolatilitySymbols as sharedStandard, VOLATILITY_SYMBOLS, type SymbolInfo, getSymbolDisplayName, normalizeSymbol as sharedNormalize, filterValidSymbols } from "@shared/symbols";
+import { getAllVolatilitySymbols as sharedAll, getStandardVolatilitySymbols as sharedStandard, VOLATILITY_SYMBOLS, getSymbolDisplayName, normalizeSymbol as sharedNormalize, filterValidSymbols } from "@shared/symbols";
 import { derivWS } from "@/services/derivWebSocket";
 
-export { VOLATILITY_SYMBOLS, type SymbolInfo, getSymbolDisplayName, filterValidSymbols };
+export { VOLATILITY_SYMBOLS, getSymbolDisplayName, filterValidSymbols };
 export type { SymbolInfo } from "@shared/symbols";
 
 // Standard volatility symbols (R_10, R_25, R_50, R_75, R_100)

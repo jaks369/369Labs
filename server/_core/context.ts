@@ -24,7 +24,7 @@ export type TrpcContext = {
 export async function createContext(
   opts: CreateExpressContextOptions
 ): Promise<TrpcContext> {
-  let user: User | null = null;
+  let user: SanitizedUser | null = null;
   let sessionId: string | null = null;
 
   try {

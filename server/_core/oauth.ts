@@ -61,7 +61,7 @@ oauthRouter.get("/github", (_req: Request, res: Response) => {
 oauthRouter.get("/callback", async (req: Request, res: Response) => {
   const { code, provider, state } = req.query as { code?: string; provider?: string; state?: string };
   const cookies = parseCookieHeader(req.headers.cookie || "");
-  const cookieState = cookies.get(OAUTH_STATE_COOKIE);
+  const cookieState = cookies[OAUTH_STATE_COOKIE];
 
   if (!state || !cookieState || state !== cookieState) {
     return res.redirect(`${ENV.appUrl}/login?oauth_error=invalid_state`);

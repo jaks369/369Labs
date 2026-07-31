@@ -105,10 +105,18 @@ function blocksToRule(blocks: StrategyBlock[]): StrategyRule {
     "Trend down": { indicator: "last_digit", comparison: "less_than", barrier: 5, count: 1 },
   };
 
+  const tradeTypeMap: Record<string, StrategyRule["action"]["tradeType"]> = {
+    "CALL": "buy_rise",
+    "PUT": "buy_fall",
+    "DIGITMATCH": "buy_match",
+    "DIGITOVER": "buy_over",
+    "DIGITUNDER": "buy_under",
+  };
+
   return {
     symbol: market,
     condition: conditionMap[condition] || conditionMap["Digit over 5"],
-    action: { tradeType: trade === "PUT" ? "buy_fall" : "buy_rise" },
+    action: { tradeType: tradeTypeMap[trade] || "buy_rise" },
     params: { stake, stopLoss: 0, takeProfit: 0 },
   };
 }

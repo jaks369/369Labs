@@ -224,7 +224,7 @@ class DerivWebSocketService {
     }
     if (data.proposal_open_contract) {
       const c = data.proposal_open_contract;
-      const isSold = c.is_sold === 1 || c.status === "sold" || c.status === "won" || c.status === "lost";
+      const isSold = c.is_sold === 1 || c.status === "sold" || c.status === "won" || c.status === "lost" || c.status === "expired";
       const cb = this.contractListeners.get(c.contract_id);
       cb?.({ contract_id: c.contract_id, is_sold: isSold ? 1 : 0, profit: c.profit, buy_price: c.buy_price, sell_price: c.sell_price, status: c.status, entry_tick: c.entry_tick, exit_tick: c.exit_tick });
       if (isSold) {
@@ -701,16 +701,25 @@ class DerivWebSocketService {
   private async connectWithOtp(token: string): Promise<void> {
     if (this.otpInProgress) return;
     this.otpInProgress = true;
+    const timeoutMs = 15000;
+    const timeoutPromise = new Promise<never>((_, reject) => 
+      setTimeout(() => reject(new Error("OTP connection timeout")), timeoutMs)
+    );
     try {
-      const accounts = await this.fetchAccounts();
-      if (!accounts.length) throw new Error(this.friendlyError("No trading accounts found"));
-      const account = accounts[0];
-      this.accountId = account.account_id;
-      this.apiMode = "v1";
-      const { url, accountType } = await this.fetchOtpUrl(account.account_id);
-      this.lastAccountType = accountType;
-      this.disconnect();
-      this.connectWs(url, true);
+      await Promise.race([
+        (async () => {
+          const accounts = await this.fetchAccounts();
+          if (!accounts.length) throw new Error(this.friendlyError("No trading accounts found"));
+          const account = accounts[0];
+          this.accountId = account.account_id;
+          this.apiMode = "v1";
+          const { url, accountType } = await this.fetchOtpUrl(account.account_id);
+          this.lastAccountType = accountType;
+          this.disconnect();
+          this.connectWs(url, true);
+        })(),
+        timeoutPromise,
+      ]);
     } catch (error: any) {
       console.error("[Deriv WS] OTP connection failed:", error.message);
       const msg = error.message || "";

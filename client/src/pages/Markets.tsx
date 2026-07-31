@@ -51,20 +51,32 @@ export default function Markets() {
 
   useEffect(() => {
     const subs = SYMBOLS.map((sym) => derivWS.subscribe(sym));
+    const tickBuffer = useRef<Record<string, any>>({});
+    const rafId = useRef<number | null>(null);
+
     const listener = {
       onTick: (tick: any) => {
-        const sym = tick.symbol;
-        const price = Number(tick.price);
-        setLive((prev) => {
-          const ref = prevRef.current[sym] ?? price;
-          const change = ref ? ((price - ref) / ref) * 100 : 0;
-          prevRef.current[sym] = price;
-          return { ...prev, [sym]: { price, change, spark: [...(prev[sym]?.spark || []).slice(-30), price] } };
-        });
+        tickBuffer.current[tick.symbol] = tick;
+        if (!rafId.current) {
+          rafId.current = requestAnimationFrame(() => {
+            setLive((prev) => {
+              const updates: typeof prev = { ...prev };
+              for (const [sym, tick] of Object.entries(tickBuffer.current)) {
+                const ref = prevRef.current[sym] ?? tick.price;
+                const change = ref ? ((tick.price - ref) / ref) * 100 : 0;
+                prevRef.current[sym] = tick.price;
+                updates[sym] = { price: tick.price, change, spark: [...(prev[sym]?.spark || []).slice(-30), tick.price] };
+              }
+              tickBuffer.current = {};
+              rafId.current = 0;
+              return updates;
+            });
+          });
+        }
       },
     };
     derivWS.addListener(listener);
-    return () => { derivWS.removeListener(listener); subs.forEach((id) => derivWS.unsubscribe(id)); };
+    return () => { derivWS.removeListener(listener); subs.forEach((id) => derivWS.unsubscribe(id)); if (rafId.current) cancelAnimationFrame(rafId.current); };
   }, []);
 
   const healthMap = useMemo(() => {
@@ -96,6 +108,25 @@ export default function Markets() {
   const momentumLabel = avgMomentum > 20 ? "Strong" : avgMomentum > 5 ? "Moderate" : "Choppy";
   const highVolCount = healthValues.filter((h: any) => h.volatility === "High").length;
   const activeSignals = signals.filter((s: any) => s.status === "active").length || signals.length;
+
+  const volMemo = useMemo(() => {
+    const map: Record<string, string | null> = {};
+    for (const sym of SYMBOLS) {
+      const p = live[sym];
+      if (!p || p.spark.length < 5) { map[sym] = null; continue; }
+      const min = Math.min(...p.spark), max = Math.max(...p.spark);
+      const avg = (min + max) / 2 || 1;
+      const rangePct = ((max - min) / avg) * 100;
+      map[sym] = rangePct > 0.5 ? "High" : rangePct > 0.15 ? "Medium" : "Low";
+    }
+    return map;
+  }, [live]);
+
+  const decimalPlacesMemo = useMemo(() => {
+    const map: Record<string, number> = {};
+    for (const sym of SYMBOLS) map[sym] = derivWS.decimalPlacesFor(sym);
+    return map;
+  }, []);
 
   const rows = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -189,12 +220,7 @@ export default function Markets() {
                   const h = healthMap[sym];
                   const isHot = hotSet.has(sym);
                   const hasSignal = signals.some((s: any) => s.symbol === sym);
-                  const vol = h?.volatility || (p ? (p.spark.length >= 5 ? (() => {
-                    const min = Math.min(...p.spark), max = Math.max(...p.spark);
-                    const avg = (min + max) / 2 || 1;
-                    const rangePct = ((max - min) / avg) * 100;
-                    return rangePct > 0.5 ? "High" : rangePct > 0.15 ? "Medium" : "Low";
-                  })() : null) : null);
+                  const vol = h?.volatility || volMemo[sym] || null;
                   const trend = h?.trend != null ? h.trend : p ? (p.change >= 0.05 ? 1 : p.change <= -0.05 ? -1 : 0) : 0;
                   const score = h?.score;
                   const aiColor = score == null ? "var(--text-muted)" : score >= 70 ? "var(--green)" : score >= 40 ? "var(--accent)" : "var(--red)";
@@ -209,7 +235,7 @@ export default function Markets() {
                         </div>
                       </td>
                       <td className="text-right font-mono tabular-nums text-white">
-                        {p ? Number(p.price).toFixed(derivWS.decimalPlacesFor(sym)) : <Loader2 className="w-3 h-3 animate-spin inline text-[var(--text-muted)]" />}
+                        {p ? Number(p.price).toFixed(decimalPlacesMemo[sym]) : <Loader2 className="w-3 h-3 animate-spin inline text-[var(--text-muted)]" />}
                       </td>
                       <td className={`text-right font-mono tabular-nums font-bold ${p ? (p.change >= 0 ? "text-[var(--green)]" : "text-[var(--red)]") : "text-[var(--text-muted)]"}`}>
                         {p ? `${p.change >= 0 ? "+" : ""}${Number(p.change).toFixed(2)}%` : "—"}
