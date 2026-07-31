@@ -17,6 +17,8 @@ import {
   Brain,
 } from "lucide-react";
 import { useLocation, useSearch } from "wouter";
+import { useIsMobile } from "@/hooks/useMobile";
+import MobileTerminal from "@/pages/MobileTerminal";
 import TickChart from "@/components/TickChart";
 import { derivWS, DerivSymbol } from "@/services/derivWebSocket";
 import { useDerivStatus } from "@/hooks/useDerivStatus";
@@ -352,12 +354,18 @@ export default function Dashboard() {
   const decimalPlaces = derivWS.decimalPlacesFor(selectedSymbol);
   const { status: derivStatus, accountType } = useDerivStatus();
 
+  const isMobile = useIsMobile();
+
   if (!isAuthenticated || !user) {
     return (
       <div className="flex items-center justify-center h-full">
         <Loader2 className="w-8 h-8 animate-spin text-[var(--accent)]" />
       </div>
     );
+  }
+
+  if (isMobile) {
+    return <MobileTerminal />;
   }
 
   return (

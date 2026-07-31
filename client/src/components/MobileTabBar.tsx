@@ -1,18 +1,18 @@
 import { useLocation } from "wouter";
-import { Home, TrendingUp, Brain, Bot } from "lucide-react";
+import { CandlestickChart, TrendingUp, GitBranch, Brain, Wallet } from "lucide-react";
 
 const tabs = [
-  { icon: Home, label: "Home", path: "/" },
-  { icon: TrendingUp, label: "Trade", path: "/dashboard" },
-  { icon: Brain, label: "Intelligence", path: "/ai-assistant" },
-  { icon: Bot, label: "Automate", path: "/bots" },
+  { icon: CandlestickChart, label: "Markets", path: "/markets" },
+  { icon: TrendingUp, label: "Terminal", path: "/dashboard" },
+  { icon: GitBranch, label: "Strategies", path: "/strategy-builder" },
+  { icon: Brain, label: "AI", path: "/ai-assistant" },
+  { icon: Wallet, label: "Portfolio", path: "/portfolio" },
 ];
 
 export default function MobileTabBar() {
   const [location, navigate] = useLocation();
 
   const isActive = (path: string) => {
-    if (path === "/") return location === "/";
     return location.startsWith(path);
   };
 
