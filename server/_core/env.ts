@@ -13,4 +13,8 @@ export const ENV = {
   googleClientSecret: process.env.GOOGLE_CLIENT_SECRET ?? "",
   githubClientId: process.env.GITHUB_CLIENT_ID ?? "",
   githubClientSecret: process.env.GITHUB_CLIENT_SECRET ?? "",
+  stripeSecretKey: process.env.STRIPE_SECRET_KEY ?? "",
+  stripeWebhookSecret: process.env.STRIPE_WEBHOOK_SECRET ?? "",
+  stripePricePro: process.env.STRIPE_PRICE_PRO ?? "",
+  stripePriceEnterprise: process.env.STRIPE_PRICE_ENTERPRISE ?? "",
 };

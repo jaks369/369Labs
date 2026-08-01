@@ -4,7 +4,7 @@ import { createExpressMiddleware } from "@trpc/server/adapters/express";
 import { appRouter } from "../routers";
 import { createContext } from "./context";
 import { serveStatic } from "./staticServe";
-import { getDb, pruneBadTicks, ensureSignalExpiryColumn, ensureSignalsTable, ensureNotificationSettingsColumns, ensureAuditLogsTable, ensureIpWhitelistTable, ensureTradesTable, ensureStrategiesTable, ensurePriceAlertsTable, ensureTickHistoryTable, recomputeLastDigits, ensureUserMemoryTable, ensurePluginsTable, ensureWebhooksTable, ensureAiKnowledgeTable, ensureUsersColumns, ensureSessionsTable, ensureVerificationTokensTable, ensurePasswordResetTokensTable, ensureBotLogsTable } from "../db";
+import { getDb, pruneBadTicks, ensureSignalExpiryColumn, ensureSignalsTable, ensureNotificationSettingsColumns, ensureAuditLogsTable, ensureIpWhitelistTable, ensureTradesTable, ensureStrategiesTable, ensurePriceAlertsTable, ensureTickHistoryTable, recomputeLastDigits, ensureUserMemoryTable, ensurePluginsTable, ensureWebhooksTable, ensureAiKnowledgeTable, ensureUsersColumns, ensureSessionsTable, ensureSubscriptionsTable, ensureVerificationTokensTable, ensurePasswordResetTokensTable, ensureBotLogsTable } from "../db";
 import { users } from "../../drizzle/schema";
 import { startTickCollector } from "../tickCollector";
 import { runWatch } from "../signalScanner";
@@ -87,6 +87,24 @@ export async function createApp() {
 
   app.use("/api/auth", oauthRouter);
 
+  // Stripe webhook — needs the raw body for signature verification,
+  // so register it BEFORE the express.json body parser.
+  app.post("/api/webhooks/stripe", express.raw({ type: "application/json" }), async (req: any, res: any) => {
+    try {
+      const { handleStripeWebhook } = await import("../billing");
+      const signature = req.headers["stripe-signature"] as string;
+      if (!signature) {
+        res.status(400).json({ error: "Missing stripe-signature header" });
+        return;
+      }
+      const result = await handleStripeWebhook(req.body, signature);
+      res.json(result);
+    } catch (e: any) {
+      logger.error("[Stripe Webhook]", { error: e?.message || e });
+      res.status(400).json({ error: e?.message || "Webhook handling failed" });
+    }
+  });
+
   // Lightweight in-memory rate limiter (per-IP + per-key). Stricter caps on auth/trading/bot endpoints.
   const rateBuckets: Record<string, { count: number; reset: number }> = {};
   const RATE = (limit: number, windowMs: number) => (req: any, res: any, next: any) => {
@@ -147,6 +165,7 @@ export async function createApp() {
       try { startTickCollector(); } catch (e) { logger.error("[startup] startTickCollector failed", { error: String(e) }); }
       try { startAlwaysOnScanner(); } catch (e) { logger.error("[startup] startAlwaysOnScanner failed", { error: String(e) }); }
       try { await ensureSessionsTable(); } catch (e) { logger.error("[startup] ensureSessionsTable failed", { error: String(e) }); }
+      try { await ensureSubscriptionsTable(); } catch (e) { logger.error("[startup] ensureSubscriptionsTable failed", { error: String(e) }); }
       try { await ensureUsersColumns(); } catch (e) { logger.error("[startup] ensureUsersColumns failed", { error: String(e) }); }
       try { await ensureSignalsTable(); } catch (e) { logger.error("[startup] ensureSignalsTable failed", { error: String(e) }); }
       try { await ensureSignalExpiryColumn(); } catch (e) { logger.error("[startup] ensureSignalExpiryColumn failed", { error: String(e) }); }

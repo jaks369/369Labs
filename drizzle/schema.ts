@@ -379,3 +379,20 @@ export const webhooks = mysqlTable("webhooks", {
 
 export type Webhook = typeof webhooks.$inferSelect;
 export type InsertWebhook = typeof webhooks.$inferInsert;
+
+// Stripe subscriptions (one per user; nullable until they subscribe)
+export const subscriptions = mysqlTable("subscriptions", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull().references(() => users.id, { onDelete: "cascade" }),
+  plan: varchar("plan", { length: 32 }).default("starter").notNull(), // starter | pro | enterprise
+  status: varchar("status", { length: 32 }).default("active").notNull(), // active | trialing | past_due | canceled | incomplete
+  stripeCustomerId: varchar("stripeCustomerId", { length: 128 }),
+  stripeSubscriptionId: varchar("stripeSubscriptionId", { length: 128 }),
+  priceId: varchar("priceId", { length: 128 }),
+  currentPeriodEnd: bigint("currentPeriodEnd", { mode: "number" }),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type Subscription = typeof subscriptions.$inferSelect;
+export type InsertSubscription = typeof subscriptions.$inferInsert;

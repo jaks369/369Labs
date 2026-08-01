@@ -2724,6 +2724,22 @@ watch: protectedProcedure
       return ENDPOINTS;
     }),
   }),
+  billing: router({
+    status: protectedProcedure.query(async ({ ctx }) => {
+      const { getCurrentPlan } = await import("./billing");
+      return getCurrentPlan(ctx.user.id);
+    }),
+    checkout: protectedProcedure
+      .input(z.object({ plan: z.enum(["pro", "enterprise"]) }))
+      .mutation(async ({ ctx, input }) => {
+        const { createCheckoutSession } = await import("./billing");
+        return createCheckoutSession(ctx.user.id, ctx.user.email, input.plan);
+      }),
+    portal: protectedProcedure.mutation(async ({ ctx }) => {
+      const { createBillingPortalSession } = await import("./billing");
+      return createBillingPortalSession(ctx.user.id);
+    }),
+  }),
   reports: {
     generate: protectedProcedure
       .input(z.object({ type: z.enum(["weekly", "monthly", "portfolio"]) }))

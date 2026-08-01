@@ -58,6 +58,9 @@ import {
   priceAlerts,
   PriceAlert,
   InsertPriceAlert,
+  subscriptions,
+  Subscription,
+  InsertSubscription,
 } from "../drizzle/schema";
 import { ENV } from './_core/env';
 import { encrypt, decrypt } from './_core/encryption';
@@ -1126,6 +1129,90 @@ export async function ensureSessionsTable(): Promise<void> {
     `);
   } catch (e: any) {
     console.error("[ensureSessionsTable] failed", e?.message || e);
+  }
+}
+
+export async function ensureSubscriptionsTable(): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+  try {
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS subscriptions (
+        id int NOT NULL AUTO_INCREMENT,
+        userId int NOT NULL,
+        plan varchar(32) NOT NULL DEFAULT 'starter',
+        status varchar(32) NOT NULL DEFAULT 'active',
+        stripeCustomerId varchar(128),
+        stripeSubscriptionId varchar(128),
+        priceId varchar(128),
+        currentPeriodEnd bigint,
+        createdAt timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updatedAt timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        PRIMARY KEY (id),
+        UNIQUE KEY subscriptions_userId (userId)
+      )
+    `);
+  } catch (e: any) {
+    console.error("[ensureSubscriptionsTable] failed", e?.message || e);
+  }
+}
+
+export async function getSubscription(userId: number): Promise<Subscription | null> {
+  const db = await getDb();
+  if (!db) return null;
+  try {
+    const rows = await db.select().from(subscriptions).where(eq(subscriptions.userId, userId)).limit(1);
+    return rows[0] || null;
+  } catch (e: any) {
+    if (e?.errno !== 1146) console.error("[getSubscription] failed", e?.message || e);
+    return null;
+  }
+}
+
+export async function getSubscriptionByCustomer(customerId: string): Promise<Subscription | null> {
+  const db = await getDb();
+  if (!db) return null;
+  try {
+    const rows = await db.select().from(subscriptions).where(eq(subscriptions.stripeCustomerId, customerId)).limit(1);
+    return rows[0] || null;
+  } catch (e: any) {
+    if (e?.errno !== 1146) console.error("[getSubscriptionByCustomer] failed", e?.message || e);
+    return null;
+  }
+}
+
+export async function upsertSubscription(userId: number, data: {
+  plan: string;
+  status?: string;
+  stripeCustomerId?: string;
+  stripeSubscriptionId?: string;
+  priceId?: string;
+  currentPeriodEnd?: number | null;
+}): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+  try {
+    await db.insert(subscriptions).values({
+      userId,
+      plan: data.plan,
+      status: data.status || "active",
+      stripeCustomerId: data.stripeCustomerId,
+      stripeSubscriptionId: data.stripeSubscriptionId,
+      priceId: data.priceId,
+      currentPeriodEnd: data.currentPeriodEnd ?? null,
+    }).onDuplicateKeyUpdate({
+      set: {
+        plan: data.plan,
+        status: data.status || "active",
+        stripeCustomerId: data.stripeCustomerId,
+        stripeSubscriptionId: data.stripeSubscriptionId,
+        priceId: data.priceId,
+        currentPeriodEnd: data.currentPeriodEnd ?? null,
+        updatedAt: new Date(),
+      },
+    });
+  } catch (e: any) {
+    console.error("[upsertSubscription] failed", e?.message || e);
   }
 }
 

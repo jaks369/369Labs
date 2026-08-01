@@ -19,25 +19,43 @@ export default function SubscriptionPage() {
 
   const activeBots = trpc.bot.listActive.useQuery(undefined, { enabled: isAuthenticated });
   const tradeCount = trpc.trades.list.useQuery({ limit: 5000 }, { enabled: isAuthenticated });
+  const billingStatus = trpc.billing.status.useQuery(undefined, { enabled: isAuthenticated });
+  const checkoutMutation = trpc.billing.checkout.useMutation();
+  const portalMutation = trpc.billing.portal.useMutation();
   const memoryQuery = trpc.memory.get.useQuery(undefined, { enabled: isAuthenticated });
   const setMemoryMutation = trpc.memory.set.useMutation();
   const activeCount = (activeBots.data as any[])?.length ?? 0;
   const totalTrades = (tradeCount.data as any[])?.length ?? 0;
-  const currentPlan = (memoryQuery.data?.memory as any)?.plan || "starter";
+  const currentPlan = (billingStatus.data?.plan as string) || (memoryQuery.data?.memory as any)?.plan || "starter";
+  const billingConfigured = billingStatus.data?.stripeConfigured ?? false;
 
   const handleSelect = async (i: number) => {
     setSelected(i);
-    const planKey = plans[i]?.name.toLowerCase() || "starter";
-    try {
-      const current = (memoryQuery.data?.memory as any) || {};
-      await setMemoryMutation.mutateAsync({ memory: { ...current, plan: planKey } });
-      if (i === 0) {
+    const planName = plans[i]?.name.toLowerCase() || "starter";
+    if (planName === "starter") {
+      try {
+        const current = (memoryQuery.data?.memory as any) || {};
+        await setMemoryMutation.mutateAsync({ memory: { ...current, plan: "starter" } });
         toast("Starter plan selected. Upgrade anytime to unlock more.", "success");
-      } else {
-        toast(`${plans[i].name} selected. Payment checkout is available via the billing portal below.`, "info");
+      } catch {
+        toast("Failed to save plan selection.", "error");
       }
-    } catch {
-      toast("Failed to save plan selection.", "error");
+      return;
+    }
+    try {
+      const result = await checkoutMutation.mutateAsync({ plan: planName as any });
+      if (result.url) window.location.href = result.url;
+    } catch (e: any) {
+      toast(e?.message || "Failed to start checkout.", "error");
+    }
+  };
+
+  const openPortal = async () => {
+    try {
+      const result = await portalMutation.mutateAsync();
+      if (result.url) window.location.href = result.url;
+    } catch (e: any) {
+      toast(e?.message || "Failed to open billing portal.", "error");
     }
   };
 
@@ -73,10 +91,10 @@ export default function SubscriptionPage() {
               </div>
               <Button
                 onClick={() => handleSelect(i)}
-                disabled={i > 0 && setMemoryMutation.isPending}
-                className={`mt-6 w-full text-xs font-bold py-2 rounded-lg ${selected === i ? "bg-[var(--accent)] text-black" : "bg-white/5 text-[var(--text-secondary)] border border-[var(--border)] hover:bg-white/10"}`}
+                disabled={i > 0 && (setMemoryMutation.isPending || checkoutMutation.isPending)}
+                className={`mt-6 w-full text-xs font-bold py-2 rounded-lg ${currentPlan === plan.name.toLowerCase() ? "bg-[var(--accent)] text-black" : "bg-white/5 text-[var(--text-secondary)] border border-[var(--border)] hover:bg-white/10"}`}
               >
-                {setMemoryMutation.isPending && selected === i ? "Saving…" : selected === i ? "Selected" : plan.cta}
+                {checkoutMutation.isPending && selected === i ? "Redirecting to Stripe…" : currentPlan === plan.name.toLowerCase() ? (i === 0 ? "Current Plan" : "Manage") : plan.cta}
               </Button>
             </div>
           ))}
@@ -123,9 +141,12 @@ export default function SubscriptionPage() {
             <CreditCard className="w-5 h-5 text-[var(--accent)]" />
             <h2 className="text-sm font-bold text-white">Payment</h2>
           </div>
-          <p className="text-xs text-[var(--text-secondary)] mb-4">To upgrade or manage your subscription, visit the billing portal.</p>
-          <Button onClick={() => window.open("https://billing.stripe.com", "_blank")} className="bg-[var(--accent)] text-black text-xs font-bold px-6 py-2.5 rounded-lg">
-            Manage Billing
+          <p className="text-xs text-[var(--text-secondary)] mb-4">Upgrade or manage your subscription securely through Stripe. Billing details and invoices live in the customer portal.</p>
+          {!billingConfigured && (
+            <p className="text-xs text-[var(--text-muted)] mb-4">Note: live checkout is awaiting Stripe keys. Ask an admin to set STRIPE_SECRET_KEY to enable payments.</p>
+          )}
+          <Button onClick={openPortal} disabled={portalMutation.isPending} className="bg-[var(--accent)] text-black text-xs font-bold px-6 py-2.5 rounded-lg">
+            {portalMutation.isPending ? "Opening portal…" : "Manage Billing"}
           </Button>
         </div>
 
