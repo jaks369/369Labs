@@ -217,7 +217,7 @@ export default function Portfolio() {
                         const pnl = parseFloat(p.profitLoss?.toString() || "0");
                         return (
                           <tr key={p.contractId || p.id} className="border-b border-[var(--border)]/50 hover:bg-white/5 transition-colors">
-                            <td className="py-3 px-4 font-bold text-white">{p.symbol || p.display_name || "-"}</td>
+                            <td className="py-3 px-4 font-bold text-white">{p.symbol || p.display_name ? getSymbolDisplayName(p.symbol || p.display_name) : "-"}</td>
                             <td className="py-3 px-4 text-right text-xs">{p.contractType || p.contract_type || "CALL"}</td>
                             <td className="py-3 px-4 text-right">${p.stake || "0"}</td>
                             <td className="py-3 px-4 text-right">{p.buyPrice || p.entryPrice || "-"}</td>
@@ -352,7 +352,7 @@ export default function Portfolio() {
                       {trades.slice(0, 8).map((t: any) => (
                         <tr key={t.id} className="border-b border-[var(--border)]/50 hover:bg-white/5 transition-colors">
                           <td className="py-3 px-4 text-xs text-[var(--text-muted)]">{new Date(t.entryTime).toLocaleDateString()}</td>
-                          <td className="py-3 px-4 font-bold text-white">{t.symbol || "-"}</td>
+                          <td className="py-3 px-4 font-bold text-white">{t.symbol ? getSymbolDisplayName(t.symbol) : "-"}</td>
                           <td className="py-3 px-4 text-right">${t.stake}</td>
                           <td className={`py-3 px-4 text-right font-bold ${parseFloat(t.profitLoss?.toString() || "0") >= 0 ? "text-[var(--green)]" : "text-[var(--red)]"}`}>
                             <SignedCurrencyStat value={parseFloat(t.profitLoss?.toString() || "0")} />

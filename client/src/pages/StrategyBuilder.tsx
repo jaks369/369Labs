@@ -27,6 +27,7 @@ import {
 } from "lucide-react";
 import { useLocation, useSearch } from "wouter";
 import RuleBuilder, { StrategyRule, DEFAULT_RULE, summarizeRule } from "@/components/RuleBuilder";
+import { getSymbolDisplayName } from "@/lib/symbols";
 
 interface StrategyBlock {
   id: string;
@@ -575,7 +576,7 @@ export function StrategyBuilderContent({ embedded = false, onClose, onSaved }: S
                           <label key={s.id} className="flex items-center gap-3 bg-[var(--card)] border border-[var(--border)] rounded-lg p-3 cursor-pointer hover:border-[var(--accent)]/50">
                             <input type="checkbox" checked={checked} onChange={(e) => setEnsembleIds((prev) => e.target.checked ? [...prev, s.id] : prev.filter((id) => id !== s.id))} className="rounded" />
                             <span className="text-sm text-white">{s.name}</span>
-                            <span className="text-caption ml-auto">{(s.config.rule.symbol) || "R_100"}</span>
+                            <span className="text-caption ml-auto">{getSymbolDisplayName(s.config.rule.symbol || "R_100")}</span>
                           </label>
                         );
                       })}
@@ -634,7 +635,7 @@ export function StrategyBuilderContent({ embedded = false, onClose, onSaved }: S
                                     >
                                       <option value="" disabled className="bg-[var(--card)]">Select {block.type}...</option>
                                       {options.map(o => (
-                                        <option key={o} value={o} className="bg-[var(--card)]">{o}</option>
+                                        <option key={o} value={o} className="bg-[var(--card)]">{block.type === "market" ? getSymbolDisplayName(o) : o}</option>
                                       ))}
                                     </select>
                                   ) : block.type === "risk" || block.type === "exit" ? (
