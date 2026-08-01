@@ -506,7 +506,7 @@ export default function Dashboard() {
           </div>
 
           {/* Chart & History — the workspace */}
-          <div className="lg:col-span-6 xl:col-span-7 space-y-4 xl:space-y-6">
+          <div className="lg:col-span-9 xl:col-span-7 space-y-4 xl:space-y-6">
             {/* Chart workspace — the heart of the OS */}
             <div className={showSymbolPicker ? "bg-[var(--card)] rounded-xl p-4 elevation-1" : "chart-workspace"}>
               {showSymbolPicker ? (
@@ -942,7 +942,7 @@ export default function Dashboard() {
           </div>
 
           {/* Context panel — always visible right rail (execution, AI, positions, alerts) */}
-          <div className="lg:col-span-6 xl:col-span-3 space-y-4 xl:space-y-6 xl:sticky xl:top-4 xl:self-start xl:max-h-[calc(100vh-120px)] xl:overflow-y-auto">
+          <div className="lg:col-span-12 xl:col-span-3 space-y-4 xl:space-y-6 xl:sticky xl:top-4 xl:self-start xl:max-h-[calc(100vh-120px)] xl:overflow-y-auto">
             <TerminalContextPanel
               selectedSymbol={selectedSymbol}
               selectedDisplay={selectedDisplay}
