@@ -90,7 +90,7 @@ export default function Marketplace() {
         <div className="flex items-center gap-2">
           <select value={symbol} onChange={(e) => setSymbol(e.target.value)} className="bg-[var(--surface-secondary)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-white focus:border-[var(--accent)] outline-none [&>option]:bg-[var(--surface-secondary)] [&>option]:text-white">
             <option value="">All symbols</option>
-            {getValidSymbols().map((s) => <option key={s} value={s}>{s}</option>)}
+            {getValidSymbols().map((s) => <option key={s} value={s}>{getSymbolDisplayName(s)}</option>)}
           </select>
           <Button onClick={() => navigate("/ai-assistant")} className="bg-[var(--accent)] hover:brightness-110 text-black text-xs px-4 py-2 rounded-lg flex items-center gap-1">
             <Bot className="w-4 h-4" /> Ask 369AI

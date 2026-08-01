@@ -4,7 +4,7 @@ import { derivWS } from "@/services/derivWebSocket";
 import { useLocation } from "wouter";
 import { Play, Pause, RotateCcw, FastForward, TrendingUp, TrendingDown, Loader2, GraduationCap } from "lucide-react";
 import Sparkline from "@/components/Sparkline";
-import { getValidSymbols } from "@/lib/symbols";
+import { getValidSymbols, getSymbolDisplayName } from "@/lib/symbols";
 
 type Tick = { epoch: number; price: number; lastDigit: number; timestamp?: number };
 type Decision = { type: "rise" | "fall"; entryIdx: number; entryPrice: number; duration: number };
@@ -102,7 +102,7 @@ export default function Replay() {
             <p className="text-[var(--text-secondary)] text-sm mt-1">Replay historical ticks and practice reading the tape. Predictions are scored, but no real orders are placed.</p>
           </div>
           <select value={symbol} onChange={(e) => setSymbol(e.target.value)} className="bg-[var(--surface-secondary)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-white focus:border-[var(--accent)] outline-none [&>option]:bg-[var(--surface-secondary)] [&>option]:text-white">
-            {SYMBOLS.map((s) => <option key={s} value={s}>{s}</option>)}
+            {SYMBOLS.map((s) => <option key={s} value={s}>{getSymbolDisplayName(s)}</option>)}
           </select>
         </div>
 

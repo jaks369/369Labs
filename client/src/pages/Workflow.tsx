@@ -4,7 +4,7 @@ import { trpc } from "@/lib/trpc";
 import { useLocation } from "wouter";
 import { Workflow as WorkflowIcon, Play, GitBranch, ShieldCheck, FlaskConical, Bell, Search, Loader2, CheckCircle2, Radio, ChevronDown } from "lucide-react";
 import { pushTimeline } from "@/components/AITimeline";
-import { getValidSymbols } from "@/lib/symbols";
+import { getValidSymbols, getSymbolDisplayName } from "@/lib/symbols";
 
 type StepKind = "scan" | "watch" | "backtest" | "risk" | "notify" | "build" | "draft" | "condition" | "trigger";
 
@@ -241,14 +241,14 @@ export default function Workflow() {
                 <label className="text-xs text-[var(--text-muted)] shrink-0">Symbol:</label>
                 <div className="relative flex-1">
                   <button onClick={() => setMenuOpen(menuOpen === w.id ? null : w.id)} className="w-full bg-[var(--surface-secondary)] border border-[var(--border)] text-white px-3 py-2 rounded-lg text-sm font-medium flex items-center justify-between hover:border-[var(--accent)]/50">
-                    {symbol}
+                    {getSymbolDisplayName(symbol)}
                     <ChevronDown className={`w-4 h-4 transition-transform ${menuOpen === w.id ? "rotate-180" : ""}`} />
                   </button>
                   {menuOpen === w.id && (
                     <div className="absolute bottom-full left-0 right-0 mb-1 bg-[var(--surface-secondary)] border border-[var(--border)] rounded-lg shadow-xl z-10 max-h-60 overflow-y-auto">
                       {SYMBOLS.map((s) => (
                         <button key={s} onClick={() => { setSymbol(s); setMenuOpen(null); }} className={`w-full px-3 py-2 text-left text-sm ${symbol === s ? "bg-[var(--accent-soft)] text-[var(--accent)]" : "text-white hover:bg-white/10"}`}>
-                          {s}
+                          {getSymbolDisplayName(s)}
                         </button>
                       ))}
                     </div>

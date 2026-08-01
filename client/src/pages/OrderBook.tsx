@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { useLocation } from "wouter";
 import { Book, TrendingUp, TrendingDown, Loader2 } from "lucide-react";
-import { getValidSymbols } from "@/lib/symbols";
+import { getValidSymbols, getSymbolDisplayName } from "@/lib/symbols";
 import { derivWS, Tick } from "@/services/derivWebSocket";
 
 interface Level {
@@ -75,7 +75,7 @@ export default function OrderBook() {
             </div>
           </div>
           <select value={symbol} onChange={(e) => setSymbol(e.target.value)} className="bg-[var(--surface-secondary)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-white focus:border-[var(--accent)] outline-none [&>option]:bg-[var(--surface-secondary)] [&>option]:text-white">
-            {getValidSymbols().map((s) => <option key={s} value={s}>{s}</option>)}
+            {getValidSymbols().map((s) => <option key={s} value={s}>{getSymbolDisplayName(s)}</option>)}
           </select>
         </div>
 

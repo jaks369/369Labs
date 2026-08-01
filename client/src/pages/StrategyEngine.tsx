@@ -7,6 +7,7 @@ import {
   Loader2, RefreshCw, ToggleLeft, ToggleRight, ChevronDown, ChevronUp,
   Zap, Info
 } from "lucide-react";
+import { getSymbolDisplayName } from "@/lib/symbols";
 
 function actionColor(action: string): string {
   switch (action) {
@@ -78,7 +79,7 @@ export default function StrategyEngine() {
             value={symbol}
             onChange={(e) => setSymbol(e.target.value)}
           >
-            {symbols.map((s) => <option key={s} value={s}>{s}</option>)}
+            {symbols.map((s) => <option key={s} value={s}>{getSymbolDisplayName(s)}</option>)}
           </select>
           <button
             onClick={() => { metas.refetch(); consensus.refetch(); regime.refetch(); }}
