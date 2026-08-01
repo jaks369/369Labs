@@ -10,7 +10,7 @@ import { useDerivStatus } from "@/hooks/useDerivStatus";
 import DerivTokenModal from "@/components/DerivTokenModal";
 import ContractTypeSelector, { ContractSelection } from "@/components/ContractTypeSelector";
 import TickChart from "@/components/TickChart";
-import { VOLATILITY_SYMBOLS } from "@/lib/symbols";
+import { VOLATILITY_SYMBOLS, getSymbolDisplayName } from "@/lib/symbols";
 import { getDecimalPlaces } from "@shared/lastDigit";
 
 const ALL_FALLBACK: DerivSymbol[] = VOLATILITY_SYMBOLS.map((s) => ({ ...s, decimalPlaces: 2 }));
@@ -184,10 +184,10 @@ export default function MobileTerminal() {
   return (
     <div className="min-h-screen bg-[var(--card)] pb-20 lg:hidden">
       {/* Header: symbol · live price · LIVE */}
-      <div className="sticky top-0 z-30 bg-[var(--card)]/95 backdrop-blur border-b border-[var(--border)] px-4 pt-3 pb-2">
+      <div className="sticky top-0 z-30 bg-[var(--card)] border-b border-[var(--border)] px-4 pt-3 pb-2">
         <div className="flex items-center justify-between gap-3">
           <button onClick={() => setShowSymbolPicker((v) => !v)} className="flex items-center gap-2 min-w-0 cursor-pointer">
-            <span className="font-mono font-bold text-lg text-white truncate">{symbol}</span>
+            <span className="font-bold text-lg text-white truncate">{selectedDisplay}</span>
             <ChevronDown className={`w-4 h-4 text-[var(--text-muted)] transition-transform shrink-0 ${showSymbolPicker ? "rotate-180" : ""}`} />
           </button>
           <div className="flex items-center gap-3 shrink-0">
@@ -222,25 +222,75 @@ export default function MobileTerminal() {
       </div>
 
       {showSymbolPicker && (
-        <div className="px-4 py-2 bg-black/20 border-b border-[var(--border)] max-h-56 overflow-y-auto">
-          <div className="grid grid-cols-2 gap-1.5">
-            {symbols.map((s) => (
-              <button key={s.symbol} onClick={() => { setSymbol(s.symbol); setShowSymbolPicker(false); }} className={`text-left px-2.5 py-3 rounded-lg text-xs font-bold cursor-pointer min-h-[44px] ${symbol === s.symbol ? "bg-[var(--accent-soft)] text-[var(--accent-hover)] border border-[var(--accent-border)]" : "bg-white/5 text-[var(--text-secondary)] border border-transparent"}`}>
-                <span className="block font-mono">{s.symbol}</span>
-                <span className="text-[9px] text-[var(--text-muted)] truncate">{s.displayName}</span>
-              </button>
-            ))}
+        <div className="fixed inset-0 z-[90] bg-black/60 flex items-start justify-center" onClick={() => setShowSymbolPicker(false)}>
+          <div className="w-full bg-[var(--card)] border-b border-[var(--border)] rounded-b-2xl shadow-2xl max-h-[60vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+            <div className="px-4 py-3 border-b border-[var(--border)] flex items-center justify-between sticky top-0 bg-[var(--card)]">
+              <h3 className="text-sm font-bold text-white">Select Market</h3>
+              <button onClick={() => setShowSymbolPicker(false)} className="text-[var(--text-muted)] hover:text-white"><X className="w-4 h-4" /></button>
+            </div>
+            <div className="grid grid-cols-2 gap-1.5 p-4">
+              {symbols.map((s) => (
+                <button key={s.symbol} onClick={() => { setSymbol(s.symbol); setShowSymbolPicker(false); }} className={`text-left px-2.5 py-3 rounded-lg cursor-pointer min-h-[44px] ${symbol === s.symbol ? "bg-[var(--accent-soft)] text-[var(--accent-hover)] border border-[var(--accent-border)]" : "bg-white/5 text-[var(--text-secondary)] border border-transparent"}`}>
+                  <span className="block font-semibold truncate">{s.displayName}</span>
+                  <span className="text-[9px] font-mono text-[var(--text-muted)]">{s.symbol}</span>
+                </button>
+              ))}
+            </div>
           </div>
         </div>
       )}
 
       {/* Chart */}
-      <div className="px-0 py-2">
-        <TickChart symbol={symbol} maxDataPoints={TIMEFRAMES[timeframe].points} decimalPlaces={decimalPlaces} />
+      <div className="px-0 pt-1 pb-0">
+        <TickChart symbol={symbol} maxDataPoints={TIMEFRAMES[timeframe].points} decimalPlaces={decimalPlaces} compact />
+      </div>
+
+      {/* Balance — near trade controls */}
+      <div className="mx-4 mt-2 flex items-center justify-between px-3 py-2 rounded-lg bg-black/20 border border-[var(--border)]">
+        <span className="text-[10px] uppercase tracking-widest text-[var(--text-muted)] font-bold flex items-center gap-1.5"><Wallet className="w-3.5 h-3.5 text-[var(--green)]" /> Balance</span>
+        <span className="text-sm font-bold font-mono tabular-nums text-white">${balance.toFixed(2)} <span className="text-[10px] text-[var(--text-muted)]">{balanceInfo?.currency || "USD"}</span></span>
+      </div>
+
+      {/* Execution */}
+      <div className="px-4 mt-2">
+        <div className="rounded-xl border border-[var(--border)] bg-[var(--card)] p-3 space-y-3">
+          <ContractTypeSelector selection={contract} onChange={setContract} />
+          <div className="flex items-center gap-2">
+            <button onClick={() => setStake(Math.max(0.35, Math.round((stake - 0.5) * 100) / 100))} className="w-12 h-12 shrink-0 rounded-lg bg-[var(--surface-secondary)] border border-[var(--border)] text-[var(--text-secondary)] text-xl font-bold cursor-pointer">−</button>
+            <div className="flex-1 text-center">
+              <div className="text-[9px] uppercase tracking-widest text-[var(--text-muted)] font-bold">Stake ($)</div>
+              <div className="text-lg font-bold font-mono tabular-nums text-white">{stake.toFixed(2)}</div>
+              <div className="text-[10px] text-[var(--green)] font-mono">≈ ${(stake * 1.95).toFixed(2)} est.</div>
+            </div>
+            <button onClick={() => setStake(Math.round((stake + 0.5) * 100) / 100)} className="w-12 h-12 shrink-0 rounded-lg bg-[var(--surface-secondary)] border border-[var(--border)] text-[var(--text-secondary)] text-xl font-bold cursor-pointer">+</button>
+          </div>
+          <div className="flex gap-1.5">
+            {[1, 5, 10].map((p) => (
+              <button key={p} onClick={() => setStake(p)} className={`flex-1 py-3 rounded-md text-caption font-bold cursor-pointer min-h-[44px] ${stake === p ? "bg-[var(--accent)] text-black" : "bg-[var(--surface-secondary)] text-[var(--text-muted)]"}`}>${p}</button>
+            ))}
+          </div>
+          {isRiseFall ? (
+            <div className="grid grid-cols-2 gap-2">
+              <button onClick={() => handleQuickTrade("fall")} disabled={tradeBusy} className="h-[56px] rounded-xl flex items-center justify-center gap-2 text-sm font-bold text-white transition-all disabled:opacity-60"
+                style={{ background: "linear-gradient(180deg, var(--red) 0%, color-mix(in srgb, var(--red) 85%, black) 100%)" }}>
+                {tradeBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : <TrendingDown className="w-4 h-4" />} Buy Fall
+              </button>
+              <button onClick={() => handleQuickTrade("rise")} disabled={tradeBusy} className="h-[56px] rounded-xl flex items-center justify-center gap-2 text-sm font-bold text-white transition-all disabled:opacity-60"
+                style={{ background: "linear-gradient(180deg, var(--green) 0%, color-mix(in srgb, var(--green) 85%, black) 100%)" }}>
+                {tradeBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : <TrendingUp className="w-4 h-4" />} Buy Rise
+              </button>
+            </div>
+          ) : (
+            <button onClick={() => handleQuickTrade("rise")} disabled={tradeBusy} className="w-full h-[56px] rounded-xl flex items-center justify-center gap-2 text-sm font-bold text-white transition-all disabled:opacity-60"
+              style={{ background: "linear-gradient(180deg, var(--green) 0%, color-mix(in srgb, var(--green) 85%, black) 100%)" }}>
+              {tradeBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Zap className="w-4 h-4" />} BUY {contract.category.replace("_", " ").toUpperCase()}
+            </button>
+          )}
+        </div>
       </div>
 
       {/* AI Market Health strip */}
-      <div className="px-4 mt-2">
+      <div className="px-4 mt-3">
         <div className="rounded-xl border border-[var(--border)] bg-[var(--card)] px-3 py-2.5">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
@@ -264,44 +314,6 @@ export default function MobileTerminal() {
         </div>
       </div>
 
-      {/* Execution */}
-      <div className="px-4 mt-3">
-        <div className="rounded-xl border border-[var(--border)] bg-[var(--card)] p-3 space-y-3">
-          <ContractTypeSelector selection={contract} onChange={setContract} />
-          <div className="flex items-center gap-2">
-            <button onClick={() => setStake(Math.max(0.35, Math.round((stake - 0.5) * 100) / 100))} className="w-12 h-12 shrink-0 rounded-lg bg-[var(--surface-secondary)] border border-[var(--border)] text-[var(--text-secondary)] text-xl font-bold cursor-pointer">−</button>
-            <div className="flex-1 text-center">
-              <div className="text-[9px] uppercase tracking-widest text-[var(--text-muted)] font-bold">Stake ($)</div>
-              <div className="text-lg font-bold font-mono tabular-nums text-white">{stake.toFixed(2)}</div>
-              <div className="text-[10px] text-[var(--green)] font-mono">≈ ${(stake * 1.95).toFixed(2)} est.</div>
-            </div>
-            <button onClick={() => setStake(Math.round((stake + 0.5) * 100) / 100)} className="w-12 h-12 shrink-0 rounded-lg bg-[var(--surface-secondary)] border border-[var(--border)] text-[var(--text-secondary)] text-xl font-bold cursor-pointer">+</button>
-          </div>
-          <div className="flex gap-1.5">
-            {[1, 5, 10].map((p) => (
-              <button key={p} onClick={() => setStake(p)} className={`flex-1 py-3 rounded-md text-caption font-bold cursor-pointer min-h-[44px] ${stake === p ? "bg-[var(--accent)] text-black" : "bg-[var(--surface-secondary)] text-[var(--text-muted)]"}`}>${p}</button>
-            ))}
-          </div>
-          {isRiseFall ? (
-            <div className="grid grid-cols-2 gap-2">
-              <button onClick={() => handleQuickTrade("fall")} disabled={tradeBusy} className="h-[56px] rounded-xl flex items-center justify-center gap-2 text-sm font-bold text-white transition-all disabled:opacity-60"
-                style={{ background: "linear-gradient(180deg, var(--red) 0%, color-mix(in srgb, var(--red) 85%, black) 100%)" }}>
-                {tradeBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : <TrendingDown className="w-4 h-4" />} SELL
-              </button>
-              <button onClick={() => handleQuickTrade("rise")} disabled={tradeBusy} className="h-[56px] rounded-xl flex items-center justify-center gap-2 text-sm font-bold text-white transition-all disabled:opacity-60"
-                style={{ background: "linear-gradient(180deg, var(--green) 0%, color-mix(in srgb, var(--green) 85%, black) 100%)" }}>
-                {tradeBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : <TrendingUp className="w-4 h-4" />} BUY
-              </button>
-            </div>
-          ) : (
-            <button onClick={() => handleQuickTrade("rise")} disabled={tradeBusy} className="w-full h-[56px] rounded-xl flex items-center justify-center gap-2 text-sm font-bold text-white transition-all disabled:opacity-60"
-              style={{ background: "linear-gradient(180deg, var(--green) 0%, color-mix(in srgb, var(--green) 85%, black) 100%)" }}>
-              {tradeBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Zap className="w-4 h-4" />} BUY {contract.category.replace("_", " ").toUpperCase()}
-            </button>
-          )}
-        </div>
-      </div>
-
       {/* Positions bar */}
       <button onClick={() => setShowPositions(true)} className="mx-4 mt-3 w-[calc(100%-32px)] flex items-center justify-between rounded-xl border border-[var(--border)] bg-[var(--card)] px-3 py-3 cursor-pointer">
         <div className="flex items-center gap-2">
@@ -310,12 +322,6 @@ export default function MobileTerminal() {
         </div>
         <span className="text-xs text-[var(--text-muted)]">{openPositions.length === 0 ? "No open positions" : "Tap to view"} ›</span>
       </button>
-
-      {/* Balance footer */}
-      <div className="mx-4 mt-3 flex items-center justify-between px-3 py-2 rounded-lg bg-black/20 border border-[var(--border)]">
-        <span className="text-[10px] uppercase tracking-widest text-[var(--text-muted)] font-bold flex items-center gap-1.5"><Wallet className="w-3.5 h-3.5 text-[var(--green)]" /> Balance</span>
-        <span className="text-sm font-bold font-mono tabular-nums text-white">${balance.toFixed(2)} <span className="text-[10px] text-[var(--text-muted)]">{balanceInfo?.currency || "USD"}</span></span>
-      </div>
 
       {/* Positions bottom sheet */}
       {showPositions && (
@@ -334,7 +340,7 @@ export default function MobileTerminal() {
                     <div className="flex items-center gap-3 min-w-0">
                       <span className="w-1.5 h-1.5 rounded-full bg-[var(--accent)] animate-live-pulse shrink-0" />
                       <div className="min-w-0">
-                        <p className="text-sm font-bold text-white truncate">{t.symbol} <span className="text-[var(--text-muted)] font-medium">{t.contractType}</span></p>
+                        <p className="text-sm font-bold text-white truncate">{getSymbolDisplayName(t.symbol)} <span className="text-[var(--text-muted)] font-medium">{t.contractType}</span></p>
                         <p className="text-xs text-[var(--text-muted)]">#{t.contractId} · {new Date(t.entryTime).toLocaleTimeString()}</p>
                       </div>
                     </div>

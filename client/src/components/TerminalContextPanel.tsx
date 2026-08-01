@@ -20,6 +20,7 @@ import ContractTypeSelector, { ContractSelection } from "@/components/ContractTy
 import DigitProbability from "@/components/DigitProbability";
 import SymbolInsights from "@/components/SymbolInsights";
 import AIVerdicts from "@/components/AIVerdicts";
+import { getSymbolDisplayName } from "@/lib/symbols";
 
 export type ContextMode = "execution" | "ai" | "positions" | "market";
 
@@ -158,7 +159,7 @@ export default function TerminalContextPanel(props: TerminalContextPanelProps) {
                   style={{ background: "linear-gradient(180deg, var(--red) 0%, color-mix(in srgb, var(--red) 85%, black) 100%)" }}
                 >
                   {tradeBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : <TrendingDown className="w-4 h-4" />}
-                  SELL
+                  Buy Fall
                 </button>
                 <button
                   onClick={() => onQuickTrade("rise")}
@@ -167,7 +168,7 @@ export default function TerminalContextPanel(props: TerminalContextPanelProps) {
                   style={{ background: "linear-gradient(180deg, var(--green) 0%, color-mix(in srgb, var(--green) 85%, black) 100%)" }}
                 >
                   {tradeBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : <TrendingUp className="w-4 h-4" />}
-                  BUY
+                  Buy Rise
                 </button>
               </div>
             ) : (
@@ -264,7 +265,7 @@ export default function TerminalContextPanel(props: TerminalContextPanelProps) {
             ) : (
               <div>
                 <div className="flex items-center gap-2 mb-2">
-                  <span className="ai-badge">{latestSignal.symbol}</span>
+                  <span className="ai-badge">{getSymbolDisplayName(latestSignal.symbol)}</span>
                 </div>
                 <p className="text-sm text-[var(--text-secondary)] leading-relaxed">{latestSignal.description}</p>
                 <div className="flex items-center gap-3 mt-3 text-xs">
@@ -294,7 +295,7 @@ export default function TerminalContextPanel(props: TerminalContextPanelProps) {
                     <div className="flex items-center gap-3 min-w-0">
                       <span className="w-1.5 h-1.5 rounded-full bg-[var(--accent)] animate-live-pulse shrink-0" />
                       <div className="min-w-0">
-                        <button onClick={() => onSelectSymbol(t.symbol)} className="text-sm font-bold text-white truncate hover:text-[var(--accent)] transition-colors">{t.symbol} <span className="text-[var(--text-muted)] font-medium">{t.contractType}</span></button>
+                        <button onClick={() => onSelectSymbol(t.symbol)} className="text-sm font-bold text-white truncate hover:text-[var(--accent)] transition-colors">{getSymbolDisplayName(t.symbol)} <span className="text-[var(--text-muted)] font-medium">{t.contractType}</span></button>
                         <p className="text-xs text-[var(--text-muted)]">#{t.contractId} · {new Date(t.entryTime).toLocaleTimeString()}</p>
                       </div>
                     </div>
@@ -348,7 +349,7 @@ export default function TerminalContextPanel(props: TerminalContextPanelProps) {
                   (alerts || []).slice(0, 5).map((a: any) => (
                     <div key={a.id} className="flex items-center justify-between py-1.5 border-b border-[var(--border)] last:border-0">
                       <div>
-                        <span className="text-xs font-bold text-white">{a.symbol}</span>
+                        <span className="text-xs font-bold text-white">{getSymbolDisplayName(a.symbol)}</span>
                         <span className={`text-caption ml-2 ${a.direction === "above" ? "text-[var(--green)]" : "text-[var(--red)]"}`}>{a.direction === "above" ? "↑" : "↓"} {a.targetPrice}</span>
                         <span className={`text-caption ml-2 ${a.status === "triggered" ? "text-[var(--accent)]" : "text-[var(--text-muted)]"}`}>{a.status}</span>
                       </div>

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import LiveValue from "./LiveValue";
+import { getSymbolDisplayName } from "@/lib/symbols";
 
 export default function LiveTick({ symbol, price, change, changePercent, direction, decimalPlaces = 2, compact = false }) {
   const prevPriceRef = useRef(price);
@@ -46,7 +47,7 @@ export default function LiveTick({ symbol, price, change, changePercent, directi
       transition={{ duration: 0.4, ease: [0.19, 1, 0.22, 1] }}
     >
       <div className="flex items-center gap-2">
-        <span className="text-xs font-bold text-white">{symbol}</span>
+        <span className="text-xs font-bold text-white">{getSymbolDisplayName(symbol)}</span>
         <span className="text-xs font-mono tabular-nums text-white">
           <LiveValue value={price} format={(v) => Number(v).toFixed(decimalPlaces)} springConfig={{ stiffness: 120, damping: 25 }} />
         </span>

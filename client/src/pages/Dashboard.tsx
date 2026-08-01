@@ -24,7 +24,7 @@ import { derivWS, DerivSymbol } from "@/services/derivWebSocket";
 import { useDerivStatus } from "@/hooks/useDerivStatus";
 import DerivTokenModal from "@/components/DerivTokenModal";
 import { ContractSelection } from "@/components/ContractTypeSelector";
-import { VOLATILITY_SYMBOLS } from "@/lib/symbols";
+import { VOLATILITY_SYMBOLS, getSymbolDisplayName } from "@/lib/symbols";
 import { getDecimalPlaces } from "@shared/lastDigit";
 import WatchlistPanel from "@/components/WatchlistPanel";
 import TerminalContextPanel, { ContextMode } from "@/components/TerminalContextPanel";
@@ -460,7 +460,7 @@ export default function Dashboard() {
         </div>
 
         {/* Chart & History — the workspace */}
-        <div className="lg:col-span-9 xl:col-span-7 space-y-4 xl:space-y-6">
+        <div className="lg:col-span-9 xl:col-span-10 space-y-4 xl:space-y-6">
 
           {/* Chart workspace — the heart of the OS */}
           <div className={showSymbolPicker ? "bg-[var(--card)] rounded-xl p-4 elevation-1" : "chart-workspace"}>
@@ -616,7 +616,7 @@ export default function Dashboard() {
               </div>
               <div className="flex items-center gap-2 min-w-[130px]">
                 <span className="text-[10px] uppercase tracking-widest text-[var(--text-muted)] font-bold">Best Symbol</span>
-                <span className="font-mono tabular-nums font-bold text-[13px] text-[var(--accent)]">{bestSymbol ? bestSymbol[0] : "—"}</span>
+                <span className="font-mono tabular-nums font-bold text-[13px] text-[var(--accent)]">{bestSymbol ? getSymbolDisplayName(bestSymbol[0]) : "—"}</span>
                 {bestSymbol && <span className={`font-mono tabular-nums ${Number(bestSymbol[1]) >= 0 ? "text-[var(--green)]" : "text-[var(--red)]"}`}>({Number(bestSymbol[1]).toFixed(1)})</span>}
               </div>
               <div className="flex items-center gap-2 min-w-[120px]">
@@ -659,7 +659,7 @@ export default function Dashboard() {
                           <div className="flex items-center gap-3 min-w-0">
                             <span className="w-1.5 h-1.5 rounded-full bg-[var(--accent)] animate-live-pulse shrink-0" />
                             <div className="min-w-0">
-                              <p className="text-sm font-bold text-white truncate">{t.symbol} <span className="text-[var(--text-muted)] font-medium">{t.contractType}</span></p>
+                              <p className="text-sm font-bold text-white truncate">{getSymbolDisplayName(t.symbol)} <span className="text-[var(--text-muted)] font-medium">{t.contractType}</span></p>
                               <p className="text-xs text-[var(--text-muted)]">#{t.contractId} · {new Date(t.entryTime).toLocaleTimeString()}</p>
                             </div>
                           </div>
@@ -743,7 +743,7 @@ export default function Dashboard() {
                                 <td className="tabular-nums text-[var(--text-muted)]">
                                   {trade.entryTime ? new Date(trade.entryTime).toLocaleString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }) : "—"}
                                 </td>
-                                <td className={`font-mono font-bold ${(trade.symbol || "") === selectedSymbol ? "text-[var(--accent)]" : "text-white"}`}>{trade.symbol || "—"}</td>
+                                <td className={`font-mono font-bold ${(trade.symbol || "") === selectedSymbol ? "text-[var(--accent)]" : "text-white"}`}>{getSymbolDisplayName(trade.symbol) || "—"}</td>
                                 <td><span className="tag">{trade.contractType || "-"}</span></td>
                                 <td className="text-right tabular-nums">${parseFloat(trade.stake || "0").toFixed(2)}</td>
                                 <td className="text-right font-mono tabular-nums">{parseFloat(trade.entryPrice || "0").toFixed(decimalPlaces)}</td>
@@ -809,7 +809,7 @@ export default function Dashboard() {
         </div>
 
         {/* Context panel — changes by task (Linear-style) */}
-        <div className="lg:col-span-12 xl:col-span-3 xl:sticky xl:top-4 xl:self-start">
+        <div className="lg:col-span-12 xl:col-span-12">
           <TerminalContextPanel
             mode={contextMode}
             onModeChange={setContextMode}

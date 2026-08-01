@@ -1,4 +1,5 @@
 import { Sparkles, TrendingUp, TrendingDown, BarChart3, Scale } from "lucide-react";
+import { getSymbolDisplayName } from "@/lib/symbols";
 
 interface AIVerdictsProps {
   symbol: string;
@@ -60,14 +61,14 @@ export default function AIVerdicts({ symbol, ticks = [], trades = [], decimalPla
 
   const verdicts: string[] = [];
   if (bestSymbol && bestSymbol[0] !== symbol) {
-    verdicts.push(`${bestSymbol[0]} is your top performer (${Number(bestSymbol[1].pnl).toFixed(2)} P&L, ${bestSymbol[1].n} trades).`);
+    verdicts.push(`${getSymbolDisplayName(bestSymbol[0])} is your top performer (${Number(bestSymbol[1].pnl).toFixed(2)} P&L, ${bestSymbol[1].n} trades).`);
   }
   if (bestType) {
     verdicts.push(`${bestType[0]} yields the best edge (${Number(bestType[1].pnl).toFixed(2)} P&L on ${bestType[1].n} trades).`);
   }
   if (health) {
-    if (health.vol === "high") verdicts.push(`${symbol} volatility is elevated (${health.rangePct.toFixed(2)}% range) — widen barriers.`);
-    if (health.momentum === "strong") verdicts.push(health.dir === "up" ? `Momentum favors longs on ${symbol}.` : `Momentum favors shorts on ${symbol}.`);
+    if (health.vol === "high") verdicts.push(`${getSymbolDisplayName(symbol)} volatility is elevated (${health.rangePct.toFixed(2)}% range) — widen barriers.`);
+    if (health.momentum === "strong") verdicts.push(health.dir === "up" ? `Momentum favors longs on ${getSymbolDisplayName(symbol)}.` : `Momentum favors shorts on ${getSymbolDisplayName(symbol)}.`);
     if (health.hottestDigit != null) verdicts.push(`Digit ${health.hottestDigit} is hot (${health.hottestPct}%) — consider matching.`);
   }
   if (!verdicts.length) verdicts.push("Keep a flat risk profile until more data accumulates.");

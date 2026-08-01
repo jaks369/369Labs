@@ -1,4 +1,5 @@
 import { TrendingUp, TrendingDown, Activity, BarChart3, Zap } from "lucide-react";
+import { getSymbolDisplayName } from "@/lib/symbols";
 
 function digitFrequency(ticks, decimals) {
   const freq = Array(10).fill(0);
@@ -83,7 +84,7 @@ export default function SymbolInsights({ symbol, ticks = [], trades = [], decima
     <div className="panel p-4">
       <div className="flex items-center gap-2 mb-3">
         <BarChart3 className="w-3.5 h-3.5 text-[var(--accent)]" />
-        <h3 className="text-micro font-bold text-[var(--text-muted)] uppercase tracking-widest">{symbol} Insights</h3>
+        <h3 className="text-micro font-bold text-[var(--text-muted)] uppercase tracking-widest">{getSymbolDisplayName(symbol)} Insights</h3>
       </div>
       <div className="space-y-2">
         {insights.map((ins, i) => (

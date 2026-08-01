@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { derivWS, Tick } from "@/services/derivWebSocket";
 import { trpc } from "@/lib/trpc";
 import { LineChart, AreaChart, Maximize, Minimize } from "lucide-react";
+import { getSymbolDisplayName } from "@/lib/symbols";
 
 interface ChartData {
   time: string;
@@ -12,6 +13,7 @@ interface TickChartProps {
   symbol: string;
   maxDataPoints?: number;
   decimalPlaces?: number;
+  compact?: boolean;
 }
 
 function niceScale(min: number, max: number, ticks: number) {
@@ -25,7 +27,7 @@ function niceScale(min: number, max: number, ticks: number) {
   return { start, end, step };
 }
 
-export default function TickChart({ symbol, maxDataPoints = 100, decimalPlaces = 3 }: TickChartProps) {
+export default function TickChart({ symbol, maxDataPoints = 100, decimalPlaces = 3, compact = false }: TickChartProps) {
   const n = maxDataPoints;
   const [data, setData] = useState<ChartData[]>([]);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -223,12 +225,12 @@ export default function TickChart({ symbol, maxDataPoints = 100, decimalPlaces =
         </div>
       </div>
 
-      <div ref={containerRef} className={`w-full relative rounded-xl overflow-hidden border border-[var(--border-subtle)] ${fullscreen ? "h-full min-h-[80vh]" : "h-[280px] md:h-[340px]"}`}
+      <div ref={containerRef} className={`w-full relative rounded-xl overflow-hidden border border-[var(--border-subtle)] ${fullscreen ? "h-full min-h-[80vh]" : compact ? "h-[220px]" : "h-[280px] md:h-[340px]"}`}
         style={{ background: "linear-gradient(180deg, rgba(45,217,196,0.04) 0%, rgba(45,217,196,0.01) 60%, transparent 100%)" }}>
         {error ? (
           <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 p-6">
             <p className="text-[var(--red)] text-sm text-center">Connection Error: {error}</p>
-            <p className="text-[var(--text-muted)] text-xs text-center max-w-md">The symbol <span className="font-mono text-[var(--accent)]">{symbol}</span> may not be available. Try selecting a different symbol.</p>
+            <p className="text-[var(--text-muted)] text-xs text-center max-w-md">The symbol <span className="font-mono text-[var(--accent)]">{symbol}</span> ({getSymbolDisplayName(symbol)}) may not be available. Try selecting a different symbol.</p>
           </div>
         ) : data.length > 1 ? (
           <svg viewBox={`0 0 ${dims.w} ${dims.h}`} preserveAspectRatio="none" className="absolute inset-0 w-full h-full">
@@ -345,6 +347,7 @@ export default function TickChart({ symbol, maxDataPoints = 100, decimalPlaces =
       </div>
 
       {/* Stats row */}
+      {!compact && (
       <div className="mt-3 grid grid-cols-4 gap-2 md:gap-3">
         <div className="bg-[var(--card)] p-2.5 rounded-lg border border-[var(--border-subtle)]">
           <span className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">Open</span>
@@ -363,6 +366,7 @@ export default function TickChart({ symbol, maxDataPoints = 100, decimalPlaces =
           <p className="text-sm font-bold text-[var(--text-primary)] tabular-nums">{ohlc ? ohlc.close.toFixed(decimalPlaces) : "—"}</p>
         </div>
       </div>
+      )}
     </div>
   );
 }

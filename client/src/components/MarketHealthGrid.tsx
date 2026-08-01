@@ -94,7 +94,7 @@ export default function MarketHealthGrid({ data, loading }: MarketHealthGridProp
         {sorted.map((h) => (
           <div key={h.symbol} className={`rounded-lg p-3 border ${scoreBg(h.score)}`}>
             <div className="flex items-center justify-between mb-1.5">
-              <span className="text-micro font-bold text-white">{h.symbol}</span>
+              <span className="text-micro font-bold text-white">{h.displayName}</span>
               <span className={`text-[8px] font-bold px-1.5 py-0.5 rounded ${volBg(h.volatility)} ${volColor(h.volatility)}`}>
                 {h.volatility}
               </span>

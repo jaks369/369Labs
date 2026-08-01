@@ -1,5 +1,6 @@
 import { AlertTriangle, Shield, ShieldAlert, ShieldCheck, Info } from "lucide-react";
 import { IntegerStat } from "@/components/LiveStat";
+import { getSymbolDisplayName } from "@/lib/symbols";
 
 interface AdvisoryItem {
   symbol: string;
@@ -103,7 +104,7 @@ export default function MarketRiskPanel({ data, loading }: MarketRiskPanelProps)
             </div>
 
             <div className="flex items-center gap-2 mb-2">
-              <span className="text-caption font-bold text-white">{a.symbol}</span>
+              <span className="text-caption font-bold text-white">{getSymbolDisplayName(a.symbol)}</span>
               <span className="text-[8px] text-[var(--text-secondary)]">Risk score: <IntegerStat value={a.riskScore} />/100</span>
             </div>
 
