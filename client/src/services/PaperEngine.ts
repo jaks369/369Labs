@@ -1,62 +1,9 @@
 import { Tick } from "./derivWebSocket";
-import { lastDigitOf } from "./conditionEval";
 import { getDecimalPlaces } from "@shared/lastDigit";
+import { actionToContractType, calcPnl, simulateOutcome } from "@shared/contractSim";
 
 const PAPER_BALANCE_KEY = "369labs_paper_balance";
 const DEFAULT_PAPER_BALANCE = 10000;
-
-function simulateOutcome(entryPrice: number, nextPrice: number, contractType: string, barrier?: number, decimals?: number): "win" | "loss" {
-  const d = decimals ?? 2;
-  switch (contractType) {
-    case "CALL":
-      return nextPrice > entryPrice ? "win" : "loss";
-    case "PUT":
-      return nextPrice < entryPrice ? "win" : "loss";
-    case "DIGITEVEN":
-      return lastDigitOf(nextPrice, d) % 2 === 0 ? "win" : "loss";
-    case "DIGITODD":
-      return lastDigitOf(nextPrice, d) % 2 === 1 ? "win" : "loss";
-    case "DIGITOVER":
-      return lastDigitOf(nextPrice, d) > (barrier ?? 5) ? "win" : "loss";
-    case "DIGITUNDER":
-      return lastDigitOf(nextPrice, d) < (barrier ?? 5) ? "win" : "loss";
-    case "DIGITMATCH":
-      return lastDigitOf(nextPrice, d) === (barrier ?? 0) ? "win" : "loss";
-    case "DIGITDIFF":
-      return lastDigitOf(nextPrice, d) !== (barrier ?? 0) ? "win" : "loss";
-    default:
-      return nextPrice > entryPrice ? "win" : "loss";
-  }
-}
-
-// Deriv payouts vary by contract type, duration, and symbol (typically 80–97%).
-// Adjust this constant to match your broker's actual rate.
-const PAYOUT_RATE = 0.95;
-
-function calcPnl(result: "win" | "loss", stake: number): number {
-  return result === "win" ? stake * PAYOUT_RATE : -stake;
-}
-
-function actionToContract(strategy: any): { contractType: string; barrier?: number } {
-  const action = strategy?.action || {};
-  const barrier = strategy?.condition?.barrier !== undefined ? strategy.condition.barrier : action.barrier;
-  switch (action.tradeType) {
-    case "buy_rise":
-      return { contractType: "CALL" };
-    case "buy_fall":
-      return { contractType: "PUT" };
-    case "buy_even":
-      return { contractType: "DIGITEVEN" };
-    case "buy_odd":
-      return { contractType: "DIGITODD" };
-    case "buy_over":
-      return { contractType: "DIGITOVER", barrier: barrier ?? 5 };
-    case "buy_under":
-      return { contractType: "DIGITUNDER", barrier: barrier ?? 5 };
-    default:
-      return { contractType: "CALL" };
-  }
-}
 
 export interface PaperTradeResult {
   tradeId: number;
@@ -111,7 +58,7 @@ export class PaperEngine {
 
   async executeTrade(entryTick: Tick, strategy: any, stake: number, symbol?: string): Promise<PaperTradeResult> {
     const decimals = symbol ? getDecimalPlaces(symbol) : 2;
-    const { contractType, barrier } = actionToContract(strategy);
+    const { contractType, barrier } = actionToContractType(strategy);
 
     const tradeId = Date.now() + Math.floor(Math.random() * 1000);
     const entryPrice = entryTick.price;
@@ -135,7 +82,8 @@ export class PaperEngine {
           const exitPrice = entryPrice + (Math.random() - 0.5) * 2 * volatility;
           result.exitPrice = exitPrice;
           result.exitTime = Date.now();
-          result.result = simulateOutcome(entryPrice, exitPrice, contractType, barrier, decimals);
+          const outcome = simulateOutcome(entryPrice, exitPrice, contractType, barrier, decimals);
+          result.result = outcome === "draw" ? "loss" : outcome;
           result.pnl = calcPnl(result.result, stake);
 
           this.balance += result.pnl;

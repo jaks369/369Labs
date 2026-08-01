@@ -3,6 +3,8 @@ import { botRunner } from "./botRunner";
 import { derivManager } from "./derivConnection";
 import { getRecentTicks, isFeedStale } from "./tickCollector";
 import { fireWebhookEvent } from "./webhookExecutor";
+import { actionToContractType, calcPnl, isDigitContract, simulateOutcome } from "@shared/contractSim";
+import { getDecimalPlaces } from "@shared/lastDigit";
 
 const POLL_INTERVAL = 500; // 500ms — near-live bot evaluation
 const MAX_PIPELINE_TRADES = 50; // max trades in one cycle
@@ -47,60 +49,6 @@ function evaluateCondition(rule: any, prices: number[], digits: number[], idx: n
   let occ = 0;
   for (let i = windowStart; i <= idx; i++) if (checkIndex(i)) occ++;
   return occ >= count;
-}
-
-function simulateOutcome(
-  entryPrice: number,
-  nextTick: { price: number; lastDigit: number } | undefined,
-  contractType: string,
-  barrier?: number,
-): "win" | "loss" {
-  if (!nextTick) return "loss";
-  const nextPrice = nextTick.price;
-  const d = nextTick.lastDigit;
-  switch (contractType) {
-    case "CALL":
-      return nextPrice > entryPrice ? "win" : "loss";
-    case "PUT":
-      return nextPrice < entryPrice ? "win" : "loss";
-    case "DIGITEVEN":
-      return d % 2 === 0 ? "win" : "loss";
-    case "DIGITODD":
-      return d % 2 === 1 ? "win" : "loss";
-    case "DIGITOVER":
-      return d > (barrier ?? 5) ? "win" : "loss";
-    case "DIGITUNDER":
-      return d < (barrier ?? 5) ? "win" : "loss";
-    case "DIGITMATCH":
-      return d === (barrier ?? 0) ? "win" : "loss";
-    case "DIGITDIFF":
-      return d !== (barrier ?? 0) ? "win" : "loss";
-    default:
-      return nextPrice > entryPrice ? "win" : "loss";
-  }
-}
-
-function actionToContractType(action: any): string {
-  switch (action?.tradeType) {
-    case "buy_rise":
-      return "CALL";
-    case "buy_fall":
-      return "PUT";
-    case "buy_even":
-      return "DIGITEVEN";
-    case "buy_odd":
-      return "DIGITODD";
-    case "buy_over":
-      return "DIGITOVER";
-    case "buy_under":
-      return "DIGITUNDER";
-    case "buy_digit_match":
-      return "DIGITMATCH";
-    case "buy_digit_diff":
-      return "DIGITDIFF";
-    default:
-      return "CALL";
-  }
 }
 
 async function executeBotCycle(): Promise<void> {
@@ -150,11 +98,11 @@ async function executeBotCycle(): Promise<void> {
       const conn = await derivManager.ensureConnected(bot.def.userId);
       if (!conn) continue;
 
-      const contractType = actionToContractType(rule.action);
-      const barrier = rule.condition?.barrier !== undefined ? Number(rule.condition.barrier) : undefined;
+      const { contractType, barrier: actionBarrier } = actionToContractType(rule);
+      const barrier = rule.condition?.barrier !== undefined ? Number(rule.condition.barrier) : actionBarrier;
       const entryPrice = prices[triggerIdx];
       const tickAfter = ticks[triggerIdx + 1];
-      const isDigit = ["DIGITMATCH", "DIGITDIFF", "DIGITOVER", "DIGITUNDER", "DIGITEVEN", "DIGITODD"].includes(contractType);
+      const isDigit = isDigitContract(contractType);
       // Use Deriv proposal/buy flow to place the actual trade
       const proposalPayload: Record<string, any> = {
         proposal: 1,
@@ -179,8 +127,9 @@ async function executeBotCycle(): Promise<void> {
       if (!buy?.buy?.contract_id) {
         // Paper/simulation fallback if Deriv API not available
         if (tickAfter != null) {
-          const result = simulateOutcome(entryPrice, tickAfter, contractType, barrier);
-          const pnl = result === "win" ? stake * 0.95 : -stake;
+          const outcome = simulateOutcome(entryPrice, tickAfter.price, contractType, barrier, getDecimalPlaces(symbol));
+          const result: "win" | "loss" = outcome === "draw" ? "loss" : outcome;
+          const pnl = calcPnl(result, stake);
           await db.saveTrade({
             userId: bot.def.userId,
             symbol,

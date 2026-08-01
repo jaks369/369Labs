@@ -1,6 +1,7 @@
 import { evaluateNode, ConditionNode, EvalContext, lastDigitOf } from "./conditionEval";
 import { Tick, DerivContractType } from "./derivWebSocket";
 import { getDecimalPlaces } from "@shared/lastDigit";
+import { actionToContractType, calcPnl, simulateOutcome } from "@shared/contractSim";
 
 export interface BacktestTrade {
   entryTime: number;
@@ -78,55 +79,6 @@ function evaluateCondition(rule: any, tick: Tick, history: Tick[], decimals: num
   return occurrences >= count;
 }
 
-function simulateTradeOutcome(entryPrice: number, nextPrice: number, contractType: string, barrier?: number, decimals?: number): "win" | "loss" {
-  const d = decimals ?? 2;
-  switch (contractType) {
-    case "CALL":
-      return nextPrice > entryPrice ? "win" : "loss";
-    case "PUT":
-      return nextPrice < entryPrice ? "win" : "loss";
-    case "DIGITEVEN":
-      return lastDigitOf(nextPrice, d) % 2 === 0 ? "win" : "loss";
-    case "DIGITODD":
-      return lastDigitOf(nextPrice, d) % 2 === 1 ? "win" : "loss";
-    case "DIGITOVER":
-      return lastDigitOf(nextPrice, d) > (barrier ?? 5) ? "win" : "loss";
-    case "DIGITUNDER":
-      return lastDigitOf(nextPrice, d) < (barrier ?? 5) ? "win" : "loss";
-    case "DIGITMATCH":
-      return lastDigitOf(nextPrice, d) === (barrier ?? 0) ? "win" : "loss";
-    case "DIGITDIFF":
-      return lastDigitOf(nextPrice, d) !== (barrier ?? 0) ? "win" : "loss";
-    default:
-      return nextPrice > entryPrice ? "win" : "loss";
-  }
-}
-
-function calcPnl(result: "win" | "loss", stake: number): number {
-  return result === "win" ? stake * 0.95 : -stake;
-}
-
-function actionToContractType(strategy: any): { contractType: string; barrier?: number } {
-  const action = strategy?.action || {};
-  const barrier = strategy?.condition?.barrier !== undefined ? strategy.condition.barrier : action.barrier;
-  switch (action.tradeType) {
-    case "buy_rise":
-      return { contractType: "CALL" };
-    case "buy_fall":
-      return { contractType: "PUT" };
-    case "buy_even":
-      return { contractType: "DIGITEVEN" };
-    case "buy_odd":
-      return { contractType: "DIGITODD" };
-    case "buy_over":
-      return { contractType: "DIGITOVER", barrier: barrier ?? 5 };
-    case "buy_under":
-      return { contractType: "DIGITUNDER", barrier: barrier ?? 5 };
-    default:
-      return { contractType: "CALL" };
-  }
-}
-
 export async function runBacktest(ticks: Tick[], strategy: any, stake: number, symbol?: string): Promise<BacktestResult> {
   const decimals = symbol ? getDecimalPlaces(symbol) : 2;
   const trades: BacktestTrade[] = [];
@@ -147,7 +99,8 @@ export async function runBacktest(ticks: Tick[], strategy: any, stake: number, s
       const exitIdx = i + duration;
       if (exitIdx >= ticks.length) break;
       const exitPrice = ticks[exitIdx].price;
-      const result = simulateTradeOutcome(entryPrice, exitPrice, contractType, barrier, decimals);
+      const outcome = simulateOutcome(entryPrice, exitPrice, contractType, barrier, decimals);
+      const result: "win" | "loss" = outcome === "draw" ? "loss" : outcome;
       const pnl = calcPnl(result, stake);
       balance += pnl;
       trades.push({ entryTime, entryPrice, exitTime: ticks[exitIdx].timestamp, exitPrice, contractType, result, pnl });
