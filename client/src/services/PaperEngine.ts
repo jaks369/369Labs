@@ -8,13 +8,24 @@ const DEFAULT_PAPER_BALANCE = 10000;
 function simulateOutcome(entryPrice: number, nextPrice: number, contractType: string, barrier?: number, decimals?: number): "win" | "loss" {
   const d = decimals ?? 2;
   switch (contractType) {
-    case "CALL": return nextPrice > entryPrice ? "win" : "loss";
-    case "PUT": return nextPrice < entryPrice ? "win" : "loss";
-    case "DIGITEVEN": return lastDigitOf(nextPrice, d) % 2 === 0 ? "win" : "loss";
-    case "DIGITODD": return lastDigitOf(nextPrice, d) % 2 === 1 ? "win" : "loss";
-    case "DIGITOVER": return lastDigitOf(nextPrice, d) > (barrier ?? 5) ? "win" : "loss";
-    case "DIGITUNDER": return lastDigitOf(nextPrice, d) < (barrier ?? 5) ? "win" : "loss";
-    default: return nextPrice > entryPrice ? "win" : "loss";
+    case "CALL":
+      return nextPrice > entryPrice ? "win" : "loss";
+    case "PUT":
+      return nextPrice < entryPrice ? "win" : "loss";
+    case "DIGITEVEN":
+      return lastDigitOf(nextPrice, d) % 2 === 0 ? "win" : "loss";
+    case "DIGITODD":
+      return lastDigitOf(nextPrice, d) % 2 === 1 ? "win" : "loss";
+    case "DIGITOVER":
+      return lastDigitOf(nextPrice, d) > (barrier ?? 5) ? "win" : "loss";
+    case "DIGITUNDER":
+      return lastDigitOf(nextPrice, d) < (barrier ?? 5) ? "win" : "loss";
+    case "DIGITMATCH":
+      return lastDigitOf(nextPrice, d) === (barrier ?? 0) ? "win" : "loss";
+    case "DIGITDIFF":
+      return lastDigitOf(nextPrice, d) !== (barrier ?? 0) ? "win" : "loss";
+    default:
+      return nextPrice > entryPrice ? "win" : "loss";
   }
 }
 
@@ -28,13 +39,20 @@ function calcPnl(result: "win" | "loss", stake: number): number {
 
 function actionToContract(action: any): { contractType: string; barrier?: number } {
   switch (action?.tradeType) {
-    case "buy_rise": return { contractType: "CALL" };
-    case "buy_fall": return { contractType: "PUT" };
-    case "buy_even": return { contractType: "DIGITEVEN" };
-    case "buy_odd": return { contractType: "DIGITODD" };
-    case "buy_over": return { contractType: "DIGITOVER", barrier: action.barrier ?? 5 };
-    case "buy_under": return { contractType: "DIGITUNDER", barrier: action.barrier ?? 5 };
-    default: return { contractType: "CALL" };
+    case "buy_rise":
+      return { contractType: "CALL" };
+    case "buy_fall":
+      return { contractType: "PUT" };
+    case "buy_even":
+      return { contractType: "DIGITEVEN" };
+    case "buy_odd":
+      return { contractType: "DIGITODD" };
+    case "buy_over":
+      return { contractType: "DIGITOVER", barrier: action.barrier ?? 5 };
+    case "buy_under":
+      return { contractType: "DIGITUNDER", barrier: action.barrier ?? 5 };
+    default:
+      return { contractType: "CALL" };
   }
 }
 
@@ -60,10 +78,16 @@ export class PaperEngine {
     this.balance = saved ? parseFloat(saved) : DEFAULT_PAPER_BALANCE;
   }
 
-  getBalance(): number { return this.balance; }
+  getBalance(): number {
+    return this.balance;
+  }
 
   private notify(): void {
-    this.listeners.forEach(cb => { try { cb(this.balance); } catch {} });
+    this.listeners.forEach((cb) => {
+      try {
+        cb(this.balance);
+      } catch {}
+    });
   }
 
   resetBalance(): void {
@@ -83,12 +107,7 @@ export class PaperEngine {
     return () => this.tradeListeners.delete(cb);
   }
 
-  async executeTrade(
-    entryTick: Tick,
-    strategyAction: any,
-    stake: number,
-    symbol?: string,
-  ): Promise<PaperTradeResult> {
+  async executeTrade(entryTick: Tick, strategyAction: any, stake: number, symbol?: string): Promise<PaperTradeResult> {
     const decimals = symbol ? getDecimalPlaces(symbol) : 2;
     const { contractType, barrier } = actionToContract(strategyAction);
 
@@ -107,23 +126,30 @@ export class PaperEngine {
     };
 
     return new Promise((resolve) => {
-      setTimeout(() => {
-        // Use volatility-scaled random move instead of flat ±2 range
-        const volatility = Math.max(entryPrice * 0.001, 0.1); // ~0.1% of entry price
-        const exitPrice = entryPrice + (Math.random() - 0.5) * 2 * volatility;
-        result.exitPrice = exitPrice;
-        result.exitTime = Date.now();
-        result.result = simulateOutcome(entryPrice, exitPrice, contractType, barrier, decimals);
-        result.pnl = calcPnl(result.result, stake);
+      setTimeout(
+        () => {
+          // Use volatility-scaled random move instead of flat ±2 range
+          const volatility = Math.max(entryPrice * 0.001, 0.1); // ~0.1% of entry price
+          const exitPrice = entryPrice + (Math.random() - 0.5) * 2 * volatility;
+          result.exitPrice = exitPrice;
+          result.exitTime = Date.now();
+          result.result = simulateOutcome(entryPrice, exitPrice, contractType, barrier, decimals);
+          result.pnl = calcPnl(result.result, stake);
 
-        this.balance += result.pnl;
-        localStorage.setItem(PAPER_BALANCE_KEY, String(this.balance));
-        this.trades.push(result);
-        this.notify();
-        this.tradeListeners.forEach(cb => { try { cb(result); } catch {} });
+          this.balance += result.pnl;
+          localStorage.setItem(PAPER_BALANCE_KEY, String(this.balance));
+          this.trades.push(result);
+          this.notify();
+          this.tradeListeners.forEach((cb) => {
+            try {
+              cb(result);
+            } catch {}
+          });
 
-        resolve(result);
-      }, 1000 + Math.random() * 2000);
+          resolve(result);
+        },
+        1000 + Math.random() * 2000,
+      );
     });
   }
 }

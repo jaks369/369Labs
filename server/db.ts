@@ -41,7 +41,7 @@ import {
   oauthAccounts,
   OAuthAccount,
   InsertOAuthAccount,
-  trades, 
+  trades,
   Trade,
   InsertTrade,
   tickHistory,
@@ -62,8 +62,8 @@ import {
   Subscription,
   InsertSubscription,
 } from "../drizzle/schema";
-import { ENV } from './_core/env';
-import { encrypt, decrypt } from './_core/encryption';
+import { ENV } from "./_core/env";
+import { encrypt, decrypt } from "./_core/encryption";
 
 function parseDbUrl(url: string) {
   const parsed = new URL(url);
@@ -152,6 +152,7 @@ export async function deleteUser(userId: number): Promise<void> {
   await db.delete(sessions).where(eq(sessions.userId, userId));
   await db.delete(ipWhitelist).where(eq(ipWhitelist.userId, userId));
   await db.delete(botLogs).where(eq(botLogs.userId, userId));
+  await db.delete(subscriptions).where(eq(subscriptions.userId, userId));
   // webhooks table uses raw SQL (no drizzle schema entry)
   if (db) await db.execute(sql`DELETE FROM webhooks WHERE userId = ${userId}`);
   await db.delete(users).where(eq(users.id, userId));
@@ -163,7 +164,13 @@ export async function createSession(data: InsertSession): Promise<Session> {
   if (!db) throw new Error("Database not available");
   const result = await db.insert(sessions).values(data);
   const id = result[0].insertId;
-  return (await db.select().from(sessions).where(eq(sessions.id, id as number)).limit(1))[0];
+  return (
+    await db
+      .select()
+      .from(sessions)
+      .where(eq(sessions.id, id as number))
+      .limit(1)
+  )[0];
 }
 
 export async function getSessionBySessionId(sessionId: string): Promise<Session | undefined> {
@@ -176,7 +183,10 @@ export async function getSessionBySessionId(sessionId: string): Promise<Session 
 export async function revokeSession(sessionId: string, userId: number): Promise<void> {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  await db.update(sessions).set({ revokedAt: new Date() }).where(and(eq(sessions.sessionId, sessionId), eq(sessions.userId, userId)));
+  await db
+    .update(sessions)
+    .set({ revokedAt: new Date() })
+    .where(and(eq(sessions.sessionId, sessionId), eq(sessions.userId, userId)));
 }
 
 export async function getUserSessions(userId: number): Promise<Session[]> {
@@ -210,11 +220,7 @@ export async function removeIpWhitelistEntry(id: number, userId: number): Promis
   await db.delete(ipWhitelist).where(and(eq(ipWhitelist.id, id), eq(ipWhitelist.userId, userId)));
 }
 
-export async function createUser(user: {
-  email: string;
-  passwordHash: string;
-  name?: string | null;
-}): Promise<User> {
+export async function createUser(user: { email: string; passwordHash: string; name?: string | null }): Promise<User> {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
 
@@ -231,7 +237,13 @@ export async function createUser(user: {
 
   const result = await db.insert(users).values(values);
   const id = result[0].insertId;
-  return (await db.select().from(users).where(eq(users.id, id as number)).limit(1))[0];
+  return (
+    await db
+      .select()
+      .from(users)
+      .where(eq(users.id, id as number))
+      .limit(1)
+  )[0];
 }
 
 export async function getUserByEmail(email: string): Promise<User | undefined> {
@@ -333,7 +345,10 @@ export async function markVerificationTokenUsed(token: string): Promise<void> {
 export async function updateUserEmailVerified(userId: number, verified?: boolean): Promise<void> {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  await db.update(users).set({ emailVerified: verified ?? true }).where(eq(users.id, userId));
+  await db
+    .update(users)
+    .set({ emailVerified: verified ?? true })
+    .where(eq(users.id, userId));
 }
 
 export async function updateUserEmail(userId: number, email: string): Promise<void> {
@@ -357,7 +372,11 @@ export async function updateUserProfile(userId: number, data: { name?: string; a
 export async function getOAuthAccount(provider: string, providerId: string): Promise<OAuthAccount | undefined> {
   const db = await getDb();
   if (!db) return undefined;
-  const result = await db.select().from(oauthAccounts).where(and(eq(oauthAccounts.provider, provider), eq(oauthAccounts.providerId, providerId))).limit(1);
+  const result = await db
+    .select()
+    .from(oauthAccounts)
+    .where(and(eq(oauthAccounts.provider, provider), eq(oauthAccounts.providerId, providerId)))
+    .limit(1);
   return result[0];
 }
 
@@ -400,18 +419,28 @@ export async function addChatMessage(userId: number, chatId: string, role: strin
 export async function saveDerivToken(token: InsertDerivToken): Promise<DerivToken> {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  
+
   const encryptedToken = encrypt(token.token);
   const result = await db.insert(derivTokens).values({ ...token, token: encryptedToken });
   const id = result[0].insertId;
-  return (await db.select().from(derivTokens).where(eq(derivTokens.id, id as number)).limit(1))[0];
+  return (
+    await db
+      .select()
+      .from(derivTokens)
+      .where(eq(derivTokens.id, id as number))
+      .limit(1)
+  )[0];
 }
 
 export async function getDerivTokenByUserId(userId: number): Promise<DerivToken | undefined> {
   const db = await getDb();
   if (!db) return undefined;
-  
-  const result = await db.select().from(derivTokens).where(and(eq(derivTokens.userId, userId), eq(derivTokens.isActive, true))).limit(1);
+
+  const result = await db
+    .select()
+    .from(derivTokens)
+    .where(and(eq(derivTokens.userId, userId), eq(derivTokens.isActive, true)))
+    .limit(1);
   if (result.length > 0) {
     const decryptedToken = decrypt(result[0].token);
     return { ...result[0], token: decryptedToken };
@@ -432,16 +461,26 @@ export async function saveStrategy(strategy: InsertStrategy): Promise<Strategy> 
   try {
     const result = await db.insert(strategies).values(strategy);
     const id = result[0].insertId;
-    return (await db.select().from(strategies).where(eq(strategies.id, id as number)).limit(1))[0];
+    return (
+      await db
+        .select()
+        .from(strategies)
+        .where(eq(strategies.id, id as number))
+        .limit(1)
+    )[0];
   } catch (e1: any) {
     console.error("[saveStrategy] Drizzle insert failed, trying raw fallback. Error:", e1?.message || e1, "userId:", strategy.userId, "name:", strategy.name);
     const pool = getRawPool();
     if (!pool) throw new Error("Pool not available");
     try {
-      const [r] = await pool.execute(
-        "INSERT INTO strategies (userId, name, description, config, isActive, published) VALUES (?, ?, ?, ?, ?, ?)",
-        [strategy.userId, strategy.name, strategy.description ?? null, JSON.stringify(strategy.config), strategy.isActive ?? true, strategy.published ?? false]
-      );
+      const [r] = await pool.execute("INSERT INTO strategies (userId, name, description, config, isActive, published) VALUES (?, ?, ?, ?, ?, ?)", [
+        strategy.userId,
+        strategy.name,
+        strategy.description ?? null,
+        JSON.stringify(strategy.config),
+        strategy.isActive ?? true,
+        strategy.published ?? false,
+      ]);
       const id = (r as any).insertId;
       const [rows] = await pool.execute("SELECT * FROM strategies WHERE id=?", [id]);
       return (rows as any[])[0];
@@ -489,23 +528,34 @@ export async function getPublishedStrategies(): Promise<Strategy[]> {
 export async function getStrategyById(id: number, userId: number): Promise<Strategy | undefined> {
   const db = await getDb();
   if (!db) return undefined;
-  
-  const result = await db.select().from(strategies).where(and(eq(strategies.id, id), eq(strategies.userId, userId))).limit(1);
+
+  const result = await db
+    .select()
+    .from(strategies)
+    .where(and(eq(strategies.id, id), eq(strategies.userId, userId)))
+    .limit(1);
   return result.length > 0 ? result[0] : undefined;
 }
 
 export async function getStrategyByName(name: string, userId: number): Promise<Strategy | undefined> {
   const db = await getDb();
   if (!db) return undefined;
-  
-  const result = await db.select().from(strategies).where(and(eq(strategies.name, name), eq(strategies.userId, userId))).limit(1);
+
+  const result = await db
+    .select()
+    .from(strategies)
+    .where(and(eq(strategies.name, name), eq(strategies.userId, userId)))
+    .limit(1);
   return result.length > 0 ? result[0] : undefined;
 }
 
 export async function setStrategyPublished(id: number, userId: number, published: boolean): Promise<Strategy | undefined> {
   const db = await getDb();
   if (!db) return undefined;
-  await db.update(strategies).set({ published }).where(and(eq(strategies.id, id), eq(strategies.userId, userId)));
+  await db
+    .update(strategies)
+    .set({ published })
+    .where(and(eq(strategies.id, id), eq(strategies.userId, userId)));
   return getStrategyById(id, userId);
 }
 
@@ -523,7 +573,13 @@ export async function duplicateStrategy(id: number, userId: number): Promise<Str
     published: false,
   });
   const newId = result[0].insertId;
-  return (await db.select().from(strategies).where(eq(strategies.id, newId as number)).limit(1))[0];
+  return (
+    await db
+      .select()
+      .from(strategies)
+      .where(eq(strategies.id, newId as number))
+      .limit(1)
+  )[0];
 }
 
 export async function saveTrade(trade: InsertTrade): Promise<Trade> {
@@ -537,22 +593,27 @@ export async function saveTrade(trade: InsertTrade): Promise<Trade> {
   // row keeps a single source of truth.
   if (trade.contractId) {
     try {
-      const existing = await db.select().from(trades)
+      const existing = await db
+        .select()
+        .from(trades)
         .where(and(eq(trades.userId, trade.userId), eq(trades.contractId, trade.contractId)))
         .limit(1);
       if (existing.length > 0) {
         const row = existing[0];
-        await db.update(trades).set({
-          result: trade.result ?? row.result,
-          profitLoss: trade.profitLoss ?? row.profitLoss,
-          exitTime: trade.exitTime ?? row.exitTime,
-          exitPrice: trade.exitPrice ?? row.exitPrice,
-          entryPrice: trade.entryPrice ?? row.entryPrice,
-          stake: trade.stake ?? row.stake,
-          contractType: trade.contractType ?? row.contractType,
-          symbol: trade.symbol ?? row.symbol,
-          updatedAt: new Date(),
-        }).where(eq(trades.id, row.id));
+        await db
+          .update(trades)
+          .set({
+            result: trade.result ?? row.result,
+            profitLoss: trade.profitLoss ?? row.profitLoss,
+            exitTime: trade.exitTime ?? row.exitTime,
+            exitPrice: trade.exitPrice ?? row.exitPrice,
+            entryPrice: trade.entryPrice ?? row.entryPrice,
+            stake: trade.stake ?? row.stake,
+            contractType: trade.contractType ?? row.contractType,
+            symbol: trade.symbol ?? row.symbol,
+            updatedAt: new Date(),
+          })
+          .where(eq(trades.id, row.id));
         return (await db.select().from(trades).where(eq(trades.id, row.id)).limit(1))[0];
       }
     } catch {
@@ -570,31 +631,76 @@ export async function saveTrade(trade: InsertTrade): Promise<Trade> {
     try {
       const [r] = await pool.execute(
         "INSERT INTO trades (userId, botRunId, strategyId, entryTime, exitTime, entryPrice, exitPrice, stake, profitLoss, symbol, contractType, result, contractId) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-        [trade.userId, trade.botRunId ?? null, trade.strategyId ?? null, trade.entryTime, trade.exitTime ?? null, trade.entryPrice ?? null, trade.exitPrice ?? null, trade.stake, trade.profitLoss ?? null, trade.symbol ?? "R_100", trade.contractType ?? "CALL", trade.result ?? null, trade.contractId ?? null]
+        [
+          trade.userId,
+          trade.botRunId ?? null,
+          trade.strategyId ?? null,
+          trade.entryTime,
+          trade.exitTime ?? null,
+          trade.entryPrice ?? null,
+          trade.exitPrice ?? null,
+          trade.stake,
+          trade.profitLoss ?? null,
+          trade.symbol ?? "R_100",
+          trade.contractType ?? "CALL",
+          trade.result ?? null,
+          trade.contractId ?? null,
+        ],
       );
       id = (r as any).insertId;
     } catch (e2: any) {
-      if (e2?.errno !== 1054 && e2?.code !== 'ER_BAD_FIELD_ERROR') throw e2;
+      if (e2?.errno !== 1054 && e2?.code !== "ER_BAD_FIELD_ERROR") throw e2;
       // try without symbol (schema may be missing it)
       try {
         const [r] = await pool.execute(
           "INSERT INTO trades (userId, botRunId, strategyId, entryTime, exitTime, entryPrice, exitPrice, stake, profitLoss, contractType, result, contractId) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-          [trade.userId, trade.botRunId ?? null, trade.strategyId ?? null, trade.entryTime, trade.exitTime ?? null, trade.entryPrice ?? null, trade.exitPrice ?? null, trade.stake, trade.profitLoss ?? null, trade.contractType ?? "CALL", trade.result ?? null, trade.contractId ?? null]
+          [
+            trade.userId,
+            trade.botRunId ?? null,
+            trade.strategyId ?? null,
+            trade.entryTime,
+            trade.exitTime ?? null,
+            trade.entryPrice ?? null,
+            trade.exitPrice ?? null,
+            trade.stake,
+            trade.profitLoss ?? null,
+            trade.contractType ?? "CALL",
+            trade.result ?? null,
+            trade.contractId ?? null,
+          ],
         );
         id = (r as any).insertId;
       } catch (e3: any) {
-        if (e3?.errno !== 1054 && e3?.code !== 'ER_BAD_FIELD_ERROR') throw e3;
+        if (e3?.errno !== 1054 && e3?.code !== "ER_BAD_FIELD_ERROR") throw e3;
         // try without both symbol and contractType
         const [r] = await pool.execute(
           "INSERT INTO trades (userId, botRunId, strategyId, entryTime, exitTime, entryPrice, exitPrice, stake, profitLoss, result, contractId) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-          [trade.userId, trade.botRunId ?? null, trade.strategyId ?? null, trade.entryTime, trade.exitTime ?? null, trade.entryPrice ?? null, trade.exitPrice ?? null, trade.stake, trade.profitLoss ?? null, trade.result ?? null, trade.contractId ?? null]
+          [
+            trade.userId,
+            trade.botRunId ?? null,
+            trade.strategyId ?? null,
+            trade.entryTime,
+            trade.exitTime ?? null,
+            trade.entryPrice ?? null,
+            trade.exitPrice ?? null,
+            trade.stake,
+            trade.profitLoss ?? null,
+            trade.result ?? null,
+            trade.contractId ?? null,
+          ],
         );
         id = (r as any).insertId;
       }
     }
   }
   try {
-    return (await db.select().from(trades).where(eq(trades.id, id as number)).limit(1))[0];
+    return (
+      await db
+        .select()
+        .from(trades)
+        .where(eq(trades.id, id as number))
+        .limit(1)
+    )[0];
   } catch {
     return {
       id,
@@ -620,7 +726,9 @@ export async function getPendingTrades(): Promise<Trade[]> {
   const db = await getDb();
   if (!db) return [];
   try {
-    return await db.select().from(trades)
+    return await db
+      .select()
+      .from(trades)
       .where(and(eq(trades.result, "pending"), sql`${trades.contractId} IS NOT NULL`))
       .orderBy(asc(trades.entryTime))
       .limit(200);
@@ -629,7 +737,7 @@ export async function getPendingTrades(): Promise<Trade[]> {
     if (!pool) return [];
     try {
       const [rows] = await pool.execute(
-        "SELECT id, userId, botRunId, strategyId, entryTime, exitTime, entryPrice, exitPrice, stake, profitLoss, contractType, result, contractId, updatedAt FROM trades WHERE result = 'pending' AND contractId IS NOT NULL ORDER BY entryTime ASC LIMIT 200"
+        "SELECT id, userId, botRunId, strategyId, entryTime, exitTime, entryPrice, exitPrice, stake, profitLoss, contractType, result, contractId, updatedAt FROM trades WHERE result = 'pending' AND contractId IS NOT NULL ORDER BY entryTime ASC LIMIT 200",
       );
       return rows as Trade[];
     } catch {
@@ -638,16 +746,20 @@ export async function getPendingTrades(): Promise<Trade[]> {
   }
 }
 
-export async function settleTrade(tradeId: number, data: {
-  result: "win" | "loss";
-  profitLoss: string;
-  exitPrice: string;
-  exitTime: Date;
-}): Promise<Trade | null> {
+export async function settleTrade(
+  tradeId: number,
+  data: {
+    result: "win" | "loss";
+    profitLoss: string;
+    exitPrice: string;
+    exitTime: Date;
+  },
+): Promise<Trade | null> {
   const db = await getDb();
   if (!db) return null;
   try {
-    await db.update(trades)
+    await db
+      .update(trades)
       .set({
         result: data.result,
         profitLoss: data.profitLoss,
@@ -661,13 +773,16 @@ export async function settleTrade(tradeId: number, data: {
     const pool = getRawPool();
     if (!pool) return null;
     try {
-      await pool.execute(
-        "UPDATE trades SET result=?, profitLoss=?, exitPrice=?, exitTime=? WHERE id=?",
-        [data.result, data.profitLoss, data.exitPrice, data.exitTime, tradeId]
-      );
+      await pool.execute("UPDATE trades SET result=?, profitLoss=?, exitPrice=?, exitTime=? WHERE id=?", [
+        data.result,
+        data.profitLoss,
+        data.exitPrice,
+        data.exitTime,
+        tradeId,
+      ]);
       const [rows] = await pool.execute(
         "SELECT id, userId, botRunId, strategyId, entryTime, exitTime, entryPrice, exitPrice, stake, profitLoss, contractType, result, contractId, updatedAt FROM trades WHERE id=?",
-        [tradeId]
+        [tradeId],
       );
       return (rows as any[])[0] || null;
     } catch {
@@ -687,7 +802,7 @@ export async function getTradeById(tradeId: number): Promise<Trade | undefined> 
     try {
       const [rows] = await pool.execute(
         "SELECT id, userId, botRunId, strategyId, entryTime, exitTime, entryPrice, exitPrice, stake, profitLoss, contractType, result, contractId, updatedAt FROM trades WHERE id=?",
-        [tradeId]
+        [tradeId],
       );
       return (rows as any[])[0] || undefined;
     } catch {
@@ -707,7 +822,7 @@ export async function getTradesByUserId(userId: number, limit: number = 50, offs
     try {
       const [rows] = await pool.execute(
         "SELECT id, userId, botRunId, strategyId, entryTime, exitTime, entryPrice, exitPrice, stake, profitLoss, contractType, result, contractId, updatedAt FROM trades WHERE userId=? ORDER BY updatedAt DESC LIMIT ? OFFSET ?",
-        [userId, limit, offset]
+        [userId, limit, offset],
       );
       return rows as Trade[];
     } catch {
@@ -721,11 +836,12 @@ export async function getHotMarkets(hours: number = 24, limit: number = 10): Pro
   if (!db) return [];
   const since = new Date(Date.now() - hours * 3600 * 1000);
   try {
-    const rows = await db.select({
-      symbol: trades.symbol,
-      count: sql<number>`COUNT(*)`,
-      wins: sql<number>`SUM(CASE WHEN ${trades.result} = 'win' THEN 1 ELSE 0 END)`,
-    })
+    const rows = await db
+      .select({
+        symbol: trades.symbol,
+        count: sql<number>`COUNT(*)`,
+        wins: sql<number>`SUM(CASE WHEN ${trades.result} = 'win' THEN 1 ELSE 0 END)`,
+      })
       .from(trades)
       .where(sql`${trades.entryTime} >= ${since}`)
       .groupBy(trades.symbol)
@@ -742,7 +858,7 @@ export async function getHotMarkets(hours: number = 24, limit: number = 10): Pro
     try {
       const [rows] = await pool.execute(
         "SELECT symbol, COUNT(*) AS tradeCount, SUM(CASE WHEN result='win' THEN 1 ELSE 0 END) AS wins FROM trades WHERE entryTime >= ? GROUP BY symbol ORDER BY tradeCount DESC LIMIT ?",
-        [since, limit]
+        [since, limit],
       );
       return (rows as any[]).map((r) => ({
         symbol: r.symbol ?? "R_100",
@@ -762,9 +878,12 @@ export async function getAccountByUserId(userId: number): Promise<{ balance: str
 export async function getAiKnowledge(userId: number, knowledgeType: string, limit: number = 50): Promise<AiKnowledgeResult[]> {
   const db = await getDb();
   if (!db) return [];
-  return db.select().from(aiKnowledge)
+  return db
+    .select()
+    .from(aiKnowledge)
     .where(and(eq(aiKnowledge.userId, userId), eq(aiKnowledge.knowledgeType, knowledgeType)))
-    .orderBy(desc(aiKnowledge.createdAt)).limit(limit);
+    .orderBy(desc(aiKnowledge.createdAt))
+    .limit(limit);
 }
 
 export async function saveAiKnowledge(data: InsertAiKnowledge): Promise<void> {
@@ -781,11 +900,12 @@ export async function pruneAiKnowledge(userId: number, knowledgeType: string, ke
   const db = await getDb();
   if (!db) return;
   try {
-    const cond = symbol ? and(eq(aiKnowledge.userId, userId), eq(aiKnowledge.knowledgeType, knowledgeType), eq(aiKnowledge.symbol, symbol))
+    const cond = symbol
+      ? and(eq(aiKnowledge.userId, userId), eq(aiKnowledge.knowledgeType, knowledgeType), eq(aiKnowledge.symbol, symbol))
       : and(eq(aiKnowledge.userId, userId), eq(aiKnowledge.knowledgeType, knowledgeType));
     const rows = await db.select({ id: aiKnowledge.id }).from(aiKnowledge).where(cond).orderBy(desc(aiKnowledge.createdAt));
     if (rows.length > keep) {
-      const ids = rows.slice(keep).map(r => r.id);
+      const ids = rows.slice(keep).map((r) => r.id);
       await db.delete(aiKnowledge).where(inArray(aiKnowledge.id, ids));
     }
   } catch {}
@@ -794,24 +914,23 @@ export async function pruneAiKnowledge(userId: number, knowledgeType: string, ke
 export async function searchAllAiKnowledge(userId: number, query: string, limit: number = 50): Promise<AiKnowledgeResult[]> {
   const db = await getDb();
   if (!db) return [];
-  return db.select().from(aiKnowledge)
-    .where(and(
-      eq(aiKnowledge.userId, userId),
-      sql`${aiKnowledge.data} LIKE ${'%' + query + '%'}`
-    ))
-    .orderBy(desc(aiKnowledge.createdAt)).limit(limit);
+  return db
+    .select()
+    .from(aiKnowledge)
+    .where(and(eq(aiKnowledge.userId, userId), sql`${aiKnowledge.data} LIKE ${"%" + query + "%"}`))
+    .orderBy(desc(aiKnowledge.createdAt))
+    .limit(limit);
 }
 
 export async function searchAiKnowledge(userId: number, query: string, knowledgeType: string, limit: number = 50): Promise<AiKnowledgeResult[]> {
   const db = await getDb();
   if (!db) return [];
-  return db.select().from(aiKnowledge)
-    .where(and(
-      eq(aiKnowledge.userId, userId),
-      eq(aiKnowledge.knowledgeType, knowledgeType),
-      sql`${aiKnowledge.data} LIKE ${'%' + query + '%'}`
-    ))
-    .orderBy(desc(aiKnowledge.createdAt)).limit(limit);
+  return db
+    .select()
+    .from(aiKnowledge)
+    .where(and(eq(aiKnowledge.userId, userId), eq(aiKnowledge.knowledgeType, knowledgeType), sql`${aiKnowledge.data} LIKE ${"%" + query + "%"}`))
+    .orderBy(desc(aiKnowledge.createdAt))
+    .limit(limit);
 }
 
 export async function createPriceAlert(data: InsertPriceAlert): Promise<PriceAlert> {
@@ -819,7 +938,13 @@ export async function createPriceAlert(data: InsertPriceAlert): Promise<PriceAle
   if (!db) throw new Error("Database not available");
   const result = await db.insert(priceAlerts).values(data);
   const id = result[0].insertId;
-  return (await db.select().from(priceAlerts).where(eq(priceAlerts.id, id as number)).limit(1))[0];
+  return (
+    await db
+      .select()
+      .from(priceAlerts)
+      .where(eq(priceAlerts.id, id as number))
+      .limit(1)
+  )[0];
 }
 
 export async function getPriceAlertsByUserId(userId: number): Promise<PriceAlert[]> {
@@ -831,7 +956,10 @@ export async function getPriceAlertsByUserId(userId: number): Promise<PriceAlert
 export async function disablePriceAlert(id: number, userId: number): Promise<void> {
   const db = await getDb();
   if (!db) return;
-  await db.update(priceAlerts).set({ status: "disabled" }).where(and(eq(priceAlerts.id, id), eq(priceAlerts.userId, userId)));
+  await db
+    .update(priceAlerts)
+    .set({ status: "disabled" })
+    .where(and(eq(priceAlerts.id, id), eq(priceAlerts.userId, userId)));
 }
 
 export async function getActivePriceAlerts(): Promise<PriceAlert[]> {
@@ -846,11 +974,22 @@ export async function markPriceAlertTriggered(id: number): Promise<void> {
   await db.update(priceAlerts).set({ status: "triggered", triggeredAt: new Date() }).where(eq(priceAlerts.id, id));
 }
 
-export async function updateStrategy(id: number, userId: number, updates: Partial<Pick<InsertStrategy, "name" | "description" | "config" | "isActive">>): Promise<Strategy | undefined> {
+export async function updateStrategy(
+  id: number,
+  userId: number,
+  updates: Partial<Pick<InsertStrategy, "name" | "description" | "config" | "isActive">>,
+): Promise<Strategy | undefined> {
   const db = await getDb();
   if (!db) return undefined;
-  await db.update(strategies).set(updates).where(and(eq(strategies.id, id), eq(strategies.userId, userId)));
-  const result = await db.select().from(strategies).where(and(eq(strategies.id, id), eq(strategies.userId, userId))).limit(1);
+  await db
+    .update(strategies)
+    .set(updates)
+    .where(and(eq(strategies.id, id), eq(strategies.userId, userId)));
+  const result = await db
+    .select()
+    .from(strategies)
+    .where(and(eq(strategies.id, id), eq(strategies.userId, userId)))
+    .limit(1);
   return result[0];
 }
 
@@ -864,9 +1003,12 @@ export async function deleteStrategy(id: number, userId: number): Promise<boolea
 export async function getAiKnowledgeByRelatedTradeId(userId: number, tradeId: number): Promise<AiKnowledgeResult[]> {
   const db = await getDb();
   if (!db) return [];
-  return db.select().from(aiKnowledge)
+  return db
+    .select()
+    .from(aiKnowledge)
     .where(and(eq(aiKnowledge.userId, userId), eq(aiKnowledge.relatedTradeId, tradeId)))
-    .orderBy(desc(aiKnowledge.createdAt)).limit(20);
+    .orderBy(desc(aiKnowledge.createdAt))
+    .limit(20);
 }
 
 export async function deleteAiKnowledgeEntry(id: number, userId: number): Promise<void> {
@@ -878,13 +1020,17 @@ export async function deleteAiKnowledgeEntry(id: number, userId: number): Promis
 export async function updateAiKnowledgeEntry(id: number, userId: number, data: Partial<InsertAiKnowledge>): Promise<void> {
   const db = await getDb();
   if (!db) return;
-  await db.update(aiKnowledge).set(data).where(and(eq(aiKnowledge.id, id), eq(aiKnowledge.userId, userId)));
+  await db
+    .update(aiKnowledge)
+    .set(data)
+    .where(and(eq(aiKnowledge.id, id), eq(aiKnowledge.userId, userId)));
 }
 
 export async function updateKnowledgeRelatedTrade(knowledgeId: number, tradeId: number, userId: number): Promise<void> {
   const db = await getDb();
   if (!db) return;
-  await db.update(aiKnowledge)
+  await db
+    .update(aiKnowledge)
     .set({ relatedTradeId: tradeId })
     .where(and(eq(aiKnowledge.id, knowledgeId), eq(aiKnowledge.userId, userId)));
 }
@@ -894,53 +1040,76 @@ export async function saveBotLog(data: InsertBotLog): Promise<void> {
   if (!db) return;
   try {
     await db.insert(botLogs).values(data);
-  } catch { /* table may not exist in production */ }
+  } catch {
+    /* table may not exist in production */
+  }
 }
 
 export async function getBotLogsByRunId(botRunId: number, userId: number, limit: number = 100): Promise<BotLog[]> {
   const db = await getDb();
   if (!db) return [];
   try {
-    return db.select().from(botLogs)
+    return db
+      .select()
+      .from(botLogs)
       .where(and(eq(botLogs.botRunId, botRunId), eq(botLogs.userId, userId)))
-      .orderBy(desc(botLogs.createdAt)).limit(limit);
-  } catch { return []; }
+      .orderBy(desc(botLogs.createdAt))
+      .limit(limit);
+  } catch {
+    return [];
+  }
 }
 
 export async function saveBotRun(botRun: InsertBotRun): Promise<BotRun> {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  
+
   const result = await db.insert(botRuns).values(botRun);
   const id = result[0].insertId;
-  return (await db.select().from(botRuns).where(eq(botRuns.id, id as number)).limit(1))[0];
+  return (
+    await db
+      .select()
+      .from(botRuns)
+      .where(eq(botRuns.id, id as number))
+      .limit(1)
+  )[0];
 }
 
 export async function getBotRunsByUserId(userId: number): Promise<BotRun[]> {
   const db = await getDb();
   if (!db) return [];
-  
+
   return db.select().from(botRuns).where(eq(botRuns.userId, userId)).orderBy(desc(botRuns.createdAt));
 }
 
 export async function updateBotRun(
   id: number,
   userId: number,
-  updates: Partial<Pick<InsertBotRun, "status" | "endTime" | "totalTrades" | "totalProfitLoss" | "errorMessage">>
+  updates: Partial<Pick<InsertBotRun, "status" | "endTime" | "totalTrades" | "totalProfitLoss" | "errorMessage">>,
 ): Promise<BotRun | undefined> {
   const db = await getDb();
   if (!db) return undefined;
 
-  await db.update(botRuns).set(updates).where(and(eq(botRuns.id, id), eq(botRuns.userId, userId)));
-  const result = await db.select().from(botRuns).where(and(eq(botRuns.id, id), eq(botRuns.userId, userId))).limit(1);
+  await db
+    .update(botRuns)
+    .set(updates)
+    .where(and(eq(botRuns.id, id), eq(botRuns.userId, userId)));
+  const result = await db
+    .select()
+    .from(botRuns)
+    .where(and(eq(botRuns.id, id), eq(botRuns.userId, userId)))
+    .limit(1);
   return result[0];
 }
 
 export async function saveTelegramSettings(settings: InsertTelegramSettings): Promise<TelegramSettings> {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  
-  await db.delete(telegramSettings).where(eq(telegramSettings.userId, settings.userId)).catch(() => {});
+
+  await db
+    .delete(telegramSettings)
+    .where(eq(telegramSettings.userId, settings.userId))
+    .catch(() => {});
   await db.insert(telegramSettings).values(settings);
   const result = await db.select().from(telegramSettings).where(eq(telegramSettings.userId, settings.userId)).limit(1);
   return result[0];
@@ -949,7 +1118,7 @@ export async function saveTelegramSettings(settings: InsertTelegramSettings): Pr
 export async function getTelegramSettingsByUserId(userId: number): Promise<TelegramSettings | undefined> {
   const db = await getDb();
   if (!db) return undefined;
-  
+
   const result = await db.select().from(telegramSettings).where(eq(telegramSettings.userId, userId)).limit(1);
   return result.length > 0 ? result[0] : undefined;
 }
@@ -975,20 +1144,25 @@ export async function sendTelegramMessage(botToken: string, chatId: string, text
 export async function saveNotificationSettings(settings: InsertNotificationSettings): Promise<NotificationSettings> {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  
+
   const result = await db.insert(notificationSettings).values(settings);
   const id = result[0].insertId;
-  return (await db.select().from(notificationSettings).where(eq(notificationSettings.id, id as number)).limit(1))[0];
+  return (
+    await db
+      .select()
+      .from(notificationSettings)
+      .where(eq(notificationSettings.id, id as number))
+      .limit(1)
+  )[0];
 }
 
 export async function getNotificationSettingsByUserId(userId: number): Promise<NotificationSettings | undefined> {
   const db = await getDb();
   if (!db) return undefined;
-  
+
   const result = await db.select().from(notificationSettings).where(eq(notificationSettings.userId, userId)).limit(1);
   return result.length > 0 ? result[0] : undefined;
 }
-
 
 export async function saveTickHistory(row: InsertTickHistory): Promise<void> {
   const db = await getDb();
@@ -1007,7 +1181,11 @@ export async function getTickHistory(symbol: string, limit: number = 1000, befor
   return db.select().from(tickHistory).where(cond).orderBy(desc(tickHistory.epoch)).limit(limit);
 }
 
-export async function checkMAcross(symbol: string, fastPeriod = 9, slowPeriod = 21): Promise<{
+export async function checkMAcross(
+  symbol: string,
+  fastPeriod = 9,
+  slowPeriod = 21,
+): Promise<{
   crossed: boolean;
   direction: "above" | "below" | null;
   fastMA: number | null;
@@ -1017,10 +1195,17 @@ export async function checkMAcross(symbol: string, fastPeriod = 9, slowPeriod = 
 }> {
   const rows = await getTickHistory(symbol, 500);
   if (rows.length < slowPeriod + 2) {
-    return { crossed: false, direction: null, fastMA: null, slowMA: null, currentPrice: null, reason: `Not enough tick data for ${symbol} (have ${rows.length}, need ${slowPeriod + 2})` };
+    return {
+      crossed: false,
+      direction: null,
+      fastMA: null,
+      slowMA: null,
+      currentPrice: null,
+      reason: `Not enough tick data for ${symbol} (have ${rows.length}, need ${slowPeriod + 2})`,
+    };
   }
   const sorted = [...rows].reverse();
-  const prices = sorted.map(r => parseFloat(r.price));
+  const prices = sorted.map((r) => parseFloat(r.price));
   const currentPrice = prices[prices.length - 1];
   const sma = (arr: number[], period: number) => {
     const slice = arr.slice(-period);
@@ -1033,12 +1218,33 @@ export async function checkMAcross(symbol: string, fastPeriod = 9, slowPeriod = 
   const fastMA = currFast;
   const slowMA = currSlow;
   if (prevFast <= prevSlow && currFast > currSlow) {
-    return { crossed: true, direction: "above", fastMA, slowMA, currentPrice, reason: `Fast MA (${fastMA.toFixed(4)}) crossed ABOVE slow MA (${slowMA.toFixed(4)}) — bullish crossover` };
+    return {
+      crossed: true,
+      direction: "above",
+      fastMA,
+      slowMA,
+      currentPrice,
+      reason: `Fast MA (${fastMA.toFixed(4)}) crossed ABOVE slow MA (${slowMA.toFixed(4)}) — bullish crossover`,
+    };
   }
   if (prevFast >= prevSlow && currFast < currSlow) {
-    return { crossed: true, direction: "below", fastMA, slowMA, currentPrice, reason: `Fast MA (${fastMA.toFixed(4)}) crossed BELOW slow MA (${slowMA.toFixed(4)}) — bearish crossover` };
+    return {
+      crossed: true,
+      direction: "below",
+      fastMA,
+      slowMA,
+      currentPrice,
+      reason: `Fast MA (${fastMA.toFixed(4)}) crossed BELOW slow MA (${slowMA.toFixed(4)}) — bearish crossover`,
+    };
   }
-  return { crossed: false, direction: null, fastMA, slowMA, currentPrice, reason: `No crossover. Fast MA (${fastMA.toFixed(4)}) / Slow MA (${slowMA.toFixed(4)})` };
+  return {
+    crossed: false,
+    direction: null,
+    fastMA,
+    slowMA,
+    currentPrice,
+    reason: `No crossover. Fast MA (${fastMA.toFixed(4)}) / Slow MA (${slowMA.toFixed(4)})`,
+  };
 }
 
 export async function saveSignal(row: InsertSignal): Promise<Signal> {
@@ -1046,19 +1252,35 @@ export async function saveSignal(row: InsertSignal): Promise<Signal> {
   if (!db) throw new Error("DB unavailable");
   const result = await db.insert(signals).values(row);
   const id = (result as any)[0]?.insertId || (result as any).insertId;
-  return (await db.select().from(signals).where(eq(signals.id, Number(id))).limit(1))[0];
+  return (
+    await db
+      .select()
+      .from(signals)
+      .where(eq(signals.id, Number(id)))
+      .limit(1)
+  )[0];
 }
 
 export async function getSignalsByUserId(userId: number, limit: number = 100): Promise<Signal[]> {
   const db = await getDb();
   if (!db) return [];
-  return db.select().from(signals).where(and(eq(signals.userId, userId), gt(signals.expiresAt, Math.floor(Date.now()/1000)))).orderBy(desc(signals.discoveredAt)).limit(limit);
+  return db
+    .select()
+    .from(signals)
+    .where(and(eq(signals.userId, userId), gt(signals.expiresAt, Math.floor(Date.now() / 1000))))
+    .orderBy(desc(signals.discoveredAt))
+    .limit(limit);
 }
 
 export async function getSignalsBySymbol(userId: number, symbol: string, limit: number = 100): Promise<Signal[]> {
   const db = await getDb();
   if (!db) return [];
-  return db.select().from(signals).where(and(eq(signals.userId, userId), eq(signals.symbol, symbol), gt(signals.expiresAt, Math.floor(Date.now()/1000)))).orderBy(desc(signals.discoveredAt)).limit(limit);
+  return db
+    .select()
+    .from(signals)
+    .where(and(eq(signals.userId, userId), eq(signals.symbol, symbol), gt(signals.expiresAt, Math.floor(Date.now() / 1000))))
+    .orderBy(desc(signals.discoveredAt))
+    .limit(limit);
 }
 // Ensure the signals.expiresAt column exists (idempotent). TiDB errors if it
 // already exists, which we swallow. Also backfill any 0 rows from old data.
@@ -1115,7 +1337,11 @@ export async function getUserMemory(userId: number): Promise<Record<string, any>
     const raw = row.memory;
     if (raw == null) return null;
     if (typeof raw === "string") {
-      try { return JSON.parse(raw); } catch { return null; }
+      try {
+        return JSON.parse(raw);
+      } catch {
+        return null;
+      }
     }
     return raw as Record<string, any>;
   } catch (e: any) {
@@ -1211,36 +1437,42 @@ export async function getSubscriptionByCustomer(customerId: string): Promise<Sub
   }
 }
 
-export async function upsertSubscription(userId: number, data: {
-  plan: string;
-  status?: string;
-  stripeCustomerId?: string;
-  stripeSubscriptionId?: string;
-  priceId?: string;
-  currentPeriodEnd?: number | null;
-}): Promise<void> {
+export async function upsertSubscription(
+  userId: number,
+  data: {
+    plan: string;
+    status?: string;
+    stripeCustomerId?: string;
+    stripeSubscriptionId?: string;
+    priceId?: string;
+    currentPeriodEnd?: number | null;
+  },
+): Promise<void> {
   const db = await getDb();
   if (!db) return;
   try {
-    await db.insert(subscriptions).values({
-      userId,
-      plan: data.plan,
-      status: data.status || "active",
-      stripeCustomerId: data.stripeCustomerId,
-      stripeSubscriptionId: data.stripeSubscriptionId,
-      priceId: data.priceId,
-      currentPeriodEnd: data.currentPeriodEnd ?? null,
-    }).onDuplicateKeyUpdate({
-      set: {
+    await db
+      .insert(subscriptions)
+      .values({
+        userId,
         plan: data.plan,
         status: data.status || "active",
         stripeCustomerId: data.stripeCustomerId,
         stripeSubscriptionId: data.stripeSubscriptionId,
         priceId: data.priceId,
         currentPeriodEnd: data.currentPeriodEnd ?? null,
-        updatedAt: new Date(),
-      },
-    });
+      })
+      .onDuplicateKeyUpdate({
+        set: {
+          plan: data.plan,
+          status: data.status || "active",
+          stripeCustomerId: data.stripeCustomerId,
+          stripeSubscriptionId: data.stripeSubscriptionId,
+          priceId: data.priceId,
+          currentPeriodEnd: data.currentPeriodEnd ?? null,
+          updatedAt: new Date(),
+        },
+      });
   } catch (e: any) {
     console.error("[upsertSubscription] failed", e?.message || e);
   }
@@ -1297,10 +1529,10 @@ export async function ensureSignalsTable(): Promise<void> {
   }
   try {
     await db.execute(sql`CREATE INDEX IF NOT EXISTS signals_userId_idx ON signals (userId)`);
-  } catch { }
+  } catch {}
   try {
     await db.execute(sql`CREATE INDEX IF NOT EXISTS signals_symbol_idx ON signals (symbol)`);
-  } catch { }
+  } catch {}
 }
 
 export async function ensureNotificationSettingsColumns(): Promise<void> {
@@ -1381,14 +1613,11 @@ export async function ensureTradesTable(): Promise<void> {
     )`);
     console.log("[ensureTradesTable] created trades table");
     // migrate existing table if missing columns from earlier schema
-    for (const col of [
-      "ADD COLUMN symbol varchar(32) NOT NULL DEFAULT 'R_100'",
-      "ADD COLUMN contractType varchar(32) DEFAULT 'CALL'",
-    ]) {
+    for (const col of ["ADD COLUMN symbol varchar(32) NOT NULL DEFAULT 'R_100'", "ADD COLUMN contractType varchar(32) DEFAULT 'CALL'"]) {
       try {
         await pool.execute(`ALTER TABLE trades ${col}`);
       } catch (e2: any) {
-        if (e2?.errno !== 1060 && !e2?.message?.includes('Duplicate column')) {
+        if (e2?.errno !== 1060 && !e2?.message?.includes("Duplicate column")) {
           console.warn("[ensureTradesTable] column migration note", e2?.message || e2);
         }
       }
@@ -1424,7 +1653,7 @@ export async function ensureStrategiesTable(): Promise<void> {
       try {
         await pool.execute(`ALTER TABLE strategies ${col}`);
       } catch (e2: any) {
-        if (e2?.errno !== 1060 && !e2?.message?.includes('Duplicate column')) {
+        if (e2?.errno !== 1060 && !e2?.message?.includes("Duplicate column")) {
           console.warn("[ensureStrategiesTable] column migration note", e2?.message || e2);
         }
       }
@@ -1491,7 +1720,6 @@ export async function ensureSignalExpiryColumn(): Promise<void> {
   }
 }
 
-
 // Recompute lastDigit from price for every row (corrects old data that stored
 // the units digit before the decimal instead of the true last decimal digit).
 // Gated behind RECOMPUTE_DIGITS=1 so it does not run on every boot.
@@ -1501,7 +1729,9 @@ export async function recomputeLastDigits(): Promise<number> {
   const db = await getDb();
   if (!db) return 0;
   try {
-    const res = await db.execute(sql`UPDATE tickHistory SET lastDigit = CAST(RIGHT(REPLACE(FORMAT(price, CASE WHEN symbol LIKE '1HZ%' THEN 3 ELSE 2 END), ',', ''), 1) AS UNSIGNED) WHERE lastDigit <> CAST(RIGHT(REPLACE(FORMAT(price, CASE WHEN symbol LIKE '1HZ%' THEN 3 ELSE 2 END), ',', ''), 1) AS UNSIGNED)`);
+    const res = await db.execute(
+      sql`UPDATE tickHistory SET lastDigit = CAST(RIGHT(REPLACE(FORMAT(price, CASE WHEN symbol LIKE '1HZ%' THEN 3 ELSE 2 END), ',', ''), 1) AS UNSIGNED) WHERE lastDigit <> CAST(RIGHT(REPLACE(FORMAT(price, CASE WHEN symbol LIKE '1HZ%' THEN 3 ELSE 2 END), ',', ''), 1) AS UNSIGNED)`,
+    );
     console.log(`[recomputeLastDigits] updated ${(res as any)?.affectedRows ?? 0} rows`);
     return (res as any)?.affectedRows ?? 0;
   } catch (e) {
@@ -1512,7 +1742,10 @@ export async function recomputeLastDigits(): Promise<number> {
 // One-time data hygiene: during a past bug, ticks were stored with lastDigit=0.
 // Remove those rows so digit stats / scanners aren't skewed by bad data.
 export async function pruneBadTicks(): Promise<number> {
-  if (process.env.PRUNE_BAD_TICKS !== "1") { console.log('[pruneBadTicks] skipped (set PRUNE_BAD_TICKS=1 to run once)'); return 0; }
+  if (process.env.PRUNE_BAD_TICKS !== "1") {
+    console.log("[pruneBadTicks] skipped (set PRUNE_BAD_TICKS=1 to run once)");
+    return 0;
+  }
   const db = await getDb();
   if (!db) return 0;
   try {
@@ -1526,11 +1759,41 @@ export async function pruneBadTicks(): Promise<number> {
 }
 
 const SEED_PLUGINS = [
-  { name: "MartingaleGuard", description: "Auto-cancels a bot if its stake doubles more than twice in a row (anti-martingale safety).", author: "369Labs", hook: "onTrade", enabledByDefault: false },
-  { name: "DailyPnLCap", description: "Stops all bots when account daily loss exceeds a user-set %.", author: "369Labs", hook: "onTrade", enabledByDefault: false },
-  { name: "SignalBooster", description: "Re-ranks AI signals by confidence × winRate before showing them.", author: "community", hook: "onSignal", enabledByDefault: true },
-  { name: "TelegramRecap", description: "Sends a nightly PnL + open-positions recap via Telegram.", author: "community", hook: "scheduled", enabledByDefault: false },
-  { name: "VolatilityWatchdog", description: "Pauses bots when realized volatility spikes > 2x its 1h average.", author: "369Labs", hook: "onTick", enabledByDefault: false },
+  {
+    name: "MartingaleGuard",
+    description: "Auto-cancels a bot if its stake doubles more than twice in a row (anti-martingale safety).",
+    author: "369Labs",
+    hook: "onTrade",
+    enabledByDefault: false,
+  },
+  {
+    name: "DailyPnLCap",
+    description: "Stops all bots when account daily loss exceeds a user-set %.",
+    author: "369Labs",
+    hook: "onTrade",
+    enabledByDefault: false,
+  },
+  {
+    name: "SignalBooster",
+    description: "Re-ranks AI signals by confidence × winRate before showing them.",
+    author: "community",
+    hook: "onSignal",
+    enabledByDefault: true,
+  },
+  {
+    name: "TelegramRecap",
+    description: "Sends a nightly PnL + open-positions recap via Telegram.",
+    author: "community",
+    hook: "scheduled",
+    enabledByDefault: false,
+  },
+  {
+    name: "VolatilityWatchdog",
+    description: "Pauses bots when realized volatility spikes > 2x its 1h average.",
+    author: "369Labs",
+    hook: "onTick",
+    enabledByDefault: false,
+  },
 ];
 
 export async function ensurePluginsTable(): Promise<void> {
@@ -1592,7 +1855,7 @@ export async function getInstalledPlugins(userId: number): Promise<any[]> {
     const rows = await db.execute(
       sql`SELECT p.*, pi.enabled AS installedEnabled FROM plugins p
           LEFT JOIN plugin_installs pi ON pi.pluginId = p.id AND pi.userId = ${userId}
-          ORDER BY p.id`
+          ORDER BY p.id`,
     );
     return (rows as any)[0] ?? [];
   } catch (e: any) {
@@ -1607,7 +1870,7 @@ export async function installPlugin(userId: number, pluginId: number, enabled: b
   try {
     await db.execute(
       sql`INSERT INTO plugin_installs (userId, pluginId, enabled) VALUES (${userId}, ${pluginId}, ${enabled ? 1 : 0})
-          ON DUPLICATE KEY UPDATE enabled = ${enabled ? 1 : 0}`
+          ON DUPLICATE KEY UPDATE enabled = ${enabled ? 1 : 0}`,
     );
   } catch (e: any) {
     console.error("[installPlugin] failed", e?.message || e);
@@ -1764,7 +2027,12 @@ export async function getActiveWebhooksForEvent(userId: number, event: string): 
     const rows = await db.execute(sql`SELECT * FROM webhooks WHERE userId = ${userId} AND active = 1`);
     const all = (rows as any)[0] ?? [];
     return all.filter((w: any) => {
-      try { const evts = typeof w.events === "string" ? JSON.parse(w.events) : w.events; return Array.isArray(evts) && evts.includes(event); } catch { return false; }
+      try {
+        const evts = typeof w.events === "string" ? JSON.parse(w.events) : w.events;
+        return Array.isArray(evts) && evts.includes(event);
+      } catch {
+        return false;
+      }
     });
   } catch {
     return [];
@@ -1775,11 +2043,11 @@ export async function exportUserData(userId: number): Promise<Record<string, any
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   const [strategies, trades, journals, workflows, bots] = await Promise.all([
-    db.execute(sql`SELECT * FROM strategies WHERE userId = ${userId}`).then(r => (r as any)[0] ?? []),
-    db.execute(sql`SELECT * FROM trades WHERE userId = ${userId}`).then(r => (r as any)[0] ?? []),
-    db.execute(sql`SELECT * FROM journals WHERE userId = ${userId}`).then(r => (r as any)[0] ?? []),
-    db.execute(sql`SELECT * FROM workflows WHERE userId = ${userId}`).then(r => (r as any)[0] ?? []),
-    db.execute(sql`SELECT * FROM bots WHERE userId = ${userId}`).then(r => (r as any)[0] ?? []),
+    db.execute(sql`SELECT * FROM strategies WHERE userId = ${userId}`).then((r) => (r as any)[0] ?? []),
+    db.execute(sql`SELECT * FROM trades WHERE userId = ${userId}`).then((r) => (r as any)[0] ?? []),
+    db.execute(sql`SELECT * FROM journals WHERE userId = ${userId}`).then((r) => (r as any)[0] ?? []),
+    db.execute(sql`SELECT * FROM workflows WHERE userId = ${userId}`).then((r) => (r as any)[0] ?? []),
+    db.execute(sql`SELECT * FROM bots WHERE userId = ${userId}`).then((r) => (r as any)[0] ?? []),
   ]);
   return { strategies, trades, journals, workflows, bots, exportedAt: new Date().toISOString() };
 }
@@ -1796,19 +2064,18 @@ export async function importUserData(userId: number, data: Record<string, any>):
     for (const row of rows) {
       const { id, createdAt, updatedAt, ...rest } = row;
       try {
-        const cols = Object.keys(rest).filter(c => SAFE_COL_RE.test(c));
+        const cols = Object.keys(rest).filter((c) => SAFE_COL_RE.test(c));
         if (cols.length === 0) continue;
-        const vals = cols.map(c => (rest as any)[c]);
+        const vals = cols.map((c) => (rest as any)[c]);
         const placeholders = vals.map(() => "?").join(", ");
         const pool = getRawPool();
         if (pool) {
-          await pool.execute(
-            `INSERT INTO ${table} (${cols.join(", ")}, userId) VALUES (${placeholders}, ?)`,
-            [...vals, userId]
-          );
+          await pool.execute(`INSERT INTO ${table} (${cols.join(", ")}, userId) VALUES (${placeholders}, ?)`, [...vals, userId]);
         }
         imported++;
-      } catch { /* skip dupes */ }
+      } catch {
+        /* skip dupes */
+      }
     }
   }
   return { imported };

@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useRef } from "react";
 import { derivWS, Tick, TickStreamListener } from "@/services/derivWebSocket";
 import { trpc } from "@/lib/trpc";
+import { lastDigitOf } from "@shared/lastDigit";
 
 interface DigitStatsProps {
   symbol: string;
@@ -23,7 +24,10 @@ export default function DigitStats({ symbol, decimalPlaces = derivWS.decimalPlac
   useEffect(() => {
     const ticks = historyQuery.data?.ticks;
     if (!ticks || !ticks.length) return;
-    const hist = ticks.map((t) => t.lastDigit).filter((d) => d >= 0 && d <= 9).reverse();
+    const hist = ticks
+      .map((t) => t.lastDigit)
+      .filter((d) => d >= 0 && d <= 9)
+      .reverse();
     if (hist.length) setDigits(hist.slice(-maxTicks));
   }, [historyQuery.data, symbol, maxTicks]);
 
@@ -32,18 +36,19 @@ export default function DigitStats({ symbol, decimalPlaces = derivWS.decimalPlac
       onTick: (tick: Tick) => {
         if (tick.symbol !== symbol) return;
 
-        const fixed = Number(tick.price).toFixed(decimalPlaces);
-        const lastDigit = parseInt(fixed[fixed.length - 1], 10);
+        const lastDigit = lastDigitOf(Number(tick.price), decimalPlaces);
         setCurrentDigit(lastDigit);
         setDigits((prev) => {
           const next = [...prev, lastDigit].slice(-maxTicks);
 
           const counts = Array(10).fill(0);
-          let even = 0, odd = 0;
+          let even = 0,
+            odd = 0;
 
           next.forEach((d) => {
             counts[d]++;
-            if (d % 2 === 0) even++; else odd++;
+            if (d % 2 === 0) even++;
+            else odd++;
           });
 
           setStats({
@@ -71,8 +76,14 @@ export default function DigitStats({ symbol, decimalPlaces = derivWS.decimalPlac
   // Over = last digit strictly greater than barrier, Under = strictly less.
   // Percentages are conditional (over / (over + under)) so they always sum to 100%.
   const th = selectedDigit;
-  let _over = 0, _under = 0;
-  digits.forEach((d) => { if (th !== null) { if (d > th) _over++; else if (d < th) _under++; } });
+  let _over = 0,
+    _under = 0;
+  digits.forEach((d) => {
+    if (th !== null) {
+      if (d > th) _over++;
+      else if (d < th) _under++;
+    }
+  });
   const _denom = _over + _under;
   const overPct = _denom ? (_over / _denom) * 100 : 0;
   const underPct = _denom ? (_under / _denom) * 100 : 0;
@@ -121,20 +132,50 @@ export default function DigitStats({ symbol, decimalPlaces = derivWS.decimalPlac
         </div>
       </div>
 
-      {th === null && (
-        <p className="text-micro text-[var(--text-muted)] mb-2">Click a digit above to set the Over/Under barrier.</p>
-      )}
+      {th === null && <p className="text-micro text-[var(--text-muted)] mb-2">Click a digit above to set the Over/Under barrier.</p>}
       <div className="bg-[var(--card)]/50 p-4 rounded border border-[var(--card)]">
         <h4 className="text-micro font-bold text-[var(--text-muted)] uppercase tracking-widest mb-4">Digit Frequency (Last {maxTicks} Ticks)</h4>
         <div className="flex items-end justify-between h-28 gap-0.5 overflow-x-auto">
           {stats.counts.map((percent, i) => (
-            <div key={i} onClick={() => { setSelectedDigit(i); }} className={`flex-1 flex flex-col items-center gap-2 cursor-pointer ${selectedDigit === i ? "ring-1 ring-[var(--accent)] rounded" : ""}`}>
-              <span className={`text-[7px] font-bold ${hasData && i === maxIdx ? "text-[var(--green)]" : hasData && i === minIdx ? "text-[var(--red)]" : "text-[var(--text-secondary)]"}`}>{percent.toFixed(1)}%</span>
-              <div className="w-full rounded-t-sm relative group cursor-pointer" style={{ height: `${(percent / maxPercent) * 100}%`, background: hasData && i === maxIdx ? "rgba(var(--green-rgb), 0.25)" : hasData && i === minIdx ? "rgba(var(--red-rgb), 0.25)" : "rgba(47, 217, 196, 0.2)" }}>
-                <div className={`absolute inset-0 rounded-t-sm transition-opacity ${i === currentDigit ? "opacity-100" : "opacity-60 group-hover:opacity-100"}`} style={{ height: `${percent}%`, background: i === currentDigit ? "var(--accent)" : hasData && i === maxIdx ? "var(--green)" : hasData && i === minIdx ? "var(--red)" : "var(--accent)" }} />
-                {i === currentDigit && (
-                  <div className="absolute -top-3 left-1/2 -translate-x-1/2 text-[var(--accent)] text-micro leading-none">▼</div>
-                )}
+            <div
+              key={i}
+              onClick={() => {
+                setSelectedDigit(i);
+              }}
+              className={`flex-1 flex flex-col items-center gap-2 cursor-pointer ${selectedDigit === i ? "ring-1 ring-[var(--accent)] rounded" : ""}`}
+            >
+              <span
+                className={`text-[7px] font-bold ${hasData && i === maxIdx ? "text-[var(--green)]" : hasData && i === minIdx ? "text-[var(--red)]" : "text-[var(--text-secondary)]"}`}
+              >
+                {percent.toFixed(1)}%
+              </span>
+              <div
+                className="w-full rounded-t-sm relative group cursor-pointer"
+                style={{
+                  height: `${(percent / maxPercent) * 100}%`,
+                  background:
+                    hasData && i === maxIdx
+                      ? "rgba(var(--green-rgb), 0.25)"
+                      : hasData && i === minIdx
+                        ? "rgba(var(--red-rgb), 0.25)"
+                        : "rgba(47, 217, 196, 0.2)",
+                }}
+              >
+                <div
+                  className={`absolute inset-0 rounded-t-sm transition-opacity ${i === currentDigit ? "opacity-100" : "opacity-60 group-hover:opacity-100"}`}
+                  style={{
+                    height: `${percent}%`,
+                    background:
+                      i === currentDigit
+                        ? "var(--accent)"
+                        : hasData && i === maxIdx
+                          ? "var(--green)"
+                          : hasData && i === minIdx
+                            ? "var(--red)"
+                            : "var(--accent)",
+                  }}
+                />
+                {i === currentDigit && <div className="absolute -top-3 left-1/2 -translate-x-1/2 text-[var(--accent)] text-micro leading-none">▼</div>}
               </div>
               <span className={`text-[9px] font-bold ${i === currentDigit ? "text-[var(--accent)]" : "text-[var(--text-secondary)]"}`}>{i}</span>
             </div>

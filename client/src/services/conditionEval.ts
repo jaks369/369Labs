@@ -2,9 +2,17 @@
 // Supports composable conditions (AND/OR/NOT) on top of a single leaf indicator.
 // Backward-compatible: a flat StrategyRule.condition is treated as one leaf.
 
+import { lastDigitOf as sharedLastDigitOf } from "@shared/lastDigit";
+
 export type IndicatorName =
-  | "digit_over" | "digit_under" | "digit_even" | "digit_odd"
-  | "parity" | "last_digit" | "consecutive_rise" | "consecutive_fall"
+  | "digit_over"
+  | "digit_under"
+  | "digit_even"
+  | "digit_odd"
+  | "parity"
+  | "last_digit"
+  | "consecutive_rise"
+  | "consecutive_fall"
   | "loss_streak"; // true if current consecutive-loss streak >= barrier
 
 export interface LeafCondition {
@@ -14,11 +22,7 @@ export interface LeafCondition {
   barrier?: number;
 }
 
-export type ConditionNode =
-  | { all: ConditionNode[] }
-  | { any: ConditionNode[] }
-  | { not: ConditionNode }
-  | ({ kind?: "leaf" } & LeafCondition);
+export type ConditionNode = { all: ConditionNode[] } | { any: ConditionNode[] } | { not: ConditionNode } | ({ kind?: "leaf" } & LeafCondition);
 
 export interface EvalContext {
   // Full trailing price history (oldest -> newest), each a number string or number.
@@ -31,27 +35,32 @@ export interface EvalContext {
   window?: number;
 }
 
-function lastDigitOf(price: number, decimals: number): number {
-  return parseInt(Number(price).toFixed(decimals).slice(-1), 10) || 0;
-}
-
 function indicatorTrue(ind: LeafCondition, ctx: EvalContext, idx: number): boolean {
   const price = ctx.prices[idx];
   const d = ctx.digits[idx];
   switch (ind.indicator) {
-    case "digit_over": return d > (ind.barrier ?? 5);
-    case "digit_under": return d < (ind.barrier ?? 5);
-    case "digit_even": return d % 2 === 0;
-    case "digit_odd": return d % 2 === 1;
-    case "parity": return ind.barrier === 1 ? d % 2 === 1 : d % 2 === 0;
+    case "digit_over":
+      return d > (ind.barrier ?? 5);
+    case "digit_under":
+      return d < (ind.barrier ?? 5);
+    case "digit_even":
+      return d % 2 === 0;
+    case "digit_odd":
+      return d % 2 === 1;
+    case "parity":
+      return ind.barrier === 1 ? d % 2 === 1 : d % 2 === 0;
     case "last_digit":
       if (ind.comparison === "greater_than") return d > (ind.barrier ?? 5);
       if (ind.comparison === "less_than") return d < (ind.barrier ?? 5);
       return d === (ind.barrier ?? 0);
-    case "consecutive_rise": return idx > 0 && ctx.prices[idx] > ctx.prices[idx - 1];
-    case "consecutive_fall": return idx > 0 && ctx.prices[idx] < ctx.prices[idx - 1];
-    case "loss_streak": return (ctx.lossStreak ?? 0) >= (ind.barrier ?? 1);
-    default: return false;
+    case "consecutive_rise":
+      return idx > 0 && ctx.prices[idx] > ctx.prices[idx - 1];
+    case "consecutive_fall":
+      return idx > 0 && ctx.prices[idx] < ctx.prices[idx - 1];
+    case "loss_streak":
+      return (ctx.lossStreak ?? 0) >= (ind.barrier ?? 1);
+    default:
+      return false;
   }
 }
 
@@ -89,4 +98,4 @@ export function legacyConditionToNode(c: LeafCondition): ConditionNode {
   return { ...c };
 }
 
-export { lastDigitOf };
+export { sharedLastDigitOf as lastDigitOf };

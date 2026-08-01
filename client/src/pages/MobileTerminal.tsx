@@ -9,7 +9,7 @@ import DerivTokenModal from "@/components/DerivTokenModal";
 import ContractTypeSelector, { ContractSelection } from "@/components/ContractTypeSelector";
 import TickChart from "@/components/TickChart";
 import { VOLATILITY_SYMBOLS, getSymbolDisplayName } from "@/lib/symbols";
-import { getDecimalPlaces } from "@shared/lastDigit";
+import { getDecimalPlaces, lastDigitOf } from "@shared/lastDigit";
 
 const ALL_FALLBACK: DerivSymbol[] = VOLATILITY_SYMBOLS.map((s) => ({ ...s, decimalPlaces: 2 }));
 const TIMEFRAMES: { label: string; points: number }[] = [
@@ -82,7 +82,7 @@ export default function MobileTerminal() {
         if (tick.symbol !== symbol) return;
         const price = Number(tick.price);
         const decimals = derivWS.decimalPlacesFor(symbol);
-        const lastDigit = parseInt(price.toFixed(decimals).slice(-1), 10) || 0;
+        const lastDigit = lastDigitOf(price, decimals);
         setTicks((prev) => [{ symbol, price, lastDigit, epoch: Math.floor(tick.timestamp / 1000) }, ...prev].slice(0, 320));
       },
       onError: () => {},
@@ -150,19 +150,19 @@ export default function MobileTerminal() {
       rise_fall: dir === "fall" ? "PUT" : "CALL",
       over_under: contract.overUnder === "under" ? "DIGITUNDER" : "DIGITOVER",
       even_odd: contract.digitMatch === "differ" ? "DIGITODD" : "DIGITEVEN",
-      digits: "DIGITMATCH",
+      digits: contract.digitMatch === "differ" ? "DIGITDIFF" : "DIGITMATCH",
       accumulator: "ACCU",
     };
     const contractType = map[contract.category];
     if (!contractType) return;
     setTradeBusy(true);
     try {
+      const isAccumulator = contract.category === "accumulator";
       const purchase = await derivWS.purchaseContract({
         symbol,
         contractType: contractType as any,
         amount: stake,
-        duration: 5,
-        durationUnit: "t",
+        ...(isAccumulator ? { growthRate: contract.growthRate ?? 1 } : { duration: 5, durationUnit: "t" }),
         ...(contract.category === "over_under" && contract.barrier !== undefined ? { barrier: contract.barrier } : {}),
         ...(contract.category === "digits" && contract.digit !== undefined ? { barrier: contract.digit } : {}),
       });

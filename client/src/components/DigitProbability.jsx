@@ -2,6 +2,7 @@ import { useEffect, useState, useRef, useMemo } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { derivWS } from "@/services/derivWebSocket";
 import { trpc } from "@/lib/trpc";
+import { lastDigitOf } from "@shared/lastDigit";
 
 function DigitCircle({ digit, percent, isCurrent, maxPercent }) {
   const r = 14;
@@ -19,7 +20,9 @@ function DigitCircle({ digit, percent, isCurrent, maxPercent }) {
         <svg width="40" height="40" viewBox="0 0 40 40" className="absolute inset-0">
           <circle cx="20" cy="20" r={r} fill="none" stroke="var(--border)" strokeWidth="2.5" />
           <motion.circle
-            cx="20" cy="20" r={r}
+            cx="20"
+            cy="20"
+            r={r}
             fill="none"
             stroke={color}
             strokeWidth="2.5"
@@ -31,11 +34,7 @@ function DigitCircle({ digit, percent, isCurrent, maxPercent }) {
             transform="rotate(-90 20 20)"
           />
         </svg>
-        <motion.span
-          className="text-xs font-bold font-mono relative z-10"
-          animate={{ color: dotColor }}
-          transition={{ duration: 0.3 }}
-        >
+        <motion.span className="text-xs font-bold font-mono relative z-10" animate={{ color: dotColor }} transition={{ duration: 0.3 }}>
           {digit}
         </motion.span>
         <AnimatePresence>
@@ -70,10 +69,7 @@ export default function DigitProbability({ symbol, decimalPlaces, maxTicks = 100
 
   const decPlaces = decimalPlaces ?? derivWS.decimalPlacesFor(symbol);
 
-  const historyQuery = trpc.market.getHistory.useQuery(
-    { symbol, limit: 500 },
-    { enabled: Boolean(symbol) }
-  );
+  const historyQuery = trpc.market.getHistory.useQuery({ symbol, limit: 500 }, { enabled: Boolean(symbol) });
 
   useEffect(() => {
     const ticks = historyQuery.data?.ticks;
@@ -86,8 +82,7 @@ export default function DigitProbability({ symbol, decimalPlaces, maxTicks = 100
     const listener = {
       onTick: (tick) => {
         if (tick.symbol !== symbol) return;
-        const fixed = Number(tick.price).toFixed(decPlaces);
-        const lastDigit = parseInt(fixed[fixed.length - 1], 10);
+        const lastDigit = lastDigitOf(Number(tick.price), decPlaces);
         setCurrentDigit(lastDigit);
         setDigits((prev) => [...prev, lastDigit].slice(-maxTicks));
 
@@ -123,17 +118,25 @@ export default function DigitProbability({ symbol, decimalPlaces, maxTicks = 100
       className="p-4 rounded-xl border transition-colors duration-300"
       style={{
         borderColor: flash === "up" ? "var(--green)" : flash === "down" ? "var(--red)" : "var(--border)",
-        background: flash === "up" ? "color-mix(in srgb, var(--green) 6%, transparent)" : flash === "down" ? "color-mix(in srgb, var(--red) 6%, transparent)" : "var(--card)",
+        background:
+          flash === "up"
+            ? "color-mix(in srgb, var(--green) 6%, transparent)"
+            : flash === "down"
+              ? "color-mix(in srgb, var(--red) 6%, transparent)"
+              : "var(--card)",
       }}
     >
       <div className="flex items-center justify-between mb-3">
-        <h4 className="text-micro font-bold text-[var(--text-muted)] uppercase tracking-widest">
-          Digit Frequency (Last {digits.length || 0} ticks)
-        </h4>
+        <h4 className="text-micro font-bold text-[var(--text-muted)] uppercase tracking-widest">Digit Frequency (Last {digits.length || 0} ticks)</h4>
         <motion.span
           className="text-[9px] font-mono px-2 py-0.5 rounded"
           animate={{
-            background: flash === "up" ? "color-mix(in srgb, var(--green) 20%, transparent)" : flash === "down" ? "color-mix(in srgb, var(--red) 20%, transparent)" : "transparent",
+            background:
+              flash === "up"
+                ? "color-mix(in srgb, var(--green) 20%, transparent)"
+                : flash === "down"
+                  ? "color-mix(in srgb, var(--red) 20%, transparent)"
+                  : "transparent",
             color: flash === "up" ? "var(--green)" : flash === "down" ? "var(--red)" : "var(--text-muted)",
           }}
         >
@@ -142,13 +145,7 @@ export default function DigitProbability({ symbol, decimalPlaces, maxTicks = 100
       </div>
       <div className="grid grid-cols-5 gap-y-2 gap-x-1 justify-items-center">
         {percents.map((pct, i) => (
-          <DigitCircle
-            key={i}
-            digit={i}
-            percent={pct}
-            isCurrent={currentDigit === i}
-            maxPercent={maxPercent}
-          />
+          <DigitCircle key={i} digit={i} percent={pct} isCurrent={currentDigit === i} maxPercent={maxPercent} />
         ))}
       </div>
     </div>

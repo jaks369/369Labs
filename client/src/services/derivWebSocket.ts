@@ -11,15 +11,15 @@ export interface TickStreamListener {
   onConnect?: () => void;
   onDisconnect?: () => void;
 }
-export type DerivContractType =
-  | "CALL" | "PUT" | "DIGITEVEN" | "DIGITODD" | "DIGITOVER" | "DIGITUNDER";
+export type DerivContractType = "CALL" | "PUT" | "DIGITEVEN" | "DIGITODD" | "DIGITOVER" | "DIGITUNDER" | "DIGITMATCH" | "DIGITDIFF" | "ACCU";
 export interface PurchaseParams {
   symbol: string;
   contractType: DerivContractType;
   amount: number;
-  duration: number;
+  duration?: number;
   durationUnit?: "t" | "s" | "m";
   barrier?: number;
+  growthRate?: number;
   stopLoss?: number;
   takeProfit?: number;
 }
@@ -89,7 +89,9 @@ class DerivWebSocketService {
   private otpInProgress = false;
 
   constructor() {
-    try { this.apiToken = localStorage.getItem("deriv_token"); } catch {}
+    try {
+      this.apiToken = localStorage.getItem("deriv_token");
+    } catch {}
     if (this.apiToken) {
       this.connectWithOtp(this.apiToken).catch(() => this.connectPublic());
     } else {
@@ -122,7 +124,7 @@ class DerivWebSocketService {
     console.log("[Deriv OTP] GET", url);
     const res = await fetch(url, {
       headers: {
-        "Authorization": `Bearer ${this.apiToken}`,
+        Authorization: `Bearer ${this.apiToken}`,
         "Deriv-App-ID": DERIV_APP_ID,
       },
     });
@@ -132,7 +134,11 @@ class DerivWebSocketService {
       throw new Error(this.friendlyError(body, res.status));
     }
     let json: any;
-    try { json = JSON.parse(body); } catch { throw new Error(this.friendlyError(`Accounts: invalid JSON: ${body}`)); }
+    try {
+      json = JSON.parse(body);
+    } catch {
+      throw new Error(this.friendlyError(`Accounts: invalid JSON: ${body}`));
+    }
     const accounts = json.data || json.accounts || [];
     if (!accounts.length) console.warn("[Deriv OTP] No accounts found in:", json);
     return accounts;
@@ -144,7 +150,7 @@ class DerivWebSocketService {
     const res = await fetch(url, {
       method: "POST",
       headers: {
-        "Authorization": `Bearer ${this.apiToken}`,
+        Authorization: `Bearer ${this.apiToken}`,
         "Deriv-App-ID": DERIV_APP_ID,
       },
     });
@@ -154,7 +160,11 @@ class DerivWebSocketService {
       throw new Error(this.friendlyError(body, res.status));
     }
     let json: any;
-    try { json = JSON.parse(body); } catch { throw new Error(this.friendlyError(`OTP: invalid JSON: ${body}`)); }
+    try {
+      json = JSON.parse(body);
+    } catch {
+      throw new Error(this.friendlyError(`OTP: invalid JSON: ${body}`));
+    }
     const wsUrl: string = json.data?.url || json.url;
     if (!wsUrl) throw new Error(this.friendlyError(`OTP response missing url: ${body}`));
     const accountType = wsUrl.includes("/real") ? "real" : "demo";
@@ -190,8 +200,11 @@ class DerivWebSocketService {
         }
       };
       this.ws.onmessage = (event) => {
-        try { this.handleMessage(JSON.parse(event.data)); }
-        catch (error) { console.error("[Deriv WS] Parse error:", error); }
+        try {
+          this.handleMessage(JSON.parse(event.data));
+        } catch (error) {
+          console.error("[Deriv WS] Parse error:", error);
+        }
       };
       this.ws.onerror = () => console.warn("[Deriv WS] Connection error");
       this.ws.onclose = () => {
@@ -199,12 +212,14 @@ class DerivWebSocketService {
         this.authorized = false;
         this.subscribedSymbols.clear();
         this.pendingSubscriptionSymbols = [];
-        this.retryTimers.forEach(t => clearTimeout(t));
+        this.retryTimers.forEach((t) => clearTimeout(t));
         this.retryTimers.clear();
         this.notifyDisconnect();
         if (!this.intentionallyDisconnected) this.attemptReconnect();
       };
-    } catch (error) { console.error("[Deriv WS] Setup failed:", error); }
+    } catch (error) {
+      console.error("[Deriv WS] Setup failed:", error);
+    }
   }
 
   private handleMessage(data: any) {
@@ -227,7 +242,16 @@ class DerivWebSocketService {
       const c = data.proposal_open_contract;
       const isSold = c.is_sold === 1 || c.status === "sold" || c.status === "won" || c.status === "lost" || c.status === "expired";
       const cb = this.contractListeners.get(c.contract_id);
-      cb?.({ contract_id: c.contract_id, is_sold: isSold ? 1 : 0, profit: c.profit, buy_price: c.buy_price, sell_price: c.sell_price, status: c.status, entry_tick: c.entry_tick, exit_tick: c.exit_tick });
+      cb?.({
+        contract_id: c.contract_id,
+        is_sold: isSold ? 1 : 0,
+        profit: c.profit,
+        buy_price: c.buy_price,
+        sell_price: c.sell_price,
+        status: c.status,
+        entry_tick: c.entry_tick,
+        exit_tick: c.exit_tick,
+      });
       if (isSold) {
         this.contractListeners.delete(c.contract_id);
         this.clearContractMeta(c.contract_id);
@@ -250,32 +274,45 @@ class DerivWebSocketService {
       const first = raw[0];
       const keys = Object.keys(first);
       console.log("[Deriv WS] active_symbols sample keys:", keys.join(", "), "sample:", JSON.stringify(first).slice(0, 200));
-      const guessField = (...names: string[]): string => names.find(n => n in first) || "";
+      const guessField = (...names: string[]): string => names.find((n) => n in first) || "";
       const symField = guessField("underlying_symbol", "symbol", "name", "id", "key", "code", "underlying", "ticker");
-      const dispField = guessField("underlying_symbol_name", "display_name", "displayName", "description", "name", "symbol_description", "long_name", "full_name", "label", "title");
+      const dispField = guessField(
+        "underlying_symbol_name",
+        "display_name",
+        "displayName",
+        "description",
+        "name",
+        "symbol_description",
+        "long_name",
+        "full_name",
+        "label",
+        "title",
+      );
       const mktField = guessField("market", "market_name", "market_display_name", "sector", "group", "asset_class");
       const smktField = guessField("submarket", "submarket_name", "sub_sector", "subgroup", "sub_market");
       const pipField = guessField("pip", "pip_size", "pip_display", "display_digits", "decimal_places", "fractional_digits", "digits");
-      let symbols: DerivSymbol[] = raw.map((s: any) => {
-        const sym = String(s[symField] || s.name || s.id || s.code || s.underlying || s.ticker || "").trim();
-        const display = String(s[dispField] || s.display_name || s.displayName || s.description || s.name || s.long_name || s.label || s.title || sym).trim();
-        return {
-          symbol: sym,
-          displayName: display,
-          market: String(s[mktField] || s.market || "").trim(),
-          submarket: String(s[smktField] || "").trim(),
-          decimalPlaces: (() => {
-            const pip = s[pipField] ?? s.pip ?? s.pip_size ?? s.display_digits;
-            const countDecimals = (v: any): number => {
-              const str = typeof v === "number" ? v.toString() : String(v || "");
-              const parts = str.split(".");
-              return parts[1] ? parts[1].replace(/0+$/, "").length || parts[1].length : 0;
-            };
-            if (typeof pip === "number" || typeof pip === "string") return countDecimals(pip);
-            return 3;
-          })(),
-        };
-      }).filter((s: any) => s.symbol && s.displayName);
+      let symbols: DerivSymbol[] = raw
+        .map((s: any) => {
+          const sym = String(s[symField] || s.name || s.id || s.code || s.underlying || s.ticker || "").trim();
+          const display = String(s[dispField] || s.display_name || s.displayName || s.description || s.name || s.long_name || s.label || s.title || sym).trim();
+          return {
+            symbol: sym,
+            displayName: display,
+            market: String(s[mktField] || s.market || "").trim(),
+            submarket: String(s[smktField] || "").trim(),
+            decimalPlaces: (() => {
+              const pip = s[pipField] ?? s.pip ?? s.pip_size ?? s.display_digits;
+              const countDecimals = (v: any): number => {
+                const str = typeof v === "number" ? v.toString() : String(v || "");
+                const parts = str.split(".");
+                return parts[1] ? parts[1].replace(/0+$/, "").length || parts[1].length : 0;
+              };
+              if (typeof pip === "number" || typeof pip === "string") return countDecimals(pip);
+              return 3;
+            })(),
+          };
+        })
+        .filter((s: any) => s.symbol && s.displayName);
       if (!symbols.length) {
         console.warn("[Deriv WS] active_symbols all filtered out, using defaults");
         symbols = [
@@ -304,7 +341,11 @@ class DerivWebSocketService {
       }
       console.log("[Deriv WS] active_symbols loaded:", symbols.length);
       this._activeSymbols = symbols;
-      this.symbolListeners.forEach(cb => { try { cb(symbols); } catch {} });
+      this.symbolListeners.forEach((cb) => {
+        try {
+          cb(symbols);
+        } catch {}
+      });
       this.processPendingSubscriptions();
       return;
     }
@@ -325,7 +366,11 @@ class DerivWebSocketService {
           }
           if (this.tickWsReady) this.processPendingSubscriptions();
         }
-        this.listeners.forEach(l => { try { l.onError?.(new Error(msg), sym); } catch {} });
+        this.listeners.forEach((l) => {
+          try {
+            l.onError?.(new Error(msg), sym);
+          } catch {}
+        });
       } else if (data.msg_type === "proposal_open_contract") {
         console.warn("[Deriv WS] Contract subscription error:", msg);
       } else {
@@ -337,16 +382,25 @@ class DerivWebSocketService {
   private fetchActiveSymbols() {
     if (!this.ws) return;
     const msg = { active_symbols: "full", req_id: this.msgId++ };
-    try { this.ws.send(JSON.stringify(msg)); }
-    catch (error) { console.error("[Deriv WS] Failed to fetch active symbols:", error); }
+    try {
+      this.ws.send(JSON.stringify(msg));
+    } catch (error) {
+      console.error("[Deriv WS] Failed to fetch active symbols:", error);
+    }
   }
 
   private ensureTickWs() {
     if (this.tickWs && this.tickWs.readyState === WebSocket.OPEN) return;
-    if (this.tickWs) { this.tickWs.close(); this.tickWs = null; }
+    if (this.tickWs) {
+      this.tickWs.close();
+      this.tickWs = null;
+    }
     try {
       this.tickWs = new WebSocket(DERIV_WS_PUBLIC);
-      this.tickWs.onopen = () => { this.tickWsReady = true; this.processPendingSubscriptions(); };
+      this.tickWs.onopen = () => {
+        this.tickWsReady = true;
+        this.processPendingSubscriptions();
+      };
       this.tickWs.onmessage = (event) => {
         try {
           const data = JSON.parse(event.data);
@@ -362,8 +416,13 @@ class DerivWebSocketService {
         } catch {}
       };
       this.tickWs.onerror = () => {};
-      this.tickWs.onclose = () => { this.tickWsReady = false; this.tickWs = null; };
-    } catch (e) { console.error("[Deriv WS] Tick WS setup failed:", e); }
+      this.tickWs.onclose = () => {
+        this.tickWsReady = false;
+        this.tickWs = null;
+      };
+    } catch (e) {
+      console.error("[Deriv WS] Tick WS setup failed:", e);
+    }
   }
 
   private processPendingSubscriptions() {
@@ -376,16 +435,20 @@ class DerivWebSocketService {
         try {
           const target = this.authorized ? (this.tickWsReady ? this.tickWs : this.ws) : this.ws;
           target?.send(JSON.stringify({ ticks: symbol, subscribe: 1, req_id: this.msgId++ }));
+        } catch (error) {
+          console.error("[Deriv WS] Failed to subscribe:", error);
         }
-        catch (error) { console.error("[Deriv WS] Failed to subscribe:", error); }
       }
     }, 500);
   }
 
   public fetchBalance() {
     if (!this.ws) return;
-    try { this.ws.send(JSON.stringify({ balance: 1, req_id: this.msgId++ })); }
-    catch (error) { console.error("[Deriv WS] Failed to fetch balance:", error); }
+    try {
+      this.ws.send(JSON.stringify({ balance: 1, req_id: this.msgId++ }));
+    } catch (error) {
+      console.error("[Deriv WS] Failed to fetch balance:", error);
+    }
   }
 
   public async fetchTickHistory(symbol: string, start: number, end: number): Promise<Tick[]> {
@@ -410,12 +473,32 @@ class DerivWebSocketService {
 
   private sendRequest(payload: Record<string, any>, timeoutMs = 15000): Promise<any> {
     return new Promise((resolve, reject) => {
-      if (!this.ws || this.ws.readyState !== WebSocket.OPEN) { reject(new Error("WebSocket not connected")); return; }
+      if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
+        reject(new Error("WebSocket not connected"));
+        return;
+      }
       const reqId = this.msgId++;
-      const timer = setTimeout(() => { this.pendingRequests.delete(reqId); reject(new Error("Deriv API request timed out")); }, timeoutMs);
-      this.pendingRequests.set(reqId, { resolve: (v) => { clearTimeout(timer); resolve(v); }, reject: (e) => { clearTimeout(timer); reject(e); } });
-      try { this.ws.send(JSON.stringify({ ...payload, req_id: reqId })); }
-      catch (error) { clearTimeout(timer); this.pendingRequests.delete(reqId); reject(error instanceof Error ? error : new Error(String(error))); }
+      const timer = setTimeout(() => {
+        this.pendingRequests.delete(reqId);
+        reject(new Error("Deriv API request timed out"));
+      }, timeoutMs);
+      this.pendingRequests.set(reqId, {
+        resolve: (v) => {
+          clearTimeout(timer);
+          resolve(v);
+        },
+        reject: (e) => {
+          clearTimeout(timer);
+          reject(e);
+        },
+      });
+      try {
+        this.ws.send(JSON.stringify({ ...payload, req_id: reqId }));
+      } catch (error) {
+        clearTimeout(timer);
+        this.pendingRequests.delete(reqId);
+        reject(error instanceof Error ? error : new Error(String(error)));
+      }
     });
   }
 
@@ -423,7 +506,10 @@ class DerivWebSocketService {
     return new Promise((resolve, reject) => {
       try {
         const ws = new WebSocket(DERIV_WS_V3);
-        const timeout = setTimeout(() => { ws.close(); reject(new Error("v3 WS timed out")); }, 30000);
+        const timeout = setTimeout(() => {
+          ws.close();
+          reject(new Error("v3 WS timed out"));
+        }, 30000);
         let reqId = 1;
         const pending = new Map<number, { res: (v: any) => void; rej: (e: Error) => void }>();
         let proposalId = "";
@@ -434,25 +520,61 @@ class DerivWebSocketService {
         };
         ws.onmessage = (event) => {
           let data: any;
-          try { data = JSON.parse(event.data); } catch { return; }
-          if (data.error) { ws.close(); clearTimeout(timeout); reject(new Error(data.error.message || JSON.stringify(data.error))); return; }
+          try {
+            data = JSON.parse(event.data);
+          } catch {
+            return;
+          }
+          if (data.error) {
+            ws.close();
+            clearTimeout(timeout);
+            reject(new Error(data.error.message || JSON.stringify(data.error)));
+            return;
+          }
           if (data.msg_type === "authorize") {
-            ws.send(JSON.stringify({ proposal: 1, amount: params.amount, basis: "stake", contract_type: params.contractType, currency: "USD", duration: params.duration, duration_unit: params.durationUnit || "t", symbol: params.symbol, ...(params.barrier !== undefined ? { barrier: String(params.barrier) } : {}), req_id: reqId++ }));
+            ws.send(
+              JSON.stringify({
+                proposal: 1,
+                amount: params.amount,
+                basis: "stake",
+                contract_type: params.contractType,
+                currency: "USD",
+                symbol: params.symbol,
+                ...(params.growthRate !== undefined
+                  ? { growth_rate: params.growthRate }
+                  : { duration: params.duration, duration_unit: params.durationUnit || "t" }),
+                ...(params.barrier !== undefined ? { barrier: String(params.barrier) } : {}),
+                req_id: reqId++,
+              }),
+            );
           } else if (data.msg_type === "proposal") {
             proposalId = data.proposal.id;
             askPrice = data.proposal.ask_price;
             spot = Number(data.proposal.spot ?? 0);
             ws.send(JSON.stringify({ buy: proposalId, price: askPrice, req_id: reqId++ }));
           } else if (data.msg_type === "buy") {
-            ws.close(); clearTimeout(timeout);
+            ws.close();
+            clearTimeout(timeout);
             const b = data.buy;
             this.lastBalance = { ...(this.lastBalance || {}), balance: b.balance_after ?? (this.lastBalance?.balance ?? 0) - params.amount };
             this.notifyBalance(this.lastBalance);
-            resolve({ contractId: b.contract_id, buyPrice: b.buy_price, longcode: b.longcode || "", balanceAfter: b.balance_after ?? 0, entrySpot: spot > 0 ? spot : undefined, entryTime: Date.now() });
+            resolve({
+              contractId: b.contract_id,
+              buyPrice: b.buy_price,
+              longcode: b.longcode || "",
+              balanceAfter: b.balance_after ?? 0,
+              entrySpot: spot > 0 ? spot : undefined,
+              entryTime: Date.now(),
+            });
           }
         };
-        ws.onerror = () => { clearTimeout(timeout); reject(new Error("v3 WS connection failed")); };
-      } catch (e: any) { reject(e); }
+        ws.onerror = () => {
+          clearTimeout(timeout);
+          reject(new Error("v3 WS connection failed"));
+        };
+      } catch (e: any) {
+        reject(e);
+      }
     });
   }
 
@@ -461,7 +583,15 @@ class DerivWebSocketService {
     if (this.apiMode === "v1") {
       // Try v1 OTP WS — tries various message formats
       try {
-        const contractParams = { amount: params.amount, basis: "stake", contract_type: params.contractType, currency: "USD", duration: params.duration, duration_unit: params.durationUnit || "t", underlying_symbol: params.symbol, ...(params.barrier !== undefined ? { barrier: String(params.barrier) } : {}) };
+        const contractParams = {
+          amount: params.amount,
+          basis: "stake",
+          contract_type: params.contractType,
+          currency: "USD",
+          underlying_symbol: params.symbol,
+          ...(params.growthRate !== undefined ? { growth_rate: params.growthRate } : { duration: params.duration, duration_unit: params.durationUnit || "t" }),
+          ...(params.barrier !== undefined ? { barrier: String(params.barrier) } : {}),
+        };
         for (const format of [
           { proposal: 1, ...contractParams },
           { proposal: 1, contract: contractParams },
@@ -475,7 +605,14 @@ class DerivWebSocketService {
             this.lastBalance = { ...(this.lastBalance || {}), balance: b };
             this.notifyBalance(this.lastBalance);
             const entrySpot = Number(proposalRes.proposal.spot ?? 0);
-            return { contractId: buyRes.buy.contract_id, buyPrice: buyRes.buy.buy_price, longcode: buyRes.buy.longcode, balanceAfter: b, entrySpot: entrySpot > 0 ? entrySpot : undefined, entryTime: Date.now() };
+            return {
+              contractId: buyRes.buy.contract_id,
+              buyPrice: buyRes.buy.buy_price,
+              longcode: buyRes.buy.longcode,
+              balanceAfter: b,
+              entrySpot: entrySpot > 0 ? entrySpot : undefined,
+              entryTime: Date.now(),
+            };
           }
         }
         console.warn("[Deriv WS] v1 proposal failed all formats");
@@ -483,11 +620,18 @@ class DerivWebSocketService {
         console.warn("[Deriv WS] v1 proposal error:", e.message);
       }
       // Fall back to v3 WS
-      try { return await this.v3Trade(params); } catch {}
+      try {
+        return await this.v3Trade(params);
+      } catch {}
       throw new Error("All trading methods failed");
     }
     if (!this.ws || this.ws.readyState !== WebSocket.OPEN) throw new Error("WebSocket not connected");
-    let proposalPayload: Record<string, any> = { proposal: 1, amount: params.amount, basis: "stake", contract_type: params.contractType, currency: "USD", duration: params.duration, duration_unit: params.durationUnit || "t" };
+    let proposalPayload: Record<string, any> = { proposal: 1, amount: params.amount, basis: "stake", contract_type: params.contractType, currency: "USD" };
+    if (params.growthRate !== undefined) proposalPayload.growth_rate = params.growthRate;
+    else {
+      proposalPayload.duration = params.duration;
+      proposalPayload.duration_unit = params.durationUnit || "t";
+    }
     if (params.barrier !== undefined) proposalPayload.barrier = String(params.barrier);
     if (params.stopLoss !== undefined) proposalPayload.stop_loss = String(params.stopLoss);
     if (params.takeProfit !== undefined) proposalPayload.take_profit = String(params.takeProfit);
@@ -503,7 +647,14 @@ class DerivWebSocketService {
           this.lastBalance = { ...(this.lastBalance || {}), balance: b };
           this.notifyBalance(this.lastBalance);
           const entrySpot = Number(proposalRes.proposal.spot ?? 0);
-          return { contractId: buyRes.buy.contract_id, buyPrice: buyRes.buy.buy_price, longcode: buyRes.buy.longcode, balanceAfter: b, entrySpot: entrySpot > 0 ? entrySpot : undefined, entryTime: Date.now() };
+          return {
+            contractId: buyRes.buy.contract_id,
+            buyPrice: buyRes.buy.buy_price,
+            longcode: buyRes.buy.longcode,
+            balanceAfter: b,
+            entrySpot: entrySpot > 0 ? entrySpot : undefined,
+            entryTime: Date.now(),
+          };
         }
         lastError = new Error("No proposal returned: " + JSON.stringify(proposalRes).slice(0, 200));
       } catch (e: any) {
@@ -516,8 +667,11 @@ class DerivWebSocketService {
   public subscribeToContract(contractId: number, onUpdate: (c: ContractUpdate) => void): void {
     this.contractListeners.set(contractId, onUpdate);
     if (!this.ws || this.ws.readyState !== WebSocket.OPEN) return;
-    try { this.ws.send(JSON.stringify({ proposal_open_contract: 1, contract_id: contractId, subscribe: 1, req_id: this.msgId++ })); }
-    catch (error) { console.error("[Deriv WS] Failed to subscribe to contract:", error); }
+    try {
+      this.ws.send(JSON.stringify({ proposal_open_contract: 1, contract_id: contractId, subscribe: 1, req_id: this.msgId++ }));
+    } catch (error) {
+      console.error("[Deriv WS] Failed to subscribe to contract:", error);
+    }
   }
 
   public onContractSettled(cb: (contractId: number, update: ContractUpdate, meta: any) => void): void {
@@ -585,7 +739,11 @@ class DerivWebSocketService {
             const meta = this.getContractMeta(contractId);
             this.subscribeToContract(contractId, (update) => {
               if (update.is_sold) {
-                this.contractSettledListeners.forEach(cb => { try { cb(contractId, update, meta); } catch {} });
+                this.contractSettledListeners.forEach((cb) => {
+                  try {
+                    cb(contractId, update, meta);
+                  } catch {}
+                });
               }
             });
           }
@@ -599,7 +757,7 @@ class DerivWebSocketService {
     if (this.reconnectAttempts < this.maxReconnectAttempts) {
       this.reconnectAttempts++;
       console.log(`[Deriv WS] Reconnect attempt ${this.reconnectAttempts}/${this.maxReconnectAttempts}`);
-      const delay = this.baseReconnectDelay * (2 ** (this.reconnectAttempts - 1));
+      const delay = this.baseReconnectDelay * 2 ** (this.reconnectAttempts - 1);
       setTimeout(() => {
         if (this.apiToken) {
           this.connectWithOtp(this.apiToken).catch(() => this.connectPublic());
@@ -611,7 +769,7 @@ class DerivWebSocketService {
   }
 
   private wsForTicks(): WebSocket | null {
-    return (this.authorized && this.tickWsReady) ? this.tickWs : this.ws;
+    return this.authorized && this.tickWsReady ? this.tickWs : this.ws;
   }
 
   public subscribe(symbol: string): number {
@@ -622,9 +780,16 @@ class DerivWebSocketService {
     this.subscribedSymbols.add(symbol);
     this.subErrors.delete(symbol);
     const target = this.wsForTicks();
-    if (!target || target.readyState !== WebSocket.OPEN) { this.pendingSubscriptionSymbols.push(symbol); return subId; }
-    try { target.send(JSON.stringify({ ticks: symbol, subscribe: 1, req_id: this.msgId++ })); }
-    catch (error) { console.error("[Deriv WS] Failed to subscribe:", error); this.subscribedSymbols.delete(symbol); }
+    if (!target || target.readyState !== WebSocket.OPEN) {
+      this.pendingSubscriptionSymbols.push(symbol);
+      return subId;
+    }
+    try {
+      target.send(JSON.stringify({ ticks: symbol, subscribe: 1, req_id: this.msgId++ }));
+    } catch (error) {
+      console.error("[Deriv WS] Failed to subscribe:", error);
+      this.subscribedSymbols.delete(symbol);
+    }
     return subId;
   }
 
@@ -637,8 +802,13 @@ class DerivWebSocketService {
     const reqId = this.msgId++;
     this.subSymbolById.set(reqId, symbol);
     const target = this.wsForTicks();
-    try { target?.send(JSON.stringify({ ticks: symbol, subscribe: 1, req_id: reqId })); }
-    catch (error) { console.error("[Deriv WS] Failed to subscribe:", error); this.subscribedSymbols.delete(symbol); this.subSymbolById.delete(reqId); }
+    try {
+      target?.send(JSON.stringify({ ticks: symbol, subscribe: 1, req_id: reqId }));
+    } catch (error) {
+      console.error("[Deriv WS] Failed to subscribe:", error);
+      this.subscribedSymbols.delete(symbol);
+      this.subSymbolById.delete(reqId);
+    }
   }
 
   public unsubscribe(subscriptionId: number): void {
@@ -651,8 +821,11 @@ class DerivWebSocketService {
     this.subscribedSymbols.delete(symbol);
     const target = this.wsForTicks();
     if (target && target.readyState === WebSocket.OPEN) {
-      try { target.send(JSON.stringify({ ticks: symbol, subscribe: 0, req_id: this.msgId++ })); }
-      catch (error) { console.error("[Deriv WS] Failed to unsubscribe:", error); }
+      try {
+        target.send(JSON.stringify({ ticks: symbol, subscribe: 0, req_id: this.msgId++ }));
+      } catch (error) {
+        console.error("[Deriv WS] Failed to unsubscribe:", error);
+      }
     }
   }
 
@@ -675,46 +848,131 @@ class DerivWebSocketService {
       }
     }
   }
-  public addListener(listener: TickStreamListener): void { this.listeners.add(listener); if (this.ws && this.ws.readyState === WebSocket.OPEN) { try { listener.onConnect?.(); } catch {} } }
-  public removeListener(listener: TickStreamListener): void { this.listeners.delete(listener); }
+  public addListener(listener: TickStreamListener): void {
+    this.listeners.add(listener);
+    if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+      try {
+        listener.onConnect?.();
+      } catch {}
+    }
+  }
+  public removeListener(listener: TickStreamListener): void {
+    this.listeners.delete(listener);
+  }
   private notifyTick(tick: Tick): void {
     const buf = this.tickBuffer.get(tick.symbol) || [];
     buf.push(tick);
     if (buf.length > 2000) buf.shift();
     this.tickBuffer.set(tick.symbol, buf);
-    this.listeners.forEach(l => { try { l.onTick(tick); } catch {} });
+    this.listeners.forEach((l) => {
+      try {
+        l.onTick(tick);
+      } catch {}
+    });
   }
-  private notifyError(error: Error): void { this.listeners.forEach(l => { try { l.onError?.(error); } catch {} }); }
-  getSubError(symbol: string): string | undefined { return this.subErrors.get(symbol); }
-  private notifyConnect(): void { this.listeners.forEach(l => { try { l.onConnect?.(); } catch {} }); }
-  private notifyDisconnect(): void { this.listeners.forEach(l => { try { l.onDisconnect?.(); } catch {} }); }
-  public isConnected(): boolean { return this.ws !== null && this.ws.readyState === WebSocket.OPEN; }
-  public isAuthorized(): boolean { return this.authorized; }
-  public getAccountType(): string { return this.lastAccountType; }
+  private notifyError(error: Error): void {
+    this.listeners.forEach((l) => {
+      try {
+        l.onError?.(error);
+      } catch {}
+    });
+  }
+  getSubError(symbol: string): string | undefined {
+    return this.subErrors.get(symbol);
+  }
+  private notifyConnect(): void {
+    this.listeners.forEach((l) => {
+      try {
+        l.onConnect?.();
+      } catch {}
+    });
+  }
+  private notifyDisconnect(): void {
+    this.listeners.forEach((l) => {
+      try {
+        l.onDisconnect?.();
+      } catch {}
+    });
+  }
+  public isConnected(): boolean {
+    return this.ws !== null && this.ws.readyState === WebSocket.OPEN;
+  }
+  public isAuthorized(): boolean {
+    return this.authorized;
+  }
+  public getAccountType(): string {
+    return this.lastAccountType;
+  }
   public onBalance(cb: (b: any) => void): void {
     this.balanceListeners.add(cb);
-    if (this.lastBalance) { try { cb(this.lastBalance); } catch {} }
+    if (this.lastBalance) {
+      try {
+        cb(this.lastBalance);
+      } catch {}
+    }
     if (this.authorized) this.fetchBalance();
   }
-  public onSymbols(cb: (symbols: DerivSymbol[]) => void): void { this.symbolListeners.add(cb); if (this._activeSymbols.length > 0) cb(this._activeSymbols); }
-  public onTokenError(cb: (msg: string) => void): () => void { this.tokenListeners.add(cb); return () => this.tokenListeners.delete(cb); }
-  public get activeSymbols(): DerivSymbol[] { return this._activeSymbols; }
-  public getSymbol(symbol: string): DerivSymbol | undefined { return this._activeSymbols.find(s => s.symbol === symbol); }
+  public onSymbols(cb: (symbols: DerivSymbol[]) => void): void {
+    this.symbolListeners.add(cb);
+    if (this._activeSymbols.length > 0) cb(this._activeSymbols);
+  }
+  public onTokenError(cb: (msg: string) => void): () => void {
+    this.tokenListeners.add(cb);
+    return () => this.tokenListeners.delete(cb);
+  }
+  public get activeSymbols(): DerivSymbol[] {
+    return this._activeSymbols;
+  }
+  public getSymbol(symbol: string): DerivSymbol | undefined {
+    return this._activeSymbols.find((s) => s.symbol === symbol);
+  }
   public getRecentTicks(symbol: string, limit = 100): Tick[] {
     const buf = this.tickBuffer.get(symbol) || [];
     return buf.slice(-limit);
   }
-  public decimalPlacesFor(symbol: string): number { return this.getSymbol(symbol)?.decimalPlaces ?? 3; }
-  private notifyBalance(b: any): void { this.balanceListeners.forEach(cb => { try { cb(b); } catch {} }); }
-  private notifyTokenError(msg: string): void { this.tokenListeners.forEach(cb => { try { cb(msg); } catch {} }); }
-  public disconnect(): void { this.intentionallyDisconnected = true; if (this.ws) { this.ws.close(); this.ws = null; } if (this.tickWs) { this.tickWs.close(); this.tickWs = null; this.tickWsReady = false; } this.authorized = false; this.contractListeners.clear(); this.pendingRequests.forEach(p => p.reject(new Error("Connection closed"))); this.pendingRequests.clear(); }
+  public decimalPlacesFor(symbol: string): number {
+    return this.getSymbol(symbol)?.decimalPlaces ?? 3;
+  }
+  private notifyBalance(b: any): void {
+    this.balanceListeners.forEach((cb) => {
+      try {
+        cb(b);
+      } catch {}
+    });
+  }
+  private notifyTokenError(msg: string): void {
+    this.tokenListeners.forEach((cb) => {
+      try {
+        cb(msg);
+      } catch {}
+    });
+  }
+  public disconnect(): void {
+    this.intentionallyDisconnected = true;
+    if (this.ws) {
+      this.ws.close();
+      this.ws = null;
+    }
+    if (this.tickWs) {
+      this.tickWs.close();
+      this.tickWs = null;
+      this.tickWsReady = false;
+    }
+    this.authorized = false;
+    this.contractListeners.clear();
+    this.pendingRequests.forEach((p) => p.reject(new Error("Connection closed")));
+    this.pendingRequests.clear();
+  }
 
   public async setApiToken(token: string): Promise<void> {
     const changed = this.apiToken !== token;
     if (!changed && this.authorized) return;
     this.apiToken = token;
     this.authorized = false;
-    try { if (token) localStorage.setItem("deriv_token", token); else localStorage.removeItem("deriv_token"); } catch {}
+    try {
+      if (token) localStorage.setItem("deriv_token", token);
+      else localStorage.removeItem("deriv_token");
+    } catch {}
     if (!token) {
       this.connectPublic();
       return;
@@ -726,9 +984,7 @@ class DerivWebSocketService {
     if (this.otpInProgress) return;
     this.otpInProgress = true;
     const timeoutMs = 15000;
-    const timeoutPromise = new Promise<never>((_, reject) => 
-      setTimeout(() => reject(new Error("OTP connection timeout")), timeoutMs)
-    );
+    const timeoutPromise = new Promise<never>((_, reject) => setTimeout(() => reject(new Error("OTP connection timeout")), timeoutMs));
     try {
       await Promise.race([
         (async () => {

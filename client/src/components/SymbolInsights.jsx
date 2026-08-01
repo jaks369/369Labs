@@ -1,18 +1,21 @@
 import { TrendingUp, TrendingDown, Activity, BarChart3, Zap } from "lucide-react";
 import { getSymbolDisplayName } from "@/lib/symbols";
+import { lastDigitOf } from "@shared/lastDigit";
 
 function digitFrequency(ticks, decimals) {
   const freq = Array(10).fill(0);
   let total = 0;
   ticks.forEach((t) => {
-    const d = t.lastDigit != null ? t.lastDigit : parseInt(Number(t.price).toFixed(decimals || 3).slice(-1), 10) || 0;
-    freq[d]++; total++;
+    const d = t.lastDigit != null ? t.lastDigit : lastDigitOf(Number(t.price), decimals || 3);
+    freq[d]++;
+    total++;
   });
   return { freq, total };
 }
 
 function trendBias(ticks) {
-  let up = 0, down = 0;
+  let up = 0,
+    down = 0;
   for (let i = 1; i < ticks.length; i++) {
     if (ticks[i].price > ticks[i - 1].price) up++;
     else if (ticks[i].price < ticks[i - 1].price) down++;
@@ -93,7 +96,9 @@ export default function SymbolInsights({ symbol, ticks = [], trades = [], decima
             <div className="min-w-0 flex-1">
               <div className="flex items-center justify-between gap-2">
                 <span className="text-caption font-semibold text-white">{ins.label}</span>
-                <span className="text-caption font-bold font-mono" style={{ color: ins.color }}>{ins.value}</span>
+                <span className="text-caption font-bold font-mono" style={{ color: ins.color }}>
+                  {ins.value}
+                </span>
               </div>
               <p className="text-micro text-[var(--text-muted)] mt-0.5">{ins.detail}</p>
             </div>

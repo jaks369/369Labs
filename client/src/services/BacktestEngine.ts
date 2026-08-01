@@ -42,13 +42,20 @@ function evaluateCondition(rule: any, tick: Tick, history: Tick[], decimals: num
     const t = history[idx];
     const d = lastDigitOf(t.price, decimals);
     switch (indicator) {
-      case "digit_over": return d > (rule.condition.barrier ?? 5);
-      case "digit_under": return d < (rule.condition.barrier ?? 5);
-      case "digit_even": return d % 2 === 0;
-      case "digit_odd": return d % 2 === 1;
-      case "consecutive_rise": return idx > 0 && t.price > history[idx - 1].price;
-      case "consecutive_fall": return idx > 0 && t.price < history[idx - 1].price;
-      default: return false;
+      case "digit_over":
+        return d > (rule.condition.barrier ?? 5);
+      case "digit_under":
+        return d < (rule.condition.barrier ?? 5);
+      case "digit_even":
+        return d % 2 === 0;
+      case "digit_odd":
+        return d % 2 === 1;
+      case "consecutive_rise":
+        return idx > 0 && t.price > history[idx - 1].price;
+      case "consecutive_fall":
+        return idx > 0 && t.price < history[idx - 1].price;
+      default:
+        return false;
     }
   };
   if (rule.condition.comparison === "appears_consecutively") {
@@ -68,13 +75,24 @@ function evaluateCondition(rule: any, tick: Tick, history: Tick[], decimals: num
 function simulateTradeOutcome(entryPrice: number, nextPrice: number, contractType: string, barrier?: number, decimals?: number): "win" | "loss" {
   const d = decimals ?? 2;
   switch (contractType) {
-    case "CALL": return nextPrice > entryPrice ? "win" : "loss";
-    case "PUT": return nextPrice < entryPrice ? "win" : "loss";
-    case "DIGITEVEN": return lastDigitOf(nextPrice, d) % 2 === 0 ? "win" : "loss";
-    case "DIGITODD": return lastDigitOf(nextPrice, d) % 2 === 1 ? "win" : "loss";
-    case "DIGITOVER": return lastDigitOf(nextPrice, d) > (barrier ?? 5) ? "win" : "loss";
-    case "DIGITUNDER": return lastDigitOf(nextPrice, d) < (barrier ?? 5) ? "win" : "loss";
-    default: return nextPrice > entryPrice ? "win" : "loss";
+    case "CALL":
+      return nextPrice > entryPrice ? "win" : "loss";
+    case "PUT":
+      return nextPrice < entryPrice ? "win" : "loss";
+    case "DIGITEVEN":
+      return lastDigitOf(nextPrice, d) % 2 === 0 ? "win" : "loss";
+    case "DIGITODD":
+      return lastDigitOf(nextPrice, d) % 2 === 1 ? "win" : "loss";
+    case "DIGITOVER":
+      return lastDigitOf(nextPrice, d) > (barrier ?? 5) ? "win" : "loss";
+    case "DIGITUNDER":
+      return lastDigitOf(nextPrice, d) < (barrier ?? 5) ? "win" : "loss";
+    case "DIGITMATCH":
+      return lastDigitOf(nextPrice, d) === (barrier ?? 0) ? "win" : "loss";
+    case "DIGITDIFF":
+      return lastDigitOf(nextPrice, d) !== (barrier ?? 0) ? "win" : "loss";
+    default:
+      return nextPrice > entryPrice ? "win" : "loss";
   }
 }
 
@@ -84,13 +102,20 @@ function calcPnl(result: "win" | "loss", stake: number): number {
 
 function actionToContractType(action: any): { contractType: string; barrier?: number } {
   switch (action?.tradeType) {
-    case "buy_rise": return { contractType: "CALL" };
-    case "buy_fall": return { contractType: "PUT" };
-    case "buy_even": return { contractType: "DIGITEVEN" };
-    case "buy_odd": return { contractType: "DIGITODD" };
-    case "buy_over": return { contractType: "DIGITOVER", barrier: action.barrier ?? 5 };
-    case "buy_under": return { contractType: "DIGITUNDER", barrier: action.barrier ?? 5 };
-    default: return { contractType: "CALL" };
+    case "buy_rise":
+      return { contractType: "CALL" };
+    case "buy_fall":
+      return { contractType: "PUT" };
+    case "buy_even":
+      return { contractType: "DIGITEVEN" };
+    case "buy_odd":
+      return { contractType: "DIGITODD" };
+    case "buy_over":
+      return { contractType: "DIGITOVER", barrier: action.barrier ?? 5 };
+    case "buy_under":
+      return { contractType: "DIGITUNDER", barrier: action.barrier ?? 5 };
+    default:
+      return { contractType: "CALL" };
   }
 }
 

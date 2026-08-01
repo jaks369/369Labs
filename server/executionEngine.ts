@@ -15,18 +15,26 @@ function evaluateCondition(rule: any, prices: number[], digits: number[], idx: n
   const checkIndex = (i: number): boolean => {
     const d = digits[i];
     switch (cond.indicator) {
-      case "digit_over": return d > (cond.barrier ?? 5);
-      case "digit_under": return d < (cond.barrier ?? 5);
-      case "digit_even": return d % 2 === 0;
-      case "digit_odd": return d % 2 === 1;
-      case "parity": return cond.barrier === 1 ? d % 2 === 1 : d % 2 === 0;
+      case "digit_over":
+        return d > (cond.barrier ?? 5);
+      case "digit_under":
+        return d < (cond.barrier ?? 5);
+      case "digit_even":
+        return d % 2 === 0;
+      case "digit_odd":
+        return d % 2 === 1;
+      case "parity":
+        return cond.barrier === 1 ? d % 2 === 1 : d % 2 === 0;
       case "last_digit":
         if (cond.comparison === "greater_than") return d > (cond.barrier ?? 5);
         if (cond.comparison === "less_than") return d < (cond.barrier ?? 5);
         return d === (cond.barrier ?? 0);
-      case "consecutive_rise": return i > 0 && prices[i] > prices[i - 1];
-      case "consecutive_fall": return i > 0 && prices[i] < prices[i - 1];
-      default: return false;
+      case "consecutive_rise":
+        return i > 0 && prices[i] > prices[i - 1];
+      case "consecutive_fall":
+        return i > 0 && prices[i] < prices[i - 1];
+      default:
+        return false;
     }
   };
   const count = cond.count ?? 1;
@@ -43,17 +51,23 @@ function evaluateCondition(rule: any, prices: number[], digits: number[], idx: n
 
 function simulateOutcome(entryPrice: number, nextPrice: number, contractType: string): "win" | "loss" {
   switch (contractType) {
-    case "CALL": return nextPrice > entryPrice ? "win" : "loss";
-    case "PUT": return nextPrice < entryPrice ? "win" : "loss";
-    default: return nextPrice > entryPrice ? "win" : "loss";
+    case "CALL":
+      return nextPrice > entryPrice ? "win" : "loss";
+    case "PUT":
+      return nextPrice < entryPrice ? "win" : "loss";
+    default:
+      return nextPrice > entryPrice ? "win" : "loss";
   }
 }
 
 function actionToContractType(action: any): string {
   switch (action?.tradeType) {
-    case "buy_rise": return "CALL";
-    case "buy_fall": return "PUT";
-    default: return "CALL";
+    case "buy_rise":
+      return "CALL";
+    case "buy_fall":
+      return "PUT";
+    default:
+      return "CALL";
   }
 }
 
@@ -84,8 +98,8 @@ async function executeBotCycle(): Promise<void> {
     const ticks = getRecentTicks(symbol, 100);
     if (ticks.length < 10) continue;
 
-    const prices = ticks.map(t => t.price);
-    const digits = ticks.map(t => t.lastDigit);
+    const prices = ticks.map((t) => t.price);
+    const digits = ticks.map((t) => t.lastDigit);
 
     // Evaluate the last N ticks
     let triggered = false;
@@ -107,7 +121,7 @@ async function executeBotCycle(): Promise<void> {
       const contractType = actionToContractType(rule.action);
       const entryPrice = prices[triggerIdx];
       const tickAfter = prices[triggerIdx + 1];
-      const isDigit = ["DIGITMATCH", "DIGITOVER", "DIGITUNDER", "DIGITEVEN", "DIGITODD"].includes(contractType);
+      const isDigit = ["DIGITMATCH", "DIGITDIFF", "DIGITOVER", "DIGITUNDER", "DIGITEVEN", "DIGITODD"].includes(contractType);
       // Use Deriv proposal/buy flow to place the actual trade
       const proposalPayload: Record<string, any> = {
         proposal: 1,
@@ -123,10 +137,12 @@ async function executeBotCycle(): Promise<void> {
       const proposal = await (conn as any).sendRaw(proposalPayload).catch(() => null);
       if (!proposal?.proposal?.id) continue;
 
-      const buy = await (conn as any).sendRaw({
-        buy: proposal.proposal.id,
-        price: proposal.proposal.ask_price,
-      }).catch(() => null);
+      const buy = await (conn as any)
+        .sendRaw({
+          buy: proposal.proposal.id,
+          price: proposal.proposal.ask_price,
+        })
+        .catch(() => null);
       if (!buy?.buy?.contract_id) {
         // Paper/simulation fallback if Deriv API not available
         if (tickAfter != null) {
@@ -142,7 +158,7 @@ async function executeBotCycle(): Promise<void> {
             profitLoss: String(pnl),
             entryTime: new Date(ticks[triggerIdx].epoch * 1000),
             exitTime: new Date(ticks[triggerIdx + 1]?.epoch * 1000 || Date.now()),
-botRunId: (() => {
+            botRunId: (() => {
               const id = bot.def.id;
               if (typeof id === "string" && id.startsWith("bot_")) {
                 return parseInt(id.replace("bot_", ""), 10) || undefined;

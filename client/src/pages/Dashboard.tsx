@@ -14,7 +14,7 @@ import { useDerivStatus } from "@/hooks/useDerivStatus";
 import DerivTokenModal from "@/components/DerivTokenModal";
 import { ContractSelection } from "@/components/ContractTypeSelector";
 import { VOLATILITY_SYMBOLS, getSymbolDisplayName } from "@/lib/symbols";
-import { getDecimalPlaces } from "@shared/lastDigit";
+import { getDecimalPlaces, lastDigitOf } from "@shared/lastDigit";
 import WatchlistPanel from "@/components/WatchlistPanel";
 import TerminalContextPanel from "@/components/TerminalContextPanel";
 
@@ -93,7 +93,7 @@ export default function Dashboard() {
         if (tick.symbol !== selectedSymbol) return;
         const price = Number(tick.price);
         const decimals = derivWS.decimalPlacesFor(selectedSymbol);
-        const lastDigit = parseInt(price.toFixed(decimals).slice(-1), 10) || 0;
+        const lastDigit = lastDigitOf(price, decimals);
         setLiveTicks((prev) => [{ symbol: tick.symbol, price, lastDigit, epoch: Math.floor(tick.timestamp / 1000) }, ...prev].slice(0, 50));
       },
       onError: () => {},
@@ -216,7 +216,7 @@ export default function Dashboard() {
       rise_fall: direction === "fall" ? "PUT" : "CALL",
       over_under: contract.overUnder === "under" ? "DIGITUNDER" : "DIGITOVER",
       even_odd: contract.digitMatch === "differ" ? "DIGITODD" : "DIGITEVEN",
-      digits: "DIGITMATCH",
+      digits: contract.digitMatch === "differ" ? "DIGITDIFF" : "DIGITMATCH",
       accumulator: "ACCU",
     };
     const contractType = map[contract.category];
@@ -226,12 +226,12 @@ export default function Dashboard() {
     }
     setTradeBusy(true);
     try {
+      const isAccumulator = contract.category === "accumulator";
       const purchase = await derivWS.purchaseContract({
         symbol: selectedSymbol,
         contractType: contractType as any,
         amount: stake,
-        duration: 5,
-        durationUnit: "t",
+        ...(isAccumulator ? { growthRate: contract.growthRate ?? 1 } : { duration: 5, durationUnit: "t" }),
         ...(contract.category === "over_under" && contract.barrier !== undefined ? { barrier: contract.barrier } : {}),
         ...(contract.category === "digits" && contract.digit !== undefined ? { barrier: contract.digit } : {}),
         ...(stopLoss > 0 ? { stopLoss } : {}),

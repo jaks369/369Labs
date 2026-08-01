@@ -1,7 +1,7 @@
 import { WebSocket } from "ws";
 import { saveTickHistory } from "./db";
 import { getAllVolatilitySymbols } from "@shared/symbols";
-import { getDecimalPlaces } from "@shared/lastDigit";
+import { getDecimalPlaces, lastDigitOf } from "@shared/lastDigit";
 
 const DERIV_WS_PUBLIC = "wss://api.derivws.com/trading/v1/options/ws/public";
 const VOLATILITY_PREFIXES = getAllVolatilitySymbols();
@@ -21,8 +21,12 @@ export function getRecentTicks(symbol: string, count: number = 100): { price: nu
   if (!buf) return [];
   return buf.slice(-count);
 }
-export function isFeedStale(): boolean { return feedStale; }
-export function getFeedHealth(): { stale: boolean; lastTickEpoch: number } { return { stale: feedStale, lastTickEpoch: lastAnyTickEpoch }; }
+export function isFeedStale(): boolean {
+  return feedStale;
+}
+export function getFeedHealth(): { stale: boolean; lastTickEpoch: number } {
+  return { stale: feedStale, lastTickEpoch: lastAnyTickEpoch };
+}
 let msgId = 1;
 
 async function fetchActiveSymbols(): Promise<string[]> {
@@ -74,11 +78,15 @@ export function startTickCollector() {
         const quote = String(msg.tick.quote);
         const epoch = Number(msg.tick.epoch) || Math.floor(Date.now() / 1000);
         const decimals = getDecimalPlaces(symbol);
-        const lastDigit = parseInt(Number(quote).toFixed(decimals).slice(-1), 10) || 0;
+        const lastDigit = lastDigitOf(Number(quote), decimals);
         const prev = lastTickEpoch[symbol] || 0;
         const outOfOrder = prev && epoch < prev;
         const nowSec = Math.floor(Date.now() / 1000);
-        if (nowSec - lastAnyTickEpoch > 30) { feedStale = true; } else { feedStale = false; }
+        if (nowSec - lastAnyTickEpoch > 30) {
+          feedStale = true;
+        } else {
+          feedStale = false;
+        }
         lastAnyTickEpoch = nowSec;
         lastTickEpoch[symbol] = epoch;
         if (outOfOrder) {
