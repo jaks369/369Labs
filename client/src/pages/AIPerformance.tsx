@@ -67,7 +67,7 @@ export default function AIPerformance() {
             <AlertCircle className="w-8 h-8 text-red-400 mx-auto mb-2" />
             <p className="text-red-400 text-sm">Failed to load data: {currentQuery.error.message}</p>
           </div>
-        ) : data ? (
+        ) : data && Object.keys(data).length > 0 ? (
           <div className="space-y-4">
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               {Object.entries(data).slice(0, 8).map(([key, val]) => (

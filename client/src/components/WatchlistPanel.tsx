@@ -42,7 +42,7 @@ export default function WatchlistPanel({ selectedSymbol, onSelect, compact, head
   const [prices, setPrices] = useState<Record<string, { price: number; change: number; spark: number[] }>>({});
   const [adding, setAdding] = useState(false);
   const [newSym, setNewSym] = useState(STANDARD_SYMBOLS[0]);
-  const prevRef = useRef<Record<string, number>>({});
+  const openPriceRef = useRef<Record<string, number>>({});
 
   useEffect(() => { localStorage.setItem(WATCHLIST_KEY, JSON.stringify(symbols)); }, [symbols]);
 
@@ -53,9 +53,12 @@ export default function WatchlistPanel({ selectedSymbol, onSelect, compact, head
         const sym = tick.symbol;
         const price = Number(tick.price);
         setPrices((prev) => {
-          const prevP = prevRef.current[sym] ?? price;
-          const change = prevP ? ((price - prevP) / prevP) * 100 : 0;
-          prevRef.current[sym] = price;
+          // Initialize open price on first tick of session
+          if (openPriceRef.current[sym] === undefined) {
+            openPriceRef.current[sym] = price;
+          }
+          const openPrice = openPriceRef.current[sym];
+          const change = openPrice ? ((price - openPrice) / openPrice) * 100 : 0;
           return {
             ...prev,
             [sym]: { price, change, spark: [...(prev[sym]?.spark || []).slice(-24), price] },
@@ -77,7 +80,7 @@ export default function WatchlistPanel({ selectedSymbol, onSelect, compact, head
   const removeSymbol = (sym: string) => {
     setSymbols((prev) => prev.filter((s) => s !== sym));
     setPrices((prev) => { const n = { ...prev }; delete n[sym]; return n; });
-    delete prevRef.current[sym];
+    delete openPriceRef.current[sym];
   };
 
   return (

@@ -110,16 +110,17 @@ export default function Home() {
         <section className="max-w-5xl mx-auto px-6 pb-16">
           <motion.div initial={{ opacity: 0, y: 12 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="flex md:grid md:grid-cols-6 gap-3 overflow-x-auto pb-2 snap-x snap-mandatory scrollbar-none">
             {[
-              { label: "Active Bots", value: "12" },
-              { label: "Win Rate", value: "64%" },
-              { label: "Total Trades", value: "10,847" },
-              { label: "Avg Payout", value: "$4.20" },
-              { label: "Signals Today", value: "38" },
-              { label: "Uptime", value: "99.9%" },
+              { label: "Active Bots", value: "—", demo: true },
+              { label: "Win Rate", value: "—", demo: true },
+              { label: "Total Trades", value: "—", demo: true },
+              { label: "Avg Payout", value: "—", demo: true },
+              { label: "Signals Today", value: "—", demo: true },
+              { label: "Uptime", value: "99.9%", demo: false },
             ].map((stat, i) => (
               <div key={i} className="border border-[var(--border)]/50 rounded-lg p-3 text-center snap-start shrink-0 w-[120px] md:w-auto">
                 <div className="text-lg font-bold text-[var(--text-primary)] tabular-nums">{stat.value}</div>
                 <div className="text-[11px] text-[var(--text-muted)] mt-0.5">{stat.label}</div>
+                {stat.demo && <div className="text-[9px] text-[var(--accent)] mt-1">Demo data</div>}
               </div>
             ))}
           </motion.div>

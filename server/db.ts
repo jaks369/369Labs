@@ -491,6 +491,14 @@ export async function getStrategyById(id: number, userId: number): Promise<Strat
   return result.length > 0 ? result[0] : undefined;
 }
 
+export async function getStrategyByName(name: string, userId: number): Promise<Strategy | undefined> {
+  const db = await getDb();
+  if (!db) return undefined;
+  
+  const result = await db.select().from(strategies).where(and(eq(strategies.name, name), eq(strategies.userId, userId))).limit(1);
+  return result.length > 0 ? result[0] : undefined;
+}
+
 export async function setStrategyPublished(id: number, userId: number, published: boolean): Promise<Strategy | undefined> {
   const db = await getDb();
   if (!db) return undefined;

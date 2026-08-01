@@ -56,7 +56,7 @@ export default function Admin() {
               </tr>
             </thead>
             <tbody>
-              {listQuery.data?.users.map(u => (
+              {listQuery.data?.users?.map(u => (
                 <tr key={u.id} className="border-b border-[var(--border)]/50">
                   <td className="py-2.5">{u.id}</td>
                   <td className="py-2.5">{u.email}</td>

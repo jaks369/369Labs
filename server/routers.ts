@@ -201,6 +201,11 @@ async function runTool(name: string, args: any, ctxUser?: any) {
         });
         const v = validateStrategy(rule);
         if (!v.ok) return { error: "Invalid strategy: " + v.errors.join("; ") };
+        // Check for duplicate strategy name
+        const existing = await db.getStrategyByName(args.name, ctxUser.id);
+        if (existing) {
+          return { error: "A strategy with this name already exists. Please choose a different name." };
+        }
         const saved = await db.saveStrategy({
           userId: ctxUser.id,
           name: args.name,
@@ -229,6 +234,13 @@ async function runTool(name: string, args: any, ctxUser?: any) {
         });
         const v = validateStrategy(rule);
         if (!v.ok) return { error: "Invalid strategy: " + v.errors.join("; ") };
+        // Check for duplicate strategy name if name is being changed
+        if (args.name !== undefined && args.name !== existing.name) {
+          const nameConflict = await db.getStrategyByName(args.name, ctxUser.id);
+          if (nameConflict) {
+            return { error: "A strategy with this name already exists. Please choose a different name." };
+          }
+        }
         const updated = await db.updateStrategy(args.id, ctxUser.id, {
           ...(args.name !== undefined ? { name: args.name } : {}),
           ...(args.description !== undefined ? { description: args.description } : {}),

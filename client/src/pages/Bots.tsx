@@ -14,23 +14,37 @@ import {
   FileText,
   X,
   Loader2,
+  RotateCcw,
+  BarChart3,
+  TrendingUp,
+  TrendingDown,
 } from "lucide-react";
 import { useLocation } from "wouter";
 import { toast } from "@/components/Toast";
-import { BotEngine, BotStatus, BotTrade } from "@/services/BotEngine";
-import { runBacktest } from "@/services/BacktestEngine";
 import { derivWS } from "@/services/derivWebSocket";
 import { StrategyRule } from "@/components/RuleBuilder";
 import { StrategyBuilderContent } from "@/pages/StrategyBuilder";
 import { pushTimeline } from "@/components/AITimeline";
+
+interface ServerBot {
+  id: string;
+  name: string;
+  status: "running" | "stopped" | "error";
+  totalTrades: number;
+  totalProfitLoss: string;
+  lossStreak: number;
+  hasOpenTrade: boolean;
+  symbol: string;
+  backtestWinRate: number | null;
+  lastLog?: string;
+}
 
 interface RunningBot {
   runId: number;
   strategyId: number;
   name: string;
   symbol: string;
-  engine: BotEngine;
-  status: BotStatus;
+  status: "running" | "stopped" | "error";
   pnl: number;
   trades: number;
   wins: number;
@@ -39,14 +53,11 @@ interface RunningBot {
   lastLog?: string;
 }
 
-// A strategy is only deployable if it was built with the structured rule builder
-// (StrategyBuilder's "visual" mode). The freeform block-notes mode has no
-// machine-executable shape yet.
+const DEFAULT_SYMBOL = "R_100";
+
 function extractRule(config: any): StrategyRule | null {
   return config && typeof config === "object" && config.rule ? (config.rule as StrategyRule) : null;
 }
-
-const DEFAULT_SYMBOL = "R_100";
 
 export default function Bots() {
   const { isAuthenticated } = useAuth();
@@ -56,6 +67,7 @@ export default function Bots() {
   const [creating, setCreating] = useState(false);
   const [viewLogsFor, setViewLogsFor] = useState<number | null>(null);
   const [selectedMulti, setSelectedMulti] = useState<number[]>([]);
+  const [refreshKey, setRefreshKey] = useState(0);
 
   const strategiesQuery = trpc.strategies.list.useQuery();
   const derivTokenQuery = trpc.deriv.getToken.useQuery();
@@ -68,8 +80,50 @@ export default function Bots() {
     { botRunId: viewLogsFor ?? 0, limit: 200 },
     { enabled: viewLogsFor !== null }
   );
+  const listActiveQuery = trpc.bot.listActive.useQuery(undefined, { refetchInterval: 5000, enabled: isAuthenticated });
 
   const alertTg = (msg: string) => { try { notifyTelegram.mutate({ message: msg }); } catch { /* ignore */ } };
+
+  // Sync runningBots with server state on mount and when listActive updates
+  useEffect(() => {
+    if (!isAuthenticated) {
+      setRunningBots([]);
+      return;
+    }
+  }, [isAuthenticated]);
+
+  useEffect(() => {
+    if (!listActiveQuery.data) return;
+
+    const serverBots = listActiveQuery.data;
+    setRunningBots((prev) => {
+      const merged = [...prev];
+      for (const sb of serverBots) {
+        const existingIndex = merged.findIndex((b) => b.runId === Number(sb.def.id));
+        const botData: RunningBot = {
+          runId: Number(sb.def.id),
+          strategyId: 0, // strategyId not directly available from listActive; using runId as fallback
+          name: sb.def.name,
+          symbol: sb.def.strategy?.symbol || DEFAULT_SYMBOL,
+          status: sb.status === "paused" || sb.status === "restarting" ? "running" : sb.status,
+          pnl: sb.totalProfitLoss,
+          trades: sb.totalTrades,
+          wins: 0, // not in listActive response
+          losses: 0,
+          backtestWinRate: null,
+          lastLog: sb.lastError,
+        };
+        if (existingIndex >= 0) {
+          merged[existingIndex] = { ...merged[existingIndex], ...botData };
+        } else {
+          merged.push(botData);
+        }
+      }
+      // Remove bots that are no longer active on server
+      const serverIds = new Set(serverBots.map((b) => Number(b.def.id)));
+      return merged.filter((b) => serverIds.has(b.runId));
+    });
+  }, [listActiveQuery.data]);
 
   // Comprehensive error handling system for all user interactions
   const handleBotError = (error: any, context: string): string => {
@@ -82,34 +136,6 @@ export default function Bots() {
       toast(message || "An error occurred", "error");
     }
     return message;
-  };
-
-  const errorBots = runningBots.filter(b => b.status === "error");
-  const idleBots = runningBots.filter(b => b.status === "stopped");
-
-  // Keep a live-mutable ref so BotEngine callbacks (closures created at deploy time)
-  // always update the latest state array rather than a stale snapshot.
-  const botsRef = useRef<RunningBot[]>([]);
-  useEffect(() => {
-    botsRef.current = runningBots;
-  }, [runningBots]);
-
-  useEffect(() => {
-    if (!isAuthenticated) {
-      navigate("/");
-    }
-  }, [isAuthenticated, navigate]);
-
-  // Stop all engines if the user navigates away / unmounts, so bots don't keep
-  // trading in the background with no visible controls.
-  useEffect(() => {
-    return () => {
-      botsRef.current.forEach((b) => b.engine.stop());
-    };
-  }, []);
-
-  const updateBot = (runId: number, patch: Partial<RunningBot>) => {
-    setRunningBots((prev) => prev.map((b) => (b.runId === runId ? { ...b, ...patch } : b)));
   };
 
   const handleDeploy = async (strategy: { id: number; name: string; config: any }) => {
@@ -139,58 +165,10 @@ export default function Bots() {
 
       const botRun = await startRunMutation.mutateAsync({ strategyId: strategy.id });
 
-      const engine = new BotEngine({
-        onStatusChange: (status) => updateBot(botRun.id, { status }),
-        onTrade: (trade: BotTrade) => {
-          if (trade.result === "open") return; // only persist settled trades
-          const current = botsRef.current.find((b) => b.runId === botRun.id);
-          updateBot(botRun.id, {
-            pnl: (current?.pnl || 0) + parseFloat(trade.pnl),
-            trades: (current?.trades || 0) + 1,
-            wins: (current?.wins || 0) + (trade.result === "win" ? 1 : 0),
-            losses: (current?.losses || 0) + (trade.result === "loss" ? 1 : 0),
-          });
-          saveTradeMutation.mutate({
-            botRunId: botRun.id,
-            strategyId: strategy.id,
-            entryTime: trade.timestamp,
-            entryPrice: String(trade.entryPrice),
-            stake: String(trade.stake),
-            profitLoss: trade.pnl,
-            result: trade.result,
-            symbol: trade.symbol,
-            contractType: trade.contractType,
-            contractId: trade.contractId ? String(trade.contractId) : undefined,
-          });
-          const decimalRegex = /^\d+(\.\d{1,8})?$/;
-          if (!decimalRegex.test(trade.stake.toString())) {
-            console.warn(`Invalid stake format: ${trade.stake}`);
-          }
-          alertTg(`${strategy.name} [${trade.symbol}] trade ${trade.result.toUpperCase()} · stake $${trade.stake} · P&L ${parseFloat(trade.pnl) >= 0 ? "+" : ""}${trade.pnl}`);
-        },
-        onLog: (message) => {
-          updateBot(botRun.id, { lastLog: message });
-          try { saveLogMutation.mutate({ botRunId: botRun.id, message, level: "info" }); } catch {}
-        },
-      });
+      // Trigger immediate refetch to pick up the new bot from server
+      setRefreshKey((k) => k + 1);
+      listActiveQuery.refetch();
 
-      // Start engine BEFORE adding to state - if start fails, we don't add orphaned entry
-      engine.start({ symbol: rule.symbol || DEFAULT_SYMBOL, strategy: rule });
-
-      const newBot: RunningBot = {
-        runId: botRun.id,
-        strategyId: strategy.id,
-        name: strategy.name,
-        symbol: rule.symbol || DEFAULT_SYMBOL,
-        engine,
-        status: "running",
-        pnl: 0,
-        trades: 0,
-        wins: 0,
-        losses: 0,
-        backtestWinRate: null,
-      };
-      setRunningBots((prev) => [...prev, newBot]);
       pushTimeline({ icon: "bot", text: `Bot started: ${strategy.name} on ${rule.symbol || DEFAULT_SYMBOL}` });
       alertTg(`🚀 Bot deployed: ${strategy.name} on ${rule.symbol || DEFAULT_SYMBOL}`);
 
@@ -200,8 +178,10 @@ export default function Bots() {
         .fetchTickHistory(rule.symbol || DEFAULT_SYMBOL, Math.floor(Date.now() / 1000) - 7 * 24 * 3600, Math.floor(Date.now() / 1000))
         .then(async (ticks) => {
           if (!ticks || ticks.length < 20) return;
+          const { runBacktest } = await import("@/services/BacktestEngine");
           const res = await runBacktest(ticks, rule, stake, rule.symbol);
-          updateBot(botRun.id, { backtestWinRate: res.winRate });
+          // Update local state with backtest win rate
+          setRunningBots((prev) => prev.map((b) => (b.runId === botRun.id ? { ...b, backtestWinRate: res.winRate } : b)));
         })
         .catch((error) => {
           // Backtest unavailable (e.g. invalid token) — badge stays hidden
@@ -223,37 +203,27 @@ export default function Bots() {
   };
 
   const handleStop = async (bot: RunningBot) => {
-    bot.engine.stop();
-
-    if (bot.engine.hasPendingTrade()) {
-      updateBot(bot.runId, { lastLog: "Stopping — waiting for open trade to settle..." });
-      await bot.engine.waitForOpenTradeToSettle();
-    }
-
-    // Read final totals directly from the engine (single source of truth for
-    // settled trades) rather than the UI's separately-accumulated state, so
-    // a trade that settled during the wait above is correctly included.
-    const finalTrades = bot.engine.getTrades().length;
-    const finalPnl = bot.engine.getTotalPnl();
-
-    setRunningBots((prev) => prev.filter((b) => b.runId !== bot.runId));
-    pushTimeline({ icon: "bot", text: `Bot stopped: ${bot.name} Â· ${finalTrades} trades Â· P&L ${finalPnl >= 0 ? "+" : ""}$${finalPnl.toFixed(2)}` });
-    alertTg(`⏹️ Bot stopped: ${bot.name} Â· ${finalTrades} trades Â· P&L ${finalPnl >= 0 ? "+" : ""}$${finalPnl.toFixed(2)}`);
     try {
       await stopRunMutation.mutateAsync({
         id: bot.runId,
         status: bot.status === "error" ? "error" : "stopped",
-        totalTrades: finalTrades,
-        totalProfitLoss: finalPnl.toFixed(2),
+        totalTrades: bot.trades,
+        totalProfitLoss: bot.pnl.toFixed(2),
       });
-    } catch {
-      // Non-fatal — the bot is already stopped client-side.
+      // Remove from local state immediately for responsive UI
+      setRunningBots((prev) => prev.filter((b) => b.runId !== bot.runId));
+      pushTimeline({ icon: "bot", text: `Bot stopped: ${bot.name} · ${bot.trades} trades · P&L ${bot.pnl >= 0 ? "+" : ""}$${bot.pnl.toFixed(2)}` });
+      alertTg(`⏹️ Bot stopped: ${bot.name} · ${bot.trades} trades · P&L ${bot.pnl >= 0 ? "+" : ""}$${bot.pnl.toFixed(2)}`);
+      // Trigger refetch to sync with server
+      listActiveQuery.refetch();
+    } catch (error) {
+      toast(error instanceof Error ? error.message : "Failed to stop bot", "error");
     }
   };
 
   if (creating) {
     return (
-    <div className="page-container">
+      <div className="page-container">
         <StrategyBuilderContent
           embedded
           onClose={() => setCreating(false)}
@@ -265,30 +235,30 @@ export default function Bots() {
 
   return (
     <div className="p-6 lg:p-10">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-10">
-          <div>
-            <h1 className="text-3xl font-bold text-white mb-2">Automated Bots</h1>
-            <p className="text-[var(--text-muted)] text-sm font-medium">Manage and monitor your 24/7 trading instances.</p>
-          </div>
-          <div className="flex flex-wrap items-center gap-4">
-            <Button onClick={() => setCreating(true)} className="btn btn-primary flex items-center gap-2">
-              <Plus className="w-4 h-4" /> Create New Bot
-            </Button>
-          </div>
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-10">
+        <div>
+          <h1 className="text-3xl font-bold text-white mb-2">Automated Bots</h1>
+          <p className="text-[var(--text-muted)] text-sm font-medium">Manage and monitor your 24/7 trading instances.</p>
         </div>
+        <div className="flex flex-wrap items-center gap-4">
+          <Button onClick={() => setCreating(true)} className="btn btn-primary flex items-center gap-2">
+            <Plus className="w-4 h-4" /> Create New Bot
+          </Button>
+        </div>
+      </div>
 
-        {!derivTokenQuery.data?.token && (
-          <div className="mb-6 p-4 rounded-lg border border-[var(--accent-border)] bg-[var(--accent-soft)] flex items-center gap-3">
-            <AlertCircle className="w-4 h-4 text-[var(--accent)] shrink-0" />
-            <p className="text-xs text-[var(--accent)]">
-              No Deriv API token on file — add a token in{" "}
-              <button className="underline font-bold" onClick={() => navigate("/settings")}>
-                Settings
-              </button>{" "}
-              to deploy bots.
-            </p>
-          </div>
-        )}
+      {!derivTokenQuery.data?.token && (
+        <div className="mb-6 p-4 rounded-lg border border-[var(--accent-border)] bg-[var(--accent-soft)] flex items-center gap-3">
+          <AlertCircle className="w-4 h-4 text-[var(--accent)] shrink-0" />
+          <p className="text-xs text-[var(--accent)]">
+            No Deriv API token on file — add a token in{" "}
+            <button className="underline font-bold" onClick={() => navigate("/settings")}>
+              Settings
+            </button>{" "}
+            to deploy bots.
+          </p>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Active Bots List */}
@@ -347,32 +317,29 @@ export default function Bots() {
                           const mismatch = drift <= -15 || liveWinRate < bot.backtestWinRate * 0.7;
                           if (!mismatch) return null;
                           return (
-                            <div className="max-w-[180px] text-left bg-[var(--red-soft)] border border-[var(--red)]/30 rounded px-2 py-1">
-                              <div className="flex items-center gap-1 text-caption text-price-down font-bold uppercase">
-                                <AlertTriangle className="w-3 h-3" /> Regime mismatch
-                              </div>
-                              <p className="text-caption text-[var(--red)]/80 leading-tight mt-0.5">
-                                Live {liveWinRate.toFixed(0)}% vs backtest {Number(bot.backtestWinRate).toFixed(0)}%
+                            <div className="text-right">
+                              <p className="text-micro mb-1">Regime Drift</p>
+                              <p className={`text-sm font-bold ${mismatch ? "text-[var(--red)]" : "text-[var(--green)]"}`}>
+                                {drift.toFixed(1)}%
                               </p>
                             </div>
                           );
                         })()}
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          className="text-[var(--text-muted)] hover:text-[var(--accent)] border border-[var(--border)] hover:border-[var(--accent)]/30"
-                          onClick={() => setViewLogsFor(bot.runId)}
-                        >
-                          <FileText className="w-3 h-3 mr-1" /> Logs
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="destructive"
-                          className="bg-[var(--red-soft)] text-[var(--red)] border-[var(--red)]/20 hover:bg-[var(--red)] hover:text-white"
-                          onClick={() => handleStop(bot)}
-                        >
-                          <Square className="w-3 h-3 mr-2 fill-current" /> Stop
-                        </Button>
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => setViewLogsFor(bot.runId)}
+                            className="px-3 py-1.5 text-xs font-bold rounded-lg border border-[var(--border)] text-[var(--text-secondary)] hover:text-white hover:border-[var(--accent)] transition-colors cursor-pointer"
+                          >
+                            Logs
+                          </button>
+                          <button
+                            onClick={() => handleStop(bot)}
+                            disabled={bot.status !== "running"}
+                            className="px-3 py-1.5 text-xs font-bold rounded-lg bg-[var(--red-soft)] text-[var(--red)] border border-[var(--red)]/30 hover:bg-[var(--red)]/20 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+                          >
+                            Stop
+                          </button>
+                        </div>
                       </div>
                     </div>
                   ))}
@@ -380,139 +347,150 @@ export default function Bots() {
               )}
             </div>
           </div>
+
+          {/* Errored/Idle Bots */}
+          {(runningBots.filter((b) => b.status === "error" || b.status === "stopped").length > 0) && (
+            <div className="panel mt-6">
+              <div className="p-4 border-b border-[var(--border)] bg-black/20">
+                <h2 className="text-micro">Stopped & Errored</h2>
+              </div>
+              <div className="divide-y divide-[var(--border)]">
+                {runningBots.filter((b) => b.status === "error" || b.status === "stopped").map((bot) => (
+                  <div key={bot.runId} className="p-4 flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                      <div className={`w-10 h-10 rounded-lg flex items-center justify-center border ${
+                        bot.status === "error"
+                          ? "bg-[var(--red-soft)] border-[var(--red)]/20"
+                          : "bg-white/5 border-white/10"
+                      }`}>
+                        <Activity className={`w-5 h-5 ${bot.status === "error" ? "text-[var(--red)]" : "text-[var(--text-muted)]"}`} />
+                      </div>
+                      <div>
+                        <h3 className="text-sm font-bold text-white">{bot.name}</h3>
+                        <p className="text-micro">{bot.symbol} • {bot.trades} trades • {bot.status}</p>
+                        {bot.lastLog && <p className="text-caption mt-1">{bot.lastLog}</p>}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-4">
+                      <div className="text-right">
+                        <p className="text-micro mb-1">Final P&L</p>
+                        <p className={`text-sm font-bold ${bot.pnl >= 0 ? "text-[var(--green)]" : "text-[var(--red)]"}`}>
+                          {bot.pnl >= 0 ? "+" : ""}${Number(bot.pnl).toFixed(2)}
+                        </p>
+                      </div>
+                      <button
+                        onClick={() => setViewLogsFor(bot.runId)}
+                        className="px-3 py-1.5 text-xs font-bold rounded-lg border border-[var(--border)] text-[var(--text-secondary)] hover:text-white hover:border-[var(--accent)] transition-colors cursor-pointer"
+                      >
+                        Logs
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
-        {/* Bot Logs Viewer */}
-        {viewLogsFor !== null && (
-          <div className="fixed inset-0 z-[90] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setViewLogsFor(null)}>
-            <div className="w-full max-w-2xl bg-[var(--card)] border border-[var(--border)] rounded-xl max-h-[80vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
-              <div className="flex items-center justify-between p-4 border-b border-[var(--border)]">
-                <h3 className="text-sm font-bold text-white flex items-center gap-2"><FileText className="w-4 h-4" /> Bot Execution Logs</h3>
-                <button onClick={() => setViewLogsFor(null)} className="text-[var(--text-muted)] hover:text-white"><X className="w-4 h-4" /></button>
-              </div>
-              <div className="p-4 space-y-1 max-h-[60vh] overflow-y-auto font-mono text-caption">
-                {botLogsQuery.isLoading ? (
-                  <div className="flex items-center justify-center py-8"><Loader2 className="w-5 h-5 animate-spin text-[var(--accent)]" /></div>
-                ) : botLogsQuery.isError ? (
-                  <div className="space-y-1">
-                    {(() => {
-                      const bot = runningBots.find(b => b.runId === viewLogsFor);
-                      return bot?.lastLog ? (
-                        <div className="flex items-start gap-2 py-1 text-[var(--text-secondary)]">
-                          <span className="text-caption shrink-0">--:--:--</span>
-                          <span className="text-caption font-bold uppercase shrink-0 w-10">[info]</span>
-                          <span>{bot.lastLog}</span>
-                        </div>
-                      ) : (
-                        <p className="text-sm text-[var(--text-muted)] text-center py-8">No logs yet. The database is unavailable — logs are not being persisted.</p>
-                      );
-                    })()}
-                  </div>
-                ) : (botLogsQuery.data || []).length === 0 ? (
-                  <p className="text-sm text-[var(--text-muted)] text-center py-8">No logs for this bot run.</p>
-                ) : (
-                  (botLogsQuery.data || []).map((log: any) => (
-                    <div key={log.id} className={`flex items-start gap-2 py-1 ${log.level === "error" ? "text-[var(--red)]" : log.level === "warn" ? "text-[var(--accent)]" : "text-[var(--text-secondary)]"}`}>
-                      <span className="text-caption shrink-0 w-16">{log.createdAt ? new Date(log.createdAt).toLocaleTimeString() : ""}</span>
-                      <span className="text-caption font-bold uppercase shrink-0 w-10">[{log.level}]</span>
-                      <span>{log.message}</span>
-                    </div>
-                  ))
-                )}
-              </div>
+        {/* Strategy List & Deployment */}
+        <div className="space-y-6">
+          <div className="panel">
+            <div className="p-4 border-b border-[var(--border)] bg-black/20 flex items-center justify-between">
+              <h2 className="text-sm font-bold text-white">Deployable Strategies</h2>
+              <button onClick={() => setSelectedMulti([])} className="text-xs text-[var(--accent)] hover:underline">Clear selection</button>
             </div>
-          </div>
-        )}
-
-        {/* Sidebar - Quick Stats & Available Strategies */}
-        <div className="space-y-8">
-          <div className="panel p-6">
-            <h3 className="text-micro mb-6">System Health</h3>
-            <div className="space-y-3">
-              <div className="flex justify-between items-center">
-                <span className="text-xs text-[var(--text-secondary)]">Active Bots</span>
-                <span className={`text-caption font-bold ${runningBots.length > 0 ? "text-[var(--green)]" : "text-[var(--text-muted)]"}`}>{runningBots.length}</span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-xs text-[var(--text-secondary)]">Idle Bots</span>
-                <span className="text-caption font-bold text-[var(--text-secondary)]">{idleBots.length}</span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-xs text-[var(--text-secondary)]">Errors</span>
-                <span className={`text-caption font-bold ${errorBots.length > 0 ? "text-[var(--red)]" : "text-[var(--green)]"}`}>{errorBots.length > 0 ? `${errorBots.length} bot(s)` : "None"}</span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-xs text-[var(--text-secondary)]">Deriv WS</span>
-                <span className={`text-caption font-bold ${derivWS.isAuthorized() ? "text-[var(--green)]" : "text-[var(--red)]"}`}>{derivWS.isAuthorized() ? "Connected" : "Disconnected"}</span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-xs text-[var(--text-secondary)]">Total Trades</span>
-                <span className="text-caption font-bold text-[var(--text-secondary)]">{runningBots.reduce((s, b) => s + (b.trades || 0), 0)}</span>
-              </div>
-              {runningBots.length > 0 && (
-                <div className="flex justify-between items-center">
-                  <span className="text-xs text-[var(--text-secondary)]">Avg. Win Rate</span>
-                  <span className="text-caption font-bold text-[var(--text-secondary)]">
-                    {(() => {
-                      const withWR = runningBots.filter(b => b.backtestWinRate != null);
-                      return withWR.length > 0 ? (withWR.reduce((s, b) => s + (b.backtestWinRate || 0), 0) / withWR.length).toFixed(0) + "%" : "—";
-                    })()}
-                  </span>
-                </div>
-              )}
-            </div>
-          </div>
-
-          <div className="panel p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-micro">Ready to Deploy</h3>
-              {selectedMulti.length > 1 && (
-                <Button onClick={handleMultiDeploy} className="text-caption font-bold bg-[var(--accent)] text-[var(--bg)] px-3 py-1 rounded-lg flex items-center gap-1">
-                  <Play className="w-3 h-3" /> Deploy {selectedMulti.length} Strategies
-                </Button>
-              )}
-            </div>
-            <div className="space-y-3">
-              {strategiesQuery.isLoading ? (
-                <div className="flex items-center justify-center py-8">
-                  <Activity className="w-5 h-5 animate-spin text-[var(--accent)]" />
-                </div>
-              ) : strategiesQuery.isError ? (
-                <p className="text-xs text-[var(--red)] italic text-center py-4">Failed to load strategies. Please try again.</p>
-              ) : (Array.isArray(strategiesQuery.data) ? strategiesQuery.data : []).map((s: any) => {
-                const isSelected = selectedMulti.includes(s.id);
-                const isRunning = runningBots.some((b) => b.strategyId === s.id);
+            <div className="divide-y divide-[var(--border)]">
+              {(strategiesQuery.data || []).filter((s: any) => s.config?.rule).map((strategy: any) => {
+                const rule = extractRule(strategy.config);
+                const isDeploying = deployingId === strategy.id;
+                const isRunning = runningBots.some((b) => b.strategyId === strategy.id);
+                const isSelected = selectedMulti.includes(strategy.id);
                 return (
-                <div key={s.id} className={`p-4 rounded-xl bg-[var(--card)] border transition-all group ${isSelected ? "border-[var(--accent)]" : "border-[var(--border)] hover:border-[var(--accent)]/50"}`}>
-                  <div className="flex justify-between items-start mb-3">
-                    <div className="flex items-center gap-2">
-                      <input type="checkbox" checked={isSelected} onChange={() => setSelectedMulti((p) => p.includes(s.id) ? p.filter((id) => id !== s.id) : [...p, s.id])} className="accent-[var(--accent)] w-3.5 h-3.5" />
-                      <h4 className="text-xs font-bold text-white">{s.name}</h4>
+                  <div key={strategy.id} className={`p-4 flex items-center justify-between hover:bg-white/5 transition-colors ${isSelected ? "bg-[var(--accent-soft)] border-l-2 border-[var(--accent)]" : ""}`}>
+                    <div className="flex items-center gap-3 min-w-0">
+                      <input
+                        type="checkbox"
+                        checked={isSelected}
+                        onChange={() => setSelectedMulti((prev) => isSelected ? prev.filter((id) => id !== strategy.id) : [...prev, strategy.id])}
+                        className="w-4 h-4 accent-[var(--accent)] cursor-pointer"
+                      />
+                      <div className="min-w-0">
+                        <h3 className="text-sm font-bold text-white truncate">{strategy.name}</h3>
+                        <p className="text-caption text-[var(--text-muted)] truncate">
+                          {rule?.symbol || DEFAULT_SYMBOL} • {rule?.action?.tradeType || "—"} • ${rule?.params?.stake || 1}
+                        </p>
+                      </div>
                     </div>
-                    <Zap className="w-3 h-3 text-[var(--accent)]" />
+                    <div className="flex items-center gap-2">
+                      {isRunning ? (
+                        <span className="px-2 py-1 text-[10px] font-bold bg-[var(--green-soft)] text-[var(--green)] rounded">Running</span>
+                      ) : (
+                        <button
+                          onClick={() => handleDeploy(strategy)}
+                          disabled={isDeploying || !derivTokenQuery.data?.token}
+                          className="px-3 py-1.5 text-xs font-bold rounded-lg bg-[var(--accent)] text-black hover:bg-[var(--accent-hover)] disabled:opacity-40 cursor-pointer"
+                        >
+                          {isDeploying ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : "Deploy"}
+                        </button>
+                      )}
+                    </div>
                   </div>
-                  <div className="flex gap-2">
-                    <Button
-                      className="flex-1 h-8 text-caption font-bold bg-[var(--accent-soft)] text-[var(--accent)] hover:bg-[var(--accent)] hover:text-white border border-[var(--accent-border)]"
-                      disabled={deployingId === s.id || isRunning}
-                      onClick={() => handleDeploy(s)}
-                    >
-                      <Play className="w-3 h-3 mr-2 fill-current" />
-                      {isRunning ? "Running" : deployingId === s.id ? "Deploying..." : "Deploy"}
-                    </Button>
-                  </div>
+                );
+              })}
+              {(strategiesQuery.data || []).filter((s: any) => s.config?.rule).length === 0 && (
+                <div className="p-8 text-center text-[var(--text-muted)]">
+                  <Bot className="w-8 h-8 mx-auto mb-2 text-[var(--text-disabled)]" />
+                  <p className="text-sm">No deployable strategies yet.</p>
+                  <p className="text-xs mt-1">Create one in the <button className="underline font-bold hover:text-white" onClick={() => navigate("/strategy-builder")}>Strategy Builder</button> using the visual IF/THEN rule builder.</p>
                 </div>
-              );})}
-              {(!strategiesQuery.data || strategiesQuery.data.length === 0) && (
-                <div className="empty-state"><p className="empty-state-desc">No strategies found.</p></div>
               )}
             </div>
           </div>
+
+          {/* Multi-Deploy */}
+          {selectedMulti.length > 0 && (
+            <div className="panel p-4 bg-[var(--accent-soft)]/20 border-[var(--accent-border)]">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-bold text-[var(--accent)]">{selectedMulti.length} strategies selected</span>
+                <Button onClick={handleMultiDeploy} disabled={deployingId !== null} className="btn btn-primary btn-sm">
+                  <Plus className="w-3.5 h-3.5 mr-1.5" /> Deploy All
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {/* Logs Modal */}
+          {viewLogsFor !== null && (
+            <div className="fixed inset-0 z-[90] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setViewLogsFor(null)}>
+              <div className="w-full max-w-2xl max-h-[80vh] bg-[var(--card)] border border-[var(--border)] rounded-xl overflow-hidden" onClick={(e) => e.stopPropagation()}>
+                <div className="flex items-center justify-between p-4 border-b border-[var(--border)]">
+                  <h3 className="text-sm font-bold text-white flex items-center gap-2"><FileText className="w-4 h-4" /> Bot Logs</h3>
+                  <button onClick={() => setViewLogsFor(null)} className="text-[var(--text-muted)] hover:text-white"><X className="w-4 h-4" /></button>
+                </div>
+                <div className="p-4 max-h-[60vh] overflow-y-auto">
+                  {botLogsQuery.isLoading ? (
+                    <div className="flex items-center justify-center py-8"><Loader2 className="w-5 h-5 animate-spin text-[var(--accent)]" /></div>
+                  ) : botLogsQuery.isError ? (
+                    <p className="text-xs text-[var(--red)] italic text-center py-4">Failed to load logs.</p>
+                  ) : (botLogsQuery.data || []).length === 0 ? (
+                    <p className="text-xs text-[var(--text-muted)] italic text-center py-4">No logs for this bot run.</p>
+                  ) : (
+                    <div className="space-y-1">
+                      {(botLogsQuery.data || []).map((log: any) => (
+                        <div key={log.id} className={`text-xs p-2 rounded-lg bg-black/20 ${log.level === "error" ? "text-[var(--red)]" : log.level === "warn" ? "text-[var(--accent)]" : "text-[var(--text-secondary)]"}`}>
+                          <span className="text-[var(--text-muted)] mr-2">{new Date(log.createdAt).toLocaleTimeString()}</span>
+                          <span className="font-bold text-[var(--accent)]">{log.level.toUpperCase()}</span>
+                          <span className="ml-1">{log.message}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>
   );
 }
-
-
-

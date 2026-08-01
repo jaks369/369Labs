@@ -1,5 +1,6 @@
 import * as db from "./db";
 import { derivManager } from "./derivConnection";
+import { botRunner } from "./botRunner";
 
 const POLL_INTERVAL = 2_000;
 const MAX_RETRIES = 100;
@@ -110,6 +111,15 @@ export class SettlementTracker {
     if (!updated) return;
 
     this.retryCount.delete(trade.id);
+
+    // Update botRunner stats so CloudBots totals stay in sync
+    if (trade.botRunId) {
+      try {
+        botRunner.updateTradeStats(String(trade.botRunId), trade.userId, profit);
+      } catch {
+        /* non-critical */
+      }
+    }
 
     try {
       const { aiIntelligenceHub } = await import("./ai/AIIntelligenceHub");
