@@ -11,7 +11,7 @@ import MarketPredictionCards from "@/components/MarketPredictionCards";
 import MarketInsightCards from "@/components/MarketInsightCards";
 import MarketRiskPanel from "@/components/MarketRiskPanel";
 
-import { getAllSymbols } from "@shared/symbols";
+import { getAllSymbols, getSymbolDisplayName } from "@shared/symbols";
 
 const SCREENER_SYMBOLS = getAllSymbols() ?? [];
 
@@ -96,7 +96,7 @@ export default function MarketIntelligencePage() {
                   const isDown = dir === "down" || dir === "bearish";
                   return (
                     <div key={sym} className="bg-black/20 rounded-lg p-3 text-center border border-[var(--border)]">
-                      <p className="text-xs font-bold text-white">{sym}</p>
+                      <p className="text-xs font-bold text-white">{getSymbolDisplayName(sym)}</p>
                       <p className={`text-caption ${isUp ? "text-[var(--green)]" : isDown ? "text-[var(--red)]" : "text-[var(--text-muted)]"} mt-1`}>
                         {isUp ? <TrendingUp className="w-3 h-3 inline" /> : isDown ? <TrendingDown className="w-3 h-3 inline" /> : <Minus className="w-3 h-3 inline" />}
                         {typeof pct === "number" ? <><IntegerStat value={pct} variant={isUp ? "always-positive" : isDown ? "always-negative" : "neutral"} />%</> : "-"}
@@ -141,7 +141,7 @@ export default function MarketIntelligencePage() {
                     const cls = vol != null ? (vol > 70 ? "text-[var(--red)]" : vol > 50 ? "text-[var(--accent)]" : "text-[var(--green)]") : "text-[var(--text-muted)]";
                     return (
                       <div key={sym} className="flex justify-between text-xs p-2 bg-black/20 rounded-lg">
-                        <span className="text-[var(--text-secondary)]">{sym}</span>
+                        <span className="text-[var(--text-secondary)]">{getSymbolDisplayName(sym)}</span>
                         <span className={cls}>{level}</span>
                       </div>
                     );

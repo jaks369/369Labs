@@ -8,6 +8,7 @@ import { LineChart, Line, ResponsiveContainer, XAxis, YAxis, Tooltip, CartesianG
 import { toast } from "@/components/Toast";
 import { CurrencyStat, PercentStat, IntegerStat, SignedCurrencyStat } from "@/components/LiveStat";
 import { PageContainer, PageSection } from "@/components/PageSection";
+import { getSymbolDisplayName } from "@/lib/symbols";
 
 export default function Portfolio() {
   const { isAuthenticated } = useAuth();
@@ -267,7 +268,7 @@ export default function Portfolio() {
                     <tbody>
                       {Object.entries(bySymbol).sort(([, a], [, b]) => b.pnl - a.pnl).map(([sym, stats]) => (
                         <tr key={sym} className="border-b border-[var(--border)]/50 hover:bg-white/5 transition-colors">
-                          <td className="py-3 px-4 font-bold text-white">{sym}</td>
+                          <td className="py-3 px-4 font-bold text-white">{getSymbolDisplayName(sym)}</td>
                           <td className="py-3 px-4 text-right"><IntegerStat value={stats.trades} /></td>
                           <td className="py-3 px-4 text-right text-[var(--green)]"><IntegerStat value={stats.wins} variant="always-positive" /></td>
                           <td className="py-3 px-4 text-right"><PercentStat value={parseFloat(((stats.wins / stats.trades) * 100).toFixed(1))} /></td>
@@ -293,7 +294,7 @@ export default function Portfolio() {
                     const diff = Number((targetWeight - currentWeight) * 100).toFixed(1);
                     return (
                       <div key={sym} className="flex items-center justify-between text-xs p-2 bg-black/20 rounded-lg">
-                        <span className="font-bold text-white">{sym}</span>
+                        <span className="font-bold text-white">{getSymbolDisplayName(sym)}</span>
                         <span className="text-[var(--text-muted)]">Current: {Number(currentWeight * 100).toFixed(1)}%</span>
                         <span className="text-[var(--text-muted)]">Target: {Number(targetWeight * 100).toFixed(1)}%</span>
                         <span className={Number(diff) >= 0 ? "text-[var(--green)]" : "text-[var(--red)]"}>{diff.startsWith("-") ? "" : "+"}{diff}%</span>

@@ -4,6 +4,7 @@ import { trpc } from "@/lib/trpc";
 import { useLocation } from "wouter";
 import { Loader2, BookOpen, Sparkles, Search, Clock, Plus, Upload, Image, Link2, BarChart3, TrendingUp, TrendingDown } from "lucide-react";
 import { toast } from "@/components/Toast";
+import { getSymbolDisplayName } from "@/lib/symbols";
 
 export default function Journal() {
   const { isAuthenticated } = useAuth();
@@ -145,7 +146,7 @@ export default function Journal() {
                       <div className="space-y-1 max-h-40 overflow-y-auto">
                         {Object.entries(bySym).sort((a, b) => b[1].pnl - a[1].pnl).map(([sym, d]) => (
                           <div key={sym} className="flex justify-between text-xs p-2 bg-black/20 rounded-lg">
-                            <span className="text-[var(--text-secondary)] font-bold">{sym}</span>
+                            <span className="text-[var(--text-secondary)] font-bold">{getSymbolDisplayName(sym)}</span>
                             <span className="text-[var(--text-muted)]">{d.wins}W / {d.losses}L</span>
                             <span className={d.pnl >= 0 ? "text-[var(--green)]" : "text-[var(--red)]"}>{d.pnl >= 0 ? "+" : ""}${d.pnl.toFixed(2)}</span>
                           </div>

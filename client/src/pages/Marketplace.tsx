@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { CandlestickChart, Sparkles, TrendingUp, Clock, Bot, Loader2, ChevronDown, ChevronRight, FlaskConical, Users, Code, Shield, CheckCircle2, XCircle, BookOpen, Star, Upload } from "lucide-react";
 import { useLocation } from "wouter";
 import { toast } from "@/components/Toast";
-import { getValidSymbols } from "@/lib/symbols";
+import { getValidSymbols, getSymbolDisplayName } from "@/lib/symbols";
 
 export default function Marketplace() {
   const { isAuthenticated } = useAuth();
@@ -145,7 +145,7 @@ export default function Marketplace() {
                   <div className="p-4 flex items-start justify-between gap-4">
                     <div className="flex-1">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <span className="px-2 py-0.5 rounded bg-[var(--accent-soft)] border border-[var(--accent-border)] text-[var(--accent)] text-micro">{sig.symbol}</span>
+                        <span className="px-2 py-0.5 rounded bg-[var(--accent-soft)] border border-[var(--accent-border)] text-[var(--accent)] text-micro">{getSymbolDisplayName(sig.symbol)}</span>
                         <span className="px-2 py-0.5 rounded bg-white/5 text-[var(--text-secondary)] text-micro">{sig.patternType}</span>
                         <span className={`px-2 py-0.5 rounded text-micro ${sig.source === "always-on" ? "bg-[var(--accent-soft)] text-[var(--accent)]" : "bg-[var(--accent-soft)] text-[var(--accent)]"}`}>{sig.source}</span>
                       </div>
