@@ -3,7 +3,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { ToastViewport, useToast } from "@/components/Toast";
 import { useState, useEffect, useRef, lazy, Suspense } from "react";
 import NotFound from "@/pages/NotFound";
-import { Route, Switch } from "wouter";
+import { Route, Switch, Redirect } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
 import CommandPalette from "./components/CommandPalette";
 
@@ -29,7 +29,6 @@ import Workflow from "./pages/Workflow";
 import Plugins from "./pages/Plugins";
 import AIPerformance from "./pages/AIPerformance";
 import AIExplainability from "./pages/AIExplainability";
-import AIChatPage from "./pages/AIChat";
 import OAuthCallback from "./pages/OAuthCallback";
 import Admin from "./pages/Admin";
 import WebhooksPage from "./pages/Webhooks";
@@ -55,7 +54,6 @@ const LazyStrategyBuilder = lazy(() => import("./pages/StrategyBuilder"));
 const LazyPortfolio = lazy(() => import("./pages/Portfolio"));
 const LazyMarketIntelligence = lazy(() => import("./pages/MarketIntelligence"));
 const LazyCoding = lazy(() => import("./pages/Coding"));
-const LazyTradingCopilot = lazy(() => import("./pages/TradingCopilot"));
 
 const LazyLoad = ({ children }: { children: React.ReactNode }) => (
   <Suspense fallback={<div className="flex items-center justify-center min-h-[60vh]"><div className="h-8 w-8 border-2 border-[var(--accent)] border-t-transparent rounded-full animate-spin" /></div>}>{children}</Suspense>
@@ -103,8 +101,8 @@ function Router() {
       <Route path={"/api-docs"}><AppLayout><ApiDocs /></AppLayout></Route>
       <Route path={"/ai-performance"}><AppLayout><AIPerformance /></AppLayout></Route>
       <Route path={"/ai-explainability"}><AppLayout><AIExplainability /></AppLayout></Route>
-      <Route path={"/trading-copilot"}><AppLayout><LazyLoad><LazyTradingCopilot /></LazyLoad></AppLayout></Route>
-      <Route path={"/ai-chat"}><AppLayout><AIChatPage /></AppLayout></Route>
+      <Route path={"/trading-copilot"}><Redirect to={"/ai-assistant"} /></Route>
+      <Route path={"/ai-chat"}><Redirect to={"/ai-assistant"} /></Route>
       <Route path={"/market-intelligence"}><AppLayout><LazyLoad><LazyMarketIntelligence /></LazyLoad></AppLayout></Route>
 
       <Route path={"/team"}><AppLayout><TeamPage /></AppLayout></Route>

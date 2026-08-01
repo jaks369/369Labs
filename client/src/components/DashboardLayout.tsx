@@ -122,8 +122,6 @@ const navGroups: NavGroup[] = [
     icon: Brain,
     items: [
       { icon: Brain, label: "369AI", path: "/ai-assistant" },
-      { icon: MessageSquare, label: "AI Chat", path: "/ai-chat" },
-      { icon: Bot, label: "AI Copilot", path: "/trading-copilot" },
       { icon: Activity, label: "Market Intel", path: "/market-intelligence" },
       { icon: CandlestickChart, label: "AI Signals", path: "/marketplace" },
       { icon: BarChart3, label: "AI Performance", path: "/ai-performance" },
