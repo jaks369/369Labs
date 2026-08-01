@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Star, Plus, X, Loader2 } from "lucide-react";
 import { derivWS } from "@/services/derivWebSocket";
 import { toast } from "@/components/Toast";
-import { getValidSymbols, STANDARD_SYMBOLS } from "@/lib/symbols";
+import { getValidSymbols, STANDARD_SYMBOLS, getSymbolDisplayName } from "@/lib/symbols";
 
 const WATCHLIST_KEY = "369labs_watchlist";
 const VALID_SYMBOLS = getValidSymbols();
@@ -74,7 +74,7 @@ export default function WatchlistPanel({ selectedSymbol, onSelect, compact, head
     if (!newSym || symbols.includes(newSym)) return;
     setSymbols((prev) => [...prev, newSym]);
     setAdding(false);
-    toast(`Added ${newSym} to watchlist`, "success");
+    toast(`Added ${getSymbolDisplayName(newSym)} to watchlist`, "success");
   };
 
   const removeSymbol = (sym: string) => {
@@ -100,7 +100,7 @@ export default function WatchlistPanel({ selectedSymbol, onSelect, compact, head
       {adding && (
         <div className="p-2 border-b border-[var(--border)] flex gap-2">
           <select value={newSym} onChange={(e) => setNewSym(e.target.value)} className="flex-1 bg-[var(--surface-secondary)] border border-[var(--border)] rounded-md px-2 py-1.5 text-xs text-white focus:border-[var(--accent)] outline-none [&>option]:bg-[var(--surface-secondary)] [&>option]:text-white">
-            {VALID_SYMBOLS.filter((s) => !symbols.includes(s)).map((s) => (<option key={s} value={s}>{s}</option>))}
+            {VALID_SYMBOLS.filter((s) => !symbols.includes(s)).map((s) => (<option key={s} value={s}>{getSymbolDisplayName(s)}</option>))}
           </select>
           <button onClick={addSymbol} className="px-3 py-1.5 rounded-md bg-[var(--accent)] text-black text-xs font-bold cursor-pointer">Add</button>
           <button onClick={() => setAdding(false)} className="px-2 py-1.5 text-xs text-[var(--text-muted)] hover:text-white cursor-pointer">Cancel</button>
@@ -134,7 +134,7 @@ export default function WatchlistPanel({ selectedSymbol, onSelect, compact, head
                 <div className="flex items-center gap-1.5 min-w-0">
                   <Star className={`w-3 h-3 shrink-0 ${active ? "text-[var(--accent)] fill-[var(--accent)]" : "text-[var(--text-disabled)]"}`} />
                   <div className="min-w-0">
-                    <p className={`text-xs font-bold truncate ${active ? "text-[var(--accent-hover)]" : "text-[var(--text-primary)]"}`}>{sym}</p>
+                    <p className={`text-xs font-bold truncate ${active ? "text-[var(--accent-hover)]" : "text-[var(--text-primary)]"}`}>{getSymbolDisplayName(sym)}</p>
                     {p && (
                       <p className={`text-[10px] font-mono tabular-nums ${p.change >= 0 ? "text-[var(--green)]" : "text-[var(--red)]"}`}>
                         {p.change >= 0 ? "+" : ""}{Number(p.change).toFixed(2)}%

@@ -99,7 +99,7 @@ export default function ContractTypeSelector({ selection, onChange }: ContractTy
       </div>
 
       {/* Sub-options */}
-      <div className="bg-[var(--card)]/50 p-3 rounded border border-[var(--card)]">
+      <div className="bg-[var(--surface-secondary)] p-3 rounded border border-[var(--border)]">
         {selection.category === "rise_fall" && (
           <div className="flex rounded-lg bg-[var(--card)] p-0.5">
             <button
