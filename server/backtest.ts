@@ -73,8 +73,10 @@ function simulateOutcome(entryPrice: number, nextPrice: number, contractType: st
   }
 }
 
-function actionToContractType(action: any): { contractType: string; barrier?: number } {
-  switch (action?.tradeType) {
+function actionToContractType(strategy: any): { contractType: string; barrier?: number } {
+  const action = strategy?.action || {};
+  const barrier = strategy?.condition?.barrier !== undefined ? strategy.condition.barrier : action.barrier;
+  switch (action.tradeType) {
     case "buy_rise":
       return { contractType: "CALL" };
     case "buy_fall":
@@ -84,9 +86,9 @@ function actionToContractType(action: any): { contractType: string; barrier?: nu
     case "buy_odd":
       return { contractType: "DIGITODD" };
     case "buy_over":
-      return { contractType: "DIGITOVER", barrier: action.barrier ?? 5 };
+      return { contractType: "DIGITOVER", barrier: barrier ?? 5 };
     case "buy_under":
-      return { contractType: "DIGITUNDER", barrier: action.barrier ?? 5 };
+      return { contractType: "DIGITUNDER", barrier: barrier ?? 5 };
     default:
       return { contractType: "CALL" };
   }
@@ -96,7 +98,7 @@ export async function runBacktest(ticks: { price: number; timestamp: number }[],
   const decimals = symbol ? getDecimalPlaces(symbol) : 2;
   const prices = ticks.map((t) => Number(t.price));
   const digits = prices.map((p) => lastDigitOf(p, decimals));
-  const { contractType, barrier } = actionToContractType(rule.action);
+  const { contractType, barrier } = actionToContractType(rule);
 
   let totalTrades = 0,
     wins = 0,

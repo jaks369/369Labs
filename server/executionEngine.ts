@@ -49,12 +49,32 @@ function evaluateCondition(rule: any, prices: number[], digits: number[], idx: n
   return occ >= count;
 }
 
-function simulateOutcome(entryPrice: number, nextPrice: number, contractType: string): "win" | "loss" {
+function simulateOutcome(
+  entryPrice: number,
+  nextTick: { price: number; lastDigit: number } | undefined,
+  contractType: string,
+  barrier?: number,
+): "win" | "loss" {
+  if (!nextTick) return "loss";
+  const nextPrice = nextTick.price;
+  const d = nextTick.lastDigit;
   switch (contractType) {
     case "CALL":
       return nextPrice > entryPrice ? "win" : "loss";
     case "PUT":
       return nextPrice < entryPrice ? "win" : "loss";
+    case "DIGITEVEN":
+      return d % 2 === 0 ? "win" : "loss";
+    case "DIGITODD":
+      return d % 2 === 1 ? "win" : "loss";
+    case "DIGITOVER":
+      return d > (barrier ?? 5) ? "win" : "loss";
+    case "DIGITUNDER":
+      return d < (barrier ?? 5) ? "win" : "loss";
+    case "DIGITMATCH":
+      return d === (barrier ?? 0) ? "win" : "loss";
+    case "DIGITDIFF":
+      return d !== (barrier ?? 0) ? "win" : "loss";
     default:
       return nextPrice > entryPrice ? "win" : "loss";
   }
@@ -66,6 +86,18 @@ function actionToContractType(action: any): string {
       return "CALL";
     case "buy_fall":
       return "PUT";
+    case "buy_even":
+      return "DIGITEVEN";
+    case "buy_odd":
+      return "DIGITODD";
+    case "buy_over":
+      return "DIGITOVER";
+    case "buy_under":
+      return "DIGITUNDER";
+    case "buy_digit_match":
+      return "DIGITMATCH";
+    case "buy_digit_diff":
+      return "DIGITDIFF";
     default:
       return "CALL";
   }
@@ -119,8 +151,9 @@ async function executeBotCycle(): Promise<void> {
       if (!conn) continue;
 
       const contractType = actionToContractType(rule.action);
+      const barrier = rule.condition?.barrier !== undefined ? Number(rule.condition.barrier) : undefined;
       const entryPrice = prices[triggerIdx];
-      const tickAfter = prices[triggerIdx + 1];
+      const tickAfter = ticks[triggerIdx + 1];
       const isDigit = ["DIGITMATCH", "DIGITDIFF", "DIGITOVER", "DIGITUNDER", "DIGITEVEN", "DIGITODD"].includes(contractType);
       // Use Deriv proposal/buy flow to place the actual trade
       const proposalPayload: Record<string, any> = {
@@ -133,7 +166,7 @@ async function executeBotCycle(): Promise<void> {
         duration_unit: "t",
         underlying_symbol: symbol,
       };
-      if (isDigit && rule.condition.barrier !== undefined) proposalPayload.barrier = String(rule.condition.barrier);
+      if (isDigit && barrier !== undefined) proposalPayload.barrier = String(barrier);
       const proposal = await (conn as any).sendRaw(proposalPayload).catch(() => null);
       if (!proposal?.proposal?.id) continue;
 
@@ -146,7 +179,7 @@ async function executeBotCycle(): Promise<void> {
       if (!buy?.buy?.contract_id) {
         // Paper/simulation fallback if Deriv API not available
         if (tickAfter != null) {
-          const result = simulateOutcome(entryPrice, tickAfter, contractType);
+          const result = simulateOutcome(entryPrice, tickAfter, contractType, barrier);
           const pnl = result === "win" ? stake * 0.95 : -stake;
           await db.saveTrade({
             userId: bot.def.userId,

@@ -70,12 +70,15 @@ export class BotEngine {
   private onTrade?: (trade: BotTrade) => void;
   private onLog?: (message: string) => void;
 
-  constructor(callbacks: {
-    onStatusChange?: (status: BotStatus) => void;
-    onTick?: (tick: Tick) => void;
-    onTrade?: (trade: BotTrade) => void;
-    onLog?: (message: string) => void;
-  }, paperMode = false) {
+  constructor(
+    callbacks: {
+      onStatusChange?: (status: BotStatus) => void;
+      onTick?: (tick: Tick) => void;
+      onTrade?: (trade: BotTrade) => void;
+      onLog?: (message: string) => void;
+    },
+    paperMode = false,
+  ) {
     this.onStatusChange = callbacks.onStatusChange;
     this.onTick = callbacks.onTick;
     this.onTrade = callbacks.onTrade;
@@ -161,9 +164,7 @@ export class BotEngine {
       case "digit_odd":
         return this.lastDigit(tick.price) % 2 === 1;
       case "parity":
-        return rule.condition.barrier === 1
-          ? this.lastDigit(tick.price) % 2 === 1
-          : this.lastDigit(tick.price) % 2 === 0;
+        return rule.condition.barrier === 1 ? this.lastDigit(tick.price) % 2 === 1 : this.lastDigit(tick.price) % 2 === 0;
       case "last_digit":
         if (rule.condition.comparison === "greater_than") return this.lastDigit(tick.price) > (rule.condition.barrier ?? 5);
         if (rule.condition.comparison === "less_than") return this.lastDigit(tick.price) < (rule.condition.barrier ?? 5);
@@ -244,7 +245,7 @@ export class BotEngine {
     return votes >= Math.ceil(ensemble.rules.length / 2);
   }
 
-      private async executeTrade() {
+  private async executeTrade() {
     if (!this.config) return;
     const currentTick = this.tickHistory[this.tickHistory.length - 1];
     const { stake } = this.config.strategy.params;
@@ -287,7 +288,7 @@ export class BotEngine {
         this.log(`Paper trade: simulating ${contractType} for $${stake}`);
         this.trades.push(pendingTrade);
         this.onTrade?.(pendingTrade);
-        const result = await paperEngine.executeTrade(currentTick, this.config.strategy.action, stake, this.config.symbol);
+        const result = await paperEngine.executeTrade(currentTick, this.config.strategy, stake, this.config.symbol);
         pendingTrade.pnl = Number(result.pnl).toFixed(2);
         pendingTrade.result = result.result;
         pendingTrade.contractType = contractType;
@@ -320,7 +321,11 @@ export class BotEngine {
         derivWS.subscribeToContract(purchase.contractId, (update) => this.handleContractUpdate(pendingTrade, update));
       } else {
         this.hasOpenTrade = false;
-        this.handleError(new Error("Not connected to a live, authorized Deriv session — cannot place a real trade. Add a Deriv API token in Settings or enable Paper Trading."));
+        this.handleError(
+          new Error(
+            "Not connected to a live, authorized Deriv session — cannot place a real trade. Add a Deriv API token in Settings or enable Paper Trading.",
+          ),
+        );
         return;
       }
     } catch (error) {
@@ -405,4 +410,3 @@ export class BotEngine {
     return this.trades;
   }
 }
-

@@ -37,8 +37,10 @@ function calcPnl(result: "win" | "loss", stake: number): number {
   return result === "win" ? stake * PAYOUT_RATE : -stake;
 }
 
-function actionToContract(action: any): { contractType: string; barrier?: number } {
-  switch (action?.tradeType) {
+function actionToContract(strategy: any): { contractType: string; barrier?: number } {
+  const action = strategy?.action || {};
+  const barrier = strategy?.condition?.barrier !== undefined ? strategy.condition.barrier : action.barrier;
+  switch (action.tradeType) {
     case "buy_rise":
       return { contractType: "CALL" };
     case "buy_fall":
@@ -48,9 +50,9 @@ function actionToContract(action: any): { contractType: string; barrier?: number
     case "buy_odd":
       return { contractType: "DIGITODD" };
     case "buy_over":
-      return { contractType: "DIGITOVER", barrier: action.barrier ?? 5 };
+      return { contractType: "DIGITOVER", barrier: barrier ?? 5 };
     case "buy_under":
-      return { contractType: "DIGITUNDER", barrier: action.barrier ?? 5 };
+      return { contractType: "DIGITUNDER", barrier: barrier ?? 5 };
     default:
       return { contractType: "CALL" };
   }
@@ -107,9 +109,9 @@ export class PaperEngine {
     return () => this.tradeListeners.delete(cb);
   }
 
-  async executeTrade(entryTick: Tick, strategyAction: any, stake: number, symbol?: string): Promise<PaperTradeResult> {
+  async executeTrade(entryTick: Tick, strategy: any, stake: number, symbol?: string): Promise<PaperTradeResult> {
     const decimals = symbol ? getDecimalPlaces(symbol) : 2;
-    const { contractType, barrier } = actionToContract(strategyAction);
+    const { contractType, barrier } = actionToContract(strategy);
 
     const tradeId = Date.now() + Math.floor(Math.random() * 1000);
     const entryPrice = entryTick.price;

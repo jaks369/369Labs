@@ -50,6 +50,12 @@ function evaluateCondition(rule: any, tick: Tick, history: Tick[], decimals: num
         return d % 2 === 0;
       case "digit_odd":
         return d % 2 === 1;
+      case "parity":
+        return rule.condition.barrier === 1 ? d % 2 === 1 : d % 2 === 0;
+      case "last_digit":
+        if (rule.condition.comparison === "greater_than") return d > (rule.condition.barrier ?? 5);
+        if (rule.condition.comparison === "less_than") return d < (rule.condition.barrier ?? 5);
+        return d === (rule.condition.barrier ?? 0);
       case "consecutive_rise":
         return idx > 0 && t.price > history[idx - 1].price;
       case "consecutive_fall":
@@ -100,8 +106,10 @@ function calcPnl(result: "win" | "loss", stake: number): number {
   return result === "win" ? stake * 0.95 : -stake;
 }
 
-function actionToContractType(action: any): { contractType: string; barrier?: number } {
-  switch (action?.tradeType) {
+function actionToContractType(strategy: any): { contractType: string; barrier?: number } {
+  const action = strategy?.action || {};
+  const barrier = strategy?.condition?.barrier !== undefined ? strategy.condition.barrier : action.barrier;
+  switch (action.tradeType) {
     case "buy_rise":
       return { contractType: "CALL" };
     case "buy_fall":
@@ -111,9 +119,9 @@ function actionToContractType(action: any): { contractType: string; barrier?: nu
     case "buy_odd":
       return { contractType: "DIGITODD" };
     case "buy_over":
-      return { contractType: "DIGITOVER", barrier: action.barrier ?? 5 };
+      return { contractType: "DIGITOVER", barrier: barrier ?? 5 };
     case "buy_under":
-      return { contractType: "DIGITUNDER", barrier: action.barrier ?? 5 };
+      return { contractType: "DIGITUNDER", barrier: barrier ?? 5 };
     default:
       return { contractType: "CALL" };
   }
@@ -125,7 +133,7 @@ export async function runBacktest(ticks: Tick[], strategy: any, stake: number, s
   const history: Tick[] = [];
   let balance = 0;
 
-  const { contractType, barrier } = actionToContractType(strategy.action);
+  const { contractType, barrier } = actionToContractType(strategy);
   const duration = strategy.params?.duration || 5; // Default 5 ticks like live bot
   const stopLoss = strategy.params?.stopLoss || 0;
   const takeProfit = strategy.params?.takeProfit || 0;
