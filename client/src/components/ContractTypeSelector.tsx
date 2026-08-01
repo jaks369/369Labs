@@ -70,7 +70,7 @@ export default function ContractTypeSelector({ selection, onChange }: ContractTy
           <ChevronDown className={`w-4 h-4 text-[var(--text-muted)] transition-transform ${open ? "rotate-180" : ""}`} />
         </button>
 
-        {/* Popover */}
+{/* Popover */}
         {open && (
           <div className="absolute z-50 top-full left-0 right-0 mt-1 bg-[var(--card)] border border-[var(--border)] rounded-lg p-2 shadow-lg">
             <div className="grid grid-cols-2 gap-1.5">
@@ -78,7 +78,7 @@ export default function ContractTypeSelector({ selection, onChange }: ContractTy
                 <button
                   key={c.id}
                   onClick={() => setCat(c.id)}
-                  className={`flex flex-col items-start gap-0.5 p-2.5 rounded-lg text-left transition-all ${
+                  className={`flex flex-col items-start gap-0.5 p-4 rounded-lg text-left transition-all min-h-[44px] ${
                     selection.category === c.id
                       ? "bg-[var(--accent-soft)] border border-[var(--accent-border)]"
                       : "hover:bg-white/[0.04] border border-transparent"
@@ -86,7 +86,7 @@ export default function ContractTypeSelector({ selection, onChange }: ContractTy
                 >
                   <div className="flex items-center gap-1.5">
                     <span className="text-[var(--accent)] text-sm">{c.icon}</span>
-                    <span className={`text-xs font-semibold ${selection.category === c.id ? "text-[var(--accent)]" : "text-[var(--text-primary)]"}`}>
+                    <span className={`text-sm font-semibold ${selection.category === c.id ? "text-[var(--accent)]" : "text-[var(--text-primary)]"}`}>
                       {c.label}
                     </span>
                   </div>
@@ -104,7 +104,7 @@ export default function ContractTypeSelector({ selection, onChange }: ContractTy
           <div className="flex rounded-lg bg-[var(--card)] p-0.5">
             <button
               onClick={() => onChange({ ...selection, direction: "rise" })}
-              className={`flex-1 py-2.5 text-center text-sm font-bold rounded-md transition-all ${
+              className={`flex-1 py-4 text-center text-sm font-bold rounded-md transition-all min-h-[44px] ${
                 selection.direction === "rise"
                   ? "bg-[var(--green)] text-white shadow-sm"
                   : "text-[var(--text-secondary)] hover:text-white"
@@ -114,7 +114,7 @@ export default function ContractTypeSelector({ selection, onChange }: ContractTy
             </button>
             <button
               onClick={() => onChange({ ...selection, direction: "fall" })}
-              className={`flex-1 py-2.5 text-center text-sm font-bold rounded-md transition-all ${
+              className={`flex-1 py-4 text-center text-sm font-bold rounded-md transition-all min-h-[44px] ${
                 selection.direction === "fall"
                   ? "bg-[var(--red)] text-white shadow-sm"
                   : "text-[var(--text-secondary)] hover:text-white"
@@ -125,26 +125,26 @@ export default function ContractTypeSelector({ selection, onChange }: ContractTy
           </div>
         )}
 
-        {selection.category === "over_under" && (
+{selection.category === "over_under" && (
           <div className="space-y-3">
             <div className="flex rounded-lg bg-[var(--card)] p-0.5">
               <button
                 onClick={() => onChange({ ...selection, overUnder: "over" })}
-                className={`flex-1 py-2.5 text-center text-sm font-bold rounded-md transition-all ${
+                className={`flex-1 py-4 text-center text-sm font-bold rounded-md transition-all min-h-[44px] ${
                   selection.overUnder === "over"
                     ? "bg-[var(--accent)] text-white shadow-sm"
                     : "text-[var(--text-secondary)] hover:text-white"
-                }`}
+              }`}
               >
                 Over
               </button>
               <button
                 onClick={() => onChange({ ...selection, overUnder: "under" })}
-                className={`flex-1 py-2.5 text-center text-sm font-bold rounded-md transition-all ${
+                className={`flex-1 py-4 text-center text-sm font-bold rounded-md transition-all min-h-[44px] ${
                   selection.overUnder === "under"
                     ? "bg-[var(--accent)] text-white shadow-sm"
                     : "text-[var(--text-secondary)] hover:text-white"
-                }`}
+              }`}
               >
                 Under
               </button>
@@ -174,7 +174,7 @@ export default function ContractTypeSelector({ selection, onChange }: ContractTy
           <div className="flex rounded-lg bg-[var(--card)] p-0.5">
             <button
               onClick={() => onChange({ ...selection, digitMatch: "match" })}
-              className={`flex-1 py-2.5 text-center text-sm font-bold rounded-md transition-all ${
+              className={`flex-1 py-4 text-center text-sm font-bold rounded-md transition-all min-h-[44px] ${
                 selection.digitMatch === "match"
                   ? "bg-[var(--green)] text-white shadow-sm"
                   : "text-[var(--text-secondary)] hover:text-white"
@@ -184,7 +184,7 @@ export default function ContractTypeSelector({ selection, onChange }: ContractTy
             </button>
             <button
               onClick={() => onChange({ ...selection, digitMatch: "differ" })}
-              className={`flex-1 py-2.5 text-center text-sm font-bold rounded-md transition-all ${
+              className={`flex-1 py-4 text-center text-sm font-bold rounded-md transition-all min-h-[44px] ${
                 selection.digitMatch === "differ"
                   ? "bg-[var(--red)] text-white shadow-sm"
                   : "text-[var(--text-secondary)] hover:text-white"
@@ -195,26 +195,26 @@ export default function ContractTypeSelector({ selection, onChange }: ContractTy
           </div>
         )}
 
-        {selection.category === "digits" && (
+{selection.category === "digits" && (
           <div className="space-y-3">
             <div className="flex rounded-lg bg-[var(--card)] p-0.5">
               <button
                 onClick={() => onChange({ ...selection, digitMatch: "match" })}
-                className={`flex-1 py-2.5 text-center text-sm font-bold rounded-md transition-all ${
+                className={`flex-1 py-4 text-center text-sm font-bold rounded-md transition-all min-h-[44px] ${
                   selection.digitMatch === "match"
                     ? "bg-[var(--green)] text-white shadow-sm"
                     : "text-[var(--text-secondary)] hover:text-white"
-                }`}
+              }`}
               >
                 Matches
               </button>
               <button
                 onClick={() => onChange({ ...selection, digitMatch: "differ" })}
-                className={`flex-1 py-2.5 text-center text-sm font-bold rounded-md transition-all ${
+                className={`flex-1 py-4 text-center text-sm font-bold rounded-md transition-all min-h-[44px] ${
                   selection.digitMatch === "differ"
                     ? "bg-[var(--red)] text-white shadow-sm"
                     : "text-[var(--text-secondary)] hover:text-white"
-                }`}
+              }`}
               >
                 Differs
               </button>
@@ -248,7 +248,7 @@ export default function ContractTypeSelector({ selection, onChange }: ContractTy
                 <button
                   key={rate}
                   onClick={() => onChange({ ...selection, growthRate: rate })}
-                  className="py-2.5 rounded-lg text-xs font-bold transition-all"
+                  className="py-4 rounded-lg text-xs font-bold transition-all min-h-[44px]"
                   style={{
                     background: selection.growthRate === rate ? "var(--accent)" : "var(--card)",
                     color: selection.growthRate === rate ? "white" : "var(--text-secondary)",

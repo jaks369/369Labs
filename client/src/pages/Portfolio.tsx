@@ -348,7 +348,7 @@ export default function Portfolio() {
                       </tr>
                     </thead>
                     <tbody>
-                      {trades.slice(0, 20).map((t: any) => (
+                      {trades.slice(0, 8).map((t: any) => (
                         <tr key={t.id} className="border-b border-[var(--border)]/50 hover:bg-white/5 transition-colors">
                           <td className="py-3 px-4 text-xs text-[var(--text-muted)]">{new Date(t.entryTime).toLocaleDateString()}</td>
                           <td className="py-3 px-4 font-bold text-white">{t.symbol || "-"}</td>
@@ -370,6 +370,14 @@ export default function Portfolio() {
                     </tbody>
                   </table>
                 </div>
+              )}
+              {trades.length > 0 && (
+                <button
+                  onClick={() => navigate("/trades")}
+                  className="mt-4 flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold bg-[var(--accent)]/20 text-[var(--accent)] border border-[var(--accent)]/30 hover:bg-[var(--accent)]/30"
+                >
+                  View Full Trade History
+                </button>
               )}
             </div>
             </>

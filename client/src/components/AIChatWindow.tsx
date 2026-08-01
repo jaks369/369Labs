@@ -14,7 +14,7 @@ export default function AIChatWindow() {
   const historyQuery = trpc.aiChat.conversationHistory.useQuery();
   const sendMessageMutation = trpc.aiChat.sendMessage.useMutation();
   const clearConversationMutation = trpc.aiChat.clearConversation.useMutation();
-  const memoryQuery = trpc.aiChat.memory.useQuery({}, { enabled: false });
+  const memoryQuery = trpc.aiChat.memory.useQuery(void 0, { enabled: false });
   const knowledgeTypesQuery = trpc.aiChat.knowledgeTypes.useQuery();
   const modelConfigQuery = trpc.aiChat.modelConfig.useQuery();
   const setModelConfigMutation = trpc.aiChat.setModelConfig.useMutation();

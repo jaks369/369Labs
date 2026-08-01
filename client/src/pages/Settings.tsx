@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Loader2, Save, Brain, AlertCircle, Sun, Moon, Camera, Database, Download, Trash2, Key, Upload, User, Shield, Bell, Bot, Mail, Lock, Smartphone, Globe, Settings2 } from "lucide-react";
-import { useLocation } from "wouter";
+import { useLocation, useSearch } from "wouter";
 import { derivWS } from "@/services/derivWebSocket";
 import { pushTimeline } from "@/components/AITimeline";
 import { toast } from "@/components/Toast";
@@ -264,7 +264,12 @@ export default function Settings() {
     }
   };
 
-  const [activeSection, setActiveSection] = useState("profile");
+  const urlSearch = useSearch();
+  const initialSection = (() => {
+    const tab = new URLSearchParams(urlSearch).get("tab");
+    return tab || "profile";
+  })();
+  const [activeSection, setActiveSection] = useState(initialSection);
 
   const sections = [
     { id: "profile", label: "Profile", icon: User },
@@ -285,7 +290,7 @@ export default function Settings() {
 
   const sectionRef = useRef<HTMLDivElement>(null);
 
-  const scrollToSection = (id: string) => {
+  const selectSection = (id: string) => {
     setActiveSection(id);
     const el = sectionRef.current;
     if (el) {
@@ -321,7 +326,7 @@ export default function Settings() {
               {sections.map((s) => (
                 <button
                   key={s.id}
-                  onClick={() => scrollToSection(s.id)}
+                  onClick={() => selectSection(s.id)}
                   className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-all whitespace-nowrap max-md:text-xs max-md:py-1.5 ${
                     activeSection === s.id
                       ? "bg-[var(--accent-soft)] text-[var(--accent)] font-semibold"
@@ -345,6 +350,7 @@ export default function Settings() {
           </div>
         )}
 
+        {activeSection === "profile" && (
         <SpotlightCard className="mb-6" data-section="profile">
           <h2 className="text-lg font-bold text-[var(--text-primary)] mb-4">Profile</h2>
           <div className="space-y-4">
@@ -406,8 +412,10 @@ export default function Settings() {
             </Button>
           </div>
         </SpotlightCard>
+        )}
 
-        <SpotlightCard className="mb-6">
+        {activeSection === "deriv" && (
+        <SpotlightCard className="mb-6" data-section="deriv">
           <h2 className="text-lg font-bold text-[var(--text-primary)] mb-4">Deriv API token</h2>
           <div className="space-y-4">
             <div>
@@ -442,8 +450,10 @@ export default function Settings() {
             </Button>
           </div>
         </SpotlightCard>
+        )}
 
-        <SpotlightCard className="mb-6">
+        {activeSection === "telegram" && (
+        <SpotlightCard className="mb-6" data-section="telegram">
           <h2 className="text-lg font-bold text-[var(--text-primary)] mb-4">Telegram notifications</h2>
           <div className="space-y-4">
             <div>
@@ -477,8 +487,10 @@ export default function Settings() {
             </Button>
           </div>
         </SpotlightCard>
+        )}
 
-        <SpotlightCard className="mb-6">
+        {activeSection === "appearance" && (
+        <SpotlightCard className="mb-6" data-section="appearance">
           <h2 className="text-lg font-bold text-[var(--text-primary)] mb-4 flex items-center gap-2">
             {theme === "dark" ? <Moon className="w-5 h-5" /> : <Sun className="w-5 h-5" />} APPEARANCE
           </h2>
@@ -497,8 +509,10 @@ export default function Settings() {
             </button>
           </div>
         </SpotlightCard>
+        )}
 
-        <SpotlightCard className="mb-6">
+        {activeSection === "notifications" && (
+        <SpotlightCard className="mb-6" data-section="notifications">
           <h2 className="text-lg font-bold text-[var(--text-primary)] mb-4">Notification preferences</h2>
           <div className="space-y-4">
             <div className="flex items-center justify-between">
@@ -568,8 +582,10 @@ export default function Settings() {
             </Button>
           </div>
         </SpotlightCard>
+        )}
 
-        <SpotlightCard className="mb-6">
+        {activeSection === "memory" && (
+        <SpotlightCard className="mb-6" data-section="memory">
           <h2 className="text-lg font-bold text-[var(--text-primary)] mb-4 flex items-center gap-2">
             <Brain className="w-5 h-5" /> AI MEMORY — TRADER PROFILE
           </h2>
@@ -652,10 +668,10 @@ export default function Settings() {
             </Button>
           </div>
         </SpotlightCard>
+        )}
 
-
-
-        <SpotlightCard className="mb-6">
+        {activeSection === "api-keys" && (
+        <SpotlightCard className="mb-6" data-section="api-keys">
           <h2 className="text-lg font-bold text-[var(--text-primary)] mb-4 flex items-center gap-2"><Key className="w-5 h-5" /> EXTERNAL API KEYS</h2>
           <p className="text-xs text-[var(--text-muted)] mb-4">Connect external services for extended features (optional).</p>
           <div className="space-y-3">
@@ -677,8 +693,10 @@ export default function Settings() {
             <Button onClick={async () => { try { await saveMemoryMutation.mutateAsync({ memory: { apiKeys: externalKeys } }); toast("API keys saved.", "success"); } catch { toast("Failed to save API keys.", "error"); } }} className="w-full bg-[var(--cta-fill)] text-[var(--cta-text)] font-bold py-2 px-4 rounded"><Save className="w-4 h-4 mr-2" /> SAVE KEYS</Button>
           </div>
         </SpotlightCard>
+        )}
 
-        <SpotlightCard className="mb-6">
+        {activeSection === "email" && (
+        <SpotlightCard className="mb-6" data-section="email">
           <h2 className="text-lg font-bold text-[var(--text-primary)] mb-4">Email</h2>
           <div className="space-y-4">
             <p className="text-sm text-[var(--text-muted)]">Current email: <span className="text-[var(--accent)]">{user?.email}</span></p>
@@ -712,8 +730,10 @@ export default function Settings() {
             </Button>
           </div>
         </SpotlightCard>
+        )}
 
-        <SpotlightCard className="mb-6">
+        {activeSection === "security" && (
+        <SpotlightCard className="mb-6" data-section="security">
           <h2 className="text-lg font-bold text-[var(--text-primary)] mb-4">Security</h2>
           <div className="space-y-4">
             <div>
@@ -745,9 +765,11 @@ export default function Settings() {
             </Button>
           </div>
         </SpotlightCard>
+        )}
 
         {/* Two-Factor Authentication */}
-        <SpotlightCard className="mb-6">
+        {activeSection === "2fa" && (
+        <SpotlightCard className="mb-6" data-section="2fa">
           <h2 className="text-lg font-bold text-[var(--text-primary)] mb-4">Two-factor authentication</h2>
           {twoFASetup && twoFASecret ? (
             <div className="space-y-4">
@@ -810,8 +832,10 @@ export default function Settings() {
             </div>
           )}
         </SpotlightCard>
+        )}
 
-        <SpotlightCard className="mb-6">
+        {activeSection === "account" && (
+        <SpotlightCard className="mb-6" data-section="account">
           <h2 className="text-lg font-bold text-[var(--text-primary)] mb-4">Account</h2>
           <div className="space-y-4">
             <p className="text-sm text-[var(--text-secondary)]">Signed in as <span className="text-[var(--accent)] font-semibold">{user?.email || (user as any)?.username || "user"}</span></p>
@@ -823,8 +847,10 @@ export default function Settings() {
             </Button>
           </div>
         </SpotlightCard>
+        )}
 
-        <SpotlightCard className="mb-6">
+        {activeSection === "sessions" && (
+        <SpotlightCard className="mb-6" data-section="sessions">
           <h2 className="text-lg font-bold text-[var(--text-primary)] mb-4">Active sessions</h2>
           {sessionsQuery.isLoading ? (
             <div className="flex items-center justify-center py-8"><div className="h-6 w-6 border-2 border-[var(--accent)] border-t-transparent rounded-full animate-spin" /></div>
@@ -852,8 +878,10 @@ export default function Settings() {
             </div>
           )}
         </SpotlightCard>
+        )}
 
-        <SpotlightCard className="mb-6">
+        {activeSection === "data" && (
+        <SpotlightCard className="mb-6" data-section="data">
           <h2 className="text-lg font-bold text-[var(--accent)] mb-4 flex items-center gap-2"><Database className="w-5 h-5" /> DATA MANAGEMENT</h2>
           <div className="space-y-4">
             <div>
@@ -879,8 +907,10 @@ export default function Settings() {
             </div>
           </div>
         </SpotlightCard>
+        )}
 
-        <SpotlightCard className="mb-6 border-[var(--red)]/30">
+        {activeSection === "danger" && (
+        <SpotlightCard className="mb-6 border-[var(--red)]/30" data-section="danger">
           <h2 className="text-lg font-bold text-[var(--red)] mb-4">Danger zone</h2>
           <div className="space-y-4">
             {deleteConfirm ? (
@@ -933,6 +963,7 @@ export default function Settings() {
             )}
           </div>
         </SpotlightCard>
+        )}
           </div>
         </div>
       </div>

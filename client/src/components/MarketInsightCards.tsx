@@ -107,9 +107,9 @@ export default function MarketInsightCards({ data, loading }: MarketInsightCards
               <span className="text-[8px] font-mono text-[var(--text-secondary)]"><IntegerStat value={insight.confidence} variant="always-positive" />%</span>
             </div>
             <p className="text-[9px] text-[var(--text-secondary)] leading-relaxed mb-1.5">{insight.message}</p>
-            {insight.reasoning.length > 0 && (
+            {(insight.reasoning?.length || 0) > 0 && (
               <div className="space-y-0.5">
-                {insight.reasoning.slice(0, 2).map((r, j) => (
+                {(insight.reasoning || []).slice(0, 2).map((r, j) => (
                   <p key={j} className="text-[8px] text-[var(--text-muted)]">• {r}</p>
                 ))}
               </div>

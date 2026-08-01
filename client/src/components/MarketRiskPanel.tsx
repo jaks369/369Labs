@@ -113,17 +113,17 @@ export default function MarketRiskPanel({ data, loading }: MarketRiskPanelProps)
               <span>Confidence: <IntegerStat value={a.confidence} variant="always-positive" />%</span>
             </div>
 
-            {a.warnings.length > 0 && (
+            {(a.warnings?.length || 0) > 0 && (
               <div className="space-y-0.5 mb-1.5">
-                {a.warnings.map((w, j) => (
+                {(a.warnings || []).map((w, j) => (
                   <p key={j} className="text-[8px] text-[var(--red)]">ΓÜá {w}</p>
                 ))}
               </div>
             )}
 
-            {a.factors.length > 0 && (
+            {(a.factors?.length || 0) > 0 && (
               <div className="space-y-0.5 mb-1.5">
-                {a.factors.slice(0, 2).map((f, j) => (
+                {(a.factors || []).slice(0, 2).map((f, j) => (
                   <p key={j} className="text-[8px] text-[var(--text-muted)]">• {f}</p>
                 ))}
               </div>

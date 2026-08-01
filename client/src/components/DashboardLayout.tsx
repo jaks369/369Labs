@@ -54,6 +54,7 @@ import {
   Book,
   Users,
   Crown,
+  User,
   Star,
   FileText,
   GitCommit,
@@ -507,6 +508,20 @@ function DashboardLayoutContent({
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-52 bg-[var(--surface-secondary)] border-[var(--border)] text-[var(--text-primary)] shadow-lg">
+                <DropdownMenuItem
+                  onClick={() => setLocation("/settings?tab=profile")}
+                  className="cursor-pointer text-[var(--text-primary)] focus:bg-white/[0.05]"
+                >
+                  <User className="mr-2 h-4 w-4" />
+                  <span>Profile</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => setLocation("/subscription")}
+                  className="cursor-pointer text-[var(--text-primary)] focus:bg-white/[0.05]"
+                >
+                  <Crown className="mr-2 h-4 w-4" />
+                  <span>Subscription</span>
+                </DropdownMenuItem>
                 <DropdownMenuItem
                   onClick={async () => { await logout(); setLocation("/"); }}
                   className="cursor-pointer text-[var(--red)] focus:text-[var(--red)] focus:bg-[var(--red)]/10"

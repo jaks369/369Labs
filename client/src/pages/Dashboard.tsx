@@ -60,7 +60,7 @@ export default function Dashboard() {
   const [newAlertPrice, setNewAlertPrice] = useState("");
 
   const tradesQuery = trpc.trades.list.useQuery({ limit: 20 });
-  const signalsQuery = trpc.signals.list.useQuery({}, { refetchInterval: 30000 });
+  const signalsQuery = trpc.signals.list.useQuery(void 0, { refetchInterval: 30000 });
   const botRunsQuery = trpc.bot.getRuns.useQuery();
   const tokenQuery = trpc.deriv.getToken.useQuery();
   const saveTradeMutation = trpc.trades.save.useMutation();

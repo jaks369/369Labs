@@ -629,6 +629,97 @@ function buildIntentResponse(intent: string, userId: number, message: string): P
   }
 }
 
+/* G��G��G�� LLM integration G��G��G�� */
+
+let _aiClient: any = null;
+
+// Resolve an API key: env first (AI_API_KEY / OPENAI_API_KEY), then the user's
+// saved OpenAI key from Settings -> API Keys (stored in AI memory).
+async function resolveAIKey(userId: number): Promise<string> {
+  const envKey = process.env.AI_API_KEY || process.env.OPENAI_API_KEY || "";
+  if (envKey) return envKey;
+  try {
+    const mem = await db.getUserMemory(userId);
+    return (mem as any)?.apiKeys?.openai || "";
+  } catch {
+    return "";
+  }
+}
+
+async function getAIClient(apiKey: string) {
+  if (!_aiClient) {
+    const mod = await import("groq-sdk");
+    _aiClient = new mod.default({
+      apiKey,
+      ...(process.env.AI_API_BASE_URL ? { baseURL: process.env.AI_API_BASE_URL } : {}),
+    });
+  }
+  return _aiClient;
+}
+
+async function llmChatCompletion(client: any, params: any): Promise<string> {
+  const res = await client.chat.completions.create(params);
+  return res?.choices?.[0]?.message?.content?.trim?.() || "";
+}
+
+// Build a compact trading-context summary for the system prompt.
+async function buildContextSummary(userId: number): Promise<string> {
+  const parts: string[] = [];
+  try {
+    const trades = await db.getTradesByUserId(userId, 20);
+    if (trades.length > 0) {
+      const settled = trades.filter((t: any) => t.result === "win" || t.result === "loss");
+      const wins = settled.filter((t: any) => t.result === "win").length;
+      const net = settled.reduce((a, t) => a + parseFloat((t as any).profitLoss || "0"), 0);
+      parts.push(`Recent trades: ${trades.length} total, ${settled.length} settled, ${wins} wins, net P&L ${net.toFixed(2)}.`);
+    }
+  } catch {}
+  try {
+    const strategies = await db.getStrategiesByUserId(userId);
+    if (strategies.length > 0) {
+      parts.push(`Strategies: ${strategies.slice(0, 10).map((s: any) => s.name).join(", ")}.`);
+    }
+  } catch {}
+  try {
+    const mem = await db.getUserMemory(userId);
+    const m = (mem as any) || {};
+    if (m.symbols?.length) parts.push(`Preferred symbols: ${m.symbols.join(", ")}.`);
+    if (m.riskPct != null) parts.push(`Risk per trade: ${m.riskPct}%.`);
+    if (m.dailyLossLimit != null) parts.push(`Daily loss limit: $${m.dailyLossLimit}.`);
+    if (m.noMartingale) parts.push("No martingale / no grid averaging.");
+    if (m.style) parts.push(`Trading style: ${m.style}.`);
+    if (m.notes) parts.push(`Trader notes: ${m.notes}.`);
+  } catch {}
+  return parts.join("\n");
+}
+
+async function tryLLMResponse(userId: number, message: string): Promise<ChatResponse | null> {
+  const apiKey = await resolveAIKey(userId);
+  if (!apiKey) return null;
+  try {
+    const client = await getAIClient(apiKey);
+    const model = process.env.AI_MODEL || "gpt-4o-mini";
+    const history = conversations.get(userId) || [];
+    const context = await buildContextSummary(userId);
+    const messages: any[] = [
+      {
+        role: "system",
+        content:
+          "You are 369AI, the trading copilot inside 369Labs. Answer concisely and helpfully using the trader's real data when relevant. If you don't know something, say so. Keep it under ~180 words." +
+          (context ? `\n\nTrader context:\n${context}` : ""),
+      },
+      ...history.slice(-10).map((m) => ({ role: m.role, content: m.content })),
+      { role: "user", content: message },
+    ];
+    const answer = await llmChatCompletion(client, { model, messages, max_tokens: 400, temperature: 0.4 });
+    if (!answer) return null;
+    return { answer, confidence: 88, evidence: [], enginesUsed: ["LLM"], timestamp: Date.now() };
+  } catch (err: any) {
+    console.warn("[AIChat] LLM call failed, falling back to template engine:", err?.message?.slice?.(0, 120) || err);
+    return null;
+  }
+}
+
 /* G��G��G�� Exported engine G��G��G�� */
 
 let engineInstance: AIChatEngine | null = null;
@@ -636,7 +727,8 @@ let engineInstance: AIChatEngine | null = null;
 export class AIChatEngine {
   async sendMessage(userId: number, message: string): Promise<ChatResponse> {
     const intent = detectIntent(message);
-    const response = await buildIntentResponse(intent, userId, message);
+    const llmResponse = await tryLLMResponse(userId, message);
+    const response = llmResponse || await buildIntentResponse(intent, userId, message);
     addMessage(userId, { role: "user", content: message, timestamp: Date.now() });
     addMessage(userId, { role: "assistant", content: response.answer, response, timestamp: Date.now() });
     return response;

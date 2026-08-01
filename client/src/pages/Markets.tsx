@@ -42,8 +42,8 @@ export default function Markets() {
   const [live, setLive] = useState<Record<string, { price: number; change: number; spark: number[] }>>({});
   const prevRef = useRef<Record<string, number>>({});
 
-  const healthQuery = trpc.aiMarket.overview.useQuery(undefined, { refetchInterval: 60000 });
-  const signalsQuery = trpc.signals.list.useQuery({}, { refetchInterval: 60000 });
+  const healthQuery = trpc.aiMarket.overview.useQuery(void 0, { refetchInterval: 60000 });
+  const signalsQuery = trpc.signals.list.useQuery(void 0, { refetchInterval: 60000 });
 
   useEffect(() => {
     if (!isAuthenticated) navigate("/");

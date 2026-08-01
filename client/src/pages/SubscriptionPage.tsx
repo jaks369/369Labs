@@ -19,8 +19,27 @@ export default function SubscriptionPage() {
 
   const activeBots = trpc.bot.listActive.useQuery(undefined, { enabled: isAuthenticated });
   const tradeCount = trpc.trades.list.useQuery({ limit: 5000 }, { enabled: isAuthenticated });
+  const memoryQuery = trpc.memory.get.useQuery(undefined, { enabled: isAuthenticated });
+  const setMemoryMutation = trpc.memory.set.useMutation();
   const activeCount = (activeBots.data as any[])?.length ?? 0;
   const totalTrades = (tradeCount.data as any[])?.length ?? 0;
+  const currentPlan = (memoryQuery.data?.memory as any)?.plan || "starter";
+
+  const handleSelect = async (i: number) => {
+    setSelected(i);
+    const planKey = plans[i]?.name.toLowerCase() || "starter";
+    try {
+      const current = (memoryQuery.data?.memory as any) || {};
+      await setMemoryMutation.mutateAsync({ memory: { ...current, plan: planKey } });
+      if (i === 0) {
+        toast("Starter plan selected. Upgrade anytime to unlock more.", "success");
+      } else {
+        toast(`${plans[i].name} selected. Payment checkout is available via the billing portal below.`, "info");
+      }
+    } catch {
+      toast("Failed to save plan selection.", "error");
+    }
+  };
 
   if (!isAuthenticated) { navigate("/login"); return null; }
 
@@ -53,10 +72,11 @@ export default function SubscriptionPage() {
                 ))}
               </div>
               <Button
-                onClick={() => { setSelected(i); if (i !== 0) toast("Payment integration coming soon. No charges will be made yet.", "info"); }}
-                className={`mt-6 w-full text-xs font-bold py-2 rounded-lg ${i === selected ? "bg-[var(--accent)] text-black" : "bg-white/5 text-[var(--text-secondary)] border border-[var(--border)] hover:bg-white/10"}`}
+                onClick={() => handleSelect(i)}
+                disabled={i > 0 && setMemoryMutation.isPending}
+                className={`mt-6 w-full text-xs font-bold py-2 rounded-lg ${selected === i ? "bg-[var(--accent)] text-black" : "bg-white/5 text-[var(--text-secondary)] border border-[var(--border)] hover:bg-white/10"}`}
               >
-                {i === selected ? (plan.cta === "Current Plan" ? "Current Plan" : "Selected") : plan.cta}
+                {setMemoryMutation.isPending && selected === i ? "Saving…" : selected === i ? "Selected" : plan.cta}
               </Button>
             </div>
           ))}
