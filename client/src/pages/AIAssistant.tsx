@@ -154,7 +154,7 @@ export default function AIAssistant() {
 
   return (
     <div className="flex flex-col h-dvh bg-[var(--card)]">
-      <div className="p-4 md:p-6 border-b border-[var(--border)] flex items-center justify-between bg-[var(--card)]/50 backdrop-blur-xl">
+      <div className="p-4 md:p-6 border-b border-[var(--border)] flex items-center justify-between bg-[var(--card)]/90 backdrop-blur-xl">
         <div className="flex items-center gap-3">
           <div className={`w-10 h-10 ${ACCENT_BG} rounded-xl flex items-center justify-center ${ACCENT_BORDER}`}>
             <CandlestickChart className={`w-6 h-6 ${ACCENT}`} />

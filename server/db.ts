@@ -529,7 +529,37 @@ export async function duplicateStrategy(id: number, userId: number): Promise<Str
 export async function saveTrade(trade: InsertTrade): Promise<Trade> {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  
+
+  // Upsert by (userId, contractId): the client saves a "pending" row on buy,
+  // then settles it later. The server SettlementTracker may also settle the same
+  // contract. Without dedup, the client-side settle would insert a second row
+  // next to the server-settled one, double-counting P&L. Updating the existing
+  // row keeps a single source of truth.
+  if (trade.contractId) {
+    try {
+      const existing = await db.select().from(trades)
+        .where(and(eq(trades.userId, trade.userId), eq(trades.contractId, trade.contractId)))
+        .limit(1);
+      if (existing.length > 0) {
+        const row = existing[0];
+        await db.update(trades).set({
+          result: trade.result ?? row.result,
+          profitLoss: trade.profitLoss ?? row.profitLoss,
+          exitTime: trade.exitTime ?? row.exitTime,
+          exitPrice: trade.exitPrice ?? row.exitPrice,
+          entryPrice: trade.entryPrice ?? row.entryPrice,
+          stake: trade.stake ?? row.stake,
+          contractType: trade.contractType ?? row.contractType,
+          symbol: trade.symbol ?? row.symbol,
+          updatedAt: new Date(),
+        }).where(eq(trades.id, row.id));
+        return (await db.select().from(trades).where(eq(trades.id, row.id)).limit(1))[0];
+      }
+    } catch {
+      // drizzle unavailable (production fallback) — fall through to insert below
+    }
+  }
+
   let id: number;
   try {
     const result = await db.insert(trades).values(trade);

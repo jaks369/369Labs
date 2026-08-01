@@ -486,6 +486,11 @@
     border-radius: var(--radius);
     box-shadow: var(--elevation-2);
   }
+  .surface-elevated {
+    background: var(--surface-elevated);
+    border-radius: var(--radius);
+    box-shadow: var(--elevation-2);
+  }
 
   .panel-header {
     display: flex;

@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
 import { ChevronDown } from "lucide-react";
+import { createPortal } from "react-dom";
 
 export type ContractCategory =
   | "rise_fall"
@@ -34,14 +35,34 @@ const CATEGORIES: { id: ContractCategory; label: string; icon: string; desc: str
 export default function ContractTypeSelector({ selection, onChange }: ContractTypeSelectorProps) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+  const [pos, setPos] = useState<{ top: number; left: number; width: number } | null>(null);
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
       if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
     };
+    const onScroll = () => setOpen(false);
     document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
+    document.addEventListener("scroll", onScroll, true);
+    window.addEventListener("resize", onScroll);
+    return () => {
+      document.removeEventListener("mousedown", handler);
+      document.removeEventListener("scroll", onScroll, true);
+      window.removeEventListener("resize", onScroll);
+    };
   }, []);
+
+  const toggle = () => {
+    if (!open) {
+      const r = ref.current?.getBoundingClientRect();
+      if (r) {
+        setPos({ top: r.bottom + 4, left: r.left, width: r.width });
+        setOpen(true);
+      }
+    } else {
+      setOpen(false);
+    }
+  };
 
   const current = CATEGORIES.find((c) => c.id === selection.category)!;
 
@@ -60,7 +81,7 @@ export default function ContractTypeSelector({ selection, onChange }: ContractTy
       {/* Pill trigger */}
       <div ref={ref} className="relative">
         <button
-          onClick={() => setOpen(!open)}
+          onClick={toggle}
           className="w-full flex items-center justify-between gap-2 h-9 px-3 rounded-lg bg-[var(--card)] border border-[var(--border)] text-[var(--text-primary)] text-sm font-medium hover:border-[var(--accent-border)] transition-colors"
         >
           <span className="flex items-center gap-2">
@@ -70,9 +91,12 @@ export default function ContractTypeSelector({ selection, onChange }: ContractTy
           <ChevronDown className={`w-4 h-4 text-[var(--text-muted)] transition-transform ${open ? "rotate-180" : ""}`} />
         </button>
 
-{/* Popover */}
-        {open && (
-          <div className="absolute z-50 top-full left-0 right-0 mt-1 bg-[var(--card)] border border-[var(--border)] rounded-lg p-2 shadow-lg">
+{/* Popover — portaled to body so it can't be clipped by scroll containers */}
+        {open && pos && createPortal(
+          <div
+            className="fixed z-[100] bg-[var(--card)] border border-[var(--border)] rounded-lg p-2 shadow-2xl"
+            style={{ top: pos.top, left: pos.left, width: pos.width }}
+          >
             <div className="grid grid-cols-2 gap-1.5">
               {CATEGORIES.map((c) => (
                 <button
@@ -94,7 +118,8 @@ export default function ContractTypeSelector({ selection, onChange }: ContractTy
                 </button>
               ))}
             </div>
-          </div>
+          </div>,
+          document.body
         )}
       </div>
 

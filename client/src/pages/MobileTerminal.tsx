@@ -75,6 +75,7 @@ export default function MobileTerminal() {
       subRef.current = null;
     }
     setTicks([]);
+    derivWS.markBackground(symbol);
     subRef.current = derivWS.subscribe(symbol);
     const listener = {
       onTick: (tick: any) => {

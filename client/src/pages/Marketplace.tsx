@@ -75,7 +75,7 @@ export default function Marketplace() {
 
   return (
     <div className="min-h-screen bg-[var(--card)] text-white">
-      <div className="p-4 md:p-6 border-b border-[var(--border)] flex flex-wrap items-center justify-between gap-3 bg-[var(--card)]/60 backdrop-blur-xl sticky top-0 z-10">
+      <div className="p-4 md:p-6 border-b border-[var(--border)] flex flex-wrap items-center justify-between gap-3 bg-[var(--card)]/90 backdrop-blur-xl sticky top-0 z-10">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 bg-[var(--accent-soft)] rounded-xl flex items-center justify-center border border-[var(--accent-border)]">
             <CandlestickChart className="w-6 h-6 text-[var(--accent)]" />
@@ -333,7 +333,7 @@ export default function Marketplace() {
         </div>
 
         {showUpload && (
-          <div className="fixed inset-0 z-[90] bg-[var(--bg)]/80 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setShowUpload(false)}>
+          <div className="fixed inset-0 z-[90] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setShowUpload(false)}>
             <div className="w-full max-w-lg bg-[var(--card)] border border-[var(--border)] rounded-xl" onClick={(e) => e.stopPropagation()}>
               <div className="flex items-center justify-between p-4 border-b border-[var(--border)]">
                 <h3 className="text-sm font-bold text-white flex items-center gap-2"><Upload className="w-4 h-4 text-[var(--accent)]" /> Publish Strategy</h3>

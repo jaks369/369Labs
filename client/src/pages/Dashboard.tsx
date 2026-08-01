@@ -48,7 +48,7 @@ export default function Dashboard() {
   const [newAlertDir, setNewAlertDir] = useState<"above" | "below">("above");
   const [newAlertPrice, setNewAlertPrice] = useState("");
 
-  const tradesQuery = trpc.trades.list.useQuery({ limit: 20 });
+  const tradesQuery = trpc.trades.list.useQuery({ limit: 20 }, { refetchInterval: 5000, refetchIntervalInBackground: true });
   const signalsQuery = trpc.signals.list.useQuery(void 0, { refetchInterval: 30000 });
   const botRunsQuery = trpc.bot.getRuns.useQuery();
   const tokenQuery = trpc.deriv.getToken.useQuery();
@@ -86,6 +86,7 @@ export default function Dashboard() {
   const [liveTicks, setLiveTicks] = useState<any[]>([]);
   useEffect(() => {
     if (historyTab !== "prices") return;
+    derivWS.markBackground(selectedSymbol);
     const subId = derivWS.subscribe(selectedSymbol);
     const listener = {
       onTick: (tick: any) => {

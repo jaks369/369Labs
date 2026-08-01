@@ -1,12 +1,13 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { derivWS, Tick } from "@/services/derivWebSocket";
 import { trpc } from "@/lib/trpc";
-import { LineChart, AreaChart, Maximize, Minimize } from "lucide-react";
+import { LineChart, AreaChart, Maximize, Minimize, ZoomIn, ZoomOut, RotateCcw } from "lucide-react";
 import { getSymbolDisplayName } from "@/lib/symbols";
 
 interface ChartData {
   time: string;
   price: number;
+  epoch: number;
 }
 
 interface TickChartProps {
@@ -28,13 +29,31 @@ function niceScale(min: number, max: number, ticks: number) {
 }
 
 export default function TickChart({ symbol, maxDataPoints = 100, decimalPlaces = 3, compact = false }: TickChartProps) {
-  const n = maxDataPoints;
   const [data, setData] = useState<ChartData[]>([]);
   const containerRef = useRef<HTMLDivElement>(null);
   const [dims, setDims] = useState({ w: 800, h: 320 });
   const [mode, setMode] = useState<"line" | "area">("area");
   const [fullscreen, setFullscreen] = useState(false);
-  const [timeframe, setTimeframe] = useState<number>(50);
+  const [timeframe, setTimeframe] = useState<number>(maxDataPoints || 100);
+
+  // Viewport interaction state (lightweight-charts-style logical range model):
+  // - visibleBars: how many bars fit in the plot (zoom level)
+  // - rightOffset: bars of empty space reserved to the right of the latest tick
+  // - scrollBack: bars the right edge is scrolled back from the live edge (0 = live-follow)
+  const MIN_BARS = 10;
+  const [visibleBars, setVisibleBars] = useState<number>(Math.max(MIN_BARS, maxDataPoints || 100));
+  const [rightOffset, setRightOffset] = useState<number>(8);
+  const [scrollBack, setScrollBack] = useState<number>(0);
+  const [dragging, setDragging] = useState<{ startX: number; startScroll: number } | null>(null);
+
+  // Changing timeframe reseeds data, so return to a live, full-width view of the new window.
+  useEffect(() => {
+    setScrollBack(0);
+    setVisibleBars(Math.max(MIN_BARS, timeframe));
+  }, [timeframe]);
+
+  const isFollowing = scrollBack === 0;
+  const liveEdge = data.length - 1;
 
   const toggleFullscreen = useCallback(() => {
     if (!document.fullscreenElement) {
@@ -69,6 +88,7 @@ export default function TickChart({ symbol, maxDataPoints = 100, decimalPlaces =
     if (!ticks || !ticks.length) return;
     const hist = ticks.slice(-timeframe).map((t) => ({
       time: new Date((t.epoch || 0) * 1000).toLocaleTimeString(),
+      epoch: t.epoch || 0,
       price: Number(t.price),
     }));
     if (hist.length) setData(hist);
@@ -78,10 +98,12 @@ export default function TickChart({ symbol, maxDataPoints = 100, decimalPlaces =
   const [priceColor, setPriceColor] = useState<"up" | "down">("up");
 
   useEffect(() => {
+    derivWS.markBackground(symbol);
     const buffered = derivWS.getRecentTicks(symbol, timeframe);
     if (buffered.length) {
       setData(buffered.slice(-timeframe).map((t) => ({
         time: new Date(t.timestamp).toLocaleTimeString(),
+        epoch: Math.floor(t.timestamp / 1000),
         price: t.price,
       })));
       const last = buffered[buffered.length - 1];
@@ -101,9 +123,10 @@ export default function TickChart({ symbol, maxDataPoints = 100, decimalPlaces =
             ...prev,
             {
               time: new Date(tick.timestamp).toLocaleTimeString(),
+              epoch: Math.floor(tick.timestamp / 1000),
               price: tick.price,
             },
-          ].slice(-timeframe);
+          ].slice(-Math.max(timeframe, 200));
           return next;
         });
         setCurrentPrice((prev) => {
@@ -130,27 +153,34 @@ export default function TickChart({ symbol, maxDataPoints = 100, decimalPlaces =
     };
   }, [symbol, timeframe]);
 
-  const prices = data.map((d) => d.price);
-  const minPrice = prices.length ? Math.min(...prices) : 0;
-  const maxPrice = prices.length ? Math.max(...prices) : 1;
-  const padding = (maxPrice - minPrice) * 0.1 || maxPrice * 0.001;
-  const yMin = minPrice - padding;
-  const yMax = maxPrice + padding;
-
+  // ===== Viewport math (logical range → pixels) =====
   const padX = 48;
   const padTop = 12;
   const padBottom = 28;
   const chartW = dims.w - padX;
   const chartH = dims.h - padTop - padBottom;
 
+  // visible slice indices in data space
+  const totalBars = visibleBars + rightOffset;
+  const rightIdx = Math.max(0, Math.min(liveEdge - scrollBack, data.length - 1));
+  const leftIdx = Math.max(0, rightIdx - visibleBars + 1);
+
+  const visibleSlice = data.slice(leftIdx, rightIdx + 1);
+  const prices = visibleSlice.map((d) => d.price);
+  const minPrice = prices.length ? Math.min(...prices) : 0;
+  const maxPrice = prices.length ? Math.max(...prices) : 1;
+  const padding = (maxPrice - minPrice) * 0.1 || maxPrice * 0.001;
+  const yMin = minPrice - padding;
+  const yMax = maxPrice + padding;
+
   const scale = niceScale(yMin, yMax, 5);
   const yRange = scale.end - scale.start || 1;
 
-  const points = data.map((d, i) => {
-    const x = data.length > 1 ? padX + (i / (data.length - 1)) * chartW : padX;
-    const y = padTop + chartH - ((d.price - scale.start) / yRange) * chartH;
-    return { x, y };
-  });
+  const xOf = (i: number) => padX + ((i - leftIdx) / (totalBars - 1 || 1)) * chartW;
+
+  const points = data
+    .map((d, i) => ({ x: xOf(i), y: padTop + chartH - ((d.price - scale.start) / yRange) * chartH }))
+    .filter((p) => p.x >= padX - 1 && p.x <= padX + chartW + 1);
   const pathD = points.map((p, i) => `${i === 0 ? "M" : "L"}${p.x},${p.y}`).join(" ");
   const areaD = `${pathD} L${padX + chartW},${padTop + chartH} L${padX},${padTop + chartH} Z`;
 
@@ -160,28 +190,71 @@ export default function TickChart({ symbol, maxDataPoints = 100, decimalPlaces =
     gridLines.push({ value: v, y });
   }
 
-  const lastPrice = prices.length ? prices[prices.length - 1] : null;
+  const lastPrice = data.length ? data[data.length - 1].price : null;
   const lastY = lastPrice != null ? padTop + chartH - ((lastPrice - scale.start) / yRange) * chartH : 0;
+  const lastX = data.length ? xOf(data.length - 1) : padX;
 
   const ohlc = (() => {
     if (!data.length) return null;
-    const first = data[0].price;
-    const open = first;
-    const high = Math.max(...prices);
-    const low = Math.min(...prices);
+    const open = data[0].price;
+    const high = Math.max(...data.map((d) => d.price));
+    const low = Math.min(...data.map((d) => d.price));
     const close = data[data.length - 1].price;
     return { open, high, low, close };
   })();
 
-  const uniqueTimes = new Set(data.map((d) => d.time));
   const timeLabels: { label: string; x: number }[] = [];
-  if (data.length > 1 && uniqueTimes.size > 1) {
-    const step = Math.max(1, Math.floor(data.length / 4));
-    for (let i = 0; i < data.length; i += step) {
-      const x = padX + (i / (data.length - 1)) * chartW;
-      timeLabels.push({ label: data[i].time, x });
+  const inView = data.filter((_, i) => i >= leftIdx && i <= rightIdx);
+  if (inView.length > 1) {
+    const step = Math.max(1, Math.floor(inView.length / 4));
+    for (let i = 0; i < inView.length; i += step) {
+      const gi = leftIdx + i;
+      timeLabels.push({ label: data[gi].time, x: xOf(gi) });
     }
   }
+
+  // ===== Interaction handlers =====
+  const zoomBy = useCallback((factor: number, anchorX?: number) => {
+    setVisibleBars((cur) => {
+      const next = Math.round(Math.min(200, Math.max(MIN_BARS, cur * factor)));
+      if (anchorX != null && dims.w > padX) {
+        const frac = (anchorX - padX) / chartW;
+        const anchorIdx = leftIdx + frac * (totalBars - 1);
+        // keep the anchor index stationary while changing bar count
+        const newLeft = anchorIdx - frac * (next + rightOffset - 1);
+        setScrollBack(Math.max(0, Math.round(liveEdge - (newLeft + next - 1))));
+      } else {
+        setScrollBack((s) => (s > 0 ? s : 0));
+      }
+      return next;
+    });
+  }, [dims.w, chartW, leftIdx, totalBars, rightOffset, liveEdge]);
+
+  const onWheel = useCallback((e: React.WheelEvent) => {
+    const rect = containerRef.current?.getBoundingClientRect();
+    const anchorX = rect ? e.clientX - rect.left : undefined;
+    zoomBy(e.deltaY > 0 ? 1.15 : 1 / 1.15, anchorX);
+  }, [zoomBy]);
+
+  const onPointerDown = useCallback((e: React.PointerEvent) => {
+    (e.target as HTMLElement).setPointerCapture?.(e.pointerId);
+    setDragging({ startX: e.clientX, startScroll: scrollBack });
+  }, [scrollBack]);
+
+  const onPointerMove = useCallback((e: React.PointerEvent) => {
+    if (!dragging || chartW <= 0) return;
+    const dx = e.clientX - dragging.startX;
+    const barsPerPx = (totalBars - 1) / chartW;
+    const delta = Math.round(dx * barsPerPx);
+    setScrollBack(Math.max(0, Math.min(liveEdge - 0, dragging.startScroll - delta)));
+  }, [dragging, chartW, totalBars, liveEdge]);
+
+  const onPointerUp = useCallback(() => setDragging(null), []);
+
+  const returnToLive = useCallback(() => {
+    setScrollBack(0);
+    setVisibleBars((cur) => cur);
+  }, []);
 
   return (
     <div className="w-full">
@@ -201,32 +274,34 @@ export default function TickChart({ symbol, maxDataPoints = 100, decimalPlaces =
           ))}
         </div>
         <div className="flex items-center gap-1">
-          <button
-            onClick={() => setMode("line")}
-            title="Line"
-            className={`p-1.5 rounded transition-colors cursor-pointer ${mode === "line" ? "bg-[var(--accent-soft)] text-[var(--accent-hover)]" : "text-[var(--text-muted)] hover:text-[var(--text-primary)]"}`}
-          >
+          <button onClick={() => zoomBy(1 / 1.3)} title="Zoom out" className="p-1.5 rounded transition-colors cursor-pointer text-[var(--text-muted)] hover:text-[var(--text-primary)]">
+            <ZoomOut className="w-3.5 h-3.5" />
+          </button>
+          <button onClick={() => zoomBy(1.3)} title="Zoom in" className="p-1.5 rounded transition-colors cursor-pointer text-[var(--text-muted)] hover:text-[var(--text-primary)]">
+            <ZoomIn className="w-3.5 h-3.5" />
+          </button>
+          <button onClick={() => setMode("line")} title="Line" className={`p-1.5 rounded transition-colors cursor-pointer ${mode === "line" ? "bg-[var(--accent-soft)] text-[var(--accent-hover)]" : "text-[var(--text-muted)] hover:text-[var(--text-primary)]"}`}>
             <LineChart className="w-3.5 h-3.5" />
           </button>
-          <button
-            onClick={() => setMode("area")}
-            title="Area"
-            className={`p-1.5 rounded transition-colors cursor-pointer ${mode === "area" ? "bg-[var(--accent-soft)] text-[var(--accent-hover)]" : "text-[var(--text-muted)] hover:text-[var(--text-primary)]"}`}
-          >
+          <button onClick={() => setMode("area")} title="Area" className={`p-1.5 rounded transition-colors cursor-pointer ${mode === "area" ? "bg-[var(--accent-soft)] text-[var(--accent-hover)]" : "text-[var(--text-muted)] hover:text-[var(--text-primary)]"}`}>
             <AreaChart className="w-3.5 h-3.5" />
           </button>
-          <button
-            onClick={toggleFullscreen}
-            title={fullscreen ? "Exit fullscreen" : "Fullscreen"}
-            className="p-1.5 rounded transition-colors cursor-pointer text-[var(--text-muted)] hover:text-[var(--text-primary)]"
-          >
+          <button onClick={toggleFullscreen} title={fullscreen ? "Exit fullscreen" : "Fullscreen"} className="p-1.5 rounded transition-colors cursor-pointer text-[var(--text-muted)] hover:text-[var(--text-primary)]">
             {fullscreen ? <Minimize className="w-3.5 h-3.5" /> : <Maximize className="w-3.5 h-3.5" />}
           </button>
         </div>
       </div>
 
-      <div ref={containerRef} className={`w-full relative rounded-xl overflow-hidden border border-[var(--border-subtle)] ${fullscreen ? "h-full min-h-[80vh]" : compact ? "h-[220px]" : "h-[280px] md:h-[340px]"}`}
-        style={{ background: "linear-gradient(180deg, rgba(45,217,196,0.04) 0%, rgba(45,217,196,0.01) 60%, transparent 100%)" }}>
+      <div
+        ref={containerRef}
+        onWheel={onWheel}
+        onPointerDown={onPointerDown}
+        onPointerMove={onPointerMove}
+        onPointerUp={onPointerUp}
+        onPointerLeave={onPointerUp}
+        className={`w-full relative rounded-xl overflow-hidden border border-[var(--border-subtle)] select-none ${fullscreen ? "h-full min-h-[80vh]" : compact ? "h-[220px]" : "h-[280px] md:h-[340px]"}`}
+        style={{ background: "linear-gradient(180deg, rgba(45,217,196,0.04) 0%, rgba(45,217,196,0.01) 60%, transparent 100%)", cursor: dragging ? "grabbing" : "grab" }}
+      >
         {error ? (
           <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 p-6">
             <p className="text-[var(--red)] text-sm text-center">Connection Error: {error}</p>
@@ -255,40 +330,18 @@ export default function TickChart({ symbol, maxDataPoints = 100, decimalPlaces =
 
             {/* Grid lines */}
             {gridLines.map((gl, i) => (
-              <line
-                key={`grid-${i}`}
-                x1={padX} y1={gl.y} x2={padX + chartW} y2={gl.y}
-                stroke="var(--border-subtle)"
-                strokeWidth="1"
-                opacity="0.6"
-              />
+              <line key={`grid-${i}`} x1={padX} y1={gl.y} x2={padX + chartW} y2={gl.y} stroke="var(--border-subtle)" strokeWidth="1" opacity="0.6" />
             ))}
 
             {/* Area fill */}
             {mode === "area" && <path d={areaD} fill="url(#chartAreaGrad)" />}
 
             {/* Line */}
-            <path
-              d={pathD}
-              fill="none"
-              stroke="url(#lineGrad)"
-              strokeWidth="2"
-              strokeLinejoin="round"
-              strokeLinecap="round"
-              vectorEffect="non-scaling-stroke"
-              filter="url(#chartGlow)"
-            />
+            <path d={pathD} fill="none" stroke="url(#lineGrad)" strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" vectorEffect="non-scaling-stroke" filter="url(#chartGlow)" />
 
             {/* Current price dashed line */}
             {lastPrice != null && (
-              <line
-                x1={padX} y1={lastY}
-                x2={padX + chartW} y2={lastY}
-                stroke="var(--accent)"
-                strokeWidth="1"
-                strokeDasharray="4,4"
-                opacity="0.4"
-              />
+              <line x1={padX} y1={lastY} x2={padX + chartW} y2={lastY} stroke="var(--accent)" strokeWidth="1" strokeDasharray="4,4" opacity="0.4" />
             )}
 
             {/* Last point dot + price label */}
@@ -312,28 +365,14 @@ export default function TickChart({ symbol, maxDataPoints = 100, decimalPlaces =
 
             {/* Y-axis labels */}
             {gridLines.map((gl, i) => (
-              <text
-                key={`ylbl-${i}`}
-                x={padX - 8} y={gl.y + 3}
-                textAnchor="end"
-                fill="var(--text-muted)"
-                fontSize="10"
-                fontFamily="JetBrains Mono, monospace"
-              >
+              <text key={`ylbl-${i}`} x={padX - 8} y={gl.y + 3} textAnchor="end" fill="var(--text-muted)" fontSize="10" fontFamily="JetBrains Mono, monospace">
                 {gl.value.toFixed(decimalPlaces)}
               </text>
             ))}
 
             {/* Time labels */}
             {timeLabels.map((tl, i) => (
-              <text
-                key={`time-${i}`}
-                x={tl.x} y={padTop + chartH + 20}
-                textAnchor="middle"
-                fill="var(--text-muted)"
-                fontSize="9"
-                fontFamily="JetBrains Mono, monospace"
-              >
+              <text key={`time-${i}`} x={tl.x} y={padTop + chartH + 20} textAnchor="middle" fill="var(--text-muted)" fontSize="9" fontFamily="JetBrains Mono, monospace">
                 {tl.label}
               </text>
             ))}
@@ -343,6 +382,16 @@ export default function TickChart({ symbol, maxDataPoints = 100, decimalPlaces =
             <div className="w-10 h-10 rounded-full bg-[var(--border-subtle)] shimmer" />
             <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-widest">Awaiting ticks</p>
           </div>
+        )}
+
+        {/* Return-to-live — shown once the user has panned/zoomed away from the live edge */}
+        {!isFollowing && data.length > 1 && (
+          <button
+            onClick={returnToLive}
+            className="absolute bottom-3 right-3 z-10 flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[var(--accent)] text-black text-[11px] font-bold shadow-lg hover:brightness-110 transition-all cursor-pointer"
+          >
+            <RotateCcw className="w-3 h-3" /> Return to live
+          </button>
         )}
       </div>
 

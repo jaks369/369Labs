@@ -68,6 +68,7 @@ class DerivWebSocketService {
   private apiToken: string | null = null;
   private authorized = false;
   private subscribedSymbols: Set<string> = new Set();
+  private backgroundSymbols: Set<string> = new Set();
   private tickBuffer: Map<string, Tick[]> = new Map();
   private pendingSubscriptionSymbols: string[] = [];
   private pendingRequests: Map<number, { resolve: (v: any) => void; reject: (e: Error) => void }> = new Map();
@@ -644,11 +645,34 @@ class DerivWebSocketService {
     const symbol = this.subSymbolById.get(subscriptionId);
     this.subSymbolById.delete(subscriptionId);
     if (!symbol) return;
+    // Keep the subscription alive if the symbol is marked as background-watched,
+    // so the rolling tick buffer keeps accumulating across page navigation.
+    if (this.backgroundSymbols.has(symbol)) return;
     this.subscribedSymbols.delete(symbol);
     const target = this.wsForTicks();
     if (target && target.readyState === WebSocket.OPEN) {
       try { target.send(JSON.stringify({ ticks: symbol, subscribe: 0, req_id: this.msgId++ })); }
       catch (error) { console.error("[Deriv WS] Failed to unsubscribe:", error); }
+    }
+  }
+
+  /**
+   * Mark a symbol as background-watched: it stays subscribed (and its tick
+   * buffer keeps growing) even when no page is actively viewing it, so
+   * navigating away and back never resets the price history. Call once per
+   * symbol you want to keep warm; the buffer is bounded internally.
+   */
+  public markBackground(symbol: string): void {
+    if (!symbol || this.backgroundSymbols.has(symbol)) return;
+    this.backgroundSymbols.add(symbol);
+    this.subscribe(symbol);
+    // Bound the warm set to the 12 most recently marked symbols.
+    if (this.backgroundSymbols.size > 12) {
+      const first = this.backgroundSymbols.values().next().value as string | undefined;
+      if (first) {
+        this.backgroundSymbols.delete(first);
+        this.unsubscribe(this.subSymbolById.entries().find(([, s]) => s === first)?.[0] ?? -1);
+      }
     }
   }
   public addListener(listener: TickStreamListener): void { this.listeners.add(listener); if (this.ws && this.ws.readyState === WebSocket.OPEN) { try { listener.onConnect?.(); } catch {} } }
