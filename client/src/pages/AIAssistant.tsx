@@ -5,6 +5,7 @@ import { Send, LineChart, ShieldCheck, Loader2, ChevronDown, ChevronRight, Wrenc
 import { useLocation } from "wouter";
 import { derivWS } from "@/services/derivWebSocket";
 import { pushTimeline } from "@/components/AITimeline";
+import { getSymbolDisplayName } from "@/lib/symbols";
 import { toast } from "@/components/Toast";
 
 interface Message { role: "user" | "ai"; content: string; steps?: any[]; }
@@ -269,7 +270,7 @@ export default function AIAssistant() {
                   <div key={alert.id} className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4 text-xs">
                     <div className="flex items-center gap-2 mb-1">
                       <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold ${alert.type === "volatility" ? "bg-[var(--red-soft)] text-[var(--red)]" : "bg-[var(--accent-soft)] text-[var(--accent)]"}`}>{alert.type}</span>
-                      <span className="text-[var(--text-muted)]">{alert.symbol}</span>
+                      <span className="text-[var(--text-muted)]">{getSymbolDisplayName(alert.symbol)}</span>
                       <span className="ml-auto text-caption">{new Date(alert.createdAt).toLocaleString()}</span>
                     </div>
                     <p className="text-[var(--text-secondary)]">{alert.message}</p>

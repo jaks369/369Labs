@@ -3,6 +3,7 @@ import { trpc } from "@/lib/trpc";
 import { useMemo, useState } from "react";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { useLocation } from "wouter";
+import { getSymbolDisplayName } from "@/lib/symbols";
 
 type Slot = "prediction" | "entry" | "risk";
 
@@ -156,7 +157,7 @@ export default function AIExplainability() {
                       <span className="text-xs font-bold text-white w-8 text-right">{confidence}%</span>
                     </div>
                   </div>
-                  {entry.symbol && <p className="text-caption mb-2">Symbol: {entry.symbol}</p>}
+                  {entry.symbol && <p className="text-caption mb-2">Symbol: {getSymbolDisplayName(entry.symbol)}</p>}
                   {factors.length > 0 ? (
                     <ul className="space-y-2">
                       {factors.map((f, i) => (

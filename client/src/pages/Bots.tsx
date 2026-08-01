@@ -25,6 +25,7 @@ import { derivWS } from "@/services/derivWebSocket";
 import { StrategyRule } from "@/components/RuleBuilder";
 import { StrategyBuilderContent } from "@/pages/StrategyBuilder";
 import { pushTimeline } from "@/components/AITimeline";
+import { getSymbolDisplayName } from "@/lib/symbols";
 
 interface ServerBot {
   id: string;
@@ -297,7 +298,7 @@ export default function Bots() {
                         <div>
                           <h3 className="text-sm font-bold text-white">{bot.name}</h3>
                           <p className="text-micro">
-                            {bot.symbol} • {bot.trades} trades • {bot.status}
+                            {getSymbolDisplayName(bot.symbol)} • {bot.trades} trades • {bot.status}
                           </p>
                           {bot.lastLog && <p className="text-caption mt-1">{bot.lastLog}</p>}
                         </div>
@@ -367,7 +368,7 @@ export default function Bots() {
                       </div>
                       <div>
                         <h3 className="text-sm font-bold text-white">{bot.name}</h3>
-                        <p className="text-micro">{bot.symbol} • {bot.trades} trades • {bot.status}</p>
+                        <p className="text-micro">{getSymbolDisplayName(bot.symbol)} • {bot.trades} trades • {bot.status}</p>
                         {bot.lastLog && <p className="text-caption mt-1">{bot.lastLog}</p>}
                       </div>
                     </div>
@@ -417,7 +418,7 @@ export default function Bots() {
                       <div className="min-w-0">
                         <h3 className="text-sm font-bold text-white truncate">{strategy.name}</h3>
                         <p className="text-caption text-[var(--text-muted)] truncate">
-                          {rule?.symbol || DEFAULT_SYMBOL} • {rule?.action?.tradeType || "—"} • ${rule?.params?.stake || 1}
+                          {getSymbolDisplayName(rule?.symbol || DEFAULT_SYMBOL)} • {rule?.action?.tradeType || "—"} • ${rule?.params?.stake || 1}
                         </p>
                       </div>
                     </div>

@@ -4,6 +4,7 @@ import { trpc } from "@/lib/trpc";
 import { toast } from "@/components/Toast";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { useLocation } from "wouter";
+import { getSymbolDisplayName } from "@/lib/symbols";
 
 const REPORT_TEMPLATES = [
   { id: "weekly" as const, name: "Weekly Performance", icon: BarChart3, description: "Win rate, profit/loss, trade count for the past week" },
@@ -99,7 +100,7 @@ function ReportViewer({ report, onClose }: { report: any; onClose: () => void })
               <div className="space-y-1.5">
                 {report.bySymbol.map((sym: any) => (
                   <div key={sym.symbol} className="flex items-center justify-between px-3 py-2 bg-black/20 rounded-lg text-xs">
-                    <span className="text-white font-bold">{sym.symbol}</span>
+                    <span className="text-white font-bold">{getSymbolDisplayName(sym.symbol)}</span>
                     <span className="text-[var(--text-muted)]">{sym.wins}W / {sym.losses}L</span>
                     <span className={`font-bold ${sym.pnl >= 0 ? "text-[var(--green)]" : "text-[var(--red)]"}`}>
                       {sym.pnl >= 0 ? "+" : ""}${sym.pnl}

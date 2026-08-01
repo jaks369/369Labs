@@ -10,7 +10,7 @@ import { runBacktest, BacktestResult } from "@/services/BacktestEngine";
 import Sparkline from "@/components/Sparkline";
 import { StrategyRule } from "@/components/RuleBuilder";
 import { getValidSymbols } from "@/lib/symbols";
-import { getAllSymbols } from "@shared/symbols";
+import { getAllSymbols, getSymbolDisplayName } from "@shared/symbols";
 
 const IT_SYMBOLS = getAllSymbols();
 
@@ -159,7 +159,7 @@ export default function Backtesting() {
             <div>
               <label className="text-xs text-[var(--text-muted)] font-bold uppercase tracking-wider">Symbol</label>
               <select value={symbol} onChange={e => setSymbol(e.target.value)} className="w-full mt-1 bg-[var(--surface-secondary)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-white focus:border-[var(--accent)] outline-none [&>option]:bg-[var(--surface-secondary)] [&>option]:text-white">
-                {IT_SYMBOLS.map(s => <option key={s} value={s}>{s}</option>)}
+                {IT_SYMBOLS.map(s => <option key={s} value={s}>{getSymbolDisplayName(s)}</option>)}
               </select>
             </div>
 

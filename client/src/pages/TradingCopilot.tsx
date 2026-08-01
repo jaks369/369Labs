@@ -5,7 +5,7 @@ import { Bot, TrendingUp, Activity, BarChart3, BrainCircuit, Loader2, Sparkles }
 import AIChatWindow from "@/components/AIChatWindow";
 import { useState, useEffect, useMemo, useRef } from "react";
 import { derivWS } from "@/services/derivWebSocket";
-import { getValidSymbols } from "@/lib/symbols";
+import { getValidSymbols, getSymbolDisplayName } from "@/lib/symbols";
 
 export default function TradingCopilot() {
   const { isAuthenticated } = useAuth();
@@ -55,7 +55,7 @@ export default function TradingCopilot() {
           </div>
           <select value={symbol} onChange={e => setSymbol(e.target.value)}
             className="bg-[var(--surface-secondary)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-white focus:border-[var(--accent)] outline-none [&>option]:bg-[var(--surface-secondary)] [&>option]:text-white">
-            {getValidSymbols().map(s => <option key={s} value={s}>{s}</option>)}
+            {getValidSymbols().map(s => <option key={s} value={s}>{getSymbolDisplayName(s)}</option>)}
           </select>
         </div>
 
@@ -63,7 +63,7 @@ export default function TradingCopilot() {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4 md:col-span-2">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-micro">{symbol} Live</span>
+              <span className="text-micro">{getSymbolDisplayName(symbol)} Live</span>
               {tick && <span className={`text-caption font-bold ${tick.change >= 0 ? "text-[var(--green)]" : "text-[var(--red)]"}`}>{tick.change >= 0 ? "+" : ""}{Number(tick.change).toFixed(2)}%</span>}
             </div>
             <p className="text-3xl font-bold text-white font-mono">

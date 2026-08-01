@@ -5,6 +5,7 @@ import AIChatMessage from "./AIChatMessage";
 import AIChatInput from "./AIChatInput";
 import AIQuickQuestions from "./AIQuickQuestions";
 import type { ChatMessage, ChatResponse } from "../../../server/ai/AIChatEngine";
+import { getSymbolDisplayName } from "@/lib/symbols";
 
 export default function AIChatWindow() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -140,7 +141,7 @@ export default function AIChatWindow() {
                   <div key={entry.id} className="p-3 rounded-lg bg-[var(--card)] border border-[var(--border)] text-micro">
                     <div className="flex items-center gap-2 mb-1">
                       <span className="text-[9px] uppercase tracking-wider text-[var(--accent)] font-bold">{entry.knowledgeType}</span>
-                      {entry.symbol && <span className="text-[var(--accent)]">{entry.symbol}</span>}
+                      {entry.symbol && <span className="text-[var(--accent)]">{getSymbolDisplayName(entry.symbol)}</span>}
                       <span className="ml-auto text-[var(--text-muted)]">{new Date(entry.createdAt).toLocaleString()}</span>
                     </div>
                     <pre className="text-[var(--text-secondary)] whitespace-pre-wrap font-mono text-[9px]">{JSON.stringify(entry.data, null, 1).slice(0, 300)}</pre>
