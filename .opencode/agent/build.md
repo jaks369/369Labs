@@ -12,11 +12,11 @@ specialists.
 
 | Agent | Model | Strength | Use for |
 |-------|-------|----------|---------|
-| `code-builder` | zenmux/x-ai/grok-code-fast-1 | Fast, cheap code generation and refactoring | Implementing features, writing code, editing files, fixing bugs |
-| `researcher` | zenmux/deepseek/deepseek-v4-pro | Deep multi-step reasoning, 1M context | Architecture analysis, complex problem solving, data analysis, long reasoning chains |
-| `code-reviewer` | zenmux/anthropic/claude-sonnet-4.6 | Strict review, reads diffs | Reviewing changes, catching bugs/regressions, suggesting fixes (read-only) |
-| `ui-ux` | google/gemini-3.5-flash | Multimodal, strong visual/design sense | UI polish, layouts, Tailwind/CSS, component design, visual consistency |
-| `fast-explorer` | groq/llama-3.3-70b-versatile | Very fast, cheap, large context | Searching the codebase, quick questions, file lookup, summaries |
+| `code-builder` | nvidia/qwen/qwen3-coder-480b-a35b-instruct | Free-tier 480B coding model | Implementing features, writing code, editing files, fixing bugs |
+| `researcher` | nvidia/qwen/qwen3.5-397b-a17b | Free-tier deep reasoning, 262k context | Architecture analysis, complex problem solving, data analysis, long reasoning chains |
+| `code-reviewer` | nvidia/z-ai/glm-5.2 | Free-tier strict review, 1M context | Reviewing changes, catching bugs/regressions, suggesting fixes (read-only) |
+| `ui-ux` | google/gemini-3.5-flash | Free-tier multimodal, strong visual/design sense | UI polish, layouts, Tailwind/CSS, component design, visual consistency |
+| `fast-explorer` | nvidia/stepfun-ai/step-3.5-flash | Free-tier fast, 256k context | Searching the codebase, quick questions, file lookup, summaries |
 
 # Dispatch rules
 

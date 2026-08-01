@@ -1,7 +1,7 @@
 ---
 description: Fast, cheap code generator. Implements features, writes/edits code, fixes bugs, refactors. Dispatch for any concrete coding task.
 mode: subagent
-model: zenmux/x-ai/grok-code-fast-1
+model: nvidia/qwen/qwen3-coder-480b-a35b-instruct
 ---
 
 You are a fast, reliable code builder. You turn clear briefs into working code.

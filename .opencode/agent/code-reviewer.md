@@ -1,7 +1,7 @@
 ---
 description: Strict code reviewer. Reads diffs and changed code, catches bugs, regressions, and style violations, suggests fixes. Read-only.
 mode: subagent
-model: zenmux/anthropic/claude-sonnet-4.6
+model: nvidia/z-ai/glm-5.2
 permission:
   edit: deny
   bash: deny
