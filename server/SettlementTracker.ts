@@ -98,8 +98,8 @@ export class SettlementTracker {
 
     const profit = parseFloat(c.profit) || 0;
     const outcome: "win" | "loss" = profit >= 0 ? "win" : "loss";
-    const exitTick = c.exit_tick ? parseInt(c.exit_tick) : null;
-    const exitPrice = c.sell_price?.toString() || "0";
+    const exitTick = c.exit_tick != null ? parseInt(c.exit_tick) : null;
+    const exitPrice = c.sell_price != null ? String(c.sell_price) : exitTick != null ? String(exitTick) : "0";
 
     const updated = await db.settleTrade(trade.id, {
       result: outcome,
