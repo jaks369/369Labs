@@ -1,7 +1,7 @@
 import { useAuth } from "@/_core/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { useLocation } from "wouter";
-import { Brain, Globe, BarChart3, ChevronRight, Activity, Star, CheckCircle2, Shield, Zap, Clock, TrendingUp, Server, Menu, X, Radar, Wrench, FlaskConical, SearchCheck, MousePointerClick, Bot, GraduationCap, LineChart } from "lucide-react";
+import { Brain, Globe, BarChart3, ChevronRight, Activity, CheckCircle2, Shield, Zap, Clock, TrendingUp, Server, Menu, X, Radar, Wrench, FlaskConical, SearchCheck, MousePointerClick, Bot, GraduationCap, LineChart } from "lucide-react";
 import { motion } from "framer-motion";
 import { useState } from "react";
 
@@ -15,14 +15,14 @@ const stagger = {
 };
 
 const SYSTEM_FLOW = [
-  { icon: Radar, label: "Discover", desc: "Scan live markets" },
-  { icon: LineChart, label: "Analyze", desc: "Health & patterns" },
-  { icon: Wrench, label: "Build", desc: "Visual strategy lab" },
-  { icon: FlaskConical, label: "Test", desc: "Backtest & replay" },
-  { icon: SearchCheck, label: "Review", desc: "AI risk critique" },
-  { icon: MousePointerClick, label: "Execute", desc: "One-tap trading" },
-  { icon: Bot, label: "Automate", desc: "24/7 cloud bots" },
-  { icon: GraduationCap, label: "Learn", desc: "Journal & improve" },
+  { icon: Radar, label: "Discover", desc: "Scan live markets", path: "/markets" },
+  { icon: LineChart, label: "Analyze", desc: "Health & patterns", path: "/analytics" },
+  { icon: Wrench, label: "Build", desc: "Visual strategy lab", path: "/strategy-builder" },
+  { icon: FlaskConical, label: "Test", desc: "Backtest & replay", path: "/backtesting" },
+  { icon: SearchCheck, label: "Review", desc: "AI risk critique", path: "/ai-assistant" },
+  { icon: MousePointerClick, label: "Execute", desc: "One-tap trading", path: "/dashboard" },
+  { icon: Bot, label: "Automate", desc: "24/7 cloud bots", path: "/bots" },
+  { icon: GraduationCap, label: "Learn", desc: "Journal & improve", path: "/journal" },
 ];
 
 export default function Home() {
@@ -83,21 +83,12 @@ export default function Home() {
         {/* Hero */}
         <section className="max-w-4xl mx-auto px-6 pt-24 pb-16 text-center">
           <motion.div initial="hidden" animate="visible" variants={stagger}>
-            <motion.div variants={fadeUp} className="inline-flex mb-6">
-              <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium text-[var(--accent)] border border-[var(--accent-border)] bg-[var(--accent-soft)]">
-                <span className="relative flex h-1.5 w-1.5">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[var(--accent)]/60" />
-                  <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-[var(--accent)]" />
-                </span>
-                V1.0 NOW LIVE
-              </span>
-            </motion.div>
             <motion.h1 variants={fadeUp} className="text-4xl md:text-6xl font-bold text-[var(--text-primary)] mb-5 tracking-tight leading-[1.1]">
-              Trading Isn't the Product.<br />
-              <span className="text-[var(--accent)]">The System Is.</span>
+              AI Intelligence,<br />
+              <span className="text-[var(--accent)]">Automated Execution.</span>
             </motion.h1>
             <motion.p variants={fadeUp} className="text-base mb-8 text-[var(--text-secondary)] max-w-lg mx-auto leading-relaxed">
-              Whether you need a ready-to-go AI trading bot or robust AI APIs to create your own tools, we've got you covered.
+              One platform for AI strategy intelligence, automated execution, and trading infrastructure — analyze, build, test, and run without building your own stack.
             </motion.p>
             <motion.div variants={fadeUp} className="flex flex-col sm:flex-row gap-3 justify-center items-center">
               <button onClick={() => navigate("/login")} className="px-8 py-2.5 w-full sm:w-auto text-sm font-semibold rounded-full bg-[var(--cta-fill)] text-[var(--cta-text)] hover:bg-[var(--cta-fill-hover)] transition-colors">Get Started Free</button>
@@ -161,15 +152,15 @@ export default function Home() {
                 <Activity className="w-3 h-3" /> The System
               </span>
               <h2 className="text-3xl md:text-4xl font-bold text-[var(--text-primary)] tracking-tight mb-3">
-                Trading isn't the product.<br className="hidden md:block" /> <span className="text-[var(--accent)]">The System is.</span>
+                The full loop, <span className="text-[var(--accent)]">on one platform.</span>
               </h2>
               <p className="text-sm text-[var(--text-secondary)] max-w-xl mx-auto leading-relaxed">
-                ﻿369Labs is a complete loop — from market discovery to automated execution to measurable learning. Every stage feeds the next.
+                369Labs is a complete loop — from market discovery to automated execution to measurable learning. Every stage feeds the next.
               </p>
             </motion.div>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
               {SYSTEM_FLOW.map((step, i) => (
-                <motion.div key={step.label} variants={fadeUp} className="relative group">
+                <motion.div key={step.label} variants={fadeUp} className="relative group cursor-pointer" onClick={() => navigate(step.path)}>
                   <div className="p-4 border border-[var(--border)]/50 rounded-xl bg-[var(--card)]/40 hover:border-[var(--accent-border)] hover:bg-[var(--card)] transition-all duration-300 h-full">
                     <div className="flex items-center justify-between mb-3">
                       <step.icon className="w-5 h-5 text-[var(--accent)]" />
@@ -221,53 +212,19 @@ export default function Home() {
               </div>
               <motion.div variants={fadeUp} className="space-y-3">
                 {[
-                  { label: "Market Health", value: "78 / 100", note: "V75 · Strong momentum", pct: 78 },
-                  { label: "Strategy Review", value: "2 findings", note: "Risk check passed", pct: 66 },
-                  { label: "Verdict", value: "+$4.20", note: "Top symbol this session", pct: 100 },
+                  { label: "Market Health", value: "Live", note: "Momentum, volatility & digit distribution scored from live ticks", pct: 0 },
+                  { label: "Strategy Review", value: "Live", note: "AI critiques risk & logic before you deploy", pct: 0 },
+                  { label: "Verdict", value: "Live", note: "Top symbol & contract type ranked from your session", pct: 0 },
                 ].map((row) => (
                   <div key={row.label} className="rounded-xl border border-[var(--border)]/50 bg-[var(--card)]/60 p-4">
                     <div className="flex items-center justify-between mb-2">
                       <span className="text-[11px] uppercase tracking-widest text-[var(--text-muted)] font-bold">{row.label}</span>
                       <span className="text-sm font-bold font-mono tabular-nums text-[var(--accent)]">{row.value}</span>
                     </div>
-                    <div className="h-1 rounded-full bg-[var(--surface-elevated)] overflow-hidden mb-2">
-                      <motion.div initial={{ width: 0 }} whileInView={{ width: `${row.pct}%` }} viewport={{ once: true }} transition={{ duration: 0.9, ease: "easeOut" }} className="h-full bg-[var(--accent)] rounded-full" />
-                    </div>
                     <p className="text-xs text-[var(--text-muted)]">{row.note}</p>
                   </div>
                 ))}
               </motion.div>
-            </div>
-          </motion.div>
-        </section>
-
-        {/* Testimonials */}
-        <section className="max-w-6xl mx-auto px-6 py-16">
-          <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={stagger}>
-            <motion.div variants={fadeUp} className="mb-10">
-              <h2 className="text-2xl font-bold text-[var(--text-primary)] mb-2">Trusted by Traders</h2>
-              <p className="text-sm text-[var(--text-muted)]">See what our users say about 369Labs.</p>
-            </motion.div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {[
-                { name: "Alex K.", role: "Algorithmic Trader", initial: "A", quote: "369Labs completely changed how I approach trading. The AI insights are uncanny." },
-                { name: "Sarah M.", role: "Quant Developer", initial: "S", quote: "Best backtesting engine I've used. The parameter sweep is a game changer." },
-                { name: "James R.", role: "Full-time Trader", initial: "J", quote: "I've automated my entire strategy. The cloud execution is flawless." },
-              ].map((t, i) => (
-                <motion.div key={i} variants={fadeUp} className="p-5 border border-[var(--border)]/50 rounded-xl">
-                  <div className="flex gap-0.5 mb-3">
-                    {[1, 2, 3, 4, 5].map((s) => <Star key={s} className="w-3.5 h-3.5 text-[var(--accent)]" style={{ fill: "var(--accent)" }} />)}
-                  </div>
-                  <p className="text-sm text-[var(--text-secondary)] mb-4 leading-relaxed">"{t.quote}"</p>
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-full bg-[var(--surface-elevated)] flex items-center justify-center text-xs font-semibold text-[var(--text-primary)]">{t.initial}</div>
-                    <div>
-                      <p className="text-sm font-medium text-[var(--text-primary)]">{t.name}</p>
-                      <p className="text-xs text-[var(--text-muted)]">{t.role}</p>
-                    </div>
-                  </div>
-                </motion.div>
-              ))}
             </div>
           </motion.div>
         </section>

@@ -156,7 +156,7 @@ export default function ContractTypeSelector({ selection, onChange }: ContractTy
                   <button
                     key={i}
                     onClick={() => onChange({ ...selection, barrier: i })}
-                    className="w-11 h-11 flex items-center justify-center rounded-lg text-xs font-bold transition-all"
+                    className="min-w-0 w-full aspect-square flex items-center justify-center rounded-lg text-xs font-bold transition-all"
                     style={{
                       background: selection.barrier === i ? "var(--accent)" : "var(--card)",
                       color: selection.barrier === i ? "white" : "var(--text-secondary)",
@@ -226,7 +226,7 @@ export default function ContractTypeSelector({ selection, onChange }: ContractTy
                   <button
                     key={i}
                     onClick={() => onChange({ ...selection, digit: i })}
-                    className="w-11 h-11 flex items-center justify-center rounded-lg text-xs font-bold transition-all"
+                    className="min-w-0 w-full aspect-square flex items-center justify-center rounded-lg text-xs font-bold transition-all"
                     style={{
                       background: selection.digit === i ? "var(--accent)" : "var(--card)",
                       color: selection.digit === i ? "white" : "var(--text-secondary)",

@@ -486,7 +486,7 @@ function DashboardLayoutContent({
 
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <button className="flex items-center gap-2.5 rounded-lg px-2 py-2 hover:bg-white/[0.03] transition-all duration-150 w-full text-left group-data-[collapsible=icon]:justify-center focus:outline-none cursor-pointer focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:outline-none">
+                <button onClick={() => setLocation("/settings?tab=profile")} title="Open profile" className="flex items-center gap-2.5 rounded-lg px-2 py-2 hover:bg-white/[0.03] transition-all duration-150 w-full text-left group-data-[collapsible=icon]:justify-center focus:outline-none cursor-pointer focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:outline-none">
                   <Avatar className="h-8 w-8 border border-[var(--border)] shrink-0">
                     {(user as any)?.avatarUrl ? (
                       <AvatarImage src={(user as any).avatarUrl} alt="Avatar" className="object-cover" />

@@ -292,6 +292,7 @@ export default function Settings() {
 
   const selectSection = (id: string) => {
     setActiveSection(id);
+    window.history.replaceState(null, "", `?tab=${id}`);
     const el = sectionRef.current;
     if (el) {
       const target = el.querySelector(`[data-section="${id}"]`);

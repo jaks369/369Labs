@@ -2720,11 +2720,8 @@ watch: protectedProcedure
   }),
   docs: router({
     endpoints: protectedProcedure.query(async () => {
-      return [
-        { method: "GET", path: "/api/trpc/trades.list", description: "List trades" },
-        { method: "POST", path: "/api/trpc/trades.save", description: "Save a trade" },
-        { method: "GET", path: "/api/trpc/strategies.list", description: "List strategies" },
-      ];
+      const { ENDPOINTS } = await import("./docs");
+      return ENDPOINTS;
     }),
   }),
   reports: {

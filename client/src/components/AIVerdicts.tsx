@@ -84,21 +84,21 @@ export default function AIVerdicts({ symbol, ticks = [], trades = [], decimalPla
       </div>
 
       {health && (
-        <div className="grid grid-cols-3 gap-1.5 mb-3">
-          <div className={`px-2 py-1.5 rounded-lg border text-center ${health.dir === "up" ? "bg-[var(--green-soft)] border-[var(--green)]/25" : health.dir === "down" ? "bg-[var(--red-soft)] border-[var(--red)]/25" : "bg-[var(--surface-secondary)] border-[var(--border)]"}`}>
-            <div className="text-[9px] uppercase tracking-widest text-[var(--text-muted)] font-bold mb-0.5">Momentum</div>
-            <div className={`text-xs font-bold font-mono flex items-center justify-center gap-1 ${health.dir === "up" ? "text-[var(--green)]" : health.dir === "down" ? "text-[var(--red)]" : "text-[var(--text-secondary)]"}`}>
-              {health.dir === "up" ? <TrendingUp className="w-3 h-3" /> : health.dir === "down" ? <TrendingDown className="w-3 h-3" /> : <BarChart3 className="w-3 h-3" />}
-              {health.momentum}
+        <div className="grid grid-cols-3 gap-1.5 mb-3 min-w-0">
+          <div className={`min-w-0 px-1.5 py-1.5 rounded-lg border text-center ${health.dir === "up" ? "bg-[var(--green-soft)] border-[var(--green)]/25" : health.dir === "down" ? "bg-[var(--red-soft)] border-[var(--red)]/25" : "bg-[var(--surface-secondary)] border-[var(--border)]"}`}>
+            <div className="text-[8px] uppercase tracking-wide text-[var(--text-muted)] font-bold mb-0.5 truncate">Momentum</div>
+            <div className={`text-xs font-bold font-mono flex items-center justify-center gap-1 min-w-0 ${health.dir === "up" ? "text-[var(--green)]" : health.dir === "down" ? "text-[var(--red)]" : "text-[var(--text-secondary)]"}`}>
+              {health.dir === "up" ? <TrendingUp className="w-3 h-3 shrink-0" /> : health.dir === "down" ? <TrendingDown className="w-3 h-3 shrink-0" /> : <BarChart3 className="w-3 h-3 shrink-0" />}
+              <span className="truncate">{health.momentum}</span>
             </div>
           </div>
-          <div className={`px-2 py-1.5 rounded-lg border text-center ${health.vol === "high" ? "bg-[var(--red-soft)] border-[var(--red)]/25" : health.vol === "medium" ? "bg-[var(--accent-soft)] border-[var(--accent-border)]" : "bg-[var(--surface-secondary)] border-[var(--border)]"}`}>
-            <div className="text-[9px] uppercase tracking-widest text-[var(--text-muted)] font-bold mb-0.5">Volatility</div>
-            <div className="text-xs font-bold font-mono" style={{ color: health.vol === "high" ? "var(--red)" : health.vol === "medium" ? "var(--accent)" : "var(--green)" }}>{health.vol}</div>
+          <div className={`min-w-0 px-1.5 py-1.5 rounded-lg border text-center ${health.vol === "high" ? "bg-[var(--red-soft)] border-[var(--red)]/25" : health.vol === "medium" ? "bg-[var(--accent-soft)] border-[var(--accent-border)]" : "bg-[var(--surface-secondary)] border-[var(--border)]"}`}>
+            <div className="text-[8px] uppercase tracking-wide text-[var(--text-muted)] font-bold mb-0.5 truncate">Volatility</div>
+            <div className="text-xs font-bold font-mono truncate" style={{ color: health.vol === "high" ? "var(--red)" : health.vol === "medium" ? "var(--accent)" : "var(--green)" }}>{health.vol}</div>
           </div>
-          <div className="px-2 py-1.5 rounded-lg border text-center bg-[var(--surface-secondary)] border-[var(--border)]">
-            <div className="text-[9px] uppercase tracking-widest text-[var(--text-muted)] font-bold mb-0.5">Hot Digit</div>
-            <div className="text-xs font-bold font-mono text-[var(--accent)]">{health.hottestDigit != null ? `${health.hottestDigit} · ${health.hottestPct}%` : "—"}</div>
+          <div className="min-w-0 px-1.5 py-1.5 rounded-lg border text-center bg-[var(--surface-secondary)] border-[var(--border)]">
+            <div className="text-[8px] uppercase tracking-wide text-[var(--text-muted)] font-bold mb-0.5 truncate">Hot Digit</div>
+            <div className="text-xs font-bold font-mono text-[var(--accent)] truncate">{health.hottestDigit != null ? `${health.hottestDigit} · ${health.hottestPct}%` : "—"}</div>
           </div>
         </div>
       )}
