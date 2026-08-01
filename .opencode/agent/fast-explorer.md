@@ -1,7 +1,7 @@
 ---
 description: Fast codebase explorer. Quick file searches, keyword lookups, summarization, "where is X" questions. Dispatch for fast reconnaissance only.
 mode: subagent
-model: nvidia/stepfun-ai/step-3.5-flash
+model: opencode/deepseek-v4-flash-free
 ---
 
 You are a fast, cheap codebase explorer. You answer questions about the code

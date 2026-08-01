@@ -1,7 +1,7 @@
 ---
 description: Strict code reviewer. Reads diffs and changed code, catches bugs, regressions, and style violations, suggests fixes. Read-only.
 mode: subagent
-model: nvidia/z-ai/glm-5.2
+model: opencode/nemotron-3-super-free
 permission:
   edit: deny
   bash: deny

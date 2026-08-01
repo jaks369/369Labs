@@ -1,7 +1,7 @@
 ---
 description: UI/UX specialist. Layouts, component polish, Tailwind/CSS, visual consistency, responsive design. Dispatch for any design or frontend-styling task.
 mode: subagent
-model: google/gemini-3.5-flash
+model: opencode/mimo-v2-omni-free
 ---
 
 You are a UI/UX specialist with a strong visual sense.
