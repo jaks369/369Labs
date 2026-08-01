@@ -2,13 +2,13 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { derivWS } from "@/services/derivWebSocket";
 import { useLocation } from "wouter";
-import { Play, Pause, RotateCcw, FastForward, TrendingUp, TrendingDown, Loader2, GanttChartSquare, ArrowRightLeft, Bell } from "lucide-react";
+import { Play, Pause, RotateCcw, FastForward, TrendingUp, TrendingDown, Loader2, GraduationCap } from "lucide-react";
 import Sparkline from "@/components/Sparkline";
 import { getValidSymbols } from "@/lib/symbols";
 
 type Tick = { epoch: number; price: number; lastDigit: number; timestamp?: number };
-type CondOrder = { id: string; type: "stop" | "limit" | "oco_buy" | "oco_sell"; price: number; triggered: boolean; ocoPair?: string };
-type TrailingStop = { active: boolean; distance: number; activationPrice: number | null; direction?: "rise" | "fall" };
+type Decision = { type: "rise" | "fall"; entryIdx: number; entryPrice: number; duration: number };
+type Result = { type: string; win: boolean; at: string };
 
 export default function Replay() {
   const { isAuthenticated } = useAuth();
@@ -20,13 +20,9 @@ export default function Replay() {
   const [speed, setSpeed] = useState(4);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [stake, setStake] = useState(1);
   const [duration, setDuration] = useState(5);
-  const [trade, setTrade] = useState<{ type: "rise" | "fall"; entryIdx: number; entryPrice: number; stake: number; duration: number } | null>(null);
-  const [results, setResults] = useState<{ type: string; pnl: number; at: string }[]>([]);
-  const [condOrders, setCondOrders] = useState<CondOrder[]>([]);
-  const [trailing, setTrailing] = useState<TrailingStop>({ active: false, distance: 10, activationPrice: null, direction: undefined });
-  const [showOrders, setShowOrders] = useState(false);
+  const [decision, setDecision] = useState<Decision | null>(null);
+  const [results, setResults] = useState<Result[]>([]);
   const timer = useRef<number | null>(null);
   const abortRef = useRef<AbortController | null>(null);
 
@@ -73,99 +69,27 @@ export default function Replay() {
   const cur = ticks[idx];
   const windowTicks = ticks.slice(Math.max(0, idx - 80), idx + 1);
 
-  const takeTrade = (type: "rise" | "fall") => {
+  const predict = (type: "rise" | "fall") => {
     if (!cur) return;
-    if (trade) {
-      // Early close - score immediately
-      const win = (trade.type === "rise" && cur.price > trade.entryPrice) || (trade.type === "fall" && cur.price < trade.entryPrice);
-      const payout = 0.95;
-      const pnl = win ? trade.stake * payout : -trade.stake;
-      setResults((r) => [{ type: `${trade.type} (early close, ${idx - trade.entryIdx}t)`, pnl, at: cur.timestamp ? new Date(cur.timestamp).toLocaleTimeString() : "—" }, ...r].slice(0, 20));
-      setTrade(null);
+    if (decision) {
+      // Cancel the open prediction and score it against the current tick
+      const win = (decision.type === "rise" && cur.price > decision.entryPrice) || (decision.type === "fall" && cur.price < decision.entryPrice);
+      setResults((r) => [{ type: `${decision.type} — ${idx - decision.entryIdx} ticks`, win, at: cur.timestamp ? new Date(cur.timestamp).toLocaleTimeString() : "—" }, ...r].slice(0, 20));
+      setDecision(null);
       return;
     }
-    setTrade({ type, entryIdx: idx, entryPrice: cur.price, stake, duration });
+    setDecision({ type, entryIdx: idx, entryPrice: cur.price, duration });
   };
 
-  // Auto-score when duration expires
+  // Auto-score when the prediction horizon expires
   useEffect(() => {
-    if (!trade || !cur) return;
-    if (idx >= trade.entryIdx + trade.duration) {
-      const win = (trade.type === "rise" && cur.price > trade.entryPrice) || (trade.type === "fall" && cur.price < trade.entryPrice);
-      const payout = 0.95; // TODO: import from BacktestEngine or compute from symbol/duration
-      const pnl = win ? trade.stake * payout : -trade.stake;
-      setResults((r) => [{ type: `${trade.type} (${trade.duration}t)`, pnl, at: cur.timestamp ? new Date(cur.timestamp).toLocaleTimeString() : "—" }, ...r].slice(0, 20));
-      setTrade(null);
+    if (!decision || !cur) return;
+    if (idx >= decision.entryIdx + decision.duration) {
+      const win = (decision.type === "rise" && cur.price > decision.entryPrice) || (decision.type === "fall" && cur.price < decision.entryPrice);
+      setResults((r) => [{ type: `${decision.type} — ${decision.duration} ticks`, win, at: cur.timestamp ? new Date(cur.timestamp).toLocaleTimeString() : "—" }, ...r].slice(0, 20));
+      setDecision(null);
     }
-  }, [idx, trade, cur]);
-
-  const orderIdRef = useRef(0);
-  const addCondOrder = (type: CondOrder["type"]) => {
-    if (!cur) return;
-    // For stop/limit, direction depends on position; oco_buy/oco_sell are direction-specific
-    const price = type === "stop" ? cur.price * 0.98 : type === "limit" ? cur.price * 1.02 : cur.price;
-    orderIdRef.current++;
-    const ocoPair = type === "oco_buy" || type === "oco_sell" ? `oco_${Date.now()}_${orderIdRef.current}` : undefined;
-    setCondOrders((o) => [...o, { id: `cond_${Date.now()}_${orderIdRef.current}`, type, price: Math.round(price * 10000) / 10000, triggered: false, ocoPair }]);
-  };
-
-  useEffect(() => {
-    if (!cur || !trade) return;
-    const isRise = trade.type === "rise";
-    setCondOrders((prev) => {
-      const updated: CondOrder[] = [];
-      const triggeredIds = new Set<string>();
-      const newOrders = prev.map((o) => {
-        if (o.triggered) return o;
-        let triggered = false;
-        // Stop: RISE (long) triggers on price DROP; FALL (short) triggers on price RISE
-        if ((o.type === "stop" || o.type === "oco_sell")) {
-          const shouldTrigger = isRise ? cur.price <= o.price : cur.price >= o.price;
-          if (shouldTrigger) triggered = true;
-        }
-        // Limit: RISE triggers on price RISE; FALL triggers on price DROP
-        if ((o.type === "limit" || o.type === "oco_buy")) {
-          const shouldTrigger = isRise ? cur.price >= o.price : cur.price <= o.price;
-          if (shouldTrigger) triggered = true;
-        }
-        if (triggered) {
-          const payout = 0.95;
-          const pnl = o.type === "stop" || o.type === "oco_sell" ? -trade.stake : trade.stake * payout;
-          const label = o.type === "stop" || o.type === "oco_sell" ? "Stop" : "Limit";
-          updated.push({ ...o, triggered: true });
-          triggeredIds.add(o.id);
-          if (o.ocoPair) triggeredIds.add(o.ocoPair); // cancel OCO counterpart
-          setResults((r) => [{ type: `⚡ ${label} triggered @ ${o.price}`, pnl, at: cur.timestamp ? new Date(cur.timestamp).toLocaleTimeString() : "—" }, ...r].slice(0, 20));
-          setTrade(null);
-        }
-        return triggered ? { ...o, triggered: true } : o;
-      });
-      // Remove triggered + their OCO counterparts
-      return newOrders.filter((o) => !triggeredIds.has(o.id) && !triggeredIds.has(o.ocoPair || ""));
-    });
-  }, [cur, trade]);
-
-  useEffect(() => {
-    if (!trailing.active || !cur || !trade) return;
-    // Initialize activation price at trade entry price, not current price
-    if (trailing.activationPrice === null) {
-      setTrailing((t) => ({ ...t, activationPrice: trade.entryPrice, direction: trade.type }));
-      return;
-    }
-    const direction = trade.type === "rise" ? 1 : -1;
-    // Get decimal places for proper distance scaling
-    const decimals = symbol.startsWith("1HZ") ? 3 : symbol.startsWith("R_") ? 2 : 2;
-    const distanceValue = trailing.distance / Math.pow(10, decimals);
-    const bestPrice = direction > 0 ? Math.max(trailing.activationPrice, cur.price) : Math.min(trailing.activationPrice, cur.price);
-    const stopPrice = direction > 0 ? bestPrice - distanceValue : bestPrice + distanceValue;
-    if ((direction > 0 && cur.price <= stopPrice) || (direction < 0 && cur.price >= stopPrice)) {
-      const payout = 0.95;
-      const pnl = trade.stake * (payout - 1); // trailing stop closes at slight loss/win
-      setResults((r) => [{ type: `🔄 Trailing stop closed @ ${cur.price.toFixed(decimals)}`, pnl, at: cur.timestamp ? new Date(cur.timestamp).toLocaleTimeString() : "—" }, ...r].slice(0, 20));
-      setTrade(null);
-      setTrailing({ active: false, distance: 10, activationPrice: null, direction: undefined });
-    }
-  }, [cur, trailing.active, trade, symbol]);
+  }, [idx, decision, cur]);
 
   return (
     <div className="min-h-screen bg-[var(--card)] p-6">
@@ -173,9 +97,9 @@ export default function Replay() {
         <div className="flex items-center justify-between flex-wrap gap-4">
           <div>
             <h1 className="text-3xl font-bold text-white flex items-center gap-3">
-              <RotateCcw className="w-7 h-7 text-[var(--accent-hover)]" /> Replay Mode
+              <GraduationCap className="w-7 h-7 text-[var(--accent-hover)]" /> Replay Mode
             </h1>
-            <p className="text-[var(--text-secondary)] text-sm mt-1">Replay historical ticks. Trade manually and let 369AI score your decision.</p>
+            <p className="text-[var(--text-secondary)] text-sm mt-1">Replay historical ticks and practice reading the tape. Predictions are scored, but no real orders are placed.</p>
           </div>
           <select value={symbol} onChange={(e) => setSymbol(e.target.value)} className="bg-[var(--surface-secondary)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-white focus:border-[var(--accent)] outline-none [&>option]:bg-[var(--surface-secondary)] [&>option]:text-white">
             {SYMBOLS.map((s) => <option key={s} value={s}>{s}</option>)}
@@ -187,6 +111,11 @@ export default function Replay() {
 
         {!loading && ticks.length > 0 && (
           <>
+            <div className="bg-[var(--accent-soft)] border border-[var(--accent)]/30 rounded-xl p-3 text-xs text-[var(--accent)] flex items-center gap-2">
+              <GraduationCap className="w-4 h-4 shrink-0" />
+              Practice mode only — nothing here buys or sells. Use Dashboard / Terminal for real trading.
+            </div>
+
             <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-6">
               <div className="flex items-end justify-between mb-4">
                 <div>
@@ -219,75 +148,37 @@ export default function Replay() {
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-6">
-                <h2 className="text-sm font-bold text-white mb-4">Manual Trade</h2>
+                <h2 className="text-sm font-bold text-white mb-1">Make a Prediction</h2>
+                <p className="text-xs text-[var(--text-muted)] mb-4">Guess the direction over the next few ticks and get scored — no real orders.</p>
                 <div className="flex gap-3">
-                  <button onClick={() => takeTrade("rise")} className={`flex-1 min-h-[44px] py-4 rounded-lg flex items-center justify-center gap-2 font-bold ${trade?.type === "rise" ? "bg-[var(--green)] text-white" : "bg-[var(--green-soft)] text-[var(--green)] border border-[var(--green)]/30"}`}>
-                    <TrendingUp className="w-5 h-5" /> {trade ? "Close" : "Buy Rise"}
+                  <button onClick={() => predict("rise")} className={`flex-1 min-h-[44px] py-4 rounded-lg flex items-center justify-center gap-2 font-bold ${decision?.type === "rise" ? "bg-[var(--green)] text-white" : "bg-[var(--green-soft)] text-[var(--green)] border border-[var(--green)]/30"}`}>
+                    <TrendingUp className="w-5 h-5" /> {decision ? "Score Now" : "Predict Rise"}
                   </button>
-                  <button onClick={() => takeTrade("fall")} className={`flex-1 min-h-[44px] py-4 rounded-lg flex items-center justify-center gap-2 font-bold ${trade?.type === "fall" ? "bg-[var(--red)] text-white" : "bg-[var(--red-soft)] text-[var(--red)] border border-[var(--red)]/30"}`}>
-                    <TrendingDown className="w-5 h-5" /> {trade ? "Close" : "Buy Fall"}
+                  <button onClick={() => predict("fall")} className={`flex-1 min-h-[44px] py-4 rounded-lg flex items-center justify-center gap-2 font-bold ${decision?.type === "fall" ? "bg-[var(--red)] text-white" : "bg-[var(--red-soft)] text-[var(--red)] border border-[var(--red)]/30"}`}>
+                    <TrendingDown className="w-5 h-5" /> {decision ? "Score Now" : "Predict Fall"}
                   </button>
                 </div>
-                {trade && <p className="text-xs text-[var(--text-secondary)] mt-3">Open {trade.type} at {trade.entryPrice.toFixed(4)}. Press again to close and score.</p>}
+                {decision && <p className="text-xs text-[var(--text-secondary)] mt-3">Predicted {decision.type} at {decision.entryPrice.toFixed(4)}. Press again to score early, or wait {decision.duration} ticks.</p>}
 
-                <div className="mt-4 pt-4 border-t border-[var(--border)]">
-                  <button onClick={() => setShowOrders((s) => !s)} className="flex items-center gap-2 text-xs text-[var(--accent)] hover:text-[var(--accent-hover)]">
-                    <GanttChartSquare className="w-3.5 h-3.5" /> {showOrders ? "Hide" : "Show"} Conditional Orders
-                  </button>
-                  {showOrders && (
-                    <div className="mt-3 space-y-3">
-                      <div className="flex gap-2">
-                        <button onClick={() => addCondOrder("stop")} className="flex-1 min-h-[44px] py-3 rounded-lg text-sm font-bold bg-[var(--red-soft)] text-[var(--red)] border border-[var(--red)]/30 hover:bg-[var(--red)]/20">
-                          Add Stop Loss
-                        </button>
-                        <button onClick={() => addCondOrder("limit")} className="flex-1 min-h-[44px] py-3 rounded-lg text-sm font-bold bg-[var(--green-soft)] text-[var(--green)] border border-[var(--green)]/30 hover:bg-[var(--green)]/20">
-                          Add Take Profit
-                        </button>
-                        <button onClick={() => addCondOrder("oco_buy")} className="flex-1 min-h-[44px] py-3 rounded-lg text-sm font-bold bg-[var(--accent)]/20 text-[var(--accent)] border border-[var(--accent)]/30 hover:bg-[var(--accent)]/30">
-                          <ArrowRightLeft className="w-4 h-4 inline mr-1" />OCO
-                        </button>
-                      </div>
-                      {condOrders.length > 0 && (
-                        <div className="space-y-1">
-                          {condOrders.map((o) => (
-                            <div key={o.id} className="flex justify-between text-xs p-2 bg-black/20 rounded-lg">
-                              <span className="text-[var(--text-secondary)]">{o.type.toUpperCase()} @ {o.price.toFixed(4)}</span>
-                              <span className={o.triggered ? "text-[var(--green)]" : "text-[var(--text-muted)]"}>{o.triggered ? "Triggered" : "Active"}</span>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-
-                <div className="mt-3 pt-3 border-t border-[var(--border)]">
-                  <label className="flex items-center gap-2 text-xs text-[var(--text-secondary)] cursor-pointer">
-                    <input type="checkbox" checked={trailing.active} onChange={(e) => setTrailing((t) => ({ ...t, active: e.target.checked, activationPrice: null }))} className="accent-[var(--accent)]" />
-                    <Bell className="w-3 h-3 text-[var(--accent)]" /> Trailing Stop
-                  </label>
-                  {trailing.active && (
-                    <div className="mt-2 flex items-center gap-2">
-                      <span className="text-xs text-[var(--text-muted)]">Distance:</span>
-                      <input type="range" min={1} max={100} value={trailing.distance} onChange={(e) => setTrailing((t) => ({ ...t, distance: Number(e.target.value) }))} className="flex-1" />
-                      <span className="text-xs text-[var(--accent)] font-bold">{trailing.distance} pts</span>
-                    </div>
-                  )}
+                <div className="mt-4 pt-4 border-t border-[var(--border)] flex items-center gap-3">
+                  <span className="text-xs text-[var(--text-secondary)]">Horizon:</span>
+                  <input type="range" min={1} max={20} value={duration} onChange={(e) => setDuration(Number(e.target.value))} className="flex-1" />
+                  <span className="text-xs text-[var(--accent)] font-bold">{duration} ticks</span>
                 </div>
               </div>
 
               <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-6">
                 <h2 className="text-sm font-bold text-white mb-4">Your Decisions</h2>
                 {(() => {
-                  const wins = results.filter((r) => r.pnl >= 0).length;
+                  const wins = results.filter((r) => r.win).length;
                   const loss = results.length - wins;
-                  const net = results.reduce((a, r) => a + r.pnl, 0);
+                  const net = wins - loss;
                   const wr = results.length ? Math.round((wins / results.length) * 100) : 0;
                   return results.length > 0 ? (
                     <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-xs mb-3 px-2 py-2 bg-black/20 rounded-lg border border-[var(--border)]">
                       <span className="flex items-center gap-2">
-                        <span className="text-[9px] uppercase tracking-widest text-[var(--text-muted)] font-bold">Replay P&L</span>
-                        <span className={`font-mono tabular-nums font-bold text-[13px] ${net >= 0 ? "text-[var(--green)]" : "text-[var(--red)]"}`}>{net >= 0 ? "+" : ""}{net.toFixed(2)}</span>
+                        <span className="text-[9px] uppercase tracking-widest text-[var(--text-muted)] font-bold">Score</span>
+                        <span className={`font-mono tabular-nums font-bold text-[13px] ${net >= 0 ? "text-[var(--green)]" : "text-[var(--red)]"}`}>{net >= 0 ? "+" : ""}{net}</span>
                       </span>
                       <span className="flex items-center gap-2">
                         <span className="text-[9px] uppercase tracking-widest text-[var(--text-muted)] font-bold">Win Rate</span>
@@ -303,12 +194,12 @@ export default function Replay() {
                     </div>
                   ) : null;
                 })()}
-                {results.length === 0 ? <div className="empty-state"><p className="empty-state-desc">No trades yet.</p></div> : (
+                {results.length === 0 ? <div className="empty-state"><p className="empty-state-desc">No predictions yet.</p></div> : (
                   <div className="space-y-1.5 max-h-64 overflow-y-auto font-mono text-xs">
                     {results.map((r, i) => (
                       <div key={i} className="flex justify-between p-2 bg-black/20 rounded-lg">
                         <span className="text-[var(--text-secondary)]">{r.type} <span className="text-[var(--text-muted)]">@ {r.at}</span></span>
-                        <span className={r.pnl >= 0 ? "text-[var(--green)]" : "text-[var(--red)]"}>{r.pnl >= 0 ? "+" : ""}{r.pnl.toFixed(2)}</span>
+                        <span className={r.win ? "text-[var(--green)]" : "text-[var(--red)]"}>{r.win ? "+1" : "-1"}</span>
                       </div>
                     ))}
                   </div>
