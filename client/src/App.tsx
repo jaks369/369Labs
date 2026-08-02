@@ -3,7 +3,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { ToastViewport, useToast } from "@/components/Toast";
 import { useState, useEffect, useRef, lazy, Suspense } from "react";
 import NotFound from "@/pages/NotFound";
-import { Route, Switch, Redirect } from "wouter";
+import { Route, Switch, Redirect, useLocation } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
 import CommandPalette from "./components/CommandPalette";
 
@@ -65,9 +65,19 @@ function AppLayout({ children }: { children: React.ReactNode }) {
   return <DashboardLayout>{children}</DashboardLayout>;
 }
 
+function PageTransition({ children }: { children: React.ReactNode }) {
+  const [location] = useLocation();
+  return (
+    <div key={location} className="animate-page-fade min-h-screen">
+      {children}
+    </div>
+  );
+}
+
 function Router() {
   return (
-    <Switch>
+    <PageTransition>
+      <Switch>
       <Route path={"/"} component={Home} />
       <Route path={"/login"} component={Login} />
       <Route path={"/forgot-password"} component={ForgotPassword} />
@@ -117,7 +127,8 @@ function Router() {
       <Route path={"/backup"}><AppLayout><BackupRestore /></AppLayout></Route>
       <Route path={"/404"} component={NotFound} />
       <Route component={NotFound} />
-    </Switch>
+      </Switch>
+    </PageTransition>
   );
 }
 

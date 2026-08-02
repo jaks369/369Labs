@@ -1181,6 +1181,12 @@
   .animate-sheet-up { animation: sheetUpIn 200ms var(--ease-out-expo) both; }
 
 
+  @keyframes pageFadeIn {
+    from { opacity: 0; transform: translateY(4px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .animate-page-fade { animation: pageFadeIn 180ms var(--ease-out-expo) both; }
+
   .ai-alive {
     position: relative;
   }
