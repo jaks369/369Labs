@@ -70,6 +70,7 @@ export default function ContractTypeSelector({ selection, onChange }: ContractTy
     const base: ContractSelection = { category };
     if (category === "rise_fall") base.direction = "rise";
     if (category === "over_under") { base.overUnder = "over"; base.barrier = 5; }
+    if (category === "even_odd") base.digitMatch = "match";
     if (category === "digits") { base.digitMatch = "match"; base.digit = 0; }
     if (category === "accumulator") base.growthRate = 1;
     onChange(base);

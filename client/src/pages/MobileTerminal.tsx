@@ -131,11 +131,12 @@ export default function MobileTerminal() {
     };
   }, [windowTicks]);
 
-  const handleQuickTrade = async (dir: "rise" | "fall") => {
+  const handleQuickTrade = async (dir?: "rise" | "fall") => {
     if (!derivWS.isAuthorized()) {
       setShowTokenModal(true);
       return;
     }
+    const direction = dir || contract.direction;
     const dailyLossLimit = (memoryQuery.data?.memory as any)?.dailyLossLimit;
     if (dailyLossLimit > 0) {
       const today = new Date().toDateString();
@@ -148,7 +149,7 @@ export default function MobileTerminal() {
       if (!ok) return;
     }
     const map: Record<string, string> = {
-      rise_fall: dir === "fall" ? "PUT" : "CALL",
+      rise_fall: direction === "fall" ? "PUT" : "CALL",
       over_under: contract.overUnder === "under" ? "DIGITUNDER" : "DIGITOVER",
       even_odd: contract.digitMatch === "differ" ? "DIGITODD" : "DIGITEVEN",
       digits: contract.digitMatch === "differ" ? "DIGITDIFF" : "DIGITMATCH",
@@ -214,6 +215,17 @@ export default function MobileTerminal() {
   const selectedDisplay = symbols.find((s) => s.symbol === symbol)?.displayName || symbol;
   const isRiseFall = contract.category === "rise_fall";
   const accountBadge = accountType === "real" ? "REAL" : accountType === "demo" ? "DEMO" : !derivWS.isAuthorized() ? "NO TOKEN" : "LIVE";
+
+  const buyLabel = (() => {
+    switch (contract.category) {
+      case "rise_fall": return contract.direction === "fall" ? "Buy Fall" : "Buy Rise";
+      case "over_under": return contract.overUnder === "under" ? `Buy Under ${contract.barrier ?? 5}` : `Buy Over ${contract.barrier ?? 5}`;
+      case "even_odd": return contract.digitMatch === "differ" ? "Buy Odd" : "Buy Even";
+      case "digits": return contract.digitMatch === "differ" ? `Buy Differs ${contract.digit ?? 0}` : `Buy Matches ${contract.digit ?? 0}`;
+      case "accumulator": return "Buy Accumulator";
+      default: return "Buy";
+    }
+  })();
 
   return (
     <div className="min-h-screen bg-[var(--card)] pb-20 lg:hidden">
@@ -294,7 +306,7 @@ export default function MobileTerminal() {
                   }}
                   className={`text-left px-2.5 py-3 rounded-lg cursor-pointer min-h-[44px] ${symbol === s.symbol ? "bg-[var(--accent-soft)] text-[var(--accent-hover)] border border-[var(--accent-border)]" : "bg-white/5 text-[var(--text-secondary)] border border-transparent"}`}
                 >
-                  <span className="block font-semibold truncate">{s.displayName}</span>
+                  <span className="block font-semibold truncate" title={s.displayName}>{s.displayName}</span>
                   <span className="text-[9px] font-mono text-[var(--text-muted)]">{s.symbol}</span>
                 </button>
               ))}
@@ -367,16 +379,16 @@ export default function MobileTerminal() {
               ) : (
                 <TrendingUp className="w-4 h-4" />
               )}
-              {contract.direction === "fall" ? "Buy Fall" : "Buy Rise"}
+              {buyLabel}
             </button>
           ) : (
             <button
-              onClick={() => handleQuickTrade("rise")}
+              onClick={() => handleQuickTrade()}
               disabled={tradeBusy}
               className="w-full h-[56px] rounded-xl flex items-center justify-center gap-2 text-sm font-bold text-white transition-all disabled:opacity-60"
-              style={{ background: "linear-gradient(180deg, var(--green) 0%, color-mix(in srgb, var(--green) 85%, black) 100%)" }}
+              style={{ background: "linear-gradient(180deg, var(--accent) 0%, color-mix(in srgb, var(--accent) 85%, black) 100%)" }}
             >
-              {tradeBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Zap className="w-4 h-4" />} BUY {contract.category.replace("_", " ").toUpperCase()}
+              {tradeBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Zap className="w-4 h-4" />} {buyLabel}
             </button>
           )}
         </div>

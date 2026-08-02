@@ -541,16 +541,15 @@ export default function Dashboard() {
                                     setShowSymbolPicker(false);
                                     setSymbolSearch("");
                                   }}
-                                  className={`text-left px-3 py-2 rounded-lg text-xs font-semibold transition-all ${selectedSymbol === s.symbol ? "bg-[var(--accent-soft)] text-[var(--accent-hover)] border border-[var(--accent-border)]" : "bg-white/5 text-[var(--text-secondary)] hover:bg-white/10 border border-transparent"}`}
+                                  className={`text-left px-3 py-2 rounded-lg text-xs font-semibold truncate transition-all ${selectedSymbol === s.symbol ? "bg-[var(--accent-soft)] text-[var(--accent-hover)] border border-[var(--accent-border)]" : "bg-white/5 text-[var(--text-secondary)] hover:bg-white/10 border border-transparent"}`}
                                 >
-                                  {s.displayName || s.symbol}
+                                  <span className="block truncate" title={s.displayName || s.symbol}>{s.displayName || s.symbol}</span>
                                 </button>
                               ))}
                             </div>
                           </div>
                         )}
-                        {volRegFiltered.length > 0 && (
-                          <div>
+                        {volRegFiltered.length > 0 && (                          <div>
                             <h3 className="section-title mb-2">Volatility Indices</h3>
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                               {volRegFiltered.map((s) => (
@@ -561,9 +560,9 @@ export default function Dashboard() {
                                     setShowSymbolPicker(false);
                                     setSymbolSearch("");
                                   }}
-                                  className={`text-left px-3 py-2 rounded-lg text-xs font-semibold transition-all ${selectedSymbol === s.symbol ? "bg-[var(--accent-soft)] text-[var(--accent-hover)] border border-[var(--accent-border)]" : "bg-white/5 text-[var(--text-secondary)] hover:bg-white/10 border border-transparent"}`}
+                                  className={`text-left px-3 py-2 rounded-lg text-xs font-semibold truncate transition-all ${selectedSymbol === s.symbol ? "bg-[var(--accent-soft)] text-[var(--accent-hover)] border border-[var(--accent-border)]" : "bg-white/5 text-[var(--text-secondary)] hover:bg-white/10 border border-transparent"}`}
                                 >
-                                  {s.displayName || s.symbol}
+                                  <span className="block truncate" title={s.displayName || s.symbol}>{s.displayName || s.symbol}</span>
                                 </button>
                               ))}
                             </div>
@@ -581,9 +580,9 @@ export default function Dashboard() {
                                     setShowSymbolPicker(false);
                                     setSymbolSearch("");
                                   }}
-                                  className={`text-left px-3 py-2 rounded-lg text-xs font-semibold transition-all ${selectedSymbol === s.symbol ? "bg-[var(--accent-soft)] text-[var(--accent-hover)] border border-[var(--accent-border)]" : "bg-white/5 text-[var(--text-secondary)] hover:bg-white/10 border border-transparent"}`}
+                                  className={`text-left px-3 py-2 rounded-lg text-xs font-semibold truncate transition-all ${selectedSymbol === s.symbol ? "bg-[var(--accent-soft)] text-[var(--accent-hover)] border border-[var(--accent-border)]" : "bg-white/5 text-[var(--text-secondary)] hover:bg-white/10 border border-transparent"}`}
                                 >
-                                  {s.displayName || s.symbol}
+                                  <span className="block truncate" title={s.displayName || s.symbol}>{s.displayName || s.symbol}</span>
                                 </button>
                               ))}
                             </div>

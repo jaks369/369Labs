@@ -23,7 +23,7 @@ interface TerminalContextPanelProps {
   takeProfit: number;
   onStopLossChange: (n: number) => void;
   onTakeProfitChange: (n: number) => void;
-  onQuickTrade: (dir: "rise" | "fall") => void;
+  onQuickTrade: (dir?: "rise" | "fall") => void;
   tradeBusy: boolean;
   openPositions: any[];
   onSelectSymbol: (s: string) => void;
@@ -98,6 +98,17 @@ export default function TerminalContextPanel(props: TerminalContextPanelProps) {
   const accountBadgeCls =
     accountType === "real" ? "badge-gray" : accountType === "demo" ? "badge-accent" : tokenStatus === "invalid" ? "badge-red" : "badge-gray";
 
+  const buyLabel = (() => {
+    switch (contract.category) {
+      case "rise_fall": return isFall ? "Buy Fall" : "Buy Rise";
+      case "over_under": return contract.overUnder === "under" ? `Buy Under ${contract.barrier ?? 5}` : `Buy Over ${contract.barrier ?? 5}`;
+      case "even_odd": return contract.digitMatch === "differ" ? "Buy Odd" : "Buy Even";
+      case "digits": return contract.digitMatch === "differ" ? `Buy Differs ${contract.digit ?? 0}` : `Buy Matches ${contract.digit ?? 0}`;
+      case "accumulator": return "Buy Accumulator";
+      default: return "Buy";
+    }
+  })();
+
   const payoutEst = stake > 0 ? formatMoney(stake * 1.95) : "—";
 
   const latestSignal = (() => {
@@ -130,16 +141,16 @@ export default function TerminalContextPanel(props: TerminalContextPanelProps) {
               }`}
             >
               {tradeBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : isFall ? <TrendingDown className="w-4 h-4" /> : <TrendingUp className="w-4 h-4" />}
-              {isFall ? "Buy Fall" : "Buy Rise"}
+              {buyLabel}
             </button>
           ) : (
             <button
-              onClick={() => onQuickTrade("rise")}
+              onClick={() => onQuickTrade()}
               disabled={tradeBusy}
-              className="w-full h-[56px] flex items-center justify-center gap-2 rounded-lg text-sm font-bold text-white transition-all disabled:opacity-60 hover:brightness-110 bg-[var(--green)]"
+              className="w-full h-[56px] flex items-center justify-center gap-2 rounded-lg text-sm font-bold text-white transition-all disabled:opacity-60 hover:brightness-110 bg-[var(--accent)]"
             >
               {tradeBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Zap className="w-4 h-4" />}
-              BUY {contract.category.replace("_", " ").toUpperCase()}
+              {buyLabel}
             </button>
           )}
 
