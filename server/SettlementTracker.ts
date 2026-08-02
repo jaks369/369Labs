@@ -91,7 +91,7 @@ export class SettlementTracker {
     if (!conn) return;
 
     const c = await conn.getContractStatus(parseInt(trade.contractId));
-    if (!c) return;
+    if (!c) throw new Error("contract_status_unavailable");
 
     const isSold = c.is_sold === 1 || c.status === "sold" || c.status === "won" || c.status === "lost";
     if (!isSold) return;

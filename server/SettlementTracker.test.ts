@@ -188,9 +188,9 @@ describe("SettlementTracker — reconcile", () => {
     expect(mockGetContractStatus).not.toHaveBeenCalled();
   });
 
-  it("returns early if contract status unavailable", async () => {
+  it("throws if contract status unavailable (so retry count increments and trade is reaped as stuck)", async () => {
     mockGetContractStatus.mockResolvedValue(null);
-    await (tracker as any).reconcile(makeTrade());
+    await expect((tracker as any).reconcile(makeTrade())).rejects.toThrow("contract_status_unavailable");
     expect(mockSettleTrade).not.toHaveBeenCalled();
   });
 
