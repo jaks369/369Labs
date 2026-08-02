@@ -73,8 +73,7 @@ export default function AIChatWindow() {
       <div className="flex items-center gap-2 border-b border-[var(--border)] px-4 py-3">
         <Sparkles className="w-4 h-4 text-[var(--accent)]" />
         <h3 className="text-xs font-bold text-white">369AI Chat</h3>
-        <span className="text-[9px] text-[var(--text-muted)] ml-auto">Conversational Copilot</span>
-        <button onClick={() => { setShowMemory(true); memoryQuery.refetch(); }} className="flex items-center gap-1 px-2 py-1 rounded text-[9px] text-[var(--text-secondary)] hover:text-white border border-[var(--border)] hover:border-[var(--accent)]/50 transition-all">
+        <span className="text-[9px] text-[var(--text-muted)] ml-auto">Conversational Copilot</span>        <button onClick={() => { setShowMemory(true); memoryQuery.refetch(); }} className="flex items-center gap-1 px-2 py-1 rounded text-[9px] text-[var(--text-secondary)] hover:text-white border border-[var(--border)] hover:border-[var(--accent)]/50 transition-all">
           <BrainCircuit className="w-3 h-3" /> Memory
         </button>
         <button onClick={() => setShowModelConfig(true)} className="flex items-center gap-1 px-2 py-1 rounded text-[9px] text-[var(--text-secondary)] hover:text-white border border-[var(--border)] hover:border-[var(--accent)]/50 transition-all">
@@ -116,6 +115,9 @@ export default function AIChatWindow() {
       </div>
 
       <AIChatInput onSend={handleSend} loading={loading} />
+      <p className="px-4 pb-2 text-[9px] text-[var(--text-muted)] leading-relaxed">
+        AI responses are model estimates, not financial advice. Past performance does not guarantee future results.
+      </p>
 
       {showMemory && (
         <div className="fixed inset-0 z-[90] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setShowMemory(false)}>

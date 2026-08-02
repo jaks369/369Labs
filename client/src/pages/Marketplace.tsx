@@ -99,6 +99,18 @@ export default function Marketplace() {
       </div>
 
       <div className="p-4 md:p-6 max-w-5xl mx-auto">
+        {signals.length > 0 && (
+          <div className="mb-6 flex items-start gap-2.5 bg-[var(--surface-secondary)] border border-[var(--border)] rounded-lg px-4 py-3 text-xs text-[var(--text-muted)] leading-relaxed">
+            <Shield className="w-4 h-4 text-[var(--accent)] mt-0.5 shrink-0" />
+            <p>
+              These signals are pattern scans over a limited recent tick window and have{" "}
+              <b className="text-[var(--text-secondary)]">not been validated on out-of-sample data</b>.
+              "Win rate" is the hit rate on the exact window where the pattern was found, not a
+              guarantee of future results. Stake is scaled by that in-sample rate. Trading involves
+              substantial risk — this is an analysis tool, not financial advice.
+            </p>
+          </div>
+        )}
         {signalsQuery.isLoading ? (
           <div className="flex items-center justify-center gap-2 text-[var(--text-muted)] py-20">
             <Loader2 className="w-5 h-5 animate-spin" /> Scanning market intelligence...
@@ -152,9 +164,8 @@ export default function Marketplace() {
                       <h3 className="font-bold text-white mt-2">{sig.title}</h3>
                       <p className="text-sm text-[var(--text-secondary)] mt-1">{sig.description}</p>
                       <div className="flex items-center gap-4 mt-3 text-xs">
-                        <span className="flex items-center gap-1 text-[var(--text-muted)]"><TrendingUp className="w-3 h-3" /> Win rate <b className={win >= 65 ? "text-[var(--green)]" : "text-[var(--red)]"}>{win}%</b></span>
+                        <span className="flex items-center gap-1 text-[var(--text-muted)]"><TrendingUp className="w-3 h-3" /> In-sample win rate <b className={win >= 65 ? "text-[var(--green)]" : "text-[var(--red)]"}>{win}%</b></span>
                         <span className="text-[var(--text-muted)]">Samples <b className="text-white">{sig.sampleSize}</b></span>
-                        <span className="text-[var(--text-muted)]">Confidence <b className="text-white">{sig.confidence}%</b></span>
                         <span className="text-[var(--text-muted)]">Stake <b className="text-[var(--accent)]">${(Math.max(0.35, +(2 * (Number(sig.confidence) || 50) / 100)).toFixed(2))}</b> <span className="text-[var(--text-muted)]">(scaled)</span></span>
                         <span className="flex items-center gap-1 text-[var(--text-muted)]"><Clock className="w-3 h-3" /> {new Date((sig.discoveredAt || 0) * 1000).toLocaleString()}</span>
                       </div>

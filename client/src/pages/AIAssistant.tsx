@@ -349,6 +349,9 @@ export default function AIAssistant() {
               <ShieldCheck className="w-3 h-3" /> Risk Management
             </button>
           </div>
+          <p className="text-[9px] text-[var(--text-muted)] text-center leading-relaxed">
+            369AI responses are model estimates, not financial advice. Any trade placed by the assistant is based on your explicit confirmation and your settings.
+          </p>
         </div>
       </div>
     </div>

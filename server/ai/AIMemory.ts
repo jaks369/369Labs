@@ -74,7 +74,7 @@ export class AIMemory {
         knowledgeType: AIKnowledgeType.ACCURACY_LOG,
         symbol: tradeReviewData.context.symbol,
         data: accuracyEntry as any,
-        confidence: correct ? "100.00" : "0.00",
+        confidence: String(prediction?.confidence ?? 0),
         source: "AIMemory",
       });
     } catch {

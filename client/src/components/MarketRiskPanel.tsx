@@ -111,7 +111,7 @@ export default function MarketRiskPanel({ data, loading }: MarketRiskPanelProps)
             <div className="flex items-center gap-3 mb-2 text-[8px] text-[var(--text-muted)]">
               <span>Market: <IntegerStat value={a.marketRisk} /></span>
               <span>User: <IntegerStat value={a.userRisk} /></span>
-              <span>Confidence: <IntegerStat value={a.confidence} variant="always-positive" />%</span>
+              <span>Confidence (est.): <IntegerStat value={a.confidence} variant="always-positive" />%</span>
             </div>
 
             {(a.warnings?.length || 0) > 0 && (

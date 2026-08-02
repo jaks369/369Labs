@@ -12,7 +12,7 @@ export default function AIEvidenceCard({ response }: AIEvidenceCardProps) {
     <div className="bg-[var(--card)] border border-[var(--border)] rounded-lg p-3 space-y-2 mt-1">
       <div className="flex items-center gap-2">
         <CheckCircle2 className="w-3 h-3 text-[var(--accent)]" />
-        <span className="text-[9px] font-bold text-[var(--text-secondary)] uppercase tracking-wider">Confidence</span>
+        <span className="text-[9px] font-bold text-[var(--text-secondary)] uppercase tracking-wider">Confidence (model estimate)</span>
         <span className={`text-caption font-bold font-mono ${confidenceColor} ml-auto`}>{response.confidence}%</span>
       </div>
 

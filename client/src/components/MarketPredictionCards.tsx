@@ -98,7 +98,7 @@ export default function MarketPredictionCards({ data, loading }: MarketPredictio
 
             <div className="mb-2">
               <div className="flex items-center justify-between text-[8px] text-[var(--text-muted)] mb-0.5">
-                <span>Confidence</span>
+                <span>Confidence (est.)</span>
                 <span className="font-bold font-mono text-white"><IntegerStat value={p.confidence} variant="always-positive" />%</span>
               </div>
               <div className="w-full h-1.5 bg-[var(--bg)] rounded-full overflow-hidden">

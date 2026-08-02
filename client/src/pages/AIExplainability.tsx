@@ -109,7 +109,7 @@ export default function AIExplainability() {
           <div className="flex items-start gap-3">
             <Lightbulb className="w-5 h-5 text-[var(--accent)] mt-0.5 shrink-0" />
             <div className="text-sm text-[var(--text-secondary)] leading-relaxed">
-              Every AI trading decision includes a list of contributing factors ranked by importance. The confidence score reflects how strongly the available data supports each prediction. Low-confidence signals (below 50%) are automatically flagged for review.
+              Every AI trading decision includes a list of contributing factors ranked by importance. Confidence is a model-generated estimate of how strongly the available data supports each prediction, not a calibrated probability of success. Treat it as a rough signal, not a guarantee.
             </div>
           </div>
         </div>

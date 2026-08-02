@@ -146,7 +146,7 @@ export default function StrategyEngine() {
                   </span>
                 </div>
                 <div className="text-sm text-[var(--text-muted)]">
-                  Confidence: <span className="text-white font-bold">{consensus.data.confidence}%</span>
+                  Confidence (est.): <span className="text-white font-bold">{consensus.data.confidence}%</span>
                   {" | "}Risk: <span className="text-white font-bold">{consensus.data.risk}%</span>
                   {" | "}R:R: <span className="text-white font-bold">{consensus.data.riskRewardRatio}</span>
                 </div>

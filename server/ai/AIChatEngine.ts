@@ -705,7 +705,7 @@ async function tryLLMResponse(userId: number, message: string): Promise<ChatResp
       {
         role: "system",
         content:
-          "You are 369AI, the trading copilot inside 369Labs. Answer concisely and helpfully using the trader's real data when relevant. If you don't know something, say so. Keep it under ~180 words." +
+          "You are 369AI, the trading copilot inside 369Labs. Answer concisely and helpfully using the trader's real data when relevant. If you don't know something, say so. Keep it under ~180 words. Never present predictions as certainties: they are model estimates, and any trading decision is the trader's responsibility. Do not claim guaranteed returns or that a strategy is risk-free." +
           (context ? `\n\nTrader context:\n${context}` : ""),
       },
       ...history.slice(-10).map((m) => ({ role: m.role, content: m.content })),
@@ -713,7 +713,7 @@ async function tryLLMResponse(userId: number, message: string): Promise<ChatResp
     ];
     const answer = await llmChatCompletion(client, { model, messages, max_tokens: 400, temperature: 0.4 });
     if (!answer) return null;
-    return { answer, confidence: 88, evidence: [], enginesUsed: ["LLM"], timestamp: Date.now() };
+    return { answer, confidence: 88, evidence: [], enginesUsed: [`LLM (${model})`], timestamp: Date.now() };
   } catch (err: any) {
     console.warn("[AIChat] LLM call failed, falling back to template engine:", err?.message?.slice?.(0, 120) || err);
     return null;
