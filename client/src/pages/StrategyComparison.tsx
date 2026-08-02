@@ -127,7 +127,7 @@ export default function StrategyComparison() {
             </div>
 
             {metrics1 && metrics2 ? (
-              <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl overflow-hidden">
+              <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl overflow-hidden overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b border-[var(--border)]">
