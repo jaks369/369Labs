@@ -41,6 +41,8 @@ export default function Markets() {
   const [query, setQuery] = useState("");
   const [live, setLive] = useState<Record<string, { price: number; change: number; spark: number[] }>>({});
   const prevRef = useRef<Record<string, number>>({});
+  const tickBufferRef = useRef<Record<string, any>>({});
+  const rafIdRef = useRef<number | null>(null);
 
   const healthQuery = trpc.aiMarket.overview.useQuery(void 0, { refetchInterval: 60000 });
   const signalsQuery = trpc.signals.list.useQuery(void 0, { refetchInterval: 60000 });
@@ -51,24 +53,22 @@ export default function Markets() {
 
   useEffect(() => {
     const subs = SYMBOLS.map((sym) => derivWS.subscribe(sym));
-    const tickBuffer = useRef<Record<string, any>>({});
-    const rafId = useRef<number | null>(null);
 
     const listener = {
       onTick: (tick: any) => {
-        tickBuffer.current[tick.symbol] = tick;
-        if (!rafId.current) {
-          rafId.current = requestAnimationFrame(() => {
+        tickBufferRef.current[tick.symbol] = tick;
+        if (!rafIdRef.current) {
+          rafIdRef.current = requestAnimationFrame(() => {
             setLive((prev) => {
               const updates: typeof prev = { ...prev };
-              for (const [sym, tick] of Object.entries(tickBuffer.current)) {
+              for (const [sym, tick] of Object.entries(tickBufferRef.current)) {
                 const ref = prevRef.current[sym] ?? tick.price;
                 const change = ref ? ((tick.price - ref) / ref) * 100 : 0;
                 prevRef.current[sym] = tick.price;
                 updates[sym] = { price: tick.price, change, spark: [...(prev[sym]?.spark || []).slice(-30), tick.price] };
               }
-              tickBuffer.current = {};
-              rafId.current = 0;
+              tickBufferRef.current = {};
+              rafIdRef.current = 0;
               return updates;
             });
           });
@@ -76,7 +76,7 @@ export default function Markets() {
       },
     };
     derivWS.addListener(listener);
-    return () => { derivWS.removeListener(listener); subs.forEach((id) => derivWS.unsubscribe(id)); if (rafId.current) cancelAnimationFrame(rafId.current); };
+    return () => { derivWS.removeListener(listener); subs.forEach((id) => derivWS.unsubscribe(id)); if (rafIdRef.current) cancelAnimationFrame(rafIdRef.current); };
   }, []);
 
   const healthMap = useMemo(() => {

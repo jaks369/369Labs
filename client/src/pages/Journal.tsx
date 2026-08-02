@@ -7,6 +7,52 @@ import { toast } from "@/components/Toast";
 import { formatMoney, formatSignedMoney } from "@/lib/format";
 import { getSymbolDisplayName } from "@/lib/symbols";
 
+function JournalEntryCard({
+  entry,
+  onLinkTrade,
+  onChanged,
+  updateMutation,
+  deleteMutation,
+}: {
+  entry: any;
+  onLinkTrade: (id: number) => void;
+  onChanged: () => void;
+  updateMutation: any;
+  deleteMutation: any;
+}) {
+  const d = entry.data as any;
+  const isManual = d?.manual;
+  const [isEditing, setIsEditing] = useState(false);
+  const [editContent, setEditContent] = useState(d?.analysis || "");
+  return (
+    <div className={`bg-[var(--card)] border ${isManual ? "border-[var(--accent)]/30" : "border-[var(--border)]"} rounded-xl p-4`}>
+      <div className="flex items-center gap-2 mb-2">
+        {isManual && <span className="text-[9px] px-1.5 py-0.5 rounded bg-[var(--accent-soft)] text-[var(--accent)] font-bold">NOTE</span>}
+        <span className="text-micro">{entry.createdAt ? new Date(entry.createdAt).toLocaleString() : ""}</span>
+        {!isManual && d?.sampleSize && <span className="text-body">{d.sampleSize} trades · {d.wins}W / {d.losses}L</span>}
+      </div>
+      {isEditing ? (
+        <div className="space-y-2">
+          <textarea value={editContent} onChange={(e) => setEditContent(e.target.value)} rows={4} className="w-full bg-[var(--card)] border border-[var(--border)] rounded-lg p-2 text-sm text-white placeholder-[var(--text-muted)] outline-none resize-none" />
+          <div className="flex gap-2">
+            <button onClick={async () => { await updateMutation.mutateAsync({ id: entry.id, data: { content: editContent } }); onChanged(); setIsEditing(false); }} className="px-3 py-1.5 rounded-lg bg-[var(--accent)] text-[var(--bg)] text-xs font-bold hover:bg-[var(--accent)] disabled:opacity-40" disabled={updateMutation.isPending}>Save</button>
+            <button onClick={() => setIsEditing(false)} className="px-3 py-1.5 rounded-lg border border-[var(--border)] text-xs text-[var(--text-secondary)] hover:text-white">Cancel</button>
+          </div>
+        </div>
+      ) : (
+        <>
+          <div className="text-sm text-[var(--text-secondary)] leading-relaxed whitespace-pre-wrap line-clamp-6">{d?.analysis || ""}</div>
+          <div className="flex items-center gap-2 mt-2">
+            <button onClick={() => onLinkTrade(entry.id)} className="text-caption text-[var(--accent)] hover:text-white flex items-center gap-1"><Link2 className="w-3 h-3" /> Link Trade</button>
+            <button onClick={() => setIsEditing(true)} className="text-caption text-[var(--text-muted)] hover:text-white flex items-center gap-1"><span className="text-[10px]">✏️</span> Edit</button>
+            <button onClick={async () => { if (confirm("Delete this journal entry?")) { await deleteMutation.mutateAsync({ id: entry.id }); onChanged(); } }} className="text-caption text-[var(--red)] hover:text-white flex items-center gap-1"><span className="text-[10px]">🗑️</span> Delete</button>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
 export default function Journal() {
   const { isAuthenticated } = useAuth();
   const [, navigate] = useLocation();
@@ -178,39 +224,16 @@ export default function Journal() {
             ) : (journalSearchQuery.data || []).length === 0 ? (
               <p className="text-xs text-[var(--text-muted)] italic text-center py-4">{searchQuery ? "No journal entries match your search." : "No journal entries yet. Generate one above."}</p>
             ) : (
-              (journalSearchQuery.data || []).map((entry: any) => {
-                const d = entry.data as any;
-                const isManual = d?.manual;
-                const [isEditing, setIsEditing] = useState(false);
-                const [editContent, setEditContent] = useState(d?.analysis || "");
-                return (
-                  <div key={entry.id} className={`bg-[var(--card)] border ${isManual ? "border-[var(--accent)]/30" : "border-[var(--border)]"} rounded-xl p-4`}>
-                    <div className="flex items-center gap-2 mb-2">
-                      {isManual && <span className="text-[9px] px-1.5 py-0.5 rounded bg-[var(--accent-soft)] text-[var(--accent)] font-bold">NOTE</span>}
-                      <span className="text-micro">{entry.createdAt ? new Date(entry.createdAt).toLocaleString() : ""}</span>
-                      {!isManual && d?.sampleSize && <span className="text-body">{d.sampleSize} trades · {d.wins}W / {d.losses}L</span>}
-                    </div>
-                    {isEditing ? (
-                      <div className="space-y-2">
-                        <textarea value={editContent} onChange={(e) => setEditContent(e.target.value)} rows={4} className="w-full bg-[var(--card)] border border-[var(--border)] rounded-lg p-2 text-sm text-white placeholder-[var(--text-muted)] outline-none resize-none" />
-                        <div className="flex gap-2">
-                          <button onClick={async () => { await journalUpdateMutation.mutateAsync({ id: entry.id, data: { content: editContent } }); journalSearchQuery.refetch(); setIsEditing(false); }} className="px-3 py-1.5 rounded-lg bg-[var(--accent)] text-[var(--bg)] text-xs font-bold hover:bg-[var(--accent)] disabled:opacity-40" disabled={journalUpdateMutation.isPending}>Save</button>
-                          <button onClick={() => setIsEditing(false)} className="px-3 py-1.5 rounded-lg border border-[var(--border)] text-xs text-[var(--text-secondary)] hover:text-white">Cancel</button>
-                        </div>
-                      </div>
-                    ) : (
-                      <>
-                        <div className="text-sm text-[var(--text-secondary)] leading-relaxed whitespace-pre-wrap line-clamp-6">{d?.analysis || ""}</div>
-                        <div className="flex items-center gap-2 mt-2">
-                          <button onClick={() => { setLinkKnowledgeId(entry.id); setLinkTradeId(""); setShowLinkTrade(true); }} className="text-caption text-[var(--accent)] hover:text-white flex items-center gap-1"><Link2 className="w-3 h-3" /> Link Trade</button>
-                          <button onClick={() => setIsEditing(true)} className="text-caption text-[var(--text-muted)] hover:text-white flex items-center gap-1"><span className="text-[10px]">✏️</span> Edit</button>
-                          <button onClick={async () => { if (confirm("Delete this journal entry?")) { await journalDeleteMutation.mutateAsync({ id: entry.id }); journalSearchQuery.refetch(); } }} className="text-caption text-[var(--red)] hover:text-white flex items-center gap-1"><span className="text-[10px]">🗑️</span> Delete</button>
-                        </div>
-                      </>
-                    )}
-                  </div>
-                );
-              })
+              (journalSearchQuery.data || []).map((entry: any) => (
+                <JournalEntryCard
+                  key={entry.id}
+                  entry={entry}
+                  onLinkTrade={(id) => { setLinkKnowledgeId(id); setLinkTradeId(""); setShowLinkTrade(true); }}
+                  onChanged={() => journalSearchQuery.refetch()}
+                  updateMutation={journalUpdateMutation}
+                  deleteMutation={journalDeleteMutation}
+                />
+              ))
             )}
           </div>
         </div>
