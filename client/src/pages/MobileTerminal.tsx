@@ -2,7 +2,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
-import { Loader2, ChevronDown, TrendingUp, TrendingDown, Zap, Wallet, ShieldCheck, X, Activity } from "lucide-react";
+import { Loader2, ChevronDown, TrendingUp, TrendingDown, Zap, Wallet, ShieldCheck, X, Activity, Search } from "lucide-react";
+import { FilterPill } from "@/components/ui/filter-pill";
 import { derivWS, DerivSymbol } from "@/services/derivWebSocket";
 import { useDerivStatus } from "@/hooks/useDerivStatus";
 import DerivTokenModal from "@/components/DerivTokenModal";
@@ -25,7 +26,8 @@ export default function MobileTerminal() {
   const { isAuthenticated } = useAuth();
   const [, navigate] = useLocation();
   const [symbol, setSymbol] = useState<string>(ALL_FALLBACK[0]?.symbol || "R_100");
-  const [symbols] = useState<DerivSymbol[]>(ALL_FALLBACK);
+  const [liveSymbols, setLiveSymbols] = useState<DerivSymbol[]>([]);
+  const symbols: DerivSymbol[] = liveSymbols.length > 0 ? liveSymbols : ALL_FALLBACK;
   const [timeframe, setTimeframe] = useState(1);
   const [ticks, setTicks] = useState<any[]>([]);
   const [balance, setBalance] = useState(0);
@@ -35,6 +37,8 @@ export default function MobileTerminal() {
   const [tradeBusy, setTradeBusy] = useState(false);
   const [showTokenModal, setShowTokenModal] = useState(false);
   const [showSymbolPicker, setShowSymbolPicker] = useState(false);
+  const [symbolSearch, setSymbolSearch] = useState("");
+  const [marketFilter, setMarketFilter] = useState<"all" | "vol" | "1s" | "boom">("all");
   const [showPositions, setShowPositions] = useState(false);
   const [tokenError, setTokenError] = useState<string | null>(null);
 
@@ -53,6 +57,13 @@ export default function MobileTerminal() {
   useEffect(() => {
     if (tokenQuery.data?.token) derivWS.setApiToken(tokenQuery.data.token).catch(console.error);
   }, [tokenQuery.data]);
+
+  useEffect(() => {
+    const unsub = derivWS.onSymbols((syms) => {
+      if (syms.length > 0) setLiveSymbols(syms);
+    });
+    return () => {};
+  }, []);
 
   useEffect(() => {
     const unsub = derivWS.onBalance((b) => {
@@ -218,11 +229,11 @@ export default function MobileTerminal() {
 
   const buyLabel = (() => {
     switch (contract.category) {
-      case "rise_fall": return contract.direction === "fall" ? "Buy Fall" : "Buy Rise";
-      case "over_under": return contract.overUnder === "under" ? `Buy Under ${contract.barrier ?? 5}` : `Buy Over ${contract.barrier ?? 5}`;
-      case "even_odd": return contract.digitMatch === "differ" ? "Buy Odd" : "Buy Even";
-      case "digits": return contract.digitMatch === "differ" ? `Buy Differs ${contract.digit ?? 0}` : `Buy Matches ${contract.digit ?? 0}`;
-      case "accumulator": return "Buy Accumulator";
+      case "rise_fall": return "Buy";
+      case "over_under": return "Buy";
+      case "even_odd": return "Buy";
+      case "digits": return "Buy";
+      case "accumulator": return "Buy";
       default: return "Buy";
     }
   })();
@@ -287,29 +298,87 @@ export default function MobileTerminal() {
       {showSymbolPicker && (
         <div className="fixed inset-0 z-[90] bg-black/60 flex items-start justify-center animate-modal-backdrop" onClick={() => setShowSymbolPicker(false)}>
           <div
-            className="w-full bg-[var(--card)] border-b border-[var(--border)] rounded-b-2xl shadow-2xl max-h-[60vh] overflow-y-auto animate-sheet-up"
+            className="w-full bg-[var(--card)] border-b border-[var(--border)] rounded-b-2xl shadow-2xl max-h-[68vh] overflow-y-auto animate-sheet-up"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="px-4 py-3 border-b border-[var(--border)] flex items-center justify-between sticky top-0 bg-[var(--card)]">
+            <div className="px-4 py-3 border-b border-[var(--border)] flex items-center justify-between sticky top-0 bg-[var(--card)] z-10">
               <h3 className="text-sm font-bold text-white">Select Market</h3>
               <button onClick={() => setShowSymbolPicker(false)} className="text-[var(--text-muted)] hover:text-white">
                 <X className="w-4 h-4" />
               </button>
             </div>
-            <div className="grid grid-cols-2 gap-1.5 p-4">
-              {symbols.map((s) => (
-                <button
-                  key={s.symbol}
-                  onClick={() => {
-                    setSymbol(s.symbol);
-                    setShowSymbolPicker(false);
-                  }}
-                  className={`text-left px-2.5 py-3 rounded-lg cursor-pointer min-h-[44px] ${symbol === s.symbol ? "bg-[var(--accent-soft)] text-[var(--accent-hover)] border border-[var(--accent-border)]" : "bg-white/5 text-[var(--text-secondary)] border border-transparent"}`}
-                >
-                  <span className="block font-semibold truncate" title={s.displayName}>{s.displayName}</span>
-                  <span className="text-[9px] font-mono text-[var(--text-muted)]">{s.symbol}</span>
-                </button>
-              ))}
+            <div className="p-4 space-y-3">
+              <div className="relative">
+                <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" />
+                <input
+                  type="text"
+                  value={symbolSearch}
+                  onChange={(e) => setSymbolSearch(e.target.value)}
+                  placeholder="Search symbols..."
+                  className="input w-full text-sm pl-9"
+                />
+              </div>
+              <div className="flex gap-1.5 overflow-x-auto scrollbar-none">
+                {(
+                  [
+                    ["all", "All"],
+                    ["vol", "Volatility"],
+                    ["1s", "1s Indices"],
+                    ["boom", "Boom & Crash"],
+                  ] as [typeof marketFilter, string][]
+                ).map(([key, label]) => (
+                  <FilterPill key={key} active={marketFilter === key} onClick={() => setMarketFilter(key)} label={label} />
+                ))}
+              </div>
+              {(() => {
+                const q = symbolSearch.toLowerCase().trim();
+                const matches = (s: DerivSymbol) =>
+                  !q || s.symbol.toLowerCase().includes(q) || s.displayName.toLowerCase().includes(q);
+                const is1s = (s: DerivSymbol) => /^1HZ/i.test(s.symbol) || /\(1s\)/i.test(s.displayName);
+                const isVol = (s: DerivSymbol) => /volatility/i.test(s.displayName) && !is1s(s);
+                const isBoom = (s: DerivSymbol) => /boom|crash/i.test(s.market) || /boom|crash/i.test(s.displayName);
+                const visible = (s: DerivSymbol) =>
+                  marketFilter === "all" ||
+                  (marketFilter === "vol" && isVol(s)) ||
+                  (marketFilter === "1s" && is1s(s)) ||
+                  (marketFilter === "boom" && isBoom(s));
+                const groups: [string, DerivSymbol[]][] = [
+                  ["Volatility 1s Indices", symbols.filter((s) => matches(s) && visible(s) && is1s(s))],
+                  ["Volatility Indices", symbols.filter((s) => matches(s) && visible(s) && isVol(s))],
+                  ["Boom & Crash Indices", symbols.filter((s) => matches(s) && visible(s) && isBoom(s))],
+                ];
+                const hasAny = groups.some(([, list]) => list.length > 0);
+                if (!hasAny) {
+                  return <p className="text-sm text-[var(--text-muted)] text-center py-8">No symbols match "{symbolSearch}"</p>;
+                }
+                return (
+                  <div className="space-y-4">
+                    {groups.map(([title, list]) =>
+                      list.length > 0 ? (
+                        <div key={title}>
+                          <h4 className="section-title mb-2">{title}</h4>
+                          <div className="grid grid-cols-2 gap-1.5">
+                            {list.map((s) => (
+                              <button
+                                key={s.symbol}
+                                onClick={() => {
+                                  setSymbol(s.symbol);
+                                  setShowSymbolPicker(false);
+                                  setSymbolSearch("");
+                                }}
+                                className={`text-left px-2.5 py-3 rounded-lg cursor-pointer min-h-[44px] ${symbol === s.symbol ? "bg-[var(--accent-soft)] text-[var(--accent-hover)] border border-[var(--accent-border)]" : "bg-white/5 text-[var(--text-secondary)] border border-transparent"}`}
+                              >
+                                <span className="block font-semibold text-xs truncate" title={s.displayName}>{s.displayName}</span>
+                                <span className="text-[9px] font-mono text-[var(--text-muted)]">{s.symbol}</span>
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      ) : null,
+                    )}
+                  </div>
+                );
+              })()}
             </div>
           </div>
         </div>

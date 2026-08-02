@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { CurrencyStat, PercentStat, IntegerStat, SignedCurrencyStat } from "@/components/LiveStat";
 import { formatMoney, formatSignedMoney, formatNumber } from "@/lib/format";
 import { PageContainer, PageSection } from "@/components/PageSection";
-import { Loader2, Activity, Zap, ChevronDown, Wallet, AlertCircle, BookOpen, BarChart3, Bot, Brain, Star } from "lucide-react";
+import { Loader2, Activity, Zap, ChevronDown, Wallet, AlertCircle, BookOpen, BarChart3, Bot, Brain, Star, Search } from "lucide-react";
 import { useLocation, useSearch } from "wouter";
 import { useIsMobile } from "@/hooks/useMobile";
 import MobileTerminal from "@/pages/MobileTerminal";
@@ -18,6 +18,7 @@ import { VOLATILITY_SYMBOLS, getSymbolDisplayName } from "@/lib/symbols";
 import { getDecimalPlaces, lastDigitOf } from "@shared/lastDigit";
 import WatchlistPanel from "@/components/WatchlistPanel";
 import TerminalContextPanel from "@/components/TerminalContextPanel";
+import { FilterPill } from "@/components/ui/filter-pill";
 
 const ALL_FALLBACK: DerivSymbol[] = VOLATILITY_SYMBOLS.map((s) => ({ ...s, decimalPlaces: 2 }));
 
@@ -32,6 +33,7 @@ export default function Dashboard() {
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [showSymbolPicker, setShowSymbolPicker] = useState(false);
   const [symbolSearch, setSymbolSearch] = useState("");
+  const [marketFilter, setMarketFilter] = useState<"all" | "vol" | "1s" | "boom" | "other">("all");
   const [showTokenModal, setShowTokenModal] = useState(false);
   const [watchlistOpen, setWatchlistOpen] = useState(true);
   const [tokenError, setTokenError] = useState<string | null>(null);
@@ -367,6 +369,9 @@ export default function Dashboard() {
   const vol1sSymbols = pickerSymbols.filter((s) => /^1HZ/i.test(s.symbol) || /\(1s\)/i.test(s.displayName));
   const volRegularSymbols = pickerSymbols.filter((s) => /volatility/i.test(s.displayName) && !/\(1s\)/i.test(s.displayName) && !/^1HZ/i.test(s.symbol));
   const boomCrashSymbols = pickerSymbols.filter((s) => /boom|crash/i.test(s.market) || /boom|crash/i.test(s.displayName));
+  const otherSymbols = pickerSymbols.filter(
+    (s) => !/volatility/i.test(s.displayName) && !/^1HZ/i.test(s.symbol) && !/\(1s\)/i.test(s.displayName) && !(/boom|crash/i.test(s.market) || /boom|crash/i.test(s.displayName)),
+  );
 
   const selectedDisplay = symbolList.find((s) => s.symbol === selectedSymbol)?.displayName || selectedSymbol;
   const decimalPlaces = derivWS.decimalPlacesFor(selectedSymbol);
@@ -514,87 +519,76 @@ export default function Dashboard() {
             {/* Chart workspace — the heart of the OS */}
             <div className={showSymbolPicker ? "bg-[var(--card)] rounded-xl p-4 elevation-1" : "chart-workspace"}>
               {showSymbolPicker ? (
-                <div className="max-h-[300px] md:max-h-[420px] overflow-y-auto space-y-5">
-                  <div className="sticky top-0 z-10 pb-2 -mt-2 pt-2">
-                    <input
-                      type="text"
-                      value={symbolSearch}
-                      onChange={(e) => setSymbolSearch(e.target.value)}
-                      placeholder="Search symbols..."
-                      className="input w-full text-sm"
-                    />
+                <div className="max-h-[300px] md:max-h-[420px] overflow-y-auto space-y-4">
+                  <div className="sticky top-0 z-10 pb-2 -mt-2 pt-2 bg-[var(--card)] space-y-2">
+                    <div className="relative">
+                      <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" />
+                      <input
+                        type="text"
+                        value={symbolSearch}
+                        onChange={(e) => setSymbolSearch(e.target.value)}
+                        placeholder="Search symbols..."
+                        className="input w-full text-sm pl-9"
+                      />
+                    </div>
+                    <div className="flex gap-1.5 overflow-x-auto scrollbar-none">
+                      {(
+                        [
+                          ["all", "All"],
+                          ["vol", "Volatility"],
+                          ["1s", "1s Indices"],
+                          ["boom", "Boom & Crash"],
+                          ["other", "Other Markets"],
+                        ] as [typeof marketFilter, string][]
+                      ).map(([key, label]) => (
+                        <FilterPill key={key} active={marketFilter === key} onClick={() => setMarketFilter(key)} label={label} />
+                      ))}
+                    </div>
                   </div>
                   {(() => {
                     const q = symbolSearch.toLowerCase().trim();
                     const filter = (s: DerivSymbol) => !q || s.symbol.toLowerCase().includes(q) || s.displayName.toLowerCase().includes(q);
-                    const vol1sFiltered = vol1sSymbols.filter(filter);
-                    const volRegFiltered = volRegularSymbols.filter(filter);
-                    const boomCrashFiltered = boomCrashSymbols.filter(filter);
+                    const inFilter = (s: DerivSymbol) =>
+                      marketFilter === "all" ||
+                      (marketFilter === "1s" && (vol1sSymbols.some((x) => x.symbol === s.symbol))) ||
+                      (marketFilter === "vol" && volRegularSymbols.some((x) => x.symbol === s.symbol)) ||
+                      (marketFilter === "boom" && boomCrashSymbols.some((x) => x.symbol === s.symbol)) ||
+                      (marketFilter === "other" && otherSymbols.some((x) => x.symbol === s.symbol));
+                    const sections: [string, DerivSymbol[]][] = [
+                      ["Volatility 1s Indices", vol1sSymbols.filter((s) => filter(s) && inFilter(s))],
+                      ["Volatility Indices", volRegularSymbols.filter((s) => filter(s) && inFilter(s))],
+                      ["Boom & Crash Indices", boomCrashSymbols.filter((s) => filter(s) && inFilter(s))],
+                      ["Other Markets", otherSymbols.filter((s) => filter(s) && inFilter(s))],
+                    ];
+                    const hasAny = sections.some(([, list]) => list.length > 0);
+                    if (!hasAny) {
+                      return <p className="text-sm text-[var(--text-muted)] text-center py-8">No symbols match "{symbolSearch}"</p>;
+                    }
                     return (
-                      <>
-                        {vol1sFiltered.length > 0 && (
-                          <div>
-                            <h3 className="section-title mb-2">Volatility 1s Indices</h3>
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                              {vol1sFiltered.map((s) => (
-                                <button
-                                  key={s.symbol}
-                                  onClick={() => {
-                                    setSelectedSymbol(s.symbol);
-                                    setShowSymbolPicker(false);
-                                    setSymbolSearch("");
-                                  }}
-                                  className={`text-left px-3 py-2 rounded-lg text-xs font-semibold truncate transition-all ${selectedSymbol === s.symbol ? "bg-[var(--accent-soft)] text-[var(--accent-hover)] border border-[var(--accent-border)]" : "bg-white/5 text-[var(--text-secondary)] hover:bg-white/10 border border-transparent"}`}
-                                >
-                                  <span className="block truncate" title={s.displayName || s.symbol}>{s.displayName || s.symbol}</span>
-                                </button>
-                              ))}
+                      <div className="space-y-4">
+                        {sections.map(([title, list]) =>
+                          list.length > 0 ? (
+                            <div key={title}>
+                              <h3 className="section-title mb-2">{title}</h3>
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                {list.map((s) => (
+                                  <button
+                                    key={s.symbol}
+                                    onClick={() => {
+                                      setSelectedSymbol(s.symbol);
+                                      setShowSymbolPicker(false);
+                                      setSymbolSearch("");
+                                    }}
+                                    className={`text-left px-3 py-2 rounded-lg text-xs font-semibold truncate transition-all ${selectedSymbol === s.symbol ? "bg-[var(--accent-soft)] text-[var(--accent-hover)] border border-[var(--accent-border)]" : "bg-white/5 text-[var(--text-secondary)] hover:bg-white/10 border border-transparent"}`}
+                                  >
+                                    <span className="block truncate" title={s.displayName || s.symbol}>{s.displayName || s.symbol}</span>
+                                  </button>
+                                ))}
+                              </div>
                             </div>
-                          </div>
+                          ) : null,
                         )}
-                        {volRegFiltered.length > 0 && (                          <div>
-                            <h3 className="section-title mb-2">Volatility Indices</h3>
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                              {volRegFiltered.map((s) => (
-                                <button
-                                  key={s.symbol}
-                                  onClick={() => {
-                                    setSelectedSymbol(s.symbol);
-                                    setShowSymbolPicker(false);
-                                    setSymbolSearch("");
-                                  }}
-                                  className={`text-left px-3 py-2 rounded-lg text-xs font-semibold truncate transition-all ${selectedSymbol === s.symbol ? "bg-[var(--accent-soft)] text-[var(--accent-hover)] border border-[var(--accent-border)]" : "bg-white/5 text-[var(--text-secondary)] hover:bg-white/10 border border-transparent"}`}
-                                >
-                                  <span className="block truncate" title={s.displayName || s.symbol}>{s.displayName || s.symbol}</span>
-                                </button>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-                        {boomCrashFiltered.length > 0 && (
-                          <div>
-                            <h3 className="section-title mb-2">Boom & Crash Indices</h3>
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                              {boomCrashFiltered.map((s) => (
-                                <button
-                                  key={s.symbol}
-                                  onClick={() => {
-                                    setSelectedSymbol(s.symbol);
-                                    setShowSymbolPicker(false);
-                                    setSymbolSearch("");
-                                  }}
-                                  className={`text-left px-3 py-2 rounded-lg text-xs font-semibold truncate transition-all ${selectedSymbol === s.symbol ? "bg-[var(--accent-soft)] text-[var(--accent-hover)] border border-[var(--accent-border)]" : "bg-white/5 text-[var(--text-secondary)] hover:bg-white/10 border border-transparent"}`}
-                                >
-                                  <span className="block truncate" title={s.displayName || s.symbol}>{s.displayName || s.symbol}</span>
-                                </button>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-                        {vol1sFiltered.length === 0 && volRegFiltered.length === 0 && boomCrashFiltered.length === 0 && (
-                          <p className="text-sm text-[var(--text-muted)] text-center py-8">No symbols match "{symbolSearch}"</p>
-                        )}
-                      </>
+                      </div>
                     );
                   })()}
                 </div>

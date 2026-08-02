@@ -100,11 +100,11 @@ export default function TerminalContextPanel(props: TerminalContextPanelProps) {
 
   const buyLabel = (() => {
     switch (contract.category) {
-      case "rise_fall": return isFall ? "Buy Fall" : "Buy Rise";
-      case "over_under": return contract.overUnder === "under" ? `Buy Under ${contract.barrier ?? 5}` : `Buy Over ${contract.barrier ?? 5}`;
-      case "even_odd": return contract.digitMatch === "differ" ? "Buy Odd" : "Buy Even";
-      case "digits": return contract.digitMatch === "differ" ? `Buy Differs ${contract.digit ?? 0}` : `Buy Matches ${contract.digit ?? 0}`;
-      case "accumulator": return "Buy Accumulator";
+      case "rise_fall": return "Buy";
+      case "over_under": return "Buy";
+      case "even_odd": return "Buy";
+      case "digits": return "Buy";
+      case "accumulator": return "Buy";
       default: return "Buy";
     }
   })();
