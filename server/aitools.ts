@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { normalizeSymbol as normalizeShared, getAllVolatilitySymbols } from '@shared/symbols';
+import { lastDigitOf, getDecimalPlaces } from '@shared/lastDigit';
 
 const DERIV_WS_PUBLIC = "wss://api.derivws.com/trading/v1/options/ws/public";
 let derivConnection: any = null;
@@ -58,10 +59,10 @@ export async function getActiveSymbols() {
 export async function getDigitStats(symbol: string, count = 100) {
   const ticks = await getTickHistory(symbol, count);
   if (!ticks.length) return { symbol: normalizeSymbol(symbol), count: 0, digits: {}, hottest: [], coldest: [] };
+  const decimals = getDecimalPlaces(normalizeSymbol(symbol));
   const digits: Record<string, number> = {};
   for (const t of ticks) {
-    const str = String(t.price).replace('.', '');
-    const d = str[str.length - 1];
+    const d = String(lastDigitOf(Number(t.price), decimals));
     digits[d] = (digits[d] || 0) + 1;
   }
   const sorted = Object.entries(digits).sort((a, b) => b[1] - a[1]);

@@ -75,7 +75,7 @@ export default function Plugins() {
                   </div>
                   <div className="flex-1">
                     <p className="text-sm font-semibold text-white">{p.name}</p>
-                    <p className="text-caption text-[var(--text-muted)]">by {p.author} Â· hook: {p.hook}</p>
+                    <p className="text-caption text-[var(--text-muted)]">by {p.author} · hook: {p.hook}</p>
                   </div>
                 </div>
                 <p className="text-xs text-[var(--text-secondary)] leading-relaxed">{p.description}</p>
@@ -87,7 +87,7 @@ export default function Plugins() {
                   }`}
                 >
                   {busy === p.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : on ? <Check className="w-3.5 h-3.5" /> : <Plus className="w-3.5 h-3.5" />}
-                  {on ? "Installed Â· Enabled" : "Install"}
+                  {on ? "Installed · Enabled" : "Install"}
                 </button>
               </div>
             );

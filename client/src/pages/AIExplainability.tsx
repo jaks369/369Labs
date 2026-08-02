@@ -142,7 +142,7 @@ export default function AIExplainability() {
                       <div>
                         <h3 className="text-sm font-bold text-white">{cfg.title}</h3>
                         <span className={`text-xs font-bold ${isPositive ? "text-[var(--green)]" : "text-[var(--red)]"}`}>
-                          {signal} Â· {confidence}% confidence
+                          {signal} · {confidence}% confidence
                           <span className="text-[var(--text-muted)] font-normal ml-2">({typeLabel})</span>
                         </span>
                       </div>

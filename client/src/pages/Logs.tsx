@@ -89,7 +89,7 @@ export default function Logs() {
                       <Icon className="w-3.5 h-3.5 text-[var(--text-secondary)] mt-0.5 shrink-0" />
                       <div className="flex-1 min-w-0">
                         <span className="text-[var(--green)]">{l.action}</span>
-                        {l.target && <span className="text-[var(--text-muted)]"> Â· {l.target}</span>}
+                        {l.target && <span className="text-[var(--text-muted)]"> · {l.target}</span>}
                       </div>
                       <span className="text-[var(--text-muted)] tabular-nums shrink-0">
                         {new Date(l.at).toLocaleString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
