@@ -33,8 +33,8 @@ function exportCsv(report: any) {
 function ReportViewer({ report, onClose }: { report: any; onClose: () => void }) {
   const s = report.summary || {};
   return (
-    <div className="fixed inset-0 z-[90] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4" onClick={onClose}>
-      <div className="w-full max-w-2xl bg-[var(--card)] border border-[var(--border)] rounded-xl max-h-[85vh] flex flex-col" onClick={e => e.stopPropagation()}>
+    <div className="fixed inset-0 z-[90] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-modal-backdrop" onClick={onClose}>
+      <div className="w-full max-w-2xl bg-[var(--card)] border border-[var(--border)] rounded-xl max-h-[85vh] flex flex-col animate-modal-panel" onClick={e => e.stopPropagation()}>
         <div className="flex items-center justify-between p-4 border-b border-[var(--border)]">
           <div>
             <h3 className="text-sm font-bold text-white">{report.label}</h3>
@@ -206,7 +206,7 @@ export default function AutoReports() {
 
       {viewReportId && (
         reportDetailQuery.isLoading ? (
-          <div className="fixed inset-0 z-[90] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="fixed inset-0 z-[90] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-modal-backdrop">
             <Loader2 className="w-8 h-8 animate-spin text-[var(--accent)]" />
           </div>
         ) : viewReport ? (

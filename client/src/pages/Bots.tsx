@@ -463,8 +463,8 @@ export default function Bots() {
 
           {/* Logs Modal */}
           {viewLogsFor !== null && (
-            <div className="fixed inset-0 z-[90] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setViewLogsFor(null)}>
-              <div className="w-full max-w-2xl max-h-[80vh] bg-[var(--card)] border border-[var(--border)] rounded-xl overflow-hidden" onClick={(e) => e.stopPropagation()}>
+            <div className="fixed inset-0 z-[90] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-modal-backdrop" onClick={() => setViewLogsFor(null)}>
+              <div className="w-full max-w-2xl max-h-[80vh] bg-[var(--card)] border border-[var(--border)] rounded-xl overflow-hidden animate-modal-panel" onClick={(e) => e.stopPropagation()}>
                 <div className="flex items-center justify-between p-4 border-b border-[var(--border)]">
                   <h3 className="text-sm font-bold text-white flex items-center gap-2"><FileText className="w-4 h-4" /> Bot Logs</h3>
                   <button onClick={() => setViewLogsFor(null)} className="text-[var(--text-muted)] hover:text-white"><X className="w-4 h-4" /></button>

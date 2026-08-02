@@ -29,8 +29,8 @@ export default function GlobalSearch({ open, onClose }: { open: boolean; onClose
   const hasResults = data && (data.trades?.length > 0 || data.strategies?.length > 0 || data.botRuns?.length > 0 || data.aiKnowledge?.length > 0);
 
   return (
-    <div className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm flex items-start justify-center pt-[15vh]" onClick={onClose}>
-      <div className="w-full max-w-xl bg-[var(--card)] border border-[var(--border)] rounded-xl shadow-2xl overflow-hidden" onClick={(e) => e.stopPropagation()}>
+    <div className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm flex items-start justify-center pt-[15vh] animate-modal-backdrop" onClick={onClose}>
+      <div className="w-full max-w-xl bg-[var(--card)] border border-[var(--border)] rounded-xl shadow-2xl overflow-hidden animate-modal-panel" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center gap-2 p-3 border-b border-[var(--border)]">
           <Search className="w-4 h-4 text-[var(--text-muted)] shrink-0" />
           <input ref={inputRef} value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search trades, strategies, bots, symbols..." className="flex-1 bg-transparent text-sm text-white outline-none placeholder-[var(--text-muted)]" />

@@ -276,8 +276,10 @@ function DashboardLayoutContent({
 
   useEffect(() => {
     const h = (e: KeyboardEvent) => { if (e.shiftKey && e.key === "?") { e.preventDefault(); setShortcutsOpen(o => !o); } };
+    const onShortcutsOpen = () => setShortcutsOpen(true);
     window.addEventListener("keydown", h);
-    return () => window.removeEventListener("keydown", h);
+    window.addEventListener("shortcuts:open", onShortcutsOpen);
+    return () => { window.removeEventListener("keydown", h); window.removeEventListener("shortcuts:open", onShortcutsOpen); };
   }, []);
 
   useEffect(() => {

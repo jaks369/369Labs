@@ -35,7 +35,7 @@ const COMMANDS: Command[] = [
   { id: "act.deploy", label: "Deploy a strategy (go to Bots)", group: "Action", icon: Zap, run: () => navigateTo("/bots") },
   { id: "act.backtest", label: "Run a backtest (go to Backtesting)", group: "Action", icon: FlaskConical, run: () => navigateTo("/backtesting") },
   { id: "act.ask", label: "Ask 369AI to build a strategy", group: "Action", icon: Brain, run: () => navigateTo("/ai-assistant") },
-  { id: "act.tools", label: "Open command palette help", group: "Action", icon: Wrench, run: () => {} },
+  { id: "act.tools", label: "Show keyboard shortcuts", group: "Action", icon: Wrench, run: () => { window.dispatchEvent(new CustomEvent("shortcuts:open")); window.dispatchEvent(new CustomEvent("command-palette:close")); } },
 ];
 
 let _setLocation: ((to: string) => void) | null = null;
@@ -96,11 +96,11 @@ export default function CommandPalette() {
 
   return (
     <div
-      className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm flex items-start justify-center pt-[12vh]"
+      className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm flex items-start justify-center pt-[12vh] animate-modal-backdrop"
       onClick={() => setOpen(false)}
     >
       <div
-        className="w-full max-w-xl bg-[var(--card)] border border-[var(--border)] rounded-xl shadow-2xl overflow-hidden"
+        className="w-full max-w-xl bg-[var(--card)] border border-[var(--border)] rounded-xl shadow-2xl overflow-hidden animate-modal-panel"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center gap-3 px-4 border-b border-[var(--border)]">

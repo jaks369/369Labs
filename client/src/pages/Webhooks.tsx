@@ -78,8 +78,8 @@ export default function WebhooksPage() {
       </div>
 
       {showCreate && (
-        <div className="fixed inset-0 z-[90] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setShowCreate(false)}>
-          <div className="w-full max-w-lg bg-[var(--card)] border border-[var(--border)] rounded-xl" onClick={(e) => e.stopPropagation()}>
+        <div className="fixed inset-0 z-[90] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-modal-backdrop" onClick={() => setShowCreate(false)}>
+          <div className="w-full max-w-lg bg-[var(--card)] border border-[var(--border)] rounded-xl animate-modal-panel" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between p-4 border-b border-[var(--border)]">
               <h3 className="text-sm font-bold text-white flex items-center gap-2"><Plus className="w-4 h-4" /> Create Webhook</h3>
               <button onClick={() => setShowCreate(false)} className="text-[var(--text-muted)] hover:text-white">✕</button>

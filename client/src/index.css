@@ -4,10 +4,10 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
-  --radius-sm: calc(var(--radius) - 2px);
-  --radius-md: var(--radius);
-  --radius-lg: calc(var(--radius) + 2px);
-  --radius-xl: calc(var(--radius) + 4px);
+  --radius-sm: var(--radius-sm);
+  --radius-md: var(--radius-md);
+  --radius-lg: var(--radius-lg);
+  --radius-xl: var(--radius-xl);
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -148,8 +148,14 @@
   --radius: 0.75rem;       /* 12px */
   --radius-lg: 1rem;       /* 16px */
   --radius-xl: 1.5rem;     /* 24px */
+  --sidebar: var(--bg);
+  --sidebar-foreground: var(--text-secondary);
+  --sidebar-primary: var(--accent);
   --sidebar-primary-foreground: #0A0C10;
   --sidebar-accent: var(--card);
+  --sidebar-accent-foreground: var(--text-primary);
+  --sidebar-border: var(--border);
+  --sidebar-ring: var(--accent);
 }
 
 .light {
@@ -227,8 +233,6 @@
   --sidebar-border: var(--border);
   --sidebar-ring: var(--accent);
 }
-
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
 
 @layer base {
 
@@ -1159,6 +1163,23 @@
   .animate-countUp { animation: countUp 300ms var(--ease-out-expo) both; }
   .animate-ripple { animation: ripple 600ms ease; }
   .animate-ticker { animation: tickerSlide 200ms var(--ease-out-expo); }
+
+  @keyframes modalBackdropIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+  @keyframes modalPanelIn {
+    from { opacity: 0; transform: translateY(8px) scale(0.98); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+  }
+  @keyframes sheetUpIn {
+    from { opacity: 0.5; transform: translateY(24px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .animate-modal-backdrop { animation: modalBackdropIn 150ms var(--ease-out-expo) both; }
+  .animate-modal-panel { animation: modalPanelIn 180ms var(--ease-out-expo) both; }
+  .animate-sheet-up { animation: sheetUpIn 200ms var(--ease-out-expo) both; }
+
 
   .ai-alive {
     position: relative;

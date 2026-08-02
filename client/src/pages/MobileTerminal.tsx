@@ -285,9 +285,9 @@ export default function MobileTerminal() {
       </div>
 
       {showSymbolPicker && (
-        <div className="fixed inset-0 z-[90] bg-black/60 flex items-start justify-center" onClick={() => setShowSymbolPicker(false)}>
+        <div className="fixed inset-0 z-[90] bg-black/60 flex items-start justify-center animate-modal-backdrop" onClick={() => setShowSymbolPicker(false)}>
           <div
-            className="w-full bg-[var(--card)] border-b border-[var(--border)] rounded-b-2xl shadow-2xl max-h-[60vh] overflow-y-auto"
+            className="w-full bg-[var(--card)] border-b border-[var(--border)] rounded-b-2xl shadow-2xl max-h-[60vh] overflow-y-auto animate-sheet-up"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="px-4 py-3 border-b border-[var(--border)] flex items-center justify-between sticky top-0 bg-[var(--card)]">
@@ -451,9 +451,9 @@ export default function MobileTerminal() {
 
       {/* Positions bottom sheet */}
       {showPositions && (
-        <div className="fixed inset-0 z-[95] bg-black/60 flex items-end" onClick={() => setShowPositions(false)}>
+        <div className="fixed inset-0 z-[95] bg-black/60 flex items-end animate-modal-backdrop" onClick={() => setShowPositions(false)}>
           <div
-            className="w-full bg-[var(--card)] border-t border-[var(--border)] rounded-t-2xl max-h-[70vh] overflow-y-auto pb-6"
+            className="w-full bg-[var(--card)] border-t border-[var(--border)] rounded-t-2xl max-h-[70vh] overflow-y-auto pb-6 animate-sheet-up"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="sticky top-0 bg-[var(--card)] px-4 py-3 border-b border-[var(--border)] flex items-center justify-between">

@@ -40,7 +40,7 @@ export default function Home() {
       </div>
 
       {/* Nav */}
-      <nav className="relative z-50 border-b border-[var(--border)]/50 sticky top-0 bg-[var(--bg)]/80 backdrop-blur-xl">
+      <nav className="relative z-50 border-b border-[var(--border)]/50 sticky top-0 bg-[var(--bg)]">
         <div className="max-w-6xl mx-auto px-6 h-14 flex justify-between items-center">
           <div className="flex items-center gap-8">
             <div className="flex items-center gap-2 cursor-pointer" onClick={() => navigate("/")}>

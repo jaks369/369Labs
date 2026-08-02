@@ -669,8 +669,8 @@ export function StrategyBuilderContent({ embedded = false, onClose, onSaved }: S
       </div>
 
       {showTemplates && (
-        <div className="fixed inset-0 z-[90] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setShowTemplates(false)}>
-          <div className="w-full max-w-2xl bg-[var(--card)] border border-[var(--border)] rounded-xl max-h-[80vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+        <div className="fixed inset-0 z-[90] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-modal-backdrop" onClick={() => setShowTemplates(false)}>
+          <div className="w-full max-w-2xl bg-[var(--card)] border border-[var(--border)] rounded-xl max-h-[80vh] overflow-y-auto animate-modal-panel" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between p-4 border-b border-[var(--border)]">
               <h3 className="text-sm font-bold text-white flex items-center gap-2"><LayoutTemplate className="w-4 h-4" /> Strategy Templates</h3>
               <button onClick={() => setShowTemplates(false)} className="text-[var(--text-muted)] hover:text-white">✕</button>
@@ -693,8 +693,8 @@ export function StrategyBuilderContent({ embedded = false, onClose, onSaved }: S
         </div>
       )}
       {showHistory && (
-        <div className="fixed inset-0 z-[90] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setShowHistory(false)}>
-          <div className="w-full max-w-2xl bg-[var(--card)] border border-[var(--border)] rounded-xl max-h-[80vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+        <div className="fixed inset-0 z-[90] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-modal-backdrop" onClick={() => setShowHistory(false)}>
+          <div className="w-full max-w-2xl bg-[var(--card)] border border-[var(--border)] rounded-xl max-h-[80vh] overflow-y-auto animate-modal-panel" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between p-4 border-b border-[var(--border)]">
               <h3 className="text-sm font-bold text-white flex items-center gap-2"><History className="w-4 h-4" /> Version History</h3>
               <button onClick={() => setShowHistory(false)} className="text-[var(--text-muted)] hover:text-white">✕</button>

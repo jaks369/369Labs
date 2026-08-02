@@ -25,8 +25,8 @@ export default function KeyboardShortcuts({ onClose }: { onClose: () => void }) 
   }, [onClose]);
 
   return (
-    <div className="fixed inset-0 z-[100] bg-black/60 flex items-center justify-center p-4" onClick={onClose}>
-      <div className="bg-[var(--card)] border border-[var(--border)] rounded-2xl w-full max-w-md max-h-[80vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+    <div className="fixed inset-0 z-[100] bg-black/60 flex items-center justify-center p-4 animate-modal-backdrop" onClick={onClose}>
+      <div className="bg-[var(--card)] border border-[var(--border)] rounded-2xl w-full max-w-md max-h-[80vh] overflow-y-auto animate-modal-panel" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between p-5 border-b border-[var(--border)]">
           <div className="flex items-center gap-2">
             <Command className="w-5 h-5 text-[var(--accent)]" />

@@ -120,8 +120,8 @@ export default function AIChatWindow() {
       </p>
 
       {showMemory && (
-        <div className="fixed inset-0 z-[90] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setShowMemory(false)}>
-          <div className="w-full max-w-2xl bg-[var(--card)] border border-[var(--border)] rounded-xl max-h-[80vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
+        <div className="fixed inset-0 z-[90] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-modal-backdrop" onClick={() => setShowMemory(false)}>
+          <div className="w-full max-w-2xl bg-[var(--card)] border border-[var(--border)] rounded-xl max-h-[80vh] flex flex-col animate-modal-panel" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between p-4 border-b border-[var(--border)]">
               <h3 className="text-sm font-bold text-white flex items-center gap-2"><BrainCircuit className="w-4 h-4 text-[var(--accent)]" /> AI Memory</h3>
               <button onClick={() => setShowMemory(false)} className="text-[var(--text-muted)] hover:text-white">✕</button>
@@ -156,8 +156,8 @@ export default function AIChatWindow() {
       )}
 
       {showModelConfig && (
-        <div className="fixed inset-0 z-[90] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setShowModelConfig(false)}>
-          <div className="w-full max-w-md bg-[var(--card)] border border-[var(--border)] rounded-xl" onClick={(e) => e.stopPropagation()}>
+        <div className="fixed inset-0 z-[90] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-modal-backdrop" onClick={() => setShowModelConfig(false)}>
+          <div className="w-full max-w-md bg-[var(--card)] border border-[var(--border)] rounded-xl animate-modal-panel" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between p-4 border-b border-[var(--border)]">
               <h3 className="text-sm font-bold text-white flex items-center gap-2"><Settings2 className="w-4 h-4 text-[var(--accent)]" /> AI Model Configuration</h3>
               <button onClick={() => setShowModelConfig(false)} className="text-[var(--text-muted)] hover:text-white">✕</button>

@@ -217,8 +217,8 @@ export default function Journal() {
       </div>
 
       {showManual && (
-        <div className="fixed inset-0 z-[90] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setShowManual(false)}>
-          <div className="w-full max-w-lg bg-[var(--card)] border border-[var(--border)] rounded-xl" onClick={(e) => e.stopPropagation()}>
+        <div className="fixed inset-0 z-[90] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-modal-backdrop" onClick={() => setShowManual(false)}>
+          <div className="w-full max-w-lg bg-[var(--card)] border border-[var(--border)] rounded-xl animate-modal-panel" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between p-4 border-b border-[var(--border)]">
               <h3 className="text-sm font-bold text-white flex items-center gap-2"><Plus className="w-4 h-4" /> Add Manual Journal Note</h3>
               <button onClick={() => setShowManual(false)} className="text-[var(--text-muted)] hover:text-white">✕</button>
@@ -234,8 +234,8 @@ export default function Journal() {
       )}
 
       {showScreenshot && (
-        <div className="fixed inset-0 z-[90] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setShowScreenshot(false)}>
-          <div className="w-full max-w-lg bg-[var(--card)] border border-[var(--border)] rounded-xl" onClick={(e) => e.stopPropagation()}>
+        <div className="fixed inset-0 z-[90] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-modal-backdrop" onClick={() => setShowScreenshot(false)}>
+          <div className="w-full max-w-lg bg-[var(--card)] border border-[var(--border)] rounded-xl animate-modal-panel" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between p-4 border-b border-[var(--border)]">
               <h3 className="text-sm font-bold text-white flex items-center gap-2"><Image className="w-4 h-4" /> Upload Screenshot</h3>
               <button onClick={() => setShowScreenshot(false)} className="text-[var(--text-muted)] hover:text-white">✕</button>
@@ -272,8 +272,8 @@ export default function Journal() {
       )}
 
       {showLinkTrade && (
-        <div className="fixed inset-0 z-[90] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => { setShowLinkTrade(false); setLinkKnowledgeId(null); }}>
-          <div className="w-full max-w-lg bg-[var(--card)] border border-[var(--border)] rounded-xl" onClick={(e) => e.stopPropagation()}>
+        <div className="fixed inset-0 z-[90] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-modal-backdrop" onClick={() => { setShowLinkTrade(false); setLinkKnowledgeId(null); }}>
+          <div className="w-full max-w-lg bg-[var(--card)] border border-[var(--border)] rounded-xl animate-modal-panel" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between p-4 border-b border-[var(--border)]">
               <h3 className="text-sm font-bold text-white flex items-center gap-2"><Link2 className="w-4 h-4" /> Link Trade to Journal</h3>
               <button onClick={() => { setShowLinkTrade(false); setLinkKnowledgeId(null); }} className="text-[var(--text-muted)] hover:text-white">✕</button>
@@ -307,8 +307,8 @@ export default function Journal() {
       )}
 
       {showImport && (
-        <div className="fixed inset-0 z-[90] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setShowImport(false)}>
-          <div className="w-full max-w-lg bg-[var(--card)] border border-[var(--border)] rounded-xl" onClick={(e) => e.stopPropagation()}>
+        <div className="fixed inset-0 z-[90] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-modal-backdrop" onClick={() => setShowImport(false)}>
+          <div className="w-full max-w-lg bg-[var(--card)] border border-[var(--border)] rounded-xl animate-modal-panel" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between p-4 border-b border-[var(--border)]">
               <h3 className="text-sm font-bold text-white flex items-center gap-2"><Upload className="w-4 h-4" /> Import Trades (CSV)</h3>
               <button onClick={() => setShowImport(false)} className="text-[var(--text-muted)] hover:text-white">✕</button>
