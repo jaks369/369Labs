@@ -4,11 +4,11 @@ import { trpc } from "@/lib/trpc";
 import { useEffect, useState } from "react";
 import { derivWS } from "@/services/derivWebSocket";
 import { Loader2, TrendingUp, TrendingDown, DollarSign, Activity, BarChart3, Wallet, AlertCircle, XCircle, Scale, FileText, Download } from "lucide-react";
-import { LineChart, Line, ResponsiveContainer, XAxis, YAxis, Tooltip, CartesianGrid } from "recharts";
 import { toast } from "@/components/Toast";
 import { CurrencyStat, PercentStat, IntegerStat, SignedCurrencyStat } from "@/components/LiveStat";
 import { PageContainer, PageSection } from "@/components/PageSection";
 import { getSymbolDisplayName } from "@/lib/symbols";
+import PriceChart from "@/components/PriceChart";
 
 export default function Portfolio() {
   const { isAuthenticated } = useAuth();
@@ -176,20 +176,15 @@ export default function Portfolio() {
             {equityData.length > 1 && (
               <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-6">
                 <h2 className="text-sm font-bold text-white mb-4">Equity Curve</h2>
-                <div className="h-64">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={equityData}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
-                      <XAxis dataKey="name" tick={{ fontSize: 10, fill: "var(--text-muted)" }} interval="preserveStartEnd" />
-                      <YAxis tick={{ fontSize: 10, fill: "var(--text-muted)" }} />
-                      <Tooltip
-                        contentStyle={{ background: "var(--card)", border: "1px solid var(--border)", borderRadius: 8, fontSize: 12 }}
-                        labelStyle={{ color: "var(--text-secondary)" }}
-                      />
-                      <Line type="monotone" dataKey="equity" stroke="var(--accent-hover)" strokeWidth={2} dot={false} />
-                    </LineChart>
-                  </ResponsiveContainer>
-                </div>
+                <PriceChart
+                  data={equityData.map((p, i) => ({ time: new Date(ordered[i]?.entryTime || 0).toLocaleDateString(), price: p.equity }))}
+                  decimalPlaces={2}
+                  color={totalPnl >= 0 ? "var(--green)" : "var(--red)"}
+                  fitOnDataChange
+                  heightClass="h-64"
+                  showStats={false}
+                  followLabel="Latest"
+                />
               </div>
             )}
 

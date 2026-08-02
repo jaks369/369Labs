@@ -5,6 +5,7 @@ import { useLocation } from "wouter";
 import { useRef, useState, useMemo } from "react";
 import { toast } from "@/components/Toast";
 import { formatMoney, formatSignedMoney } from "@/lib/format";
+import PriceChart from "@/components/PriceChart";
 
 type FilterMode = "all" | "bot" | "manual";
 
@@ -119,24 +120,8 @@ export default function Analytics() {
   const allMonths = years.length > 0 ? months : [];
   const maxMonthly = Math.max(1, ...Object.values(monthlyPnl).flatMap(y => Object.values(y).map(Math.abs)));
 
-  // Equity curve SVG
-  const eqPoints = equityCurve;
-  const eqWidth = 700;
-  const eqHeight = 220;
-  const eqPadding = 30;
-  const eqInnerW = eqWidth - eqPadding * 2;
-  const eqInnerH = eqHeight - eqPadding * 2;
-  const eqMin = eqPoints.length > 0 ? Math.min(...eqPoints.map(p => p.value)) : 0;
-  const eqMax = eqPoints.length > 0 ? Math.max(...eqPoints.map(p => p.value)) : 1;
-  const eqRange = eqMax - eqMin || 1;
-  const eqXStep = eqPoints.length > 1 ? eqInnerW / (eqPoints.length - 1) : eqInnerW;
-  const eqPath = eqPoints.map((p, i) => {
-    const x = eqPadding + (i * eqXStep);
-    const y = eqPadding + eqInnerH - ((p.value - eqMin) / eqRange) * eqInnerH;
-    return `${i === 0 ? "M" : "L"}${x.toFixed(1)},${y.toFixed(1)}`;
-  }).join(" ");
+  // Equity curve
   const eqColor = totalPnl >= 0 ? "var(--green)" : "var(--red)";
-  const eqFillColor = totalPnl >= 0 ? "rgba(var(--green-rgb), 0.08)" : "rgba(var(--red-rgb), 0.08)";
 
   const riskStats = [
     { label: "Current Drawdown", value: formatMoney(currentDD), sub: "peak-to-now", color: currentDD > 0 ? "text-[var(--accent)]" : "text-[var(--text-secondary)]" },
@@ -242,28 +227,15 @@ export default function Analytics() {
                 <TrendingUp className="w-5 h-5 text-[var(--green)]" /> Equity Curve
               </h2>
               {equityCurve.length > 1 ? (
-                <svg viewBox={`0 0 ${eqWidth} ${eqHeight}`} className="w-full h-auto" style={{ maxHeight: "240px" }}>
-                  <defs>
-                    <linearGradient id="eqGrad" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor={eqColor} stopOpacity="0.3" />
-                      <stop offset="100%" stopColor={eqColor} stopOpacity="0.02" />
-                    </linearGradient>
-                  </defs>
-                  {[0.25, 0.5, 0.75].map(frac => (
-                    <line key={frac}
-                      x1={eqPadding} y1={eqPadding + eqInnerH * (1 - frac)}
-                      x2={eqPadding + eqInnerW} y2={eqPadding + eqInnerH * (1 - frac)}
-                      stroke="#1a1a2e" strokeWidth="1" strokeDasharray="4 4" />
-                  ))}
-                  <path d={eqPath} fill="none" stroke={eqColor} strokeWidth="2" />
-                  <path d={`${eqPath} L${eqPadding + eqInnerW},${eqPadding + eqInnerH} L${eqPadding},${eqPadding + eqInnerH} Z`} fill="url(#eqGrad)" />
-                  <rect x={eqPadding + eqInnerW - 48} y={eqHeight - 18} width="42" height="14" rx="3" fill="var(--accent)" />
-                  <text x={eqPadding + eqInnerW - 27} y={eqHeight - 9} fill="#000" fontSize="9" textAnchor="middle" fontWeight="600">{equityCurve[equityCurve.length - 1]?.date || ""}</text>
-                  <rect x={eqPadding} y={eqPadding - 4} width="28" height="14" rx="3" fill="var(--accent)" />
-                  <text x={eqPadding + 14} y={eqPadding + 5} fill="#000" fontSize="9" textAnchor="middle" fontWeight="600">${eqMax.toFixed(0)}</text>
-                  <rect x={eqPadding + eqInnerW - 48} y={eqPadding + eqInnerH - 7} width="42" height="14" rx="3" fill="var(--accent)" />
-                  <text x={eqPadding + eqInnerW - 27} y={eqPadding + eqInnerH + 2} fill="#000" fontSize="9" textAnchor="middle" fontWeight="600">${eqMin.toFixed(0)}</text>
-                </svg>
+                <PriceChart
+                  data={equityCurve.map(p => ({ time: p.date, price: p.value }))}
+                  decimalPlaces={2}
+                  color={eqColor}
+                  fitOnDataChange
+                  heightClass="h-60 md:h-72"
+                  showStats={false}
+                  followLabel="Latest"
+                />
               ) : (
                 <div className="flex items-center justify-center h-48 text-[var(--text-muted)]">Not enough data for equity curve</div>
               )}
