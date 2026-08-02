@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { LineChart, AreaChart, Maximize, Minimize, ZoomIn, ZoomOut, RotateCcw } from "lucide-react";
+import { LineChart, AreaChart, Maximize, Minimize, RotateCcw } from "lucide-react";
 import { getSymbolDisplayName } from "@/lib/symbols";
 
 export interface PriceChartPoint {
@@ -56,15 +56,18 @@ export default function PriceChart({
   const [mode, setMode] = useState<"line" | "area">(initialMode);
   const [fullscreen, setFullscreen] = useState(false);
 
-  // Viewport interaction state (lightweight-charts-style logical range model):
-  // - visibleBars: how many bars fit in the plot (zoom level)
-  // - rightOffset: bars of empty space reserved to the right of the latest point
+  // Viewport state (lightweight-charts-style logical range model):
+  // - visibleBars: how many bars fit in the plot
+  // - rightOffset: empty space reserved to the right of the latest tick so the
+  //   line ends short of the grid edge — a visual cue that price continues.
   // - scrollBack: bars the right edge is scrolled back from the live edge (0 = follow latest)
   const MIN_BARS = 10;
   const [visibleBars, setVisibleBars] = useState<number>(Math.max(MIN_BARS, data.length || 1));
-  const [rightOffset, setRightOffset] = useState<number>(8);
   const [scrollBack, setScrollBack] = useState<number>(0);
   const [dragging, setDragging] = useState<{ startX: number; startScroll: number } | null>(null);
+
+  // Reserve ~18% of the visible window as continuation space on the right.
+  const rightOffset = Math.max(8, Math.round((visibleBars || 1) * 0.2));
 
   // Controlled timeframe: reseed viewport when the parent changes the window.
   useEffect(() => {
@@ -134,12 +137,23 @@ export default function PriceChart({
   const prices = visibleSlice.map((d) => d.price);
   const minPrice = prices.length ? Math.min(...prices) : 0;
   const maxPrice = prices.length ? Math.max(...prices) : 1;
-  const padding = (maxPrice - minPrice) * 0.1 || maxPrice * 0.001;
+  // When the visible window is flat, pad by the symbol's own tick resolution
+  // (10^-decimalPlaces) instead of a fraction of the absolute price, otherwise
+  // a tiny decimal move would be invisible against a huge absolute range.
+  const tickPad = Math.pow(10, -decimalPlaces);
+  const padding = (maxPrice - minPrice) * 0.1 || tickPad;
   const yMin = minPrice - padding;
   const yMax = maxPrice + padding;
 
   const scale = niceScale(yMin, yMax, 5);
   const yRange = scale.end - scale.start || 1;
+
+  // Precision for the left grid labels: always show at least the symbol's
+  // decimals, and extend further when the auto-scaled price step is finer
+  // (volatility indices tick in 0.01/0.001) so the movement is readable
+  // instead of reading as a flat line. Cap at 6 to keep labels short.
+  const stepDecimals = Math.max(0, Math.ceil(-Math.log10(scale.step)));
+  const labelDecimals = Math.min(6, Math.max(decimalPlaces, stepDecimals));
 
   const xOf = (i: number) => padX + ((i - leftIdx) / (totalBars - 1 || 1)) * chartW;
 
@@ -246,12 +260,6 @@ export default function PriceChart({
           ))}
         </div>
         <div className="flex items-center gap-1">
-          <button onClick={() => zoomBy(1 / 1.3)} title="Zoom out" className="p-1.5 rounded transition-colors cursor-pointer text-[var(--text-muted)] hover:text-[var(--text-primary)]">
-            <ZoomOut className="w-3.5 h-3.5" />
-          </button>
-          <button onClick={() => zoomBy(1.3)} title="Zoom in" className="p-1.5 rounded transition-colors cursor-pointer text-[var(--text-muted)] hover:text-[var(--text-primary)]">
-            <ZoomIn className="w-3.5 h-3.5" />
-          </button>
           <button onClick={() => setMode("line")} title="Line" className={`p-1.5 rounded transition-colors cursor-pointer ${mode === "line" ? "bg-[var(--accent-soft)] text-[var(--accent-hover)]" : "text-[var(--text-muted)] hover:text-[var(--text-primary)]"}`}>
             <LineChart className="w-3.5 h-3.5" />
           </button>
@@ -338,7 +346,7 @@ export default function PriceChart({
             {/* Y-axis labels */}
             {gridLines.map((gl, i) => (
               <text key={`ylbl-${i}`} x={padX - 8} y={gl.y + 3} textAnchor="end" fill="var(--text-muted)" fontSize="10" fontFamily="JetBrains Mono, monospace">
-                {gl.value.toFixed(decimalPlaces)}
+                {gl.value.toFixed(labelDecimals)}
               </text>
             ))}
 
