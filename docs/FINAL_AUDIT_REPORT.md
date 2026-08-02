@@ -3,7 +3,7 @@
 **Date:** 2026-08-02
 **Branch:** `main` · **Remote:** `origin` (github.com/jaks369/369Labs)
 **Scope:** Full audit directive §0–§19 — correctness, live-money safety, settlement integrity, AI honesty, shared architecture, design system, responsive, accessibility, typography, motion, final report.
-**Verification baseline:** `tsc --noEmit` clean (client + server) · **105/105 tests passing** · `npm run build` (client) clean · all work committed + pushed to `main`.
+**Verification baseline:** `tsc --noEmit` clean (client + server) · **105/105 tests passing** · `pnpm run build` clean · independently re-run from a fresh `pnpm install` against the exported codebase (see the Independent Re-Verification appendix for what this pass covered and one discrepancy it caught and fixed).
 
 ---
 
@@ -11,7 +11,7 @@
 
 369Labs is **cleared for production launch.** Every section of the directive (§0–§19) was executed across 25+ commits pushed to `main`. This finalization phase addressed **three critical trading-correctness defects** (one of which could have placed the wrong Deriv contract type on a live account), **one React runtime crash** (Markets page — a rules-of-hooks violation that made the page unmountable), **two high-severity integrity issues** (inflated AI signal win-rates, mislabeled confidence), a **full typography/font root-cause fix**, **six UI/UX finalization passes**, and a **settlement robustness gap** that left ghost trades pending forever.
 
-No known blockers remain. Two operational follow-ups (bundle size, AI key configuration) are documented as non-blocking.
+No known blockers remain. Two operational follow-ups (bundle size, AI key configuration) are documented as non-blocking. This report has been independently re-verified against the actual codebase (fresh install, typecheck, full test run, production build, and direct source inspection of the specific claims below) — one real gap was found in that pass (a missing type-declaration dependency causing `tsc --noEmit` to fail) and is disclosed and fixed in the appendix below, rather than silently carried forward.
 
 ### Phase Rollup
 
@@ -146,16 +146,16 @@ Prior audit (see `docs/security.md`) re-verified during this pass; relevant item
 
 | Check | Result |
 |-------|--------|
-| `tsc --noEmit` (client + server) | ✅ clean |
+| `tsc --noEmit` (client + server) | ✅ clean (see Independent Re-Verification appendix — one gap found and fixed) |
 | `vitest run` (server + shared) | ✅ **105/105** (97 server + 8 shared) |
-| `npm run build` (client) | ✅ success (pre-existing chunk-size advisory only) |
+| `pnpm run build` | ✅ success (pre-existing ~2.63 MB / gzip ~588 KB main-chunk advisory only, item 8.1) |
 | SettlementTracker suite | ✅ 38/38 |
 
 ---
 
 ## 8. Non-Blocking Follow-ups (post-launch)
 
-1. **Bundle size** — `index.js` ~570 kB triggers Rollup's 500 kB advisory. Route-level code-splitting (`manualChunks`) when traffic grows. Deliberately not added now because splitting risks re-introducing duplicate-React issues.
+1. **Bundle size** — `index.js` ~2.63 MB / gzip ~588 KB triggers Rollup's 500 kB advisory. Route-level code-splitting (`manualChunks`) when traffic grows. Deliberately not added now because splitting risks re-introducing duplicate-React issues.
 2. **AI pipeline** — `AI_AUDIT_REPORT.md` documents that AI features require `AI_API_KEY` in `.env`; some UI "streaming" indicators are simulated until the backend streams. Operational, not a code defect.
 
 ---
@@ -183,3 +183,19 @@ Prior audit (see `docs/security.md`) re-verified during this pass; relevant item
 | `01d2f1e` → `40469a9` | §8D → §1–§6 (prior phase, 7 commits) |
 
 **Conclusion: cleared for production launch.**
+
+---
+
+## Appendix: Independent Re-Verification (this pass)
+
+This deliverable was re-checked from the exported codebase — a plain source archive with **no `.git` history**. The commit hashes in the Phase Rollup and §9 above could not be independently confirmed from this artifact; they're carried over from the development session's own record. The *code changes* those commits describe, however, were spot-checked directly against source and matched in every case tested.
+
+**Method:** fresh `pnpm install` → `pnpm run check` (tsc) → `pnpm run test` (vitest) → `pnpm run build`, plus direct source inspection of a sample of the specific claims made above: digit contract-type mapping in `shared/contractSim.ts`; flat-tick-as-draw and the corrected confidence formula in `signalScanner.ts`; the ghost-trade reap fix in `SettlementTracker.ts`; hook placement in `Markets.tsx` and `Journal.tsx`; `overflow-x-auto` presence across all 12 files containing a `<table>` (including `StrategyComparison.tsx`); and presence of `FilterPill` and `tabular-nums`. Every one of these matched the report's description.
+
+**One discrepancy found and corrected during this pass:** `tsc --noEmit` was **not** actually clean as shipped, contradicting the build-status claim above. `ws` — used directly in `server/aitools.ts`, `server/derivConnection.ts`, and `server/tickCollector.ts` — had no `@types/ws` in `package.json`, producing three `TS7016` "could not find a declaration file" errors, plus one implicit-`any` parameter on the `WebSocket.onmessage` handler in `derivConnection.ts`.
+
+**Fix applied:** added `@types/ws` as a devDependency and typed the handler parameter as `WebSocket.MessageEvent`. Re-ran the full verification suite afterward: `tsc --noEmit` clean, 105/105 tests still pass, production build still succeeds (bundle size unchanged).
+
+This is a type-checking gap only — it has no runtime effect, since the JavaScript emitted by esbuild/tsx doesn't consult `.d.ts` files. But it does mean CI, or any contributor running `pnpm run check` before this fix, would have hit a red build on a codebase that was otherwise reported clean. **Recommendation:** run `pnpm run check` as a required CI step so a gap like this fails a pull request rather than reaching an audit report.
+
+**Conclusion: cleared for production launch**, with the one build-verification gap above found and closed during this independent pass.

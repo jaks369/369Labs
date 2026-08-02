@@ -114,7 +114,7 @@ class DerivConnection {
           this.refresh();
           resolve();
         };
-        this.ws.onmessage = (event) => {
+        this.ws.onmessage = (event: WebSocket.MessageEvent) => {
           let data: any;
           try { data = JSON.parse(event.data as string); } catch { return; }
           this.handleMessage(data);
