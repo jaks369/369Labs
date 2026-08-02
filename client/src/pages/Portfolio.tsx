@@ -81,8 +81,8 @@ export default function Portfolio() {
   }
 
   return (
-    <PageContainer className="min-h-screen bg-[var(--card)] p-6">
-      <div className="max-w-6xl mx-auto space-y-8">
+    <PageContainer className="page-container">
+      <div className="space-y-8">
         <PageSection>
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>

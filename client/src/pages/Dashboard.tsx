@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { CurrencyStat, PercentStat, IntegerStat, SignedCurrencyStat } from "@/components/LiveStat";
 import { formatMoney, formatSignedMoney, formatNumber } from "@/lib/format";
 import { PageContainer, PageSection } from "@/components/PageSection";
-import { Loader2, Activity, Zap, ChevronDown, Wallet, AlertCircle, BookOpen, BarChart3, Bot, Brain } from "lucide-react";
+import { Loader2, Activity, Zap, ChevronDown, Wallet, AlertCircle, BookOpen, BarChart3, Bot, Brain, Star } from "lucide-react";
 import { useLocation, useSearch } from "wouter";
 import { useIsMobile } from "@/hooks/useMobile";
 import MobileTerminal from "@/pages/MobileTerminal";
@@ -33,6 +33,7 @@ export default function Dashboard() {
   const [showSymbolPicker, setShowSymbolPicker] = useState(false);
   const [symbolSearch, setSymbolSearch] = useState("");
   const [showTokenModal, setShowTokenModal] = useState(false);
+  const [watchlistOpen, setWatchlistOpen] = useState(true);
   const [tokenError, setTokenError] = useState<string | null>(null);
   const [tokenSaved, setTokenSaved] = useState(false);
   const [contract, setContract] = useState<ContractSelection>({ category: "rise_fall", direction: "rise" });
@@ -492,9 +493,10 @@ export default function Dashboard() {
 
       <PageSection>
         {/* Workstation grid: watchlist | chart+history | order+intelligence */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 xl:gap-6">
+        <div className={`grid grid-cols-1 lg:grid-cols-12 gap-4 xl:gap-6 ${watchlistOpen ? "" : "lg:grid-cols-1"}`}>
           {/* Watchlist column — dense, sticky on desktop, hidden on mobile (sheet available) */}
-          <div className="hidden lg:block lg:col-span-3 xl:col-span-2 xl:sticky xl:top-4 xl:self-start xl:max-h-[calc(100vh-120px)]">
+          {watchlistOpen && (
+          <div className="hidden lg:block lg:col-span-3 xl:col-span-2 xl:sticky xl:top-4 xl:self-start xl:max-h-[calc(100vh-120px)] animate-slideInRight">
             <WatchlistPanel
               compact
               header={false}
@@ -505,9 +507,10 @@ export default function Dashboard() {
               }}
             />
           </div>
+          )}
 
           {/* Chart & History — the workspace */}
-          <div className="lg:col-span-9 xl:col-span-7 space-y-4 xl:space-y-6">
+          <div className={`space-y-4 xl:space-y-6 ${watchlistOpen ? "lg:col-span-9 xl:col-span-7" : "lg:col-span-12"}`}>
             {/* Chart workspace — the heart of the OS */}
             <div className={showSymbolPicker ? "bg-[var(--card)] rounded-xl p-4 elevation-1" : "chart-workspace"}>
               {showSymbolPicker ? (
@@ -616,6 +619,14 @@ export default function Dashboard() {
                               <span className="w-2 h-2 rounded-full bg-[var(--green)] animate-live-pulse" />
                               <span className="text-[10px] font-bold uppercase tracking-widest text-[var(--text-muted)]">Live</span>
                             </div>
+                            <button
+                              onClick={() => setWatchlistOpen((o) => !o)}
+                              className="hidden xl:flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white/5 border border-[var(--border)] text-[10px] font-bold uppercase tracking-wider text-[var(--text-muted)] hover:text-white transition-colors cursor-pointer"
+                              title={watchlistOpen ? "Hide watchlist" : "Show watchlist"}
+                            >
+                              <Star className={`w-3 h-3 ${watchlistOpen ? "text-[var(--accent)]" : ""}`} />
+                              Watchlist
+                            </button>
                             <div className="flex items-baseline gap-2">
                               <span
                                 className="text-xl font-bold font-mono tabular-nums text-white"
