@@ -46,6 +46,7 @@ export default function LiveValue({
     <span
       style={{
         color: pulse || undefined,
+        fontVariantNumeric: "tabular-nums",
         transition: "color 0.3s cubic-bezier(0.19, 1, 0.22, 1), opacity 0.6s cubic-bezier(0.19, 1, 0.22, 1)",
         opacity: stale ? 0.5 : 1,
         ...style,

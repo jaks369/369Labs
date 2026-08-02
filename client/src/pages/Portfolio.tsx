@@ -8,6 +8,7 @@ import { toast } from "@/components/Toast";
 import { CurrencyStat, PercentStat, IntegerStat, SignedCurrencyStat } from "@/components/LiveStat";
 import { PageContainer, PageSection } from "@/components/PageSection";
 import { getSymbolDisplayName } from "@/lib/symbols";
+import { formatMoney, formatNumber } from "@/lib/format";
 import PriceChart from "@/components/PriceChart";
 
 export default function Portfolio() {
@@ -214,9 +215,9 @@ export default function Portfolio() {
                           <tr key={p.contractId || p.id} className="border-b border-[var(--border)]/50 hover:bg-white/5 transition-colors">
                             <td className="py-3 px-4 font-bold text-white">{p.symbol || p.display_name ? getSymbolDisplayName(p.symbol || p.display_name) : "-"}</td>
                             <td className="py-3 px-4 text-right text-xs">{p.contractType || p.contract_type || "CALL"}</td>
-                            <td className="py-3 px-4 text-right">${p.stake || "0"}</td>
-                            <td className="py-3 px-4 text-right">{p.buyPrice || p.entryPrice || "-"}</td>
-                            <td className="py-3 px-4 text-right">{p.currentPrice || "-"}</td>
+                            <td className="py-3 px-4 text-right font-mono tabular-nums">{formatMoney(p.stake || 0, balanceInfo?.currency)}</td>
+                            <td className="py-3 px-4 text-right font-mono tabular-nums">{p.buyPrice != null ? formatNumber(Number(p.buyPrice), 2) : "-"}</td>
+                            <td className="py-3 px-4 text-right font-mono tabular-nums">{p.currentPrice != null ? formatNumber(Number(p.currentPrice), 2) : "-"}</td>
                             <td className={`py-3 px-4 text-right font-bold ${pnl >= 0 ? "text-[var(--green)]" : "text-[var(--red)]"}`}>
                               <SignedCurrencyStat value={pnl} currency={balanceInfo?.currency || "USD"} />
                             </td>
@@ -348,7 +349,7 @@ export default function Portfolio() {
                         <tr key={t.id} className="border-b border-[var(--border)]/50 hover:bg-white/5 transition-colors">
                           <td className="py-3 px-4 text-xs text-[var(--text-muted)]">{new Date(t.entryTime).toLocaleDateString()}</td>
                           <td className="py-3 px-4 font-bold text-white">{t.symbol ? getSymbolDisplayName(t.symbol) : "-"}</td>
-                          <td className="py-3 px-4 text-right">${t.stake}</td>
+                          <td className="py-3 px-4 text-right font-mono tabular-nums">{formatMoney(t.stake, balanceInfo?.currency)}</td>
                           <td className={`py-3 px-4 text-right font-bold ${parseFloat(t.profitLoss?.toString() || "0") >= 0 ? "text-[var(--green)]" : "text-[var(--red)]"}`}>
                             <SignedCurrencyStat value={parseFloat(t.profitLoss?.toString() || "0")} currency={balanceInfo?.currency || "USD"} />
                           </td>

@@ -6,6 +6,7 @@ import { BarChart3, Search, RefreshCw, TrendingUp, TrendingDown, Minus, Loader2,
 import { derivWS } from "@/services/derivWebSocket";
 import { getAllSymbols, getSymbolDisplayName } from "@shared/symbols";
 import { PageContainer, PageSection } from "@/components/PageSection";
+import { FilterPill } from "@/components/ui/filter-pill";
 
 const SYMBOLS = getAllSymbols() ?? [];
 
@@ -197,13 +198,7 @@ export default function Markets() {
       <PageSection>
         <div className="flex gap-1.5 overflow-x-auto scrollbar-none mb-4">
           {([["all", "All"], ["volatility", "Volatility"], ["volatility_1s", "Volatility 1s"], ["boom_crash", "Boom & Crash"]] as [Group, string][]).map(([g, label]) => (
-            <button
-              key={g}
-              onClick={() => setGroup(g)}
-              className={`px-3 py-1.5 text-caption font-bold rounded-lg transition-colors cursor-pointer whitespace-nowrap ${group === g ? "bg-[var(--accent)] text-black" : "bg-[var(--card)] border border-[var(--border)] text-[var(--text-muted)] hover:text-white"}`}
-            >
-              {label}
-            </button>
+            <FilterPill key={g} active={group === g} onClick={() => setGroup(g)} label={label} />
           ))}
         </div>
 

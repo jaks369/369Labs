@@ -342,7 +342,8 @@ export default function Settings() {
           </nav>
 
           {/* Content — max 640px */}
-          <div className="flex-1 min-w-0 max-w-[640px] space-y-6" ref={sectionRef}>
+          <div className="flex-1 min-w-0 max-w-[640px]" ref={sectionRef}>
+            <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5 md:p-6 space-y-6">
 
         {settingsError && (
           <div className="mb-6 p-4 rounded-lg border border-[var(--red)]/30 bg-[var(--red)]/10 flex items-center gap-3">
@@ -965,6 +966,7 @@ export default function Settings() {
           </div>
         </SpotlightCard>
         )}
+            </div>
           </div>
         </div>
       </div>

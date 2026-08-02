@@ -36,8 +36,7 @@ export default function GlobalSearch({ open, onClose }: { open: boolean; onClose
           <input ref={inputRef} value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search trades, strategies, bots, symbols..." className="flex-1 bg-transparent text-sm text-white outline-none placeholder-[var(--text-muted)]" />
           {searchQuery.isFetching && <Loader2 className="w-4 h-4 text-[var(--accent)] animate-spin shrink-0" />}
           <button onClick={onClose} className="text-[var(--text-muted)] hover:text-white p-1 rounded hover:bg-white/5"><X className="w-4 h-4" /></button>
-        </div>
-        {query.length >= 2 && (
+        </div>        {query.length >= 2 && (
           <div className="max-h-[50vh] overflow-y-auto p-2 space-y-1">
             {searchQuery.isLoading ? (
               <div className="flex items-center justify-center py-6"><Loader2 className="w-5 h-5 text-[var(--accent)] animate-spin" /></div>
