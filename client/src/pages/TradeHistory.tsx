@@ -3,6 +3,7 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import { trpc } from "@/lib/trpc";
 import { Loader2, Download, AlertCircle, BarChart3, TrendingUp, TrendingDown, ChevronLeft, ChevronRight } from "lucide-react";
 import { useLocation } from "wouter";
+import { formatMoney, formatSignedMoney, formatPrice } from "@/lib/format";
 
 export default function TradeHistory() {
   const { isAuthenticated } = useAuth();
@@ -93,7 +94,7 @@ export default function TradeHistory() {
               <span className={`text-2xl font-bold font-mono tabular-nums ${
                 totalPnL > 0 ? "text-[var(--green)]" : totalPnL < 0 ? "text-[var(--red)]" : "text-[var(--text-disabled)]"
               }`}>
-                {totalPnL >= 0 ? "+" : ""}${totalPnL.toFixed(2)}
+                {formatSignedMoney(totalPnL)}
               </span>
             </div>
           </div>
@@ -171,15 +172,15 @@ export default function TradeHistory() {
                           {trade.exitTime ? new Date(trade.exitTime).toLocaleString() : "—"}
                         </td>
                         <td className="text-right font-mono tabular-nums">
-                          {trade.entryPrice}
+                          {formatPrice(trade.entryPrice, (trade as any).symbol)}
                         </td>
                         <td className="text-right font-mono tabular-nums">
-                          ${trade.stake}
+                          {formatMoney(trade.stake)}
                         </td>
                         <td className={`text-right font-mono tabular-nums font-semibold ${
                           pnl > 0 ? "text-[var(--green)]" : pnl < 0 ? "text-[var(--red)]" : "text-[var(--text-disabled)]"
                         }`}>
-                          {pnl >= 0 ? "+" : ""}${pnl.toFixed(2)}
+                          {formatSignedMoney(pnl)}
                         </td>
                         <td className="text-center">
                           <span className={

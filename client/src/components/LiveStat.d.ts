@@ -5,6 +5,7 @@ type StatProps = Omit<LiveValueProps, "format" | "variant"> & {
   value: number;
   variant?: "neutral" | "positive" | "always-positive" | "always-negative";
   decimals?: number;
+  currency?: string;
 };
 
 export function CurrencyStat(props: StatProps): ReactNode;

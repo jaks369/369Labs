@@ -92,8 +92,8 @@ export default function Portfolio() {
           {balanceInfo && (
             <div className="flex items-center gap-2 px-4 py-2 rounded-lg border border-[var(--border)] bg-black/20">
               <Wallet className="w-4 h-4 text-[var(--green)]" />
-              <span className="text-sm font-bold text-white"><CurrencyStat value={balance} /> {balanceInfo.currency}</span>
-              <span className={`badge ${balanceInfo.accountType === "demo" ? "badge-accent" : "badge-red"}`}>{balanceInfo.accountType}</span>
+              <span className="text-sm font-bold text-white"><CurrencyStat value={balance} currency={balanceInfo.currency} /> {balanceInfo.currency}</span>
+              <span className={`badge ${balanceInfo.accountType === "demo" ? "badge-accent" : "badge-gray"}`}>{balanceInfo.accountType}</span>
             </div>
           )}
         </div>
@@ -125,7 +125,7 @@ export default function Portfolio() {
                   <DollarSign className={`w-5 h-5 ${totalPnl >= 0 ? "text-[var(--green)]" : "text-[var(--red)]"}`} />
                 </div>
                 <p className={`text-2xl font-bold ${totalPnl >= 0 ? "text-[var(--green)]" : "text-[var(--red)]"}`}>
-                  <SignedCurrencyStat value={totalPnl} />
+                  <SignedCurrencyStat value={totalPnl} currency={balanceInfo?.currency || "USD"} />
                 </p>
               </div>
               <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
@@ -148,7 +148,7 @@ export default function Portfolio() {
                   <BarChart3 className={`w-5 h-5 ${avgTrade >= 0 ? "text-[var(--green)]" : "text-[var(--red)]"}`} />
                 </div>
                 <p className={`text-2xl font-bold ${avgTrade >= 0 ? "text-[var(--green)]" : "text-[var(--red)]"}`}>
-                  <SignedCurrencyStat value={avgTrade} />
+                  <SignedCurrencyStat value={avgTrade} currency={balanceInfo?.currency || "USD"} />
                 </p>
               </div>
               <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
@@ -157,7 +157,7 @@ export default function Portfolio() {
                   <AlertCircle className="w-5 h-5 text-[var(--red)]" />
                 </div>
                 <p className="text-2xl font-bold text-[var(--red)]">
-                  <SignedCurrencyStat value={-maxDrawdown} />
+                  <SignedCurrencyStat value={-maxDrawdown} currency={balanceInfo?.currency || "USD"} />
                 </p>
               </div>
             </div>
@@ -165,11 +165,11 @@ export default function Portfolio() {
             <div className="grid grid-cols-2 gap-4">
               <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
                 <span className="text-micro">Best Trade</span>
-                <p className="text-lg font-bold text-[var(--green)] mt-1"><SignedCurrencyStat value={bestTrade} /></p>
+                <p className="text-lg font-bold text-[var(--green)] mt-1"><SignedCurrencyStat value={bestTrade} currency={balanceInfo?.currency || "USD"} /></p>
               </div>
               <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
                 <span className="text-micro">Worst Trade</span>
-                <p className="text-lg font-bold text-[var(--red)] mt-1"><SignedCurrencyStat value={worstTrade} /></p>
+                <p className="text-lg font-bold text-[var(--red)] mt-1"><SignedCurrencyStat value={worstTrade} currency={balanceInfo?.currency || "USD"} /></p>
               </div>
             </div>
 
@@ -223,7 +223,7 @@ export default function Portfolio() {
                             <td className="py-3 px-4 text-right">{p.buyPrice || p.entryPrice || "-"}</td>
                             <td className="py-3 px-4 text-right">{p.currentPrice || "-"}</td>
                             <td className={`py-3 px-4 text-right font-bold ${pnl >= 0 ? "text-[var(--green)]" : "text-[var(--red)]"}`}>
-                              <SignedCurrencyStat value={pnl} />
+                              <SignedCurrencyStat value={pnl} currency={balanceInfo?.currency || "USD"} />
                             </td>
                             <td className="py-3 px-4 text-center">
                               <button
@@ -273,7 +273,7 @@ export default function Portfolio() {
                           <td className="py-3 px-4 text-right text-[var(--green)]"><IntegerStat value={stats.wins} variant="always-positive" /></td>
                           <td className="py-3 px-4 text-right"><PercentStat value={parseFloat(((stats.wins / stats.trades) * 100).toFixed(1))} /></td>
                           <td className={`py-3 px-4 text-right font-bold ${stats.pnl >= 0 ? "text-[var(--green)]" : "text-[var(--red)]"}`}>
-                            <SignedCurrencyStat value={stats.pnl} />
+                            <SignedCurrencyStat value={stats.pnl} currency={balanceInfo?.currency || "USD"} />
                           </td>
                         </tr>
                       ))}
@@ -315,7 +315,7 @@ export default function Portfolio() {
                   </div>
                   <div className="bg-black/20 rounded-lg p-3">
                     <p className="text-caption text-[var(--text-muted)] uppercase">Realized P&L</p>
-                    <p className={`text-lg font-bold ${totalPnl >= 0 ? "text-[var(--green)]" : "text-[var(--red)]"}`}><SignedCurrencyStat value={totalPnl} /></p>
+                    <p className={`text-lg font-bold ${totalPnl >= 0 ? "text-[var(--green)]" : "text-[var(--red)]"}`}><SignedCurrencyStat value={totalPnl} currency={balanceInfo?.currency || "USD"} /></p>
                   </div>
                   <div className="bg-black/20 rounded-lg p-3">
                     <p className="text-caption text-[var(--text-muted)] uppercase">Wins / Losses</p>
@@ -355,7 +355,7 @@ export default function Portfolio() {
                           <td className="py-3 px-4 font-bold text-white">{t.symbol ? getSymbolDisplayName(t.symbol) : "-"}</td>
                           <td className="py-3 px-4 text-right">${t.stake}</td>
                           <td className={`py-3 px-4 text-right font-bold ${parseFloat(t.profitLoss?.toString() || "0") >= 0 ? "text-[var(--green)]" : "text-[var(--red)]"}`}>
-                            <SignedCurrencyStat value={parseFloat(t.profitLoss?.toString() || "0")} />
+                            <SignedCurrencyStat value={parseFloat(t.profitLoss?.toString() || "0")} currency={balanceInfo?.currency || "USD"} />
                           </td>
                           <td className="py-3 px-4 text-center">
                             <span className={`px-2 py-1 rounded text-caption font-bold ${

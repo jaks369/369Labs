@@ -26,6 +26,7 @@ import { StrategyRule } from "@/components/RuleBuilder";
 import { StrategyBuilderContent } from "@/pages/StrategyBuilder";
 import { pushTimeline } from "@/components/AITimeline";
 import { getSymbolDisplayName } from "@/lib/symbols";
+import { formatSignedMoney } from "@/lib/format";
 
 interface ServerBot {
   id: string;
@@ -213,8 +214,8 @@ export default function Bots() {
       });
       // Remove from local state immediately for responsive UI
       setRunningBots((prev) => prev.filter((b) => b.runId !== bot.runId));
-      pushTimeline({ icon: "bot", text: `Bot stopped: ${bot.name} · ${bot.trades} trades · P&L ${bot.pnl >= 0 ? "+" : ""}$${bot.pnl.toFixed(2)}` });
-      alertTg(`⏹️ Bot stopped: ${bot.name} · ${bot.trades} trades · P&L ${bot.pnl >= 0 ? "+" : ""}$${bot.pnl.toFixed(2)}`);
+      pushTimeline({ icon: "bot", text: `Bot stopped: ${bot.name} · ${bot.trades} trades · P&L ${formatSignedMoney(bot.pnl)}` });
+      alertTg(`⏹️ Bot stopped: ${bot.name} · ${bot.trades} trades · P&L ${formatSignedMoney(bot.pnl)}`);
       // Trigger refetch to sync with server
       listActiveQuery.refetch();
     } catch (error) {
@@ -307,7 +308,7 @@ export default function Bots() {
                         <div className="text-right">
                           <p className="text-micro mb-1">Profit/Loss</p>
                           <p className={`text-sm font-bold ${bot.pnl >= 0 ? "text-[var(--green)]" : "text-[var(--red)]"}`}>
-                            {bot.pnl >= 0 ? "+" : ""}${Number(bot.pnl).toFixed(2)}
+                            {formatSignedMoney(bot.pnl)}
                           </p>
                         </div>
                         {(() => {
@@ -376,7 +377,7 @@ export default function Bots() {
                       <div className="text-right">
                         <p className="text-micro mb-1">Final P&L</p>
                         <p className={`text-sm font-bold ${bot.pnl >= 0 ? "text-[var(--green)]" : "text-[var(--red)]"}`}>
-                          {bot.pnl >= 0 ? "+" : ""}${Number(bot.pnl).toFixed(2)}
+                          {formatSignedMoney(bot.pnl)}
                         </p>
                       </div>
                       <button

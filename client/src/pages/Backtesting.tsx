@@ -11,6 +11,7 @@ import Sparkline from "@/components/Sparkline";
 import { StrategyRule } from "@/components/RuleBuilder";
 import { getValidSymbols } from "@/lib/symbols";
 import { getAllSymbols, getSymbolDisplayName } from "@shared/symbols";
+import { formatMoney, formatSignedMoney, formatPrice } from "@/lib/format";
 
 const IT_SYMBOLS = getAllSymbols();
 
@@ -236,12 +237,12 @@ export default function Backtesting() {
                   <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4">
                     <p className="text-micro">Total P&L</p>
                     <p className={`text-2xl font-bold mt-1 ${result.totalPnl >= 0 ? "text-[var(--green)]" : "text-[var(--red)]"}`}>
-                      {result.totalPnl >= 0 ? "+" : ""}${result.totalPnl.toFixed(2)}
+                      {formatSignedMoney(result.totalPnl)}
                     </p>
                   </div>
                   <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4">
                     <p className="text-micro">Max Drawdown</p>
-                    <p className="text-2xl font-bold text-[var(--red)] mt-1">-${result.maxDrawdown.toFixed(2)}</p>
+                    <p className="text-2xl font-bold text-[var(--red)] mt-1">{formatMoney(-result.maxDrawdown)}</p>
                   </div>
                 </div>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -256,11 +257,11 @@ export default function Backtesting() {
                       <>
                         <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4">
                           <p className="text-micro">Avg Win</p>
-                          <p className="text-2xl font-bold text-[var(--green)] mt-1">+${avgWin.toFixed(2)}</p>
+                          <p className="text-2xl font-bold text-[var(--green)] mt-1">{formatMoney(avgWin)}</p>
                         </div>
                         <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4">
                           <p className="text-micro">Avg Loss</p>
-                          <p className="text-2xl font-bold text-[var(--red)] mt-1">-${avgLoss.toFixed(2)}</p>
+                          <p className="text-2xl font-bold text-[var(--red)] mt-1">{formatMoney(-avgLoss)}</p>
                         </div>
                         <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4">
                           <p className="text-micro">Profit Factor</p>
@@ -298,14 +299,14 @@ export default function Backtesting() {
                         {result.trades.slice(0, 100).map((t, i) => (
                           <tr key={i} className="hover:bg-white/5">
                             <td className="py-3 text-[var(--text-muted)]">{i + 1}</td>
-                            <td className="py-3 text-[var(--text-secondary)]">${t.entryPrice.toFixed(2)}</td>
-                            <td className="py-3 text-[var(--text-secondary)]">${t.exitPrice.toFixed(2)}</td>
+                            <td className="py-3 text-[var(--text-secondary)]">{formatPrice(t.entryPrice, symbol)}</td>
+                            <td className="py-3 text-[var(--text-secondary)]">{formatPrice(t.exitPrice, symbol)}</td>
                             <td className="py-3 text-[var(--text-secondary)]">{t.contractType}</td>
                             <td className="py-3">
                               {t.result === "win" ? <CheckCircle2 className="w-4 h-4 text-[var(--green)]" /> : <XCircle className="w-4 h-4 text-[var(--red)]" />}
                             </td>
                             <td className={`py-3 text-right font-bold ${t.pnl >= 0 ? "text-[var(--green)]" : "text-[var(--red)]"}`}>
-                              {t.pnl >= 0 ? "+" : ""}${t.pnl.toFixed(2)}
+                              {formatSignedMoney(t.pnl)}
                             </td>
                           </tr>
                         ))}
@@ -330,7 +331,7 @@ export default function Backtesting() {
                             backgroundColor: val >= 0 ? "var(--green)" : "var(--red)",
                             opacity: 0.7,
                           }}
-                          title={`$${val.toFixed(2)}`}
+                          title={formatMoney(val)}
                         />
                       );
                     })}
@@ -371,8 +372,8 @@ export default function Backtesting() {
                               <td className="py-2 font-bold text-white">{r.name}</td>
                               <td className="py-2 text-[var(--text-secondary)]">{r.totalTrades ?? 0}</td>
                               <td className={`py-2 ${(r.winRate ?? 0) >= 50 ? "text-[var(--green)]" : "text-[var(--red)]"}`}>{(r.winRate ?? 0).toFixed(1)}%</td>
-                              <td className={`py-2 text-right font-bold ${(r.totalPnl ?? 0) >= 0 ? "text-[var(--green)]" : "text-[var(--red)]"}`}>${(r.totalPnl ?? 0).toFixed(2)}</td>
-                              <td className="py-2 text-right text-[var(--red)]">-${(r.maxDrawdown ?? 0).toFixed(2)}</td>
+                              <td className={`py-2 text-right font-bold ${(r.totalPnl ?? 0) >= 0 ? "text-[var(--green)]" : "text-[var(--red)]"}`}>{formatSignedMoney(r.totalPnl ?? 0)}</td>
+                              <td className="py-2 text-right text-[var(--red)]">{formatMoney(-(r.maxDrawdown ?? 0))}</td>
                             </tr>
                           ))}
                         </tbody>
@@ -401,14 +402,14 @@ export default function Backtesting() {
                     const applyBest = () => {
                       if (sweepParam === "stake") { setStake(best.value); }
                       else if (result) {
-                        toast(`Best ${sweepParam}=${best.value} (${best.winRate.toFixed(1)}%, $${best.pnl.toFixed(2)} P&L). Update your strategy rule manually.`, "success");
+                        toast(`Best ${sweepParam}=${best.value} (${best.winRate.toFixed(1)}%, ${formatMoney(best.pnl)} P&L). Update your strategy rule manually.`, "success");
                       }
                     };
                     return (
                     <div>
                       {best && (
                         <div className="mb-3 p-2 rounded-lg bg-[var(--green-soft)]/20 border border-[var(--green)]/20 text-caption text-price-up flex items-center justify-between">
-                          <span>Best: {sweepParam}={best.value} ({best.winRate.toFixed(1)}%, ${best.pnl.toFixed(2)} P&L)</span>
+                          <span>Best: {sweepParam}={best.value} ({best.winRate.toFixed(1)}%, {formatMoney(best.pnl)} P&L)</span>
                           <button onClick={applyBest} className="px-2 py-0.5 rounded bg-[var(--green)] text-black text-[9px] font-bold">Apply</button>
                         </div>
                       )}
@@ -428,7 +429,7 @@ export default function Backtesting() {
                                 <td className="py-2 font-bold text-white">{c.value}{i === bestIdx ? " ← best" : ""}</td>
                                 <td className={`py-2 px-2 rounded font-bold ${heatColor(c.winRate)}`}>{c.winRate.toFixed(1)}%</td>
                                 <td className="py-2 text-[var(--text-secondary)]">{c.trades}</td>
-                                <td className={`py-2 text-right font-bold ${c.pnl >= 0 ? "text-[var(--green)]" : "text-[var(--red)]"}`}>{c.pnl >= 0 ? "+" : ""}${c.pnl.toFixed(2)}</td>
+                                <td className={`py-2 text-right font-bold ${c.pnl >= 0 ? "text-[var(--green)]" : "text-[var(--red)]"}`}>{formatSignedMoney(c.pnl)}</td>
                               </tr>
                             ))}
                           </tbody>

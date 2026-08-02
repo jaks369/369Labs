@@ -6,6 +6,7 @@ import DigitProbability from "@/components/DigitProbability";
 import SymbolInsights from "@/components/SymbolInsights";
 import AIVerdicts from "@/components/AIVerdicts";
 import { getSymbolDisplayName } from "@/lib/symbols";
+import { formatMoney, formatNumber } from "@/lib/format";
 
 interface TerminalContextPanelProps {
   selectedSymbol: string;
@@ -95,9 +96,9 @@ export default function TerminalContextPanel(props: TerminalContextPanelProps) {
   const isFall = isRiseFall && contract.direction === "fall";
   const accountBadge = accountType === "real" ? "REAL" : accountType === "demo" ? "DEMO" : tokenStatus === "invalid" ? "UNAUTHORIZED" : "NO TOKEN";
   const accountBadgeCls =
-    accountType === "real" ? "badge-red" : accountType === "demo" ? "badge-green" : tokenStatus === "invalid" ? "badge-red" : "badge-gray";
+    accountType === "real" ? "badge-gray" : accountType === "demo" ? "badge-accent" : tokenStatus === "invalid" ? "badge-red" : "badge-gray";
 
-  const payoutEst = stake > 0 ? (stake * 1.95).toFixed(2) : "—";
+  const payoutEst = stake > 0 ? formatMoney(stake * 1.95) : "—";
 
   const latestSignal = (() => {
     const sigs = Array.isArray(signals) ? signals : [];
@@ -206,8 +207,8 @@ export default function TerminalContextPanel(props: TerminalContextPanelProps) {
             <div className="space-y-3 pt-1">
               {showRiskChips ? (
                 <div className="flex items-center gap-3 text-xs">
-                  {stopLoss > 0 && <span className="text-[var(--red)]">SL: ${stopLoss.toFixed(2)}</span>}
-                  {takeProfit > 0 && <span className="text-[var(--green)]">TP: ${takeProfit.toFixed(2)}</span>}
+                  {stopLoss > 0 && <span className="text-[var(--red)]">SL: {formatMoney(stopLoss)}</span>}
+                  {takeProfit > 0 && <span className="text-[var(--green)]">TP: {formatMoney(takeProfit)}</span>}
                   <button onClick={() => setRiskOpen(true)} className="text-[var(--text-muted)] hover:text-[var(--text-secondary)] underline">
                     Edit
                   </button>
@@ -331,8 +332,8 @@ export default function TerminalContextPanel(props: TerminalContextPanelProps) {
                       </div>
                     </div>
                     <div className="text-right shrink-0">
-                      <p className="text-sm font-bold text-[var(--accent)] font-mono tabular-nums">${Number(t.stake).toFixed(2)}</p>
-                      <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">entry {Number(t.entryPrice).toFixed(decimalPlaces)}</p>
+                      <p className="text-sm font-bold text-[var(--accent)] font-mono tabular-nums">{formatMoney(t.stake)}</p>
+                      <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">entry {formatNumber(t.entryPrice, decimalPlaces)}</p>
                     </div>
                   </div>
                 ))}

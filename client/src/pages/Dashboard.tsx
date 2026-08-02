@@ -3,6 +3,7 @@ import { useEffect, useState, useRef } from "react";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { CurrencyStat, PercentStat, IntegerStat, SignedCurrencyStat } from "@/components/LiveStat";
+import { formatMoney, formatSignedMoney, formatNumber } from "@/lib/format";
 import { PageContainer, PageSection } from "@/components/PageSection";
 import { Loader2, Activity, Zap, ChevronDown, Wallet, AlertCircle, BookOpen, BarChart3, Bot, Brain } from "lucide-react";
 import { useLocation, useSearch } from "wouter";
@@ -269,7 +270,7 @@ export default function Dashboard() {
         if (c.status !== "open") {
           const profit = parseFloat(c.profit || c.profit_loss || "0");
           const resultLabel = profit >= 0 ? "WIN" : "LOSS";
-          addTradeLog(profit >= 0 ? "ok" : "err", `Contract #${purchase.contractId} settled — ${resultLabel} ${profit >= 0 ? "+" : ""}${profit.toFixed(2)}`);
+          addTradeLog(profit >= 0 ? "ok" : "err", `Contract #${purchase.contractId} settled — ${resultLabel} ${formatSignedMoney(profit)}`);
           saveTradeMutation.mutate(
             {
               result: (profit >= 0 ? "win" : "loss") as any,
@@ -393,7 +394,7 @@ export default function Dashboard() {
             <div className="flex items-center gap-2 px-3 py-2 rounded-lg panel-secondary">
               <Wallet className="w-4 h-4 text-[var(--green)]" />
               <span className="text-xl font-bold text-[var(--text-primary)] font-mono tabular-nums">
-                <CurrencyStat value={balance} /> {balanceInfo?.currency || "USD"}
+                <CurrencyStat value={balance} currency={balanceInfo?.currency || "USD"} /> {balanceInfo?.currency || "USD"}
               </span>
               {balanceInfo?.accountType ? (
                 <span
@@ -668,8 +669,7 @@ export default function Dashboard() {
                 <div className="flex items-center gap-2 min-w-[140px]">
                   <span className="text-[10px] uppercase tracking-widest text-[var(--text-muted)] font-bold">Session P&L</span>
                   <span className={`font-mono tabular-nums font-bold text-[13px] ${todayPnl >= 0 ? "text-[var(--green)]" : "text-[var(--red)]"}`}>
-                    {todayPnl >= 0 ? "+" : ""}
-                    {todayPnl.toFixed(2)}
+                    {formatSignedMoney(todayPnl)}
                   </span>
                 </div>
                 <div className="flex items-center gap-2 min-w-[110px]">
@@ -698,9 +698,9 @@ export default function Dashboard() {
                 <div className="flex items-center gap-2 min-w-[120px]">
                   <span className="text-[10px] uppercase tracking-widest text-[var(--text-muted)] font-bold">Avg W/L</span>
                   <span className="font-mono tabular-nums font-bold text-[13px]">
-                    <span className="text-[var(--green)]">+{avgWin.toFixed(2)}</span>
+                    <span className="text-[var(--green)]">{formatSignedMoney(avgWin)}</span>
                     <span className="text-[var(--text-muted)]"> / </span>
-                    <span className="text-[var(--red)]">{avgLoss.toFixed(2)}</span>
+                    <span className="text-[var(--red)]">{formatMoney(-avgLoss)}</span>
                   </span>
                 </div>
               </div>
@@ -752,9 +752,9 @@ export default function Dashboard() {
                               </div>
                             </div>
                             <div className="text-right shrink-0">
-                              <p className="text-sm font-bold text-[var(--accent)] font-mono tabular-nums">${Number(t.stake).toFixed(2)}</p>
+                              <p className="text-sm font-bold text-[var(--accent)] font-mono tabular-nums">{formatMoney(t.stake)}</p>
                               <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">
-                                entry {Number(t.entryPrice).toFixed(decimalPlaces)}
+                                entry {formatNumber(t.entryPrice, decimalPlaces)}
                               </p>
                             </div>
                           </div>
@@ -812,7 +812,7 @@ export default function Dashboard() {
                         <div className="kpi-card">
                           <div className="kpi-label">P&L</div>
                           <div className={`kpi-value text-lg ${net >= 0 ? "text-[var(--green)]" : "text-[var(--red)]"}`}>
-                            <SignedCurrencyStat value={net} />
+                            <SignedCurrencyStat value={net} currency={balanceInfo?.currency || "USD"} />
                           </div>
                         </div>
                       </div>
@@ -857,16 +857,15 @@ export default function Dashboard() {
                                   <td>
                                     <span className="tag">{trade.contractType || "-"}</span>
                                   </td>
-                                  <td className="text-right tabular-nums">${parseFloat(trade.stake || "0").toFixed(2)}</td>
-                                  <td className="text-right font-mono tabular-nums">{parseFloat(trade.entryPrice || "0").toFixed(decimalPlaces)}</td>
+                                  <td className="text-right tabular-nums">{formatMoney(trade.stake)}</td>
+                                  <td className="text-right font-mono tabular-nums">{formatNumber(trade.entryPrice, decimalPlaces)}</td>
                                   <td>
                                     <span className={`badge ${trade.result === "win" ? "badge-green" : trade.result === "loss" ? "badge-red" : "badge-gray"}`}>
                                       {trade.result?.toUpperCase() || "-"}
                                     </span>
                                   </td>
                                   <td className={`text-right font-bold font-mono tabular-nums ${pl >= 0 ? "text-[var(--green)]" : "text-[var(--red)]"}`}>
-                                    {pl >= 0 ? "+" : ""}
-                                    {pl.toFixed(2)}
+                                    {formatSignedMoney(pl)}
                                   </td>
                                 </tr>
                               );

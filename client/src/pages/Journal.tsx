@@ -4,6 +4,7 @@ import { trpc } from "@/lib/trpc";
 import { useLocation } from "wouter";
 import { Loader2, BookOpen, Sparkles, Search, Clock, Plus, Upload, Image, Link2, BarChart3, TrendingUp, TrendingDown } from "lucide-react";
 import { toast } from "@/components/Toast";
+import { formatMoney, formatSignedMoney } from "@/lib/format";
 import { getSymbolDisplayName } from "@/lib/symbols";
 
 export default function Journal() {
@@ -92,7 +93,7 @@ export default function Journal() {
           <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-6">
             <div className="flex items-center gap-2 mb-4">
               <Sparkles className="w-4 h-4 text-[var(--accent)]" />
-              <span className="text-xs font-bold text-[var(--text-muted)] uppercase tracking-wider">{(journalMutation.data as any).sampleSize} trades · {(journalMutation.data as any).wins}W / {(journalMutation.data as any).losses}L · Net ${(journalMutation.data as any).net?.toFixed(2) ?? "0.00"}</span>
+              <span className="text-xs font-bold text-[var(--text-muted)] uppercase tracking-wider">{(journalMutation.data as any).sampleSize} trades · {(journalMutation.data as any).wins}W / {(journalMutation.data as any).losses}L · Net {formatMoney((journalMutation.data as any).net)}</span>
             </div>
             <div className="prose prose-invert max-w-none text-sm text-[var(--text-secondary)] leading-relaxed whitespace-pre-wrap">{journalMutation.data.analysis}</div>
           </div>
@@ -133,7 +134,7 @@ export default function Journal() {
                     </div>
                     <div className="bg-black/20 rounded-lg p-3 text-center">
                       <p className="text-micro">Net P&L</p>
-                      <p className={`text-lg font-bold ${totalPnl >= 0 ? "text-[var(--green)]" : "text-[var(--red)]"}`}>${totalPnl.toFixed(2)}</p>
+                      <p className={`text-lg font-bold ${totalPnl >= 0 ? "text-[var(--green)]" : "text-[var(--red)]"}`}>{formatSignedMoney(totalPnl)}</p>
                     </div>
                     <div className="bg-black/20 rounded-lg p-3 text-center">
                       <p className="text-micro">Profit Factor</p>
@@ -148,7 +149,7 @@ export default function Journal() {
                           <div key={sym} className="flex justify-between text-xs p-2 bg-black/20 rounded-lg">
                             <span className="text-[var(--text-secondary)] font-bold">{getSymbolDisplayName(sym)}</span>
                             <span className="text-[var(--text-muted)]">{d.wins}W / {d.losses}L</span>
-                            <span className={d.pnl >= 0 ? "text-[var(--green)]" : "text-[var(--red)]"}>{d.pnl >= 0 ? "+" : ""}${d.pnl.toFixed(2)}</span>
+                            <span className={d.pnl >= 0 ? "text-[var(--green)]" : "text-[var(--red)]"}>{formatSignedMoney(d.pnl)}</span>
                           </div>
                         ))}
                       </div>

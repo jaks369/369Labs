@@ -1,6 +1,7 @@
 import { TrendingUp, TrendingDown, Activity, BarChart3, Zap } from "lucide-react";
 import { getSymbolDisplayName } from "@/lib/symbols";
 import { lastDigitOf } from "@shared/lastDigit";
+import { formatMoney, formatSignedMoney } from "@/lib/format";
 
 function digitFrequency(ticks, decimals) {
   const freq = Array(10).fill(0);
@@ -78,7 +79,7 @@ export default function SymbolInsights({ symbol, ticks = [], trades = [], decima
       icon: Zap,
       label: "Win Rate",
       value: `${wr}%`,
-      detail: `${wins}W / ${losses}L · ${netPnl >= 0 ? "+" : ""}$${netPnl.toFixed(2)}`,
+      detail: `${wins}W / ${losses}L · ${formatSignedMoney(netPnl)}`,
       color: wr >= 50 ? "var(--green)" : "var(--red)",
     });
   }

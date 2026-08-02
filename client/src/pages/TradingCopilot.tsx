@@ -6,6 +6,7 @@ import AIChatWindow from "@/components/AIChatWindow";
 import { useState, useEffect, useMemo, useRef } from "react";
 import { derivWS } from "@/services/derivWebSocket";
 import { getValidSymbols, getSymbolDisplayName } from "@/lib/symbols";
+import { formatSignedMoney } from "@/lib/format";
 
 export default function TradingCopilot() {
   const { isAuthenticated } = useAuth();
@@ -73,7 +74,7 @@ export default function TradingCopilot() {
           <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4">
             <span className="text-micro">Total P&L</span>
             <p className={`text-xl font-bold mt-1 font-mono ${stats.pnl >= 0 ? "text-[var(--green)]" : "text-[var(--red)]"}`}>
-              {stats.pnl >= 0 ? "+" : ""}${Number(stats.pnl).toFixed(2)}
+              {formatSignedMoney(stats.pnl)}
             </p>
           </div>
           <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4">

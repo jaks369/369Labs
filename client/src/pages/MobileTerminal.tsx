@@ -10,6 +10,7 @@ import ContractTypeSelector, { ContractSelection } from "@/components/ContractTy
 import TickChart from "@/components/TickChart";
 import { VOLATILITY_SYMBOLS, getSymbolDisplayName } from "@/lib/symbols";
 import { getDecimalPlaces, lastDigitOf } from "@shared/lastDigit";
+import { formatMoney, formatNumber } from "@/lib/format";
 
 const ALL_FALLBACK: DerivSymbol[] = VOLATILITY_SYMBOLS.map((s) => ({ ...s, decimalPlaces: 2 }));
 const TIMEFRAMES: { label: string; points: number }[] = [
@@ -313,7 +314,7 @@ export default function MobileTerminal() {
           <Wallet className="w-3.5 h-3.5 text-[var(--green)]" /> Balance
         </span>
         <span className="text-sm font-bold font-mono tabular-nums text-white">
-          ${balance.toFixed(2)} <span className="text-[10px] text-[var(--text-muted)]">{balanceInfo?.currency || "USD"}</span>
+          {formatMoney(balance, balanceInfo?.currency || "USD")} <span className="text-[10px] text-[var(--text-muted)]">{balanceInfo?.currency || "USD"}</span>
         </span>
       </div>
 
@@ -330,8 +331,8 @@ export default function MobileTerminal() {
             </button>
             <div className="flex-1 text-center">
               <div className="text-[9px] uppercase tracking-widest text-[var(--text-muted)] font-bold">Stake ($)</div>
-              <div className="text-lg font-bold font-mono tabular-nums text-white">{stake.toFixed(2)}</div>
-              <div className="text-[10px] text-[var(--green)] font-mono">≈ ${(stake * 1.95).toFixed(2)} est.</div>
+              <div className="text-lg font-bold font-mono tabular-nums text-white">{formatNumber(stake)}</div>
+              <div className="text-[10px] text-[var(--green)] font-mono">≈ {formatMoney(stake * 1.95)} est.</div>
             </div>
             <button
               onClick={() => setStake(Math.round((stake + 0.5) * 100) / 100)}
@@ -467,8 +468,8 @@ export default function MobileTerminal() {
                       </div>
                     </div>
                     <div className="text-right shrink-0">
-                      <p className="text-sm font-bold text-[var(--accent)] font-mono tabular-nums">${Number(t.stake).toFixed(2)}</p>
-                      <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">entry {Number(t.entryPrice).toFixed(decimalPlaces)}</p>
+                      <p className="text-sm font-bold text-[var(--accent)] font-mono tabular-nums">{formatMoney(t.stake)}</p>
+                      <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">entry {formatNumber(t.entryPrice, decimalPlaces)}</p>
                     </div>
                   </div>
                 ))

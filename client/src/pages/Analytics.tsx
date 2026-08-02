@@ -4,6 +4,7 @@ import { BarChart4, TrendingUp, DollarSign, Activity, Loader2, ShieldAlert, Down
 import { useLocation } from "wouter";
 import { useRef, useState, useMemo } from "react";
 import { toast } from "@/components/Toast";
+import { formatMoney, formatSignedMoney } from "@/lib/format";
 
 type FilterMode = "all" | "bot" | "manual";
 
@@ -138,13 +139,13 @@ export default function Analytics() {
   const eqFillColor = totalPnl >= 0 ? "rgba(var(--green-rgb), 0.08)" : "rgba(var(--red-rgb), 0.08)";
 
   const riskStats = [
-    { label: "Current Drawdown", value: `$${currentDD.toFixed(2)}`, sub: "peak-to-now", color: currentDD > 0 ? "text-[var(--accent)]" : "text-[var(--text-secondary)]" },
-    { label: "Max Drawdown", value: `$${maxDD.toFixed(2)}`, sub: "all-time", color: maxDD > 0 ? "text-[var(--red)]" : "text-[var(--text-secondary)]" },
-    { label: "Daily Drawdown", value: `$${dailyDD.toFixed(2)}`, sub: "worst day", color: dailyDD < 0 ? "text-[var(--red)]" : "text-[var(--text-secondary)]" },
-    { label: "Weekly Drawdown", value: `$${weeklyDD.toFixed(2)}`, sub: "worst week", color: weeklyDD < 0 ? "text-[var(--red)]" : "text-[var(--text-secondary)]" },
-    { label: "Largest Loss", value: `$${largestLoss.toFixed(2)}`, sub: "single trade", color: largestLoss < 0 ? "text-[var(--red)]" : "text-[var(--text-secondary)]" },
+    { label: "Current Drawdown", value: formatMoney(currentDD), sub: "peak-to-now", color: currentDD > 0 ? "text-[var(--accent)]" : "text-[var(--text-secondary)]" },
+    { label: "Max Drawdown", value: formatMoney(maxDD), sub: "all-time", color: maxDD > 0 ? "text-[var(--red)]" : "text-[var(--text-secondary)]" },
+    { label: "Daily Drawdown", value: formatMoney(dailyDD), sub: "worst day", color: dailyDD < 0 ? "text-[var(--red)]" : "text-[var(--text-secondary)]" },
+    { label: "Weekly Drawdown", value: formatMoney(weeklyDD), sub: "worst week", color: weeklyDD < 0 ? "text-[var(--red)]" : "text-[var(--text-secondary)]" },
+    { label: "Largest Loss", value: formatMoney(largestLoss), sub: "single trade", color: largestLoss < 0 ? "text-[var(--red)]" : "text-[var(--text-secondary)]" },
     { label: "Risk : Reward", value: rr.toFixed(2), sub: "gross win/loss", color: rr >= 1 ? "text-[var(--green)]" : "text-[var(--accent)]" },
-    { label: "Avg Exposure", value: `$${exposure.toFixed(2)}`, sub: "per trade stake", color: "text-[var(--text-secondary)]" },
+    { label: "Avg Exposure", value: formatMoney(exposure), sub: "per trade stake", color: "text-[var(--text-secondary)]" },
     { label: "Open Risk", value: "—", sub: "live bots", color: "text-[var(--text-muted)]" },
     { label: "Sharpe Ratio", value: sharpeRatio.toFixed(2), sub: "risk-adjusted return", color: sharpeRatio >= 1 ? "text-[var(--green)]" : sharpeRatio >= 0 ? "text-[var(--accent)]" : "text-[var(--red)]" },
     { label: "Sortino Ratio", value: sortinoRatio.toFixed(2), sub: "downside risk-adjusted", color: sortinoRatio >= 1 ? "text-[var(--green)]" : sortinoRatio >= 0 ? "text-[var(--accent)]" : "text-[var(--red)]" },
@@ -152,10 +153,10 @@ export default function Analytics() {
   ];
 
   const stats = [
-    { label: "Total P&L", value: `$${totalPnl.toFixed(2)}`, icon: DollarSign, color: totalPnl >= 0 ? "text-[var(--green)]" : "text-[var(--red)]" },
+    { label: "Total P&L", value: formatSignedMoney(totalPnl), icon: DollarSign, color: totalPnl >= 0 ? "text-[var(--green)]" : "text-[var(--red)]" },
     { label: "Win Rate", value: `${winRate}%`, icon: TrendingUp, color: "text-[var(--green)]" },
     { label: "Total Trades", value: totalTrades.toString(), icon: Activity, color: "text-[var(--accent)]" },
-    { label: "Avg. Trade", value: `${avgTrade >= 0 ? "+" : ""}$${avgTrade.toFixed(2)}`, icon: BarChart4, color: avgTrade >= 0 ? "text-[var(--green)]" : "text-[var(--red)]" },
+    { label: "Avg. Trade", value: formatSignedMoney(avgTrade), icon: BarChart4, color: avgTrade >= 0 ? "text-[var(--green)]" : "text-[var(--red)]" },
   ];
 
   const exportCsv = () => {
@@ -407,7 +408,7 @@ export default function Analytics() {
                   <div className="flex justify-between p-3 bg-black/20 rounded-lg border border-[var(--border)]">
                     <span className="text-white font-bold">Total P&L</span>
                     <span className={`font-bold ${totalPnl >= 0 ? "text-[var(--green)]" : "text-[var(--red)]"}`}>
-                      {totalPnl >= 0 ? "+" : ""}${totalPnl.toFixed(2)}
+                      {formatSignedMoney(totalPnl)}
                     </span>
                   </div>
                 </div>

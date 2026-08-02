@@ -3,6 +3,7 @@ import { Loader2, GitCompare, AlertCircle } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { useLocation } from "wouter";
+import { formatSignedMoney } from "@/lib/format";
 
 type StrategyMetrics = {
   winRate: number;
@@ -50,7 +51,7 @@ const METRICS: { key: keyof StrategyMetrics; label: string; format: (v: number) 
   { key: "winRate", label: "Win Rate", format: v => `${v.toFixed(1)}%`, higherBetter: true },
   { key: "profitFactor", label: "Profit Factor", format: v => v === Infinity ? "∞" : v.toFixed(2), higherBetter: true },
   { key: "totalTrades", label: "Total Trades", format: v => v.toString(), higherBetter: false },
-  { key: "totalProfit", label: "Total Profit", format: v => `${v >= 0 ? "+" : ""}$${v.toFixed(2)}`, higherBetter: true },
+  { key: "totalProfit", label: "Total Profit", format: v => formatSignedMoney(v), higherBetter: true },
   { key: "maxDrawdown", label: "Max Drawdown", format: v => `${v.toFixed(1)}%`, higherBetter: false },
   { key: "sharpeRatio", label: "Sharpe Ratio", format: v => v.toFixed(2), higherBetter: true },
 ];
