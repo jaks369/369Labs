@@ -40,7 +40,7 @@ This doc must be updated whenever tokens change; tokens must only change here, n
 
 ### Rules
 - **Polarity tokens** (`--green` / `--red`) must never be used for brand/decoration; they encode up/down, win/loss, buy/sell only.
-- **One accent.** Amber class names (`accent-dot-amber`, `section-label-amber`, `text-gradient-amber`, `glow-amber`) are retained as aliases to the teal accent for backward compatibility.
+- **One accent.** All legacy amber/yellow utilities and `-amber` alias classes have been removed repo-wide (verified grep = 0); nothing may reintroduce amber, orange, or yellow as brand/decorative color.
 - Hardcoded hexes are banned in components; use `var(--...)`.
 
 ---

@@ -20,6 +20,7 @@ export default function Particles({ count = 50 }: { count?: number }) {
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
+    const accent = getComputedStyle(document.documentElement).getPropertyValue("--accent").trim() || "#2FD9C4";
     let animationId: number;
     let particles: Particle[] = [];
 
@@ -38,7 +39,7 @@ export default function Particles({ count = 50 }: { count?: number }) {
           vy: (Math.random() - 0.5) * 0.3,
           size: Math.random() * 2 + 0.5,
           opacity: Math.random() * 0.5 + 0.1,
-          color: Math.random() > 0.7 ? "#f59e0b" : "#ffffff",
+          color: Math.random() > 0.7 ? accent : "#ffffff",
         });
       }
     };

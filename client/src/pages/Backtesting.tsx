@@ -134,7 +134,7 @@ export default function Backtesting() {
   };
 
   const heatColor = (wr: number) => {
-    // 40% red -> 60% amber -> 75%+ green
+    // 40% red -> 60% teal -> 75%+ green
     if (wr >= 75) return "bg-[var(--green-soft)] text-white";
     if (wr >= 60) return "bg-[var(--green-soft)] text-[var(--green)]";
     if (wr >= 50) return "bg-[var(--accent-soft)] text-[var(--accent-hover)]";

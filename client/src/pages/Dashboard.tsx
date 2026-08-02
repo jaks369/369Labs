@@ -399,8 +399,8 @@ export default function Dashboard() {
                 <span
                   className="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold"
                   style={{
-                    background: balanceInfo.accountType === "demo" ? "rgba(245,158,11,0.15)" : "rgba(239,68,68,0.15)",
-                    color: balanceInfo.accountType === "demo" ? "var(--accent)" : "var(--red)",
+                    background: balanceInfo.accountType === "demo" ? "var(--accent-soft)" : "var(--surface-elevated)",
+                    color: balanceInfo.accountType === "demo" ? "var(--accent)" : "var(--text-secondary)",
                   }}
                 >
                   {balanceInfo.accountType}
