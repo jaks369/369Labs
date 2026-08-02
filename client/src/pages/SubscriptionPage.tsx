@@ -62,7 +62,7 @@ export default function SubscriptionPage() {
   if (!isAuthenticated) { navigate("/login"); return null; }
 
   return (
-    <div className="min-h-screen bg-[var(--card)] p-6">
+    <div className="min-h-screen bg-[var(--bg)] p-6">
       <div className="max-w-5xl mx-auto space-y-8">
         <div className="text-center">
           <div className="flex items-center justify-center gap-2 mb-2">

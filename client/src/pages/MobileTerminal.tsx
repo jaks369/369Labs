@@ -228,7 +228,7 @@ export default function MobileTerminal() {
   })();
 
   return (
-    <div className="min-h-screen bg-[var(--card)] pb-20 lg:hidden">
+    <div className="min-h-screen bg-[var(--bg)] pb-20 lg:hidden">
       {/* Header: symbol · live price · LIVE */}
       <div className="sticky top-0 z-30 bg-[var(--card)] border-b border-[var(--border)] px-4 pt-3 pb-2">
         <div className="flex items-center justify-between gap-3">

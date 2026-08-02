@@ -7,7 +7,7 @@ const RELEASES = [
 
 export default function ReleaseNotes() {
   return (
-    <div className="min-h-screen bg-[var(--card)] p-6">
+    <div className="min-h-screen bg-[var(--bg)] p-6">
       <div className="max-w-2xl mx-auto space-y-8">
         <div className="flex items-center gap-3">
           <Megaphone className="w-7 h-7 text-[var(--accent)]" />

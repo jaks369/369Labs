@@ -30,7 +30,7 @@ export default function CloudBots() {
   };
 
   return (
-    <div className="min-h-screen bg-[var(--card)] p-6">
+    <div className="min-h-screen bg-[var(--bg)] p-6">
       <div className="max-w-6xl mx-auto space-y-8">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>

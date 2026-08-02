@@ -49,7 +49,7 @@ export default function BackupRestore() {
   };
 
   return (
-    <div className="min-h-screen bg-[var(--card)] p-6">
+    <div className="min-h-screen bg-[var(--bg)] p-6">
       <div className="max-w-2xl mx-auto space-y-6">
         <div className="flex items-center gap-3">
           <HardDrive className="w-7 h-7 text-[var(--accent)]" />

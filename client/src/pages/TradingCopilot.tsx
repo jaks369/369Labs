@@ -1,4 +1,4 @@
-﻿import { useAuth } from "@/_core/hooks/useAuth";
+import { useAuth } from "@/_core/hooks/useAuth";
 import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { Bot, TrendingUp, Activity, BarChart3, BrainCircuit, Loader2, Sparkles } from "lucide-react";
@@ -41,7 +41,7 @@ export default function TradingCopilot() {
   }, [tradesQuery.data]);
 
   return (
-    <div className="min-h-screen bg-[var(--card)] p-6">
+    <div className="min-h-screen bg-[var(--bg)] p-6">
       <div className="max-w-6xl mx-auto space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between flex-wrap gap-4">

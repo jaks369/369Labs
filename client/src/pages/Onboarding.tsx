@@ -33,7 +33,7 @@ export default function Onboarding() {
   const Icon = s.icon;
 
   return (
-    <div className="min-h-screen bg-[var(--card)] flex items-center justify-center p-6 relative overflow-hidden">
+    <div className="min-h-screen bg-[var(--bg)] flex items-center justify-center p-6 relative overflow-hidden">
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[400px] h-[300px] bg-[var(--accent)] blur-[180px] rounded-full opacity-[0.1] pointer-events-none" />
       <div className="absolute bottom-0 right-0 w-[300px] h-[260px] bg-[var(--green)] blur-[180px] rounded-full opacity-[0.05] pointer-events-none" />
       <div className="w-full max-w-lg relative">

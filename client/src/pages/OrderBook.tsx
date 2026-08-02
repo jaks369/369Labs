@@ -64,7 +64,7 @@ export default function OrderBook() {
   if (!isAuthenticated) { navigate("/login"); return null; }
 
   return (
-    <div className="min-h-screen bg-[var(--card)] p-6">
+    <div className="min-h-screen bg-[var(--bg)] p-6">
       <div className="max-w-4xl mx-auto space-y-6">
         <div className="flex items-center justify-between flex-wrap gap-4">
           <div className="flex items-center gap-3">
