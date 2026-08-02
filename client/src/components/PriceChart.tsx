@@ -137,13 +137,19 @@ export default function PriceChart({
   const prices = visibleSlice.map((d) => d.price);
   const minPrice = prices.length ? Math.min(...prices) : 0;
   const maxPrice = prices.length ? Math.max(...prices) : 1;
-  // When the visible window is flat, pad by the symbol's own tick resolution
-  // (10^-decimalPlaces) instead of a fraction of the absolute price, otherwise
-  // a tiny decimal move would be invisible against a huge absolute range.
+  // Decimal-focused y-scale: for high-priced indices (e.g. ~6849) the absolute
+  // range dwarfs the fractional movement, so plotting against the absolute price
+  // renders even real movement as a flat line. Instead we anchor the axis to the
+  // window's integer base and scale against the fractional part — a 0.002 move
+  // is as visible as a 2-point move on a low-priced asset.
   const tickPad = Math.pow(10, -decimalPlaces);
-  const padding = (maxPrice - minPrice) * 0.1 || tickPad;
-  const yMin = minPrice - padding;
-  const yMax = maxPrice + padding;
+  const base = Math.floor(minPrice);
+  const relPrices = prices.map((p) => p - base);
+  const relMin = relPrices.length ? Math.min(...relPrices) : 0;
+  const relMax = relPrices.length ? Math.max(...relPrices) : 1;
+  const padding = (relMax - relMin) * 0.1 || tickPad;
+  const yMin = relMin - padding;
+  const yMax = relMax + padding;
 
   const scale = niceScale(yMin, yMax, 5);
   const yRange = scale.end - scale.start || 1;
@@ -158,7 +164,7 @@ export default function PriceChart({
   const xOf = (i: number) => padX + ((i - leftIdx) / (totalBars - 1 || 1)) * chartW;
 
   const points = data
-    .map((d, i) => ({ x: xOf(i), y: padTop + chartH - ((d.price - scale.start) / yRange) * chartH }))
+    .map((d, i) => ({ x: xOf(i), y: padTop + chartH - ((d.price - base - scale.start) / yRange) * chartH }))
     .filter((p) => p.x >= padX - 1 && p.x <= padX + chartW + 1);
   const pathD = points.map((p, i) => `${i === 0 ? "M" : "L"}${p.x},${p.y}`).join(" ");
   const areaD = `${pathD} L${padX + chartW},${padTop + chartH} L${padX},${padTop + chartH} Z`;
@@ -166,11 +172,11 @@ export default function PriceChart({
   const gridLines: { value: number; y: number }[] = [];
   for (let v = scale.start; v <= scale.end + scale.step * 0.01; v += scale.step) {
     const y = padTop + chartH - ((v - scale.start) / yRange) * chartH;
-    gridLines.push({ value: v, y });
+    gridLines.push({ value: v + base, y });
   }
 
   const lastPrice = data.length ? data[data.length - 1].price : null;
-  const lastY = lastPrice != null ? padTop + chartH - ((lastPrice - scale.start) / yRange) * chartH : 0;
+  const lastY = lastPrice != null ? padTop + chartH - ((lastPrice - base - scale.start) / yRange) * chartH : 0;
   const lastX = data.length ? xOf(data.length - 1) : padX;
 
   const ohlc = (() => {
