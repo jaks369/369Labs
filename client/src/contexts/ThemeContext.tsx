@@ -31,11 +31,10 @@ export function ThemeProvider({
 
   useEffect(() => {
     const root = document.documentElement;
-    if (theme === "dark") {
-      root.classList.add("dark");
-    } else {
-      root.classList.remove("dark");
-    }
+    // index.css defines the dark palette on :root and the light override under
+    // .light. Toggle the .light class so switching themes actually changes the
+    // palette instead of only flipping a class that has no CSS.
+    root.classList.toggle("light", theme === "light");
 
     if (switchable) {
       localStorage.setItem("theme", theme);

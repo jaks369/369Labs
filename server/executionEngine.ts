@@ -3,8 +3,7 @@ import { botRunner } from "./botRunner";
 import { derivManager } from "./derivConnection";
 import { getRecentTicks, isFeedStale } from "./tickCollector";
 import { fireWebhookEvent } from "./webhookExecutor";
-import { actionToContractType, calcPnl, isDigitContract, simulateOutcome } from "@shared/contractSim";
-import { getDecimalPlaces } from "@shared/lastDigit";
+import { actionToContractType, isDigitContract } from "@shared/contractSim";
 
 const POLL_INTERVAL = 500; // 500ms — near-live bot evaluation
 const MAX_PIPELINE_TRADES = 50; // max trades in one cycle
@@ -125,32 +124,12 @@ async function executeBotCycle(): Promise<void> {
         })
         .catch(() => null);
       if (!buy?.buy?.contract_id) {
-        // Paper/simulation fallback if Deriv API not available
-        if (tickAfter != null) {
-          const outcome = simulateOutcome(entryPrice, tickAfter.price, contractType, barrier, getDecimalPlaces(symbol));
-          const result: "win" | "loss" = outcome === "draw" ? "loss" : outcome;
-          const pnl = calcPnl(result, stake);
-          await db.saveTrade({
-            userId: bot.def.userId,
-            symbol,
-            contractType,
-            stake: String(stake),
-            entryPrice: String(entryPrice),
-            result,
-            profitLoss: String(pnl),
-            entryTime: new Date(ticks[triggerIdx].epoch * 1000),
-            exitTime: new Date(ticks[triggerIdx + 1]?.epoch * 1000 || Date.now()),
-            botRunId: (() => {
-              const id = bot.def.id;
-              if (typeof id === "string" && id.startsWith("bot_")) {
-                return parseInt(id.replace("bot_", ""), 10) || undefined;
-              }
-              return parseInt(id, 10) || undefined;
-            })(),
-          });
-          botRunner.updateTradeStats(bot.def.id, bot.def.userId, pnl);
-          fireWebhookEvent(bot.def.userId, "trade.settled", { botId: bot.def.id, symbol, stake, result, profitLoss: pnl }).catch(() => {});
-        }
+        // Real fill failed. Do NOT fabricate a fake win/loss and record it as a
+        // real trade in the user's history/portfolio/analytics — that silently
+        // pollutes the trading record. Surface the failure instead and let the
+        // bot evaluate again on the next cycle.
+        console.warn(`[ExecutionEngine] Deriv buy failed for bot ${bot.def.id} (${symbol}). Trade not recorded.`);
+        fireWebhookEvent(bot.def.userId, "trade.error", { botId: bot.def.id, symbol, stake, reason: "buy_failed" }).catch(() => {});
         continue;
       }
 

@@ -101,19 +101,19 @@ export default function Bots() {
     setRunningBots((prev) => {
       const merged = [...prev];
       for (const sb of serverBots) {
-        const existingIndex = merged.findIndex((b) => b.runId === Number(sb.def.id));
+        const existingIndex = merged.findIndex((b) => b.runId === Number(sb.id));
         const botData: RunningBot = {
-          runId: Number(sb.def.id),
-          strategyId: 0, // strategyId not directly available from listActive; using runId as fallback
-          name: sb.def.name,
-          symbol: sb.def.strategy?.symbol || DEFAULT_SYMBOL,
+          runId: Number(sb.id),
+          strategyId: sb.strategyId || 0,
+          name: sb.name || "",
+          symbol: sb.symbol || DEFAULT_SYMBOL,
           status: sb.status === "paused" || sb.status === "restarting" ? "running" : sb.status,
           pnl: sb.totalProfitLoss,
           trades: sb.totalTrades,
           wins: 0, // not in listActive response
           losses: 0,
           backtestWinRate: null,
-          lastLog: sb.lastError,
+          lastLog: undefined,
         };
         if (existingIndex >= 0) {
           merged[existingIndex] = { ...merged[existingIndex], ...botData };
@@ -122,7 +122,7 @@ export default function Bots() {
         }
       }
       // Remove bots that are no longer active on server
-      const serverIds = new Set(serverBots.map((b) => Number(b.def.id)));
+      const serverIds = new Set(serverBots.map((b) => Number(b.id)));
       return merged.filter((b) => serverIds.has(b.runId));
     });
   }, [listActiveQuery.data]);

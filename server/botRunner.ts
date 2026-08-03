@@ -15,6 +15,7 @@ interface BotDefinition {
   userId: number;
   name: string;
   strategy: any;
+  strategyId?: number;
   safety: BotSafety;
   startedAt: number;
 }
@@ -32,7 +33,7 @@ interface BotRuntime {
 class BotRunner {
   private bots = new Map<string, BotRuntime>();
 
-  start(opts: { id: string; userId: number; name: string; strategy: any; safety: BotSafety }): void {
+  start(opts: { id: string; userId: number; name: string; strategy: any; strategyId?: number; safety: BotSafety }): void {
     const existing = this.bots.get(opts.id);
     if (existing && existing.status === "running") return;
     this.bots.set(opts.id, {
@@ -41,6 +42,7 @@ class BotRunner {
         userId: opts.userId,
         name: opts.name,
         strategy: opts.strategy,
+        strategyId: opts.strategyId,
         safety: opts.safety || {},
         startedAt: Date.now(),
       },

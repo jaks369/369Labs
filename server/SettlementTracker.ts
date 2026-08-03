@@ -112,10 +112,14 @@ export class SettlementTracker {
 
     this.retryCount.delete(trade.id);
 
-    // Update botRunner stats so CloudBots totals stay in sync
+    // Update botRunner stats so CloudBots totals stay in sync, and release the
+    // open-trade lock so the bot can place its next trade. Fixes the stall where
+    // a bot traded exactly once then went permanently inert (hasOpenTrade was set
+    // true on buy but never reset on settlement).
     if (trade.botRunId) {
       try {
         botRunner.updateTradeStats(String(trade.botRunId), trade.userId, profit);
+        botRunner.setOpenTrade(String(trade.botRunId), trade.userId, false);
       } catch {
         /* non-critical */
       }

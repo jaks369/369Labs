@@ -1245,8 +1245,23 @@ export const appRouter = router({
 
     backtestCompare: protectedProcedure
       .input(z.object({ strategyIds: z.array(z.number()) }))
-      .mutation(async ({ input }) => {
-        return { comparisons: input.strategyIds.map(() => ({ winRate: 0, totalTrades: 0, profitFactor: 0, avgWin: 0, avgLoss: 0 })) };
+      .mutation(async ({ input, ctx }) => {
+        // Real comparison: run runBacktest over live tick history for each strategy.
+        const results = [];
+        for (const id of input.strategyIds) {
+          const strat = await db.getStrategyById(id, ctx.user.id);
+          if (!strat) continue;
+          const config = strat.config as { rule?: { symbol?: string; params?: { stake?: number } } };
+          const rule = config.rule;
+          if (!rule || !rule.symbol) continue;
+          const { runBacktest } = await import("./backtest");
+          const rows = await db.getTickHistory(rule.symbol, 1000);
+          if (rows.length < 50) continue;
+          const ticks = rows.map((r: any) => ({ price: Number(r.price), timestamp: Number(r.epoch) * 1000 }));
+          const res = await runBacktest(ticks, rule, Number(rule.params?.stake) || 1, rule.symbol);
+          results.push({ strategyId: id, name: strat.name, ...res });
+        }
+        return { comparisons: results };
       }),
   }),
 
@@ -1497,6 +1512,7 @@ save: protectedProcedure
             userId: ctx.user.id,
             name: strategy.name,
             strategy: rule,
+            strategyId: input.strategyId,
             safety: input.safety || {},
           });
 
@@ -1525,7 +1541,17 @@ save: protectedProcedure
     // Live fleet view: which bots are actually running on the server right now.
     listActive: protectedProcedure.query(async ({ ctx }) => {
       const { botRunner } = await import("./botRunner");
-      return botRunner.listForUser(ctx.user.id);
+      return botRunner.listForUser(ctx.user.id).map((rt) => ({
+        id: rt.def.id,
+        name: rt.def.name,
+        status: rt.status,
+        totalTrades: rt.totalTrades,
+        totalProfitLoss: rt.totalProfitLoss,
+        lossStreak: rt.lossStreak,
+        hasOpenTrade: rt.hasOpenTrade,
+        strategyId: rt.def.strategyId,
+        symbol: rt.def.strategy?.symbol,
+      }));
     }),
 
     getStatus: protectedProcedure
@@ -2078,10 +2104,30 @@ Return ONLY the JSON.`;
     userRisk: protectedProcedure
       .input(z.object({ symbol: z.string() }))
       .query(async ({ ctx, input }) => {
-        const { riskIntelligence } = await import("./ai/RiskIntelligence");
-        // riskIntelligence.assess requires prices, health, prediction, risk - we don't have those here
-        // Return a basic assessment instead
-        return { symbol: input.symbol, riskLevel: "LOW", score: 20, factors: [], recommendation: "No live data available", timestamp: Date.now() };
+        // Prefer the live cached advisory the AI orchestrator computes from real
+        // tick data (market health, volatility, trend, prediction confidence).
+        const { aiOrchestrator } = await import("./ai/AIOrchestrator");
+        const advisory = aiOrchestrator.getRiskAdvisoryFor(input.symbol);
+        if (advisory) {
+          return {
+            symbol: input.symbol,
+            riskLevel: advisory.riskLevel,
+            score: advisory.score,
+            factors: advisory.factors,
+            recommendation: advisory.recommendation,
+            timestamp: advisory.timestamp,
+          };
+        }
+        // No advisory yet (orchestrator still warming up) — fall back to a
+        // transparent "not yet computed" signal instead of a fake LOW/20.
+        return {
+          symbol: input.symbol,
+          riskLevel: "MEDIUM" as const,
+          score: 50,
+          factors: ["Risk model warming up — advisory will appear once live market data is ingested."],
+          recommendation: "Insufficient live data to assess risk yet. Check back shortly.",
+          timestamp: Date.now(),
+        };
       }),
     accuracyStats: protectedProcedure
       .input(z.object({ symbol: z.string().optional() }).optional())

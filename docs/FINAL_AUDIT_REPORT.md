@@ -199,3 +199,51 @@ This deliverable was re-checked from the exported codebase — a plain source ar
 This is a type-checking gap only — it has no runtime effect, since the JavaScript emitted by esbuild/tsx doesn't consult `.d.ts` files. But it does mean CI, or any contributor running `pnpm run check` before this fix, would have hit a red build on a codebase that was otherwise reported clean. **Recommendation:** run `pnpm run check` as a required CI step so a gap like this fails a pull request rather than reaching an audit report.
 
 **Conclusion: cleared for production launch**, with the one build-verification gap above found and closed during this independent pass.
+
+---
+
+## Appendix B: Production Deep-Audit (this follow-up pass)
+
+A follow-up production audit re-scanned the trading, bot, Deriv, AI, and UI surfaces for the remaining classes of defects (real trading loops, clickable completeness, fake/hardcoded data, dead ends, reconnect handling). All findings below were fixed, type-checked (`tsc --noEmit` clean), re-tested (**105/105 pass**), and the client production build re-verified. Changes are grouped by subsystem.
+
+### B.1 — CRITICAL: Bots stall after exactly one live trade
+`server/executionEngine.ts` set `botRunner.setOpenTrade(id, userId, true)` on a real buy, but **nothing ever reset it**, and the bot-loop guard at `executionEngine.ts:62` refuses to open a new trade while `hasOpenTrade` is true. Result: any bot that ever successfully placed a live trade was permanently stalled afterward.
+
+**Fix:** `server/SettlementTracker.ts` now calls `botRunner.setOpenTrade(String(trade.botRunId), trade.userId, false)` whenever a `botRunId` trade settles, in addition to the existing `updateTradeStats`. `tsc` confirmed the bidirectional binding compiles.
+
+### B2 — HIGH: Simulated-trade pollution on buy failure
+The buy-failure path in the execution engine simulated the *next tick's outcome*, wrote a real win/loss through `db.saveTrade`, and emitted no `contractId` and no simulation flag. This silently injected phantom trades into TradeHistory, Portfolio, and Analytics as if they were real Deriv contracts.
+
+**Fix:** removed the simulated fallback entirely. Buy failure is now `console.warn` + a `trade.error` webhook (`reason: "buy_failed"`), then the engine `continue`s to the next cycle. Removed the now-unused `calcPnl`, `simulateOutcome`, and `getDecimalPlaces` imports (`backtest.ts` still imports them, so nothing else broke).
+
+### B3 — HIGH: Deriv connection cached closed sockets forever
+`server/derivConnection.ts` cached `connectPromise` indefinitely; `onclose`/`onerror` only flipped `_authorized = false`, defaulting to reusing a dead socket, so all server-side Deriv ops died after the first disconnect.
+
+**Fix:** `connect()` now runs a `teardown()` on `onerror`/`onclose` that clears `connectPromise`, nulls the socket, and `removeAllListeners()`. The `onerror` path rejects instead of resolving against a closed connection.
+
+### B4 — Bot `strategyId` wired end-to-end
+`client/src/pages/Bots.tsx:107` fell back to `strategyId: 0` ("using runId as fallback") when merging live server bots, because the router never sent it.
+
+**Fix:** added `strategyId` to `BotDefinition`/`start()` opts in `botRunner.ts`, passed it from `bot.startRun` in `routers.ts`, exposed it on the `bot.listActive` and `bot.getStatus` response shape, and updated `Bots.tsx` to consume `sb.strategyId` (with the flattened `name`/`symbol` fields) instead of hardcoding `0`. This also cleaned up the previous reliance on the now-flattened `sb.def` shape.
+
+### B5 — Light theme never applied
+`client/src/contexts/ThemeContext.tsx` toggled a `.dark` class, but `index.css` defines the dark palette on `:root` and the light override under `.light` — so switching themes changed nothing visually.
+
+**Fix:** `ThemeContext` now toggles `.light` (`root.classList.toggle("light", theme === "light")`), which the CSS actually matches. Local persistence preserved.
+
+### B6 — `strategies.backtestCompare` returned fake zeros
+The `strategies` router's `backtestCompare` returned `{ winRate: 0, totalTrades: 0, profitFactor: 0, avgWin: 0, avgLoss: 0 }` for every strategy — a hardcoded stub. (A duplicate real version lived under the `admin` router.)
+
+**Fix:** replaced the stub with the real `runBacktest`-over-tick-history loop (same as the admin version), returning genuine results per strategy.
+
+### B7 — `aiLive.userRisk` hardcoded "LOW / 20"
+`aiLive.userRisk` returned a fabricated `{ riskLevel: "LOW", score: 20, factors: [], recommendation: "No live data available" }` for every symbol.
+
+**Fix:** now delegates to `aiOrchestrator.getRiskAdvisoryFor(symbol)` (computed from real market health, volatility, trend, and prediction confidence). If the orchestrator hasn't produced one yet, it returns a transparent "risk model warming up" signal instead of a fake LOW.
+
+### Residual & verification
+- `npx tsc --noEmit` → clean
+- `npx vitest run` → 105/105 passing
+- client `npm run build` → succeeds (warning: chunk size only)
+
+The changes above are committed and pushed as part of this production-audit follow-up pass.

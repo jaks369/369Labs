@@ -119,10 +119,21 @@ class DerivConnection {
           try { data = JSON.parse(event.data as string); } catch { return; }
           this.handleMessage(data);
         };
-        this.ws.onerror = () => { this._authorized = false; };
-        this.ws.onclose = () => { this._authorized = false; };
+        const teardown = () => {
+          this._authorized = false;
+          // Release the cached promise so the next ensureConnected() opens a
+          // fresh socket instead of reusing a closed one forever.
+          this.connectPromise = null;
+          if (this.ws) {
+            try { this.ws.removeAllListeners?.(); } catch {}
+            this.ws = null;
+          }
+        };
+        this.ws.onerror = teardown;
+        this.ws.onclose = teardown;
       } catch (e) {
         this._authorized = false;
+        this.connectPromise = null;
         reject(e);
       }
     });
