@@ -61,6 +61,7 @@ import {
   Megaphone,
   HardDrive,
   PanelLeftClose,
+  Palette,
 } from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState, useMemo } from "react";
 import { useLocation } from "wouter";
@@ -101,9 +102,11 @@ const navGroups: NavGroup[] = [
     items: [
       { icon: LayoutDashboard, label: "Terminal", path: "/dashboard" },
       { icon: CandlestickChart, label: "Markets", path: "/markets" },
+      { icon: Book, label: "Order Book", path: "/order-book" },
       { icon: Star, label: "Watchlist", path: "/watchlist" },
       { icon: Wallet, label: "Portfolio", path: "/portfolio" },
       { icon: BarChart3, label: "Trade History", path: "/trades" },
+      { icon: Shield, label: "Paper Trading", path: "/paper-trading" },
     ],
   },
   {
@@ -147,6 +150,7 @@ const navGroups: NavGroup[] = [
       { icon: Crown, label: "Subscription", path: "/subscription" },
       { icon: HardDrive, label: "Backup", path: "/backup" },
       { icon: BookText, label: "API Docs", path: "/api-docs" },
+      { icon: Palette, label: "Theme Preview", path: "/theme-preview" },
     ],
   },
   {

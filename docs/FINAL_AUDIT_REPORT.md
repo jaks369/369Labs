@@ -247,3 +247,32 @@ The `strategies` router's `backtestCompare` returned `{ winRate: 0, totalTrades:
 - client `npm run build` → succeeds (warning: chunk size only)
 
 The changes above are committed and pushed as part of this production-audit follow-up pass.
+
+## Appendix C �?" Production deep-audit round 2 (bot execution & page reachability)
+
+A second full pass over server execution, AI orchestration, and client routing, focused on the bot execution engine, SL/TP enforcement, and component reachability.
+
+### B8 �?" CRITICAL: bots never evaluated or traded (rule extraction mismatch)
+`server/executionEngine.ts` read `const rule = strategy?.rule || strategy?.config?.rule`. But every `botRunner.start()` caller passes the **bare** `StrategyRule` as `strategy: rule` (`routers.ts` `bot.startRun`), and `botRunner.ts` stores it as-is. A bare rule (`{ symbol, condition, action, params }` — see `RuleBuilder.tsx`) has no `.rule` or `.config` key, so `rule` was always `undefined` and the guard `if (!rule?.condition) continue` skipped **every bot forever**. Nothing backfilled with tick data, placed trades, or updated stats. Confirmed by the fact that surrounding code (`bot.getStatus`/`listActive`) reads `def.strategy.symbol` directly from the bare rule, proving the shape had no wrapper.
+
+**Fix:** `server/executionEngine.ts` now resolves the rule defensively: `const rule = strategy?.condition ? strategy : strategy?.rule || strategy?.config?.rule;`. `tsc` clean. No test had covered this path; a regression guard is recommended.
+
+### B9 �?" HIGH: Bots ignored configured stop-loss / take-profit
+The manual terminal path passes SL/TP to Deriv (`Dashboard.tsx`), but the bot engine's proposal payload did not include `stop_loss`/`take_profit`, so strategy SL/TP (`rule.params.stopLoss` / `rule.params.takeProfit`) were silently dropped for automated bots. `actionToContractType` already reads `strategy?.condition?.barrier`, confirming the bare-rule shape.
+
+**Fix:** `executionEngine.ts` now appends `stop_loss` and `take_profit` to the Deriv proposal payload when present, mirroring the manual path. Removed the unused `tickAfter` variable.
+
+### B10 �?" Dead-end pages brought into the app
+`PaperTrading.tsx`, `OrderBook.tsx`, `ThemePreview.tsx` were fully implemented, functional pages with no route and no nav link. `AIChat.tsx` was already reachable via the `/ai-chat` redirect so it was left as-is.
+
+**Fix:** added `/order-book`, `/paper-trading`, `/theme-preview` routes in `App.tsx` and wired nav entries (Trade group: Order Book, Paper Trading; Account group: Theme Preview) in `DashboardLayout.tsx`. Client `npm run build` succeeds.
+
+### AI market reading verified
+`server/ai/AIOrchestrator.ts` (started at `_core/index.ts:190`, 15s poll) reads tick history across all `getAllVolatilitySymbols()` markets, running health/risk/prediction/advisory engines per symbol and emitting a composite feed. `InsightEngine` reads real tick history (100 ticks) for 10 R_*/1HZ* symbols for digit-distribution, volatility-regime, and trend insights. All AI tool dispatch (~20 tools), confirm-gated intents, and client AI endpoints were re-verified wired.
+
+### Verification
+- `npx tsc --noEmit` clean
+- `npx vitest run` 105/105 passing
+- client `npm run build` succeeds (chunk-size warning only)
+
+Changes pending commit & push in this pass.

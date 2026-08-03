@@ -60,8 +60,11 @@ async function executeBotCycle(): Promise<void> {
     if (traded >= MAX_PIPELINE_TRADES) break;
     if (bot.status !== "running" || bot.hasOpenTrade) continue;
 
+    // `bot.def.strategy` holds the bare StrategyRule (symbol/condition/action/params),
+    // NOT a wrapper with `.rule`/`.config`. Fall back defensively to the old
+    // wrapped shapes if a different caller ever stored them.
     const strategy = bot.def?.strategy;
-    const rule = strategy?.rule || strategy?.config?.rule;
+    const rule = strategy?.condition ? strategy : strategy?.rule || strategy?.config?.rule;
     if (!rule?.condition) continue;
 
     const symbol = rule.symbol || "R_100";
@@ -100,7 +103,6 @@ async function executeBotCycle(): Promise<void> {
       const { contractType, barrier: actionBarrier } = actionToContractType(rule);
       const barrier = rule.condition?.barrier !== undefined ? Number(rule.condition.barrier) : actionBarrier;
       const entryPrice = prices[triggerIdx];
-      const tickAfter = ticks[triggerIdx + 1];
       const isDigit = isDigitContract(contractType);
       // Use Deriv proposal/buy flow to place the actual trade
       const proposalPayload: Record<string, any> = {
@@ -114,6 +116,12 @@ async function executeBotCycle(): Promise<void> {
         underlying_symbol: symbol,
       };
       if (isDigit && barrier !== undefined) proposalPayload.barrier = String(barrier);
+      // Enforce the strategy's stop-loss / take-profit on the live contract,
+      // mirroring the manual terminal path.
+      const sl = Number(rule.params?.stopLoss);
+      const tp = Number(rule.params?.takeProfit);
+      if (sl > 0) proposalPayload.stop_loss = String(sl);
+      if (tp > 0) proposalPayload.take_profit = String(tp);
       const proposal = await (conn as any).sendRaw(proposalPayload).catch(() => null);
       if (!proposal?.proposal?.id) continue;
 

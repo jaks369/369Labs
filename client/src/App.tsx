@@ -46,6 +46,9 @@ import StrategyEnginePage from "./pages/StrategyEngine";
 import AutoReports from "./pages/AutoReports";
 import ServerError from "./pages/ServerError";
 import BackupRestore from "./pages/BackupRestore";
+import PaperTrading from "./pages/PaperTrading";
+import OrderBook from "./pages/OrderBook";
+import ThemePreview from "./pages/ThemePreview";
 
 const LazyBacktesting = lazy(() => import("./pages/Backtesting"));
 const LazyAnalytics = lazy(() => import("./pages/Analytics"));
@@ -88,6 +91,9 @@ function Router() {
       <Route path={"/500"} component={ServerError} />
       <Route path={"/dashboard"}><AppLayout><Dashboard /></AppLayout></Route>
       <Route path={"/markets"}><AppLayout><LazyLoad><LazyMarkets /></LazyLoad></AppLayout></Route>
+      <Route path={"/order-book"}><AppLayout><OrderBook /></AppLayout></Route>
+      <Route path={"/paper-trading"}><AppLayout><PaperTrading /></AppLayout></Route>
+      <Route path={"/theme-preview"}><AppLayout><ThemePreview /></AppLayout></Route>
       <Route path={"/bots"}><AppLayout><Bots /></AppLayout></Route>
       <Route path={"/portfolio"}><AppLayout><LazyLoad><LazyPortfolio /></LazyLoad></AppLayout></Route>
       <Route path={"/strategy-builder"}><AppLayout><LazyLoad><LazyStrategyBuilder /></LazyLoad></AppLayout></Route>
