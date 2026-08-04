@@ -28,7 +28,7 @@ export default function VerifyEmail() {
   }, [token]);
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[var(--bg)] px-4">
+    <div className="min-h-screen flex items-center justify-center px-4">
       <div className="w-full max-w-sm border border-[var(--accent-border)] bg-[var(--card)] rounded p-8 text-center">
         {status === "verifying" && (
           <>

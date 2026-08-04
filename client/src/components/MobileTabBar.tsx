@@ -17,7 +17,7 @@ export default function MobileTabBar() {
   };
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 bg-[var(--card)] border-t border-[var(--border)] shadow-[0_-4px_16px_rgba(0,0,0,0.4)] md:hidden pb-safe">
+    <nav className="fixed bottom-0 left-0 right-0 z-50 aurora-glass border-t border-[var(--border)] shadow-[0_-4px_16px_rgba(0,0,0,0.4)] md:hidden pb-safe">
       <div className="flex items-center justify-around h-14 px-2">
         {tabs.map((tab) => {
           const active = isActive(tab.path);

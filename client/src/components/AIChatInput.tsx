@@ -37,7 +37,7 @@ export default function AIChatInput({ onSend, loading, disabled }: AIChatInputPr
   }, [input]);
 
   return (
-    <div className="flex items-end gap-2 border-t border-[var(--border)] bg-[var(--bg)] p-3">
+    <div className="flex items-end gap-2 border-t border-[var(--border)] aurora-glass p-3">
       <textarea data-chat-input="true" ref={inputRef}
         value={input}
         onChange={(e) => setInput(e.target.value)}

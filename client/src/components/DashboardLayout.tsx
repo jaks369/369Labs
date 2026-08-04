@@ -192,7 +192,7 @@ export default function DashboardLayout({
 
   if (!user) {
     return (
-      <div className="flex items-center justify-center h-full bg-[var(--bg)]">
+      <div className="flex items-center justify-center h-full aurora-glass">
         <div className="flex flex-col items-center gap-6 p-8 max-w-md w-full card">
           <div className="flex flex-col items-center gap-4">
             <div className="w-10 h-10 bg-[var(--accent)] rounded-lg flex items-center justify-center">

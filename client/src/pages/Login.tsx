@@ -99,7 +99,7 @@ export default function Login() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[var(--bg)] px-4">
+    <div className="min-h-screen flex items-center justify-center px-4">
       <div className="w-full max-w-sm border border-[var(--accent-border)] bg-[var(--card)] rounded p-6 relative">
         <div className="absolute -top-3 left-4 bg-[var(--bg)] px-2 text-sm font-bold text-[var(--accent)]">
           {mode === "login" ? "LOG IN" : "SIGN UP"}

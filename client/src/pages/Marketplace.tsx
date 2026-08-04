@@ -75,7 +75,7 @@ export default function Marketplace() {
 
   return (
     <div className="h-full text-white">
-      <div className="p-4 md:p-6 border-b border-[var(--border)] flex flex-wrap items-center justify-between gap-3 bg-[var(--card)] sticky top-0 z-10">
+      <div className="p-4 md:p-6 border-b border-[var(--border)] flex flex-wrap items-center justify-between gap-3 aurora-glass sticky top-0 z-10">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 bg-[var(--accent-soft)] rounded-xl flex items-center justify-center border border-[var(--accent-border)]">
             <CandlestickChart className="w-6 h-6 text-[var(--accent)]" />
@@ -189,7 +189,7 @@ export default function Marketplace() {
                     </div>
                   </div>
                   {isOpen && (
-                    <div className="border-t border-[var(--border)] bg-[var(--bg)] p-4">
+                    <div className="border-t border-[var(--border)] aurora-glass p-4">
                       <div className="text-micro mb-2">Raw evidence (tick window)</div>
                       <div className="overflow-x-auto">
                         <table className="w-full text-left text-xs font-mono">

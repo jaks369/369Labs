@@ -342,7 +342,7 @@ export function StrategyBuilderContent({ embedded = false, onClose, onSaved }: S
   ];
 
   return (
-    <div className="p-6 lg:p-10 bg-[var(--card)] min-h-screen">
+    <div className="p-6 lg:p-10 aurora-glass min-h-screen">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-10">

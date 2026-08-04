@@ -322,7 +322,7 @@ export default function Settings() {
 
         <div className="flex gap-8">
           {/* Nav sidebar — 200px on desktop, horizontal scrollable on mobile */}
-          <nav className="w-[200px] shrink-0 sticky top-20 self-start max-md:fixed max-md:top-14 max-md:left-0 max-md:right-0 max-md:z-40 max-md:bg-[var(--bg)] max-md:border-b max-md:border-[var(--border)] max-md:w-full max-md:static max-md:self-auto max-md:sticky max-md:top-14">
+          <nav className="w-[200px] shrink-0 sticky top-20 self-start max-md:fixed max-md:top-14 max-md:left-0 max-md:right-0 max-md:z-40 max-md:aurora-glass max-md:border-b max-md:border-[var(--border)] max-md:w-full max-md:static max-md:self-auto max-md:sticky max-md:top-14">
             <div className="space-y-0.5 max-md:flex max-md:overflow-x-auto max-md:gap-2 max-md:p-3 max-md:pb-2 max-md:scrollbar-none">
               {sections.map((s) => (
                 <button

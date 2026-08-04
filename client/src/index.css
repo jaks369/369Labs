@@ -45,10 +45,10 @@
   --bg: #0A0C10;
   --surface-dim: #08080c;
   --surface: #10131A;
-  --surface-secondary: #10131A;
-  --surface-elevated: #1A2029;
-  --card: #141821;
-  --surface-floating: #16161e;
+  --surface-secondary: rgba(255, 255, 255, 0.03);
+  --surface-elevated: rgba(255, 255, 255, 0.05);
+  --card: rgba(255, 255, 255, 0.04);
+  --surface-floating: rgba(255, 255, 255, 0.05);
   --border: #212936;
   --border-subtle: #1A212C;
 
@@ -1313,6 +1313,16 @@
     border-radius: var(--radius);
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
     position: relative;
+  }
+
+  /* ─── Global Glass Morphism for Card Containers ─────────── */
+  /* Any rounded bordered container automatically gets glass properties */
+  [class*="rounded-xl"][class*="border"]:not(button):not(a):not(summary):not([role="button"]),
+  [class*="rounded-lg"][class*="border"]:not(button):not(a):not(summary):not([role="button"]),
+  [class*="rounded-2xl"][class*="border"]:not(button):not(a):not(summary):not([role="button"]) {
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
   }
 
   /* ─── Utility ───────────────────────────────────────────── */
