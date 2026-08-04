@@ -37,7 +37,7 @@ export default function PopupPanel({ open, onClose, title, icon, children, width
         className="relative animate-slideInRight aurora-glass rounded-xl shadow-2xl overflow-hidden"
         style={{ width, maxHeight: "calc(100vh - 80px)" }}
       >
-        <div className="flex items-center justify-between px-4 py-3 border-b border-[rgba(139,92,246,0.12)]">
+        <div className="flex items-center justify-between px-4 py-3 border-b border-[rgba(255,255,255,0.08)]">
           <div className="flex items-center gap-2">
             {icon}
             <span className="text-sm font-bold text-white">{title}</span>

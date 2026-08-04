@@ -422,13 +422,13 @@ export default function Dashboard() {
           {/* Left: Chart area */}
           <div className="terminal-chart-area">
             {/* Chart Header: Symbol + Price + Balance + Status */}
-            <div className="flex items-center justify-between px-4 py-2 border-b border-[rgba(139,92,246,0.12)] bg-[rgba(10,10,26,0.5)] backdrop-blur-sm shrink-0">
+            <div className="flex items-center justify-between px-4 py-2 border-b border-[rgba(255,255,255,0.08)] aurora-glass shrink-0">
               <div className="flex items-center gap-3">
                 {/* Symbol Picker */}
                 <div className="relative">
                   <button
                     onClick={() => setShowSymbolPicker((s) => !s)}
-                    className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/5 border border-[rgba(139,92,246,0.15)] hover:border-[rgba(139,92,246,0.3)] transition-colors text-sm font-semibold text-white"
+                    className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/5 border border-[rgba(255,255,255,0.10)] hover:border-[rgba(255,255,255,0.15)] transition-colors text-sm font-semibold text-white"
                   >
                     <Activity className="w-3.5 h-3.5 text-[var(--accent)]" />
                     <span className="truncate max-w-[120px]">{selectedDisplay}</span>
@@ -554,10 +554,10 @@ export default function Dashboard() {
                 </div>
                 {/* Quick Access Popups — single toggle */}
                 <div className="hidden md:flex items-center gap-0.5 shrink-0">
-                  <button onClick={() => { setDataPopupTab("watchlist"); setDataPopupOpen(true); }} className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-white/5 border border-[var(--border)] text-[10px] font-bold text-[var(--text-muted)] hover:text-white hover:border-[rgba(139,92,246,0.3)] transition-colors" title="Data: Watchlist, Trade History, Prices">
+                  <button onClick={() => { setDataPopupTab("watchlist"); setDataPopupOpen(true); }} className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-white/5 border border-[var(--border)] text-[10px] font-bold text-[var(--text-muted)] hover:text-white hover:border-[rgba(255,255,255,0.15)] transition-colors" title="Data: Watchlist, Trade History, Prices">
                     <Star className="w-3 h-3" />
                   </button>
-                  <button onClick={() => setInsightPopupOpen(true)} className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-white/5 border border-[var(--border)] text-[10px] font-bold text-[var(--text-muted)] hover:text-white hover:border-[rgba(139,92,246,0.3)] transition-colors" title="Market Insight & Intel">
+                  <button onClick={() => setInsightPopupOpen(true)} className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-white/5 border border-[var(--border)] text-[10px] font-bold text-[var(--text-muted)] hover:text-white hover:border-[rgba(255,255,255,0.15)] transition-colors" title="Market Insight & Intel">
                     <Brain className="w-3 h-3" />
                   </button>
                 </div>
@@ -571,10 +571,10 @@ export default function Dashboard() {
             {/* Chart Plot */}
             <div className="flex-1 min-h-0 relative" style={{ background: 'var(--bg)' }}>
               {/* Trade Type Dropdown (Deriv style) */}
-              <div data-trade-type-popup className="relative px-4 py-1.5 border-b border-[rgba(139,92,246,0.12)] bg-[rgba(10,10,26,0.3)]">
+              <div data-trade-type-popup className="relative px-4 py-1.5 border-b border-[rgba(255,255,255,0.08)] aurora-glass">
                 <button
                   onClick={() => setTradeTypePopupOpen((v) => !v)}
-                  className="flex items-center gap-2 px-3 py-1 rounded-lg bg-white/5 border border-[rgba(139,92,246,0.15)] hover:border-[rgba(139,92,246,0.3)] transition-colors text-xs font-semibold text-white"
+                  className="flex items-center gap-2 px-3 py-1 rounded-lg bg-white/5 border border-[rgba(255,255,255,0.10)] hover:border-[rgba(255,255,255,0.15)] transition-colors text-xs font-semibold text-white"
                 >
                   <Zap className="w-3 h-3 text-[var(--accent)]" />
                   <span>{contractLabels[contract.category] || "Rise/Fall"}</span>
@@ -625,7 +625,7 @@ export default function Dashboard() {
             </div>
 
             {/* OHLC Strip */}
-            <div className="flex items-center gap-4 px-4 py-1.5 border-t border-[rgba(139,92,246,0.12)] bg-[rgba(10,10,26,0.5)] shrink-0">
+            <div className="flex items-center gap-4 px-4 py-1.5 border-t border-[rgba(255,255,255,0.08)] aurora-glass shrink-0">
               {(() => {
                 const ticks = displayTicks;
                 const prices = ticks.map((t: any) => t.price).filter(Boolean);
@@ -706,7 +706,7 @@ export default function Dashboard() {
         icon={<Star className="w-4 h-4 text-[var(--accent)]" />}
         width="420px"
       >
-        <div className="flex border-b border-[rgba(139,92,246,0.12)]">
+        <div className="flex border-b border-[rgba(255,255,255,0.08)]">
           {([
             { id: "watchlist" as const, label: "Watchlist", icon: <Star className="w-3 h-3" /> },
             { id: "trades" as const, label: "Trades", icon: <History className="w-3 h-3" /> },
@@ -800,11 +800,11 @@ export default function Dashboard() {
       >
         <div className="p-3 space-y-3">
           <SymbolInsights symbol={selectedSymbol} ticks={displayTicks} trades={(tradesQuery.data || []) as any} decimalPlaces={decimalPlaces} />
-          <div className="border-t border-[rgba(139,92,246,0.12)] pt-3">
+          <div className="border-t border-[rgba(255,255,255,0.08)] pt-3">
             <AIVerdicts symbol={selectedSymbol} ticks={displayTicks} trades={(tradesQuery.data || []) as any} decimalPlaces={decimalPlaces} />
           </div>
           {signalsQuery.data && signalsQuery.data.length > 0 && (
-            <div className="border-t border-[rgba(139,92,246,0.12)] pt-3">
+            <div className="border-t border-[rgba(255,255,255,0.08)] pt-3">
               <h4 className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-wider mb-2">AI Signals</h4>
               {signalsQuery.data.slice(0, 3).map((sig: any, i: number) => (
                 <div key={i} className="py-2 border-b border-[var(--border)] last:border-0">

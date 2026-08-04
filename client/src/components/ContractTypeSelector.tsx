@@ -84,7 +84,7 @@ export default function ContractTypeSelector({ selection, onChange }: ContractTy
       <div ref={ref} className="relative">
         <button
           onClick={toggle}
-          className="w-full flex items-center justify-between gap-2 h-8 px-3 rounded-lg bg-white/5 border border-[rgba(139,92,246,0.15)] text-white text-xs font-medium hover:border-[rgba(139,92,246,0.3)] transition-colors"
+          className="w-full flex items-center justify-between gap-2 h-8 px-3 rounded-lg bg-white/5 border border-[rgba(255,255,255,0.10)] text-white text-xs font-medium hover:border-[rgba(255,255,255,0.15)] transition-colors"
         >
           <span className="flex items-center gap-1.5">
             <span className="text-[var(--accent)]">{current.icon}</span>

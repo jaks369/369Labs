@@ -40,7 +40,7 @@ export default function Home() {
       </div>
 
       {/* Nav */}
-      <nav className="relative z-50 border-b border-[rgba(139,92,246,0.12)] sticky top-0 aurora-glass">
+      <nav className="relative z-50 border-b border-[rgba(255,255,255,0.08)] sticky top-0 aurora-glass">
         <div className="max-w-6xl mx-auto px-6 h-14 flex justify-between items-center">
           <div className="flex items-center gap-8">
             <div className="flex items-center gap-2 cursor-pointer" onClick={() => navigate("/")}>
@@ -96,7 +96,7 @@ export default function Home() {
             />
             {/* Aurora color wash over image */}
             <div className="absolute inset-0" style={{
-              background: 'linear-gradient(135deg, rgba(74,222,128,0.15) 0%, rgba(139,92,246,0.12) 40%, rgba(236,72,153,0.08) 70%, transparent 100%)',
+              background: 'linear-gradient(135deg, rgba(74,222,128,0.15) 0%, rgba(255,255,255,0.08) 40%, rgba(236,72,153,0.08) 70%, transparent 100%)',
               mixBlendMode: 'screen',
             }} />
             {/* Dark gradient fade into page bg */}
@@ -118,7 +118,7 @@ export default function Home() {
             </motion.p>
             <motion.div variants={fadeUp} className="flex flex-col sm:flex-row gap-3 justify-center items-center">
               <button onClick={() => navigate("/login")} className="px-8 py-2.5 w-full sm:w-auto text-sm font-semibold rounded-full text-black transition-all hover:brightness-110" style={{ background: 'linear-gradient(135deg, #4ade80, #8b5cf6)' }}>Get Started Free</button>
-              <button onClick={() => navigate("/dashboard")} className="px-8 py-2.5 w-full sm:w-auto text-sm font-medium rounded-full border border-[rgba(139,92,246,0.3)] text-[var(--text-secondary)] hover:border-[rgba(139,92,246,0.5)] hover:text-white transition-all">Live Demo</button>
+              <button onClick={() => navigate("/dashboard")} className="px-8 py-2.5 w-full sm:w-auto text-sm font-medium rounded-full border border-[rgba(255,255,255,0.15)] text-[var(--text-secondary)] hover:border-[rgba(255,255,255,0.25)] hover:text-white transition-all">Live Demo</button>
             </motion.div>
           </motion.div>
         </section>
@@ -161,7 +161,7 @@ export default function Home() {
               { icon: BarChart3, title: "Advanced Analytics", desc: "Monitor ROI, Drawdown, and Profit Factor in real-time. Gain deep insights into your bot's performance with professional-grade metrics.", path: "/analytics" },
               { icon: Globe, title: "Cloud Execution", desc: "Deploy your bots to our secure cloud infrastructure. Your strategies run 24/7 without needing your computer to stay online.", path: "/cloud-bots" },
             ].map((feature, i) => (
-              <motion.div key={i} variants={fadeUp} onClick={() => navigate(feature.path)} className="group cursor-pointer aurora-glass rounded-xl p-5 hover:border-[rgba(139,92,246,0.3)] transition-all duration-300">
+              <motion.div key={i} variants={fadeUp} onClick={() => navigate(feature.path)} className="group cursor-pointer aurora-glass rounded-xl p-5 hover:border-[rgba(255,255,255,0.15)] transition-all duration-300">
                 <feature.icon className="w-5 h-5 text-[var(--accent)] mb-3" />
                 <h3 className="text-base font-semibold text-white mb-1.5">{feature.title}</h3>
                 <p className="text-sm text-[var(--text-muted)] leading-relaxed">{feature.desc}</p>
@@ -187,7 +187,7 @@ export default function Home() {
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
               {SYSTEM_FLOW.map((step, i) => (
                 <motion.div key={step.label} variants={fadeUp} className="relative group cursor-pointer" onClick={() => navigate(step.path)}>
-                  <div className="aurora-glass rounded-xl p-4 hover:border-[rgba(139,92,246,0.3)] transition-all duration-300 h-full">
+                  <div className="aurora-glass rounded-xl p-4 hover:border-[rgba(255,255,255,0.15)] transition-all duration-300 h-full">
                     <div className="flex items-center justify-between mb-3">
                       <step.icon className="w-5 h-5 text-[var(--accent)]" />
                       <span className="text-[10px] font-mono text-[var(--text-disabled)]">0{i + 1}</span>
@@ -206,7 +206,7 @@ export default function Home() {
 
         {/* 369AI Introduction */}
         <section className="max-w-6xl mx-auto px-6 py-16">
-          <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={stagger} className="relative overflow-hidden rounded-2xl border border-[rgba(139,92,246,0.2)] aurora-glass p-8 md:p-12">
+          <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={stagger} className="relative overflow-hidden rounded-2xl border border-[rgba(255,255,255,0.12)] aurora-glass p-8 md:p-12">
             <div className="absolute -top-16 right-0 w-[300px] h-[300px] blur-[160px] rounded-full opacity-[0.1] pointer-events-none" style={{ background: 'linear-gradient(135deg, #4ade80, #8b5cf6)' }} />
             <div className="grid grid-cols-1 md:grid-cols-2 gap-10 items-center relative">
               <div>
@@ -292,7 +292,7 @@ export default function Home() {
                 { name: "Pro", price: "$29", features: ["Real trading", "Advanced backtesting", "Unlimited bots", "AI signals & alerts", "Priority support"], cta: "Start Free Trial", popular: true },
                 { name: "Enterprise", price: "$99", features: ["Everything in Pro", "Dedicated infrastructure", "Custom AI models", "SLA guarantee", "Team management"], cta: "Contact Sales" },
               ].map((plan, i) => (
-                <motion.div key={i} variants={fadeUp} className={`relative p-5 rounded-xl aurora-glass ${plan.popular ? "border-[rgba(139,92,246,0.3)]" : ""}`}>
+                <motion.div key={i} variants={fadeUp} className={`relative p-5 rounded-xl aurora-glass ${plan.popular ? "border-[rgba(255,255,255,0.15)]" : ""}`}>
                   {plan.popular && <div className="absolute -top-2.5 left-6 px-3 py-0.5 text-[var(--bg)] text-[10px] font-bold rounded-full" style={{ background: 'linear-gradient(135deg, #4ade80, #8b5cf6)' }}>Most Popular</div>}
                   <h3 className="text-base font-semibold text-white mb-1">{plan.name}</h3>
                   <p className="text-2xl font-bold text-white mb-4">{plan.price}<span className="text-xs text-[var(--text-muted)] font-normal ml-1">{plan.price !== "$0" ? "/mo" : ""}</span></p>
@@ -301,7 +301,7 @@ export default function Home() {
                       <li key={f} className="flex items-center gap-2 text-sm text-[var(--text-muted)]"><CheckCircle2 className="w-3.5 h-3.5 text-[var(--green)] shrink-0" /> {f}</li>
                     ))}
                   </ul>
-                  <button onClick={() => navigate("/login")} className={`w-full py-2.5 rounded-lg text-sm font-semibold transition-all ${plan.popular ? "text-black hover:brightness-110" : "border border-[rgba(139,92,246,0.2)] text-[var(--text-secondary)] hover:border-[rgba(139,92,246,0.4)] hover:text-white"}`} style={plan.popular ? { background: 'linear-gradient(135deg, #4ade80, #8b5cf6)' } : undefined}>{plan.cta}</button>
+                  <button onClick={() => navigate("/login")} className={`w-full py-2.5 rounded-lg text-sm font-semibold transition-all ${plan.popular ? "text-black hover:brightness-110" : "border border-[rgba(255,255,255,0.12)] text-[var(--text-secondary)] hover:border-[rgba(255,255,255,0.20)] hover:text-white"}`} style={plan.popular ? { background: 'linear-gradient(135deg, #4ade80, #8b5cf6)' } : undefined}>{plan.cta}</button>
                 </motion.div>
               ))}
             </div>
@@ -319,7 +319,7 @@ export default function Home() {
           </motion.div>
         </section>
 
-        <footer className="border-t border-[rgba(139,92,246,0.12)] py-6 px-6">
+        <footer className="border-t border-[rgba(255,255,255,0.08)] py-6 px-6">
           <div className="max-w-6xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
             <div className="flex items-center gap-2">
               <div className="w-4 h-4 rounded flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #4ade80, #8b5cf6)' }}>

@@ -241,7 +241,7 @@ export default function MobileTerminal() {
   return (
     <div className="h-full bg-[#0A0A1A] pb-20 lg:hidden">
       {/* Header: symbol · live price · LIVE */}
-      <div className="sticky top-0 z-30 aurora-glass border-b border-[rgba(139,92,246,0.15)] px-4 pt-3 pb-2">
+      <div className="sticky top-0 z-30 aurora-glass border-b border-[rgba(255,255,255,0.08)] px-4 pt-3 pb-2">
         <div className="flex items-center justify-between gap-3">
           <button onClick={() => setShowSymbolPicker((v) => !v)} className="flex items-center gap-2 min-w-0 cursor-pointer">
             <span className="font-bold text-lg text-white truncate">{selectedDisplay}</span>
@@ -298,10 +298,10 @@ export default function MobileTerminal() {
       {showSymbolPicker && (
         <div className="fixed inset-0 z-[90] bg-black/60 flex items-start justify-center animate-modal-backdrop" onClick={() => setShowSymbolPicker(false)}>
           <div
-            className="w-full aurora-glass border-b border-[rgba(139,92,246,0.15)] rounded-b-2xl shadow-2xl max-h-[68vh] overflow-y-auto animate-sheet-up"
+            className="w-full aurora-glass border-b border-[rgba(255,255,255,0.08)] rounded-b-2xl shadow-2xl max-h-[68vh] overflow-y-auto animate-sheet-up"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="px-4 py-3 border-b border-[rgba(139,92,246,0.15)] flex items-center justify-between sticky top-0 aurora-glass z-10">
+            <div className="px-4 py-3 border-b border-[rgba(255,255,255,0.08)] flex items-center justify-between sticky top-0 aurora-glass z-10">
               <h3 className="text-sm font-bold text-white">Select Market</h3>
               <button onClick={() => setShowSymbolPicker(false)} className="text-[var(--text-muted)] hover:text-white">
                 <X className="w-4 h-4" />
@@ -522,10 +522,10 @@ export default function MobileTerminal() {
       {showPositions && (
         <div className="fixed inset-0 z-[95] bg-black/60 flex items-end animate-modal-backdrop" onClick={() => setShowPositions(false)}>
           <div
-            className="w-full aurora-glass border-t border-[rgba(139,92,246,0.15)] rounded-t-2xl max-h-[70vh] overflow-y-auto pb-6 animate-sheet-up"
+            className="w-full aurora-glass border-t border-[rgba(255,255,255,0.08)] rounded-t-2xl max-h-[70vh] overflow-y-auto pb-6 animate-sheet-up"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="sticky top-0 aurora-glass px-4 py-3 border-b border-[rgba(139,92,246,0.15)] flex items-center justify-between">
+            <div className="sticky top-0 aurora-glass px-4 py-3 border-b border-[rgba(255,255,255,0.08)] flex items-center justify-between">
               <h3 className="text-sm font-bold text-white">Open Positions</h3>
               <button onClick={() => setShowPositions(false)} className="text-[var(--text-muted)] hover:text-white">
                 <X className="w-4 h-4" />

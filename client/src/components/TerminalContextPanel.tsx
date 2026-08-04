@@ -126,7 +126,7 @@ export default function TerminalContextPanel(props: TerminalContextPanelProps) {
   return (
     <div className="flex flex-col h-full">
       {/* EXECUTION */}
-      <div className="aurora-glass-panel border-b border-[rgba(139,92,246,0.12)]">
+      <div className="aurora-glass-panel border-b border-[rgba(255,255,255,0.08)]">
         <div className="p-3 space-y-2.5">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2 min-w-0">
@@ -145,7 +145,7 @@ export default function TerminalContextPanel(props: TerminalContextPanelProps) {
             <div className="flex items-center gap-1.5">
               <button
                 onClick={() => onStakeChange(Math.max(0.35, Math.round((stake - 0.5) * 100) / 100))}
-                className="w-8 h-8 shrink-0 rounded-lg bg-white/5 border border-[var(--border)] text-[var(--text-secondary)] hover:text-white hover:border-[rgba(139,92,246,0.3)] transition-colors text-sm font-bold"
+                className="w-8 h-8 shrink-0 rounded-lg bg-white/5 border border-[var(--border)] text-[var(--text-secondary)] hover:text-white hover:border-[rgba(255,255,255,0.15)] transition-colors text-sm font-bold"
                 aria-label="Decrease stake"
               >
                 −
@@ -156,11 +156,11 @@ export default function TerminalContextPanel(props: TerminalContextPanelProps) {
                 step="0.01"
                 value={stake}
                 onChange={(e) => onStakeChange(Math.max(0, parseFloat(e.target.value) || 0))}
-                className="flex-1 text-center font-mono font-bold tabular-nums text-sm bg-white/5 border border-[var(--border)] rounded-lg py-1.5 text-white focus:border-[rgba(139,92,246,0.4)] focus:outline-none"
+                className="flex-1 text-center font-mono font-bold tabular-nums text-sm bg-white/5 border border-[var(--border)] rounded-lg py-1.5 text-white focus:border-[rgba(255,255,255,0.20)] focus:outline-none"
               />
               <button
                 onClick={() => onStakeChange(Math.round((stake + 0.5) * 100) / 100)}
-                className="w-8 h-8 shrink-0 rounded-lg bg-white/5 border border-[var(--border)] text-[var(--text-secondary)] hover:text-white hover:border-[rgba(139,92,246,0.3)] transition-colors text-sm font-bold"
+                className="w-8 h-8 shrink-0 rounded-lg bg-white/5 border border-[var(--border)] text-[var(--text-secondary)] hover:text-white hover:border-[rgba(255,255,255,0.15)] transition-colors text-sm font-bold"
                 aria-label="Increase stake"
               >
                 +
@@ -214,17 +214,17 @@ export default function TerminalContextPanel(props: TerminalContextPanelProps) {
       </div>
 
       {/* Digit Probability */}
-      <div className="border-b border-[rgba(139,92,246,0.12)] p-3">
+      <div className="border-b border-[rgba(255,255,255,0.08)] p-3">
         <DigitProbability symbol={selectedSymbol} decimalPlaces={decimalPlaces} />
       </div>
 
       {/* Contract Type Selector (compact) */}
-      <div className="border-b border-[rgba(139,92,246,0.12)] p-3">
+      <div className="border-b border-[rgba(255,255,255,0.08)] p-3">
         <ContractTypeSelector selection={contract} onChange={onContractChange} />
       </div>
 
       {/* Risk Controls (collapsed) */}
-      <div className="border-b border-[rgba(139,92,246,0.12)] p-3">
+      <div className="border-b border-[rgba(255,255,255,0.08)] p-3">
         <button
           onClick={() => setMoreOpen((v) => !v)}
           className="w-full flex items-center justify-between text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-wider mb-1.5"
@@ -270,7 +270,7 @@ export default function TerminalContextPanel(props: TerminalContextPanelProps) {
       {/* AI + Positions + Alerts — collapsible */}
       <div className="flex-1 overflow-y-auto min-h-0">
         {/* AI */}
-        <div className="border-b border-[rgba(139,92,246,0.12)]">
+        <div className="border-b border-[rgba(255,255,255,0.08)]">
           <button onClick={() => setAiOpen((v) => !v)} className="w-full flex items-center justify-between px-3 py-2 cursor-pointer">
             <div className="flex items-center gap-1.5">
               <Sparkles className="w-3.5 h-3.5 text-[var(--accent)] animate-breathe" />
@@ -300,7 +300,7 @@ export default function TerminalContextPanel(props: TerminalContextPanelProps) {
         </div>
 
         {/* POSITIONS */}
-        <div className="border-b border-[rgba(139,92,246,0.12)]">
+        <div className="border-b border-[rgba(255,255,255,0.08)]">
           <button onClick={() => setPositionsOpen((v) => !v)} className="w-full flex items-center justify-between px-3 py-2 cursor-pointer">
             <div className="flex items-center gap-1.5">
               <ShieldCheck className="w-3.5 h-3.5 text-[var(--accent)]" />
