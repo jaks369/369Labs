@@ -32,15 +32,46 @@ export default function Home() {
 
   return (
     <div className="h-full text-[var(--text-primary)] selection:bg-[var(--accent)]/20">
-      {/* Aurora background glow */}
-      <div className="fixed inset-0 pointer-events-none">
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[500px] h-[350px] blur-[200px] rounded-full opacity-[0.08]" style={{ background: 'linear-gradient(135deg, #4ade80, #8b5cf6)' }} />
-        <div className="absolute bottom-0 right-0 w-[420px] h-[320px] blur-[220px] rounded-full opacity-[0.05]" style={{ background: 'linear-gradient(135deg, #8b5cf6, #ec4899)' }} />
-        <div className="absolute top-1/3 left-0 w-[360px] h-[300px] blur-[200px] rounded-full opacity-[0.04]" style={{ background: 'linear-gradient(135deg, #4ade80, #14b8a6)' }} />
+      {/* Full-bleed aurora nature photo — the single continuous background */}
+      <div className="fixed inset-0 pointer-events-none" style={{ zIndex: 0 }}>
+        {/* The processed photo */}
+        <div
+          className="absolute inset-0"
+          style={{
+            backgroundImage: 'url("/aurora-nature.jpg")',
+            backgroundSize: 'cover',
+            backgroundPosition: 'center 30%',
+            backgroundAttachment: 'fixed',
+            filter: 'saturate(0.8) brightness(0.7)',
+          }}
+        />
+        {/* Color-grade: push greens toward teal, deepen shadows to navy */}
+        <div className="absolute inset-0" style={{
+          background: 'linear-gradient(180deg, rgba(10,14,20,0.3) 0%, rgba(10,14,20,0.1) 40%, rgba(10,14,20,0.5) 100%)',
+        }} />
+        {/* Aurora glow bleeding through the sky — screen blend so it looks emitted from the photo */}
+        <div className="absolute inset-0" style={{
+          background: `
+            radial-gradient(ellipse at 50% 15%, rgba(74,222,128,0.18) 0%, transparent 55%),
+            radial-gradient(ellipse at 30% 20%, rgba(139,92,246,0.15) 0%, transparent 50%),
+            radial-gradient(ellipse at 70% 10%, rgba(236,72,153,0.12) 0%, transparent 45%),
+            radial-gradient(ellipse at 50% 60%, rgba(20,184,166,0.08) 0%, transparent 50%)
+          `,
+          mixBlendMode: 'screen',
+        }} />
+        {/* Magenta-to-purple color wash in the cloud bank area (upper half) */}
+        <div className="absolute inset-0" style={{
+          background: 'linear-gradient(135deg, rgba(139,92,246,0.10) 0%, rgba(236,72,153,0.08) 30%, transparent 60%)',
+          mixBlendMode: 'soft-light',
+        }} />
+        {/* Dark gradient fade at bottom for text legibility */}
+        <div className="absolute inset-0" style={{
+          background: 'linear-gradient(180deg, rgba(10,14,20,0.2) 0%, rgba(10,14,20,0.6) 55%, rgba(10,14,20,0.92) 100%)',
+        }} />
       </div>
 
-      {/* Nav */}
-      <nav className="relative z-50 border-b border-[rgba(255,255,255,0.08)] sticky top-0 aurora-glass">
+      {/* Nav — translucent glass, photo shows through */}
+      <nav className="relative z-50 border-b border-[rgba(255,255,255,0.08)] sticky top-0" style={{ background: 'rgba(10,14,20,0.5)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)' }}>
         <div className="max-w-6xl mx-auto px-6 h-14 flex justify-between items-center">
           <div className="flex items-center gap-8">
             <div className="flex items-center gap-2 cursor-pointer" onClick={() => navigate("/")}>
@@ -65,7 +96,7 @@ export default function Home() {
         </div>
         {/* Mobile full-screen menu */}
         {mobileMenuOpen && (
-          <div className="md:hidden border-t border-[var(--border)]/50 bg-[var(--bg)]">
+          <div className="md:hidden border-t border-[rgba(255,255,255,0.08)]" style={{ background: 'rgba(10,14,20,0.7)', backdropFilter: 'blur(20px)' }}>
             <div className="px-6 py-4 space-y-2">
               {[{ label: "Dashboard", path: "/dashboard" }, { label: "Strategy Builder", path: "/strategy-builder" }, { label: "Marketplace", path: "/marketplace" }, { label: "Backtesting", path: "/backtesting" }].map((item) => (
                 <button key={item.path} onClick={() => { navigate(item.path); setMobileMenuOpen(false); }} className="block w-full text-left py-2 text-sm text-[var(--text-secondary)] hover:text-[var(--text-primary)]">{item.label}</button>
@@ -80,34 +111,8 @@ export default function Home() {
       </nav>
 
       <main className="relative z-10">
-        {/* Hero with Nature Photo Background */}
-        <section className="relative max-w-4xl mx-auto px-6 pt-24 pb-16 text-center overflow-hidden">
-          {/* Aurora morphism nature background */}
-          <div className="absolute inset-0 -z-10 overflow-hidden">
-            <div
-              className="absolute inset-0"
-              style={{
-                backgroundImage: 'url("/aurora-nature.jpg")',
-                backgroundSize: 'cover',
-                backgroundPosition: 'center 30%',
-                filter: 'blur(1px) saturate(0.7)',
-                opacity: 0.25,
-              }}
-            />
-            {/* Aurora color wash over image */}
-            <div className="absolute inset-0" style={{
-              background: 'linear-gradient(135deg, rgba(74,222,128,0.15) 0%, rgba(255,255,255,0.08) 40%, rgba(236,72,153,0.08) 70%, transparent 100%)',
-              mixBlendMode: 'screen',
-            }} />
-            {/* Dark gradient fade into page bg */}
-            <div className="absolute inset-0" style={{
-              background: 'linear-gradient(180deg, rgba(10,10,26,0.4) 0%, rgba(10,10,26,0.75) 50%, rgba(10,10,26,0.95) 100%)',
-            }} />
-            {/* Soft aurora glow at bottom edge — the "hill" effect */}
-            <div className="absolute bottom-0 left-0 right-0 h-32" style={{
-              background: 'radial-gradient(ellipse 120% 100% at 50% 100%, rgba(74,222,128,0.08) 0%, transparent 70%)',
-            }} />
-          </div>
+        {/* Hero — floats on top of the full-bleed photo */}
+        <section className="relative max-w-4xl mx-auto px-6 pt-24 pb-16 text-center">
           <motion.div initial="hidden" animate="visible" variants={stagger}>
             <motion.h1 variants={fadeUp} className="text-4xl md:text-6xl font-bold text-white mb-5 tracking-tight leading-[1.1]">
               AI Intelligence,<br />
@@ -242,7 +247,7 @@ export default function Home() {
                   { label: "Strategy Review", value: "Live", note: "AI critiques risk & logic before you deploy", pct: 0 },
                   { label: "Verdict", value: "Live", note: "Top symbol & contract type ranked from your session", pct: 0 },
                 ].map((row) => (
-                  <div key={row.label} className="rounded-xl border border-[var(--border)]/50 bg-[var(--card)]/60 p-4">
+                  <div key={row.label} className="rounded-xl border border-[rgba(255,255,255,0.08)] p-4" style={{ background: 'rgba(255,255,255,0.04)', backdropFilter: 'blur(16px)' }}>
                     <div className="flex items-center justify-between mb-2">
                       <span className="text-[11px] uppercase tracking-widest text-[var(--text-muted)] font-bold">{row.label}</span>
                       <span className="text-sm font-bold font-mono tabular-nums text-[var(--accent)]">{row.value}</span>

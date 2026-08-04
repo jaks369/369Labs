@@ -82,7 +82,7 @@ export default function Dashboard() {
   });
   const [historyTab, setHistoryTab] = useState<"positions" | "trades" | "prices">("positions");
   const [dataPopupOpen, setDataPopupOpen] = useState(false);
-  const [dataPopupTab, setDataPopupTab] = useState<"watchlist" | "trades" | "prices">("watchlist");
+  const [dataPopupTab, setDataPopupTab] = useState<"watchlist" | "trades" | "prices" | "ohlc">("watchlist");
   const [tradeTypePopupOpen, setTradeTypePopupOpen] = useState(false);
   const [insightPopupOpen, setInsightPopupOpen] = useState(false);
 
@@ -557,8 +557,9 @@ export default function Dashboard() {
                   <button onClick={() => { setDataPopupTab("watchlist"); setDataPopupOpen(true); }} className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-white/5 border border-[var(--border)] text-[10px] font-bold text-[var(--text-muted)] hover:text-white hover:border-[rgba(255,255,255,0.15)] transition-colors" title="Data: Watchlist, Trade History, Prices">
                     <Star className="w-3 h-3" />
                   </button>
-                  <button onClick={() => setInsightPopupOpen(true)} className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-white/5 border border-[var(--border)] text-[10px] font-bold text-[var(--text-muted)] hover:text-white hover:border-[rgba(255,255,255,0.15)] transition-colors" title="Market Insight & Intel">
+                  <button onClick={() => setInsightPopupOpen(true)} className="flex items-center gap-1 px-2 py-1 rounded-lg bg-[var(--accent)]/10 border border-[var(--accent)]/20 text-[10px] font-bold text-[var(--accent)] hover:bg-[var(--accent)]/20 transition-colors" title="AI Insights — 369AI">
                     <Brain className="w-3 h-3" />
+                    <span className="hidden lg:inline">AI Insights</span>
                   </button>
                 </div>
                 {/* Connect button */}
@@ -568,26 +569,54 @@ export default function Dashboard() {
               </div>
             </div>
 
+            {/* Trade Type Pill Row — always visible above chart */}
+            <div className="flex items-center gap-1 px-3 py-1.5 border-b border-[rgba(255,255,255,0.08)] aurora-glass shrink-0 overflow-x-auto scrollbar-none">
+              {([
+                { id: "rise_fall", label: "Rise/Fall" },
+                { id: "over_under", label: "Over/Under" },
+                { id: "even_odd", label: "Even/Odd" },
+                { id: "digits", label: "Digits" },
+                { id: "accumulator", label: "Accumulators" },
+              ] as const).map((t) => (
+                <button
+                  key={t.id}
+                  onClick={() => {
+                    const base: ContractSelection = { category: t.id };
+                    if (t.id === "rise_fall") base.direction = "rise";
+                    if (t.id === "over_under") { base.overUnder = "over"; base.barrier = 5; }
+                    if (t.id === "even_odd") base.digitMatch = "match";
+                    if (t.id === "digits") { base.digitMatch = "match"; base.digit = 0; }
+                    if (t.id === "accumulator") base.growthRate = 1;
+                    setContract(base);
+                  }}
+                  className={`trade-type-tab shrink-0 ${contract.category === t.id ? "active" : ""}`}
+                >
+                  {t.label}
+                </button>
+              ))}
+              <button
+                onClick={() => setTradeTypePopupOpen((v) => !v)}
+                className="flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-bold text-[var(--accent)] hover:bg-[var(--accent)]/10 transition-colors shrink-0"
+                title="All Trade Types"
+              >
+                <Zap className="w-3 h-3" />
+                <span>More</span>
+              </button>
+            </div>
+
             {/* Chart Plot */}
             <div className="flex-1 min-h-0 relative" style={{ background: 'var(--bg)' }}>
-              {/* Trade Type Dropdown (Deriv style) */}
-              <div data-trade-type-popup className="relative px-4 py-1.5 border-b border-[rgba(255,255,255,0.08)] aurora-glass">
-                <button
-                  onClick={() => setTradeTypePopupOpen((v) => !v)}
-                  className="flex items-center gap-2 px-3 py-1 rounded-lg bg-white/5 border border-[rgba(255,255,255,0.10)] hover:border-[rgba(255,255,255,0.15)] transition-colors text-xs font-semibold text-white"
-                >
-                  <Zap className="w-3 h-3 text-[var(--accent)]" />
-                  <span>{contractLabels[contract.category] || "Rise/Fall"}</span>
-                  <ChevronDown className={`w-3 h-3 text-[var(--text-muted)] transition-transform ${tradeTypePopupOpen ? "rotate-180" : ""}`} />
-                </button>
-                {tradeTypePopupOpen && (
-                  <div className="absolute top-full left-4 mt-1 z-50 aurora-glass-panel rounded-lg p-2 shadow-2xl w-[220px]">
+              {/* Trade Types Popup Grid */}
+              {tradeTypePopupOpen && (
+                <div className="absolute top-full left-4 mt-1 z-50 aurora-glass-panel rounded-lg p-3 shadow-2xl w-[320px]">
+                  <div className="text-[10px] uppercase tracking-widest text-[var(--text-muted)] font-bold mb-2">All Trade Types</div>
+                  <div className="grid grid-cols-2 gap-1.5">
                     {([
-                      { id: "rise_fall", label: "Rise / Fall", desc: "Predict direction" },
-                      { id: "over_under", label: "Over / Under", desc: "Digit above/below barrier" },
-                      { id: "even_odd", label: "Even / Odd", desc: "Last digit parity" },
-                      { id: "digits", label: "Digits", desc: "Match or differ" },
-                      { id: "accumulator", label: "Accumulator", desc: "Compounding ticks" },
+                      { id: "rise_fall", label: "Rise / Fall", desc: "Predict if price goes up or down" },
+                      { id: "over_under", label: "Over / Under", desc: "Last digit above or below barrier" },
+                      { id: "even_odd", label: "Even / Odd", desc: "Last digit is even or odd" },
+                      { id: "digits", label: "Matches / Differs", desc: "Last digit matches or differs" },
+                      { id: "accumulator", label: "Accumulator", desc: "Compounding tick trades" },
                     ] as const).map((t) => (
                       <button
                         key={t.id}
@@ -601,15 +630,15 @@ export default function Dashboard() {
                           setContract(base);
                           setTradeTypePopupOpen(false);
                         }}
-                        className={`w-full text-left px-3 py-2 rounded-md transition-colors ${contract.category === t.id ? "bg-[var(--accent)]/10 border border-[var(--accent)]/20" : "hover:bg-white/5 border border-transparent"}`}
+                        className={`text-left p-2 rounded-lg transition-colors ${contract.category === t.id ? "bg-[var(--accent)]/10 border border-[var(--accent)]/20" : "hover:bg-white/5 border border-transparent"}`}
                       >
-                        <span className={`text-xs font-bold ${contract.category === t.id ? "text-[var(--accent)]" : "text-white"}`}>{t.label}</span>
-                        <span className="block text-[10px] text-[var(--text-muted)] mt-0.5">{t.desc}</span>
+                        <span className={`text-[11px] font-bold block ${contract.category === t.id ? "text-[var(--accent)]" : "text-white"}`}>{t.label}</span>
+                        <span className="text-[9px] text-[var(--text-muted)] leading-tight">{t.desc}</span>
                       </button>
                     ))}
                   </div>
-                )}
-              </div>
+                </div>
+              )}
               <div className="chart-plot h-full" style={{ minHeight: 0 }}>
                 {(() => {
                   const ticks = displayTicks;
@@ -622,30 +651,6 @@ export default function Dashboard() {
                   );
                 })()}
               </div>
-            </div>
-
-            {/* OHLC Strip */}
-            <div className="flex items-center gap-4 px-4 py-1.5 border-t border-[rgba(255,255,255,0.08)] aurora-glass shrink-0">
-              {(() => {
-                const ticks = displayTicks;
-                const prices = ticks.map((t: any) => t.price).filter(Boolean);
-                if (prices.length < 2) return <span className="text-[10px] text-[var(--text-muted)]">Awaiting OHLC data</span>;
-                const open = prices[prices.length - 1];
-                const high = Math.max(...prices);
-                const low = Math.min(...prices);
-                const close = prices[0];
-                return [
-                  { label: "O", value: open, color: "text-white" },
-                  { label: "H", value: high, color: "text-[var(--green)]" },
-                  { label: "L", value: low, color: "text-[var(--red)]" },
-                  { label: "C", value: close, color: "text-white" },
-                ].map((item) => (
-                  <div key={item.label} className="flex items-center gap-1">
-                    <span className="text-[9px] text-[var(--text-muted)] font-bold">{item.label}</span>
-                    <span className={`text-[11px] font-mono tabular-nums font-semibold ${item.color}`}>{Number(item.value).toFixed(decimalPlaces)}</span>
-                  </div>
-                ));
-              })()}
             </div>
           </div>
 
@@ -711,6 +716,7 @@ export default function Dashboard() {
             { id: "watchlist" as const, label: "Watchlist", icon: <Star className="w-3 h-3" /> },
             { id: "trades" as const, label: "Trades", icon: <History className="w-3 h-3" /> },
             { id: "prices" as const, label: "Prices", icon: <Clock className="w-3 h-3" /> },
+            { id: "ohlc" as const, label: "OHLC", icon: <BarChart3 className="w-3 h-3" /> },
           ]).map((tab) => (
             <button
               key={tab.id}
@@ -785,6 +791,42 @@ export default function Dashboard() {
                   })}
                 </div>
               )}
+            </div>
+          )}
+          {dataPopupTab === "ohlc" && (
+            <div className="p-3">
+              {(() => {
+                const ticks = displayTicks;
+                const prices = ticks.map((t: any) => t.price).filter(Boolean);
+                if (prices.length < 2) return <p className="text-xs text-[var(--text-muted)] text-center py-6">Awaiting OHLC data.</p>;
+                const open = prices[prices.length - 1];
+                const high = Math.max(...prices);
+                const low = Math.min(...prices);
+                const close = prices[0];
+                const range = high - low;
+                return (
+                  <div className="space-y-3">
+                    <div className="grid grid-cols-2 gap-2">
+                      {[
+                        { label: "Open", value: open, color: "text-white" },
+                        { label: "High", value: high, color: "text-[var(--green)]" },
+                        { label: "Low", value: low, color: "text-[var(--red)]" },
+                        { label: "Close", value: close, color: "text-white" },
+                      ].map((item) => (
+                        <div key={item.label} className="rounded-lg border border-[rgba(255,255,255,0.08)] p-2.5" style={{ background: 'rgba(255,255,255,0.03)' }}>
+                          <div className="text-[9px] uppercase tracking-widest text-[var(--text-muted)] font-bold mb-1">{item.label}</div>
+                          <div className={`text-sm font-bold font-mono tabular-nums ${item.color}`}>{Number(item.value).toFixed(decimalPlaces)}</div>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="rounded-lg border border-[rgba(255,255,255,0.08)] p-2.5" style={{ background: 'rgba(255,255,255,0.03)' }}>
+                      <div className="text-[9px] uppercase tracking-widest text-[var(--text-muted)] font-bold mb-1">Range</div>
+                      <div className="text-sm font-bold font-mono tabular-nums text-[var(--accent)]">{Number(range).toFixed(decimalPlaces)}</div>
+                    </div>
+                    <div className="text-[10px] text-[var(--text-muted)]">Based on last {prices.length} ticks</div>
+                  </div>
+                );
+              })()}
             </div>
           )}
         </div>

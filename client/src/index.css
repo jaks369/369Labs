@@ -404,21 +404,29 @@
 
   /* ─── Cards ─────────────────────────────────────────────── */
   .card {
-    background: var(--card);
+    background: rgba(255, 255, 255, 0.04);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
     border-radius: var(--radius);
     padding: 20px;
-    box-shadow: var(--elevation-1);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
     transition: box-shadow 200ms ease;
   }
   .card-hover {
-    background: var(--card);
+    background: rgba(255, 255, 255, 0.04);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
     border-radius: var(--radius);
     padding: 20px;
-    box-shadow: var(--elevation-1);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
     transition: box-shadow 200ms ease, transform 200ms ease;
   }
   .card-hover:hover {
-    box-shadow: var(--elevation-2);
+    background: rgba(255, 255, 255, 0.06);
+    border-color: rgba(255, 255, 255, 0.12);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
     transform: translateY(-1px);
   }
 
@@ -501,21 +509,33 @@
 
   /* ─── Surface Panels ────────────────────────────────────── */
   .panel {
-    background: var(--card);
+    background: rgba(255, 255, 255, 0.04);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
     border-radius: var(--radius);
-    box-shadow: var(--elevation-1);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
   }
   .panel-secondary {
-    background: var(--surface-secondary);
+    background: rgba(255, 255, 255, 0.03);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.06);
     border-radius: var(--radius);
   }
   .panel-elevated {
-    background: var(--surface-elevated);
+    background: rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
     border-radius: var(--radius);
-    box-shadow: var(--elevation-2);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
   }
   .surface-elevated {
-    background: var(--surface-elevated);
+    background: rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
     border-radius: var(--radius);
     box-shadow: var(--elevation-2);
   }
@@ -1286,9 +1306,12 @@
 
   /* ─── Floating Surface (Trade Studio terminal) ──────────── */
   .surface-floating {
-    background: var(--card);
+    background: rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
     border-radius: var(--radius);
-    box-shadow: var(--elevation-3);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
     position: relative;
   }
 
