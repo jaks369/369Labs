@@ -648,15 +648,40 @@ export default function Dashboard() {
                               </div>
                             )}
                             <div
-                              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg border ${derivStatus === "connected" ? "bg-[var(--green-soft)] border-[var(--green)]/25" : "bg-white/5 border-[var(--border)]"}`}
+                              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg border ${
+                                derivStatus === "connected"
+                                  ? "bg-[var(--green-soft)] border-[var(--green)]/25"
+                                  : derivStatus === "reconnecting"
+                                    ? "border-amber-400/40"
+                                    : "bg-white/5 border-[var(--border)]"
+                              }`}
+                              style={derivStatus === "reconnecting" ? { background: "rgba(251,191,36,0.10)" } : undefined}
                             >
                               <span
-                                className={`w-1.5 h-1.5 rounded-full ${derivStatus === "connected" ? "bg-[var(--green)] animate-live-pulse" : "bg-[var(--text-disabled)]"}`}
+                                className={`w-1.5 h-1.5 rounded-full ${
+                                  derivStatus === "connected"
+                                    ? "bg-[var(--green)] animate-live-pulse"
+                                    : derivStatus === "reconnecting"
+                                      ? "bg-amber-400 animate-pulse"
+                                      : "bg-[var(--text-disabled)]"
+                                }`}
                               />
                               <span
-                                className={`text-[10px] font-bold uppercase tracking-wider ${derivStatus === "connected" ? "text-[var(--green)]" : "text-[var(--text-muted)]"}`}
+                                className={`text-[10px] font-bold uppercase tracking-wider ${
+                                  derivStatus === "connected"
+                                    ? "text-[var(--green)]"
+                                    : derivStatus === "reconnecting"
+                                      ? "text-amber-400"
+                                      : "text-[var(--text-muted)]"
+                                }`}
                               >
-                                {derivStatus === "connected" ? "Feed Connected" : derivStatus === "needs_token" ? "Token Required" : "Reconnecting"}
+                                {derivStatus === "connected"
+                                  ? "Feed Connected"
+                                  : derivStatus === "needs_token"
+                                    ? "Token Required"
+                                    : derivStatus === "reconnecting"
+                                      ? "Feed Reconnecting"
+                                      : "Disconnected"}
                               </span>
                             </div>
                           </div>

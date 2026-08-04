@@ -55,6 +55,9 @@ const DERIV_APP_ID = (import.meta as any).env?.VITE_DERIV_APP_ID || "33V0MWtYaZL
 const DERIV_API_BASE = "https://api.derivws.com";
 const DERIV_WS_PUBLIC = "wss://api.derivws.com/trading/v1/options/ws/public";
 const DERIV_WS_V3 = "wss://ws.derivws.com/websockets/v3?app_id=1089";
+// If no tick has arrived for this long while symbols are subscribed, the live
+// feed is considered stale/frozen even if the socket itself is still open.
+const FEED_STALE_MS = 15000;
 
 class DerivWebSocketService {
   private ws: WebSocket | null = null;
@@ -70,6 +73,7 @@ class DerivWebSocketService {
   private subscribedSymbols: Set<string> = new Set();
   private backgroundSymbols: Set<string> = new Set();
   private tickBuffer: Map<string, Tick[]> = new Map();
+  private lastTickAt = 0;
   private pendingSubscriptionSymbols: string[] = [];
   private pendingRequests: Map<number, { resolve: (v: any) => void; reject: (e: Error) => void }> = new Map();
   private contractListeners: Map<number, (c: ContractUpdate) => void> = new Map();
@@ -905,6 +909,7 @@ class DerivWebSocketService {
     this.listeners.delete(listener);
   }
   private notifyTick(tick: Tick): void {
+    this.lastTickAt = Date.now();
     const buf = this.tickBuffer.get(tick.symbol) || [];
     buf.push(tick);
     if (buf.length > 2000) buf.shift();
@@ -941,6 +946,19 @@ class DerivWebSocketService {
   }
   public isConnected(): boolean {
     return this.ws !== null && this.ws.readyState === WebSocket.OPEN;
+  }
+  /**
+   * Feed health reflects whether live prices are actually flowing, not just
+   * whether a socket is open. When the dedicated tick socket is down (or has
+   * gone quiet for more than FEED_STALE_MS), the market is effectively frozen
+   * even though the auth socket may still report "connected".
+   */
+  public getFeedHealth(): { alive: boolean; lastTickAt: number; reconnecting: boolean } {
+    const reconnecting = this.tickReconnectAttempts > 0 || (this.authorized && this.tickWsReady === false);
+    const stale = this.lastTickAt > 0 && Date.now() - this.lastTickAt > FEED_STALE_MS;
+    const hasFeed = this.subscribedSymbols.size > 0 || this.backgroundSymbols.size > 0;
+    const alive = this.lastTickAt > 0 && !stale && hasFeed;
+    return { alive, lastTickAt: this.lastTickAt, reconnecting };
   }
   public isAuthorized(): boolean {
     return this.authorized;
