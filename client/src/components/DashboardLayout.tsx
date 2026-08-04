@@ -562,7 +562,9 @@ function DashboardLayoutContent({
               <button onClick={() => { setRiskDismissed(true); localStorage.setItem("risk-dismissed", "true"); }} className="text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors font-semibold px-2 shrink-0 text-xs cursor-pointer">✕</button>
             </div>
           )}
-          {children}
+          <div key={location} className="animate-page-fade flex-1">
+            {children}
+          </div>
         </main>
       </SidebarInset>
       {isMobile && <MobileTabBar />}

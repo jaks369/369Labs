@@ -1515,6 +1515,9 @@ export async function ensureSignalsTable(): Promise<void> {
         sampleSize int NOT NULL,
         winRate decimal(5,2) NOT NULL,
         confidence decimal(5,2) NOT NULL,
+        oosWinRate decimal(5,2) NULL,
+        oosSampleSize int NULL,
+        oosValidated varchar(8) NULL DEFAULT 'true',
         discoveredAt bigint NOT NULL,
         startEpoch bigint NOT NULL,
         endEpoch bigint NOT NULL,
@@ -1717,6 +1720,26 @@ export async function ensureSignalExpiryColumn(): Promise<void> {
     await pool.execute(`UPDATE signals SET expiresAt = discoveredAt + 3600 WHERE expiresAt = 0`);
   } catch (e) {
     console.error("[ensureSignalExpiryColumn] backfill failed", e);
+  }
+}
+
+// Idempotently add out-of-sample validation columns to existing signals tables
+// (older databases were created before OOS validation existed).
+export async function ensureSignalOosColumns(): Promise<void> {
+  const pool = getRawPool();
+  if (!pool) return;
+  const cols: [string, string][] = [
+    ["oosWinRate", "decimal(5,2) NULL"],
+    ["oosSampleSize", "int NULL"],
+    ["oosValidated", "varchar(8) NULL DEFAULT 'true'"],
+  ];
+  for (const [name, def] of cols) {
+    try {
+      await pool.execute(`ALTER TABLE signals ADD COLUMN ${name} ${def}`);
+      console.log(`[ensureSignalOosColumns] added ${name} column`);
+    } catch (e: any) {
+      if (e?.errno !== 1060) console.error(`[ensureSignalOosColumns] add ${name} failed`, e?.message || e);
+    }
   }
 }
 

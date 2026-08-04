@@ -79,16 +79,15 @@ function PageTransition({ children }: { children: React.ReactNode }) {
 
 function Router() {
   return (
-    <PageTransition>
-      <Switch>
-      <Route path={"/"} component={Home} />
-      <Route path={"/login"} component={Login} />
-      <Route path={"/forgot-password"} component={ForgotPassword} />
-      <Route path={"/reset"} component={ResetPassword} />
-      <Route path={"/verify-email"} component={VerifyEmail} />
-      <Route path={"/oauth/callback"} component={OAuthCallback} />
-      <Route path={"/onboarding"} component={Onboarding} />
-      <Route path={"/500"} component={ServerError} />
+    <Switch>
+      <Route path={"/"}><PageTransition><Home /></PageTransition></Route>
+      <Route path={"/login"}><PageTransition><Login /></PageTransition></Route>
+      <Route path={"/forgot-password"}><PageTransition><ForgotPassword /></PageTransition></Route>
+      <Route path={"/reset"}><PageTransition><ResetPassword /></PageTransition></Route>
+      <Route path={"/verify-email"}><PageTransition><VerifyEmail /></PageTransition></Route>
+      <Route path={"/oauth/callback"}><PageTransition><OAuthCallback /></PageTransition></Route>
+      <Route path={"/onboarding"}><PageTransition><Onboarding /></PageTransition></Route>
+      <Route path={"/500"}><PageTransition><ServerError /></PageTransition></Route>
       <Route path={"/dashboard"}><AppLayout><Dashboard /></AppLayout></Route>
       <Route path={"/markets"}><AppLayout><LazyLoad><LazyMarkets /></LazyLoad></AppLayout></Route>
       <Route path={"/order-book"}><AppLayout><OrderBook /></AppLayout></Route>
@@ -131,10 +130,9 @@ function Router() {
       <Route path={"/strategy-engine"}><AppLayout><StrategyEnginePage /></AppLayout></Route>
       <Route path={"/auto-reports"}><AppLayout><AutoReports /></AppLayout></Route>
       <Route path={"/backup"}><AppLayout><BackupRestore /></AppLayout></Route>
-      <Route path={"/404"} component={NotFound} />
-      <Route component={NotFound} />
-      </Switch>
-    </PageTransition>
+      <Route path={"/404"}><PageTransition><NotFound /></PageTransition></Route>
+      <Route><PageTransition><NotFound /></PageTransition></Route>
+    </Switch>
   );
 }
 

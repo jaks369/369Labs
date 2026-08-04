@@ -95,10 +95,10 @@ export class AIOrchestrator {
             id: generateFeedId(),
             symbol: insight.market,
             timestamp: insight.timestamp,
-            message: `${insight.market}: ${insight.message}`,
+            message: `${insight.displayName || insight.market}: ${insight.message}`,
             confidence: insight.confidence,
             reasoning: insight.reasoning,
-            type: "insight",
+            type: insight.type || "insight",
           });
         }
       }

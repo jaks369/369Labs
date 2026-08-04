@@ -1972,7 +1972,7 @@ When you use a tool, briefly note which specialist is acting (e.g. "[Market Anal
                   symbol: intent.symbol,
                   sampleSize: Math.min(2000, intent.durationMinutes * 20),
                   minWinRate: 55,
-                  patternType: intent.patternType as "digit_streak" | "digit_bias" | "even_odd_run" | "momentum_after_digit" | "any",
+                  patternType: intent.patternType as "digit_streak" | "digit_bias" | "even_odd_run" | "even_odd" | "over_under" | "match_diff" | "momentum_after_digit" | "any",
                 });
                 const msg2 = saved.length
                   ? `I watched ${intent.symbol} and found ${saved.length} repeatable pattern${saved.length > 1 ? "s" : ""} (win rates ${saved.map((s: any) => s.winRate + "%").join(", ")}). Check the AI Signals page - each has full evidence and a Backtest button.`
@@ -2193,7 +2193,7 @@ Return ONLY the JSON.`;
         }
       }),
 watch: protectedProcedure
-      .input(z.object({ symbol: z.string(), durationMinutes: z.number().default(30), patternType: z.enum(["any", "digit_streak", "digit_bias", "even_odd_run", "momentum_after_digit"]).default('any'), minWinRate: z.number().default(55) }))
+      .input(z.object({ symbol: z.string(), durationMinutes: z.number().default(30), patternType: z.enum(["any", "digit_streak", "digit_bias", "even_odd_run", "even_odd", "over_under", "match_diff", "momentum_after_digit"]).default('any'), minWinRate: z.number().default(55) }))
       .mutation(async ({ ctx, input }) => {
         try {
           const { runWatch } = await import('./signalScanner');

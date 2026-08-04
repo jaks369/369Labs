@@ -119,7 +119,9 @@ const WATCH_WORDS = ["watch", "scan", "monitor", "keep an eye", "keep eye", "loo
 const PATTERN_WORDS: Record<string, string> = {
   streak: "digit_streak", streaky: "digit_streak", consecutive: "digit_streak",
   bias: "digit_bias", digit: "digit_bias", lastdigit: "digit_bias", "last digit": "digit_bias",
-  parity: "even_odd_run", even: "even_odd_run", odd: "even_odd_run",
+  parity: "even_odd_run", even: "even_odd", odd: "even_odd",
+  over: "over_under", under: "over_under", "over/under": "over_under",
+  match: "match_diff", diff: "match_diff", "different": "match_diff",
 };
 
 export function detectWatchIntent(text: string): { symbol: string; durationMinutes: number; patternType: string } | null {
@@ -267,7 +269,7 @@ export const TOOL_DEFS = [
         properties: {
           symbol: { type: 'string' },
           durationMinutes: { type: 'number', description: 'How long to watch (minutes). Default 30.' },
-          patternType: { type: 'string', description: 'digit_streak | digit_bias | even_odd_run | any' },
+          patternType: { type: 'string', description: 'digit_streak | digit_bias | even_odd_run | even_odd | over_under | match_diff | any' },
           minWinRate: { type: 'number', description: 'Minimum win-rate percent to record a signal (default 55)' },
         },
         required: ['symbol'],

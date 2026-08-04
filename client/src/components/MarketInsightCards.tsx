@@ -5,6 +5,7 @@ interface InsightItem {
   id: string;
   type: string;
   market: string;
+  displayName?: string;
   message: string;
   confidence: number;
   reasoning: string[];
@@ -103,7 +104,7 @@ export default function MarketInsightCards({ data, loading }: MarketInsightCards
               <span className="text-[8px] text-[var(--text-muted)]">{formatTime(insight.timestamp)}</span>
             </div>
             <div className="flex items-center justify-between mb-1.5">
-              <span className="text-micro font-bold text-white">{insight.market}</span>
+              <span className="text-micro font-bold text-white">{insight.displayName || insight.market}</span>
               <span className="text-[8px] font-mono text-[var(--text-secondary)]"><IntegerStat value={insight.confidence} variant="always-positive" />%</span>
             </div>
             <p className="text-[9px] text-[var(--text-secondary)] leading-relaxed mb-1.5">{insight.message}</p>

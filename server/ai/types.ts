@@ -13,6 +13,8 @@ export interface MarketHealth {
 export interface AIInsight {
   id: string;
   market: string;
+  displayName?: string;
+  type?: string;
   message: string;
   confidence: number;
   reasoning: string[];

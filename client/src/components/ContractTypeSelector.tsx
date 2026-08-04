@@ -35,11 +35,12 @@ const CATEGORIES: { id: ContractCategory; label: string; icon: string; desc: str
 export default function ContractTypeSelector({ selection, onChange }: ContractTypeSelectorProps) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+  const portalRef = useRef<HTMLDivElement>(null);
   const [pos, setPos] = useState<{ top: number; left: number; width: number } | null>(null);
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+      if (ref.current && !ref.current.contains(e.target as Node) && portalRef.current && !portalRef.current.contains(e.target as Node)) setOpen(false);
     };
     const onScroll = () => setOpen(false);
     document.addEventListener("mousedown", handler);
@@ -95,6 +96,7 @@ export default function ContractTypeSelector({ selection, onChange }: ContractTy
 {/* Popover — portaled to body so it can't be clipped by scroll containers */}
         {open && pos && createPortal(
           <div
+            ref={portalRef}
             className="fixed z-[100] bg-[var(--card)] border border-[var(--border)] rounded-lg p-2 shadow-2xl"
             style={{ top: pos.top, left: pos.left, width: pos.width }}
           >

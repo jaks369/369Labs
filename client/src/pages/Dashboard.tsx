@@ -81,7 +81,7 @@ export default function Dashboard() {
   }, [urlSearch]);
   const priceQuery = trpc.market.getHistory.useQuery(
     { symbol: selectedSymbol, limit: 200 },
-    { enabled: historyTab === "prices", refetchInterval: historyTab === "prices" ? 3000 : false, staleTime: 30000, gcTime: 60000 },
+    { enabled: historyTab === "prices", staleTime: 30000, gcTime: 60000 },
   );
 
   // Live tick buffer: stream ticks from the Deriv WS so the Price History table

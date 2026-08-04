@@ -1,6 +1,7 @@
 import * as db from "../db";
 import { AIInsight } from "./types";
 import { lastDigitOf, getDecimalPlaces } from "@shared/lastDigit";
+import { getSymbolDisplayName } from "@shared/symbols";
 
 export class InsightEngine {
   async generateAll(): Promise<AIInsight[]> {
@@ -10,6 +11,7 @@ export class InsightEngine {
 
     for (const symbol of symbols) {
       try {
+        const displayName = getSymbolDisplayName(symbol);
         const decimals = getDecimalPlaces(symbol);
         const ticks = await db.getTickHistory(symbol, 100);
         if (ticks.length < 20) continue;
@@ -23,16 +25,37 @@ export class InsightEngine {
         const sorted = Object.entries(digitCounts).sort((a, b) => b[1] - a[1]);
         const hottest = sorted[0];
         const coldest = sorted[sorted.length - 1];
+        const distinctDigits = sorted.length;
 
-        if (hottest && Number(hottest[1]) > digits.length * 0.15) {
-          insights.push({
-            id: `digit_bias_${symbol}_${now}`,
-            market: symbol,
-            message: `${symbol}: Digit ${hottest[0]} appears ${((Number(hottest[1]) / digits.length) * 100).toFixed(0)}% of the time — significant bias.`,
-            confidence: Math.min(90, Math.round((Number(hottest[1]) / digits.length) * 100)),
-            reasoning: [`Digit ${hottest[0]} count: ${hottest[1]} / ${digits.length}`, `Expected ~10% per digit, actual ${((Number(hottest[1]) / digits.length) * 100).toFixed(0)}%`],
-            timestamp: now,
-          });
+        // Hottest first | second half splits to detect an actual forward-holding bias.
+        // A "100% digit 0" on a coarse 1-second index is a rounding/scale artifact, not
+        // an edge — so we require the digit to vary within the window before claiming bias.
+        if (
+          hottest &&
+          Number(hottest[1]) > digits.length * 0.15 &&
+          distinctDigits >= 3 &&
+          distinctDigits <= 8
+        ) {
+          const pct = (Number(hottest[1]) / digits.length) * 100;
+          const pctCold = (Number(coldest[1]) / digits.length) * 100;
+          const spread = pct - pctCold;
+          // Only surface as a candidate when the hot digit clearly dominates the cold one.
+          if (spread >= 8) {
+            insights.push({
+              id: `digit_bias_${symbol}_${now}`,
+              market: symbol,
+              displayName,
+              type: "digit_bias",
+              message: `${displayName}: Digit ${hottest[0]} appears ${pct.toFixed(0)}% of the time — a noticeable (not guaranteed) frequency tilt.`,
+              confidence: Math.min(80, Math.round(pct)),
+              reasoning: [
+                `Digit ${hottest[0]} count: ${hottest[1]} / ${digits.length} (${pct.toFixed(0)}%)`,
+                `Coldest digit ${coldest[0]}: ${coldest[1]} / ${digits.length} (${pctCold.toFixed(0)}%)`,
+                `Distinct digits sampled: ${distinctDigits}`,
+              ],
+              timestamp: now,
+            });
+          }
         }
 
         // Volatility regime detection
@@ -44,20 +67,24 @@ export class InsightEngine {
         const recentVar = recentPrices.reduce((a: number, b: number) => a + (b - recentMean) ** 2, 0) / recentPrices.length;
         const recentStd = Math.sqrt(recentVar);
 
-        if (recentStd > std * 1.5) {
+        if (recentStd > std * 1.5 && std > 0) {
           insights.push({
             id: `vol_spike_${symbol}_${now}`,
             market: symbol,
-            message: `${symbol}: Volatility spike detected — recent std ${recentStd.toFixed(4)} vs baseline ${std.toFixed(4)}. Caution advised.`,
+            displayName,
+            type: "volatility_change",
+            message: `${displayName}: Volatility spike detected — recent std ${recentStd.toFixed(4)} vs baseline ${std.toFixed(4)}. Caution advised.`,
             confidence: 75,
             reasoning: [`Recent std: ${recentStd.toFixed(4)}`, `Baseline std: ${std.toFixed(4)}`, `Ratio: ${(recentStd / std).toFixed(2)}x`],
             timestamp: now,
           });
-        } else if (recentStd < std * 0.5) {
+        } else if (recentStd < std * 0.5 && std > 0) {
           insights.push({
             id: `vol_compress_${symbol}_${now}`,
             market: symbol,
-            message: `${symbol}: Volatility compression — market noise decreased. Potential breakout imminent.`,
+            displayName,
+            type: "volatility_change",
+            message: `${displayName}: Volatility compression — market noise decreased. Potential breakout imminent.`,
             confidence: 65,
             reasoning: [`Recent std: ${recentStd.toFixed(4)}`, `Baseline std: ${std.toFixed(4)}`, `Ratio: ${(recentStd / std).toFixed(2)}x`],
             timestamp: now,
@@ -75,7 +102,9 @@ export class InsightEngine {
           insights.push({
             id: `trend_${symbol}_${now}`,
             market: symbol,
-            message: `${symbol}: ${changePct > 0 ? "Upward" : "Downward"} trend of ${Math.abs(changePct).toFixed(3)}% over last ${prices.length} ticks.`,
+            displayName,
+            type: "momentum_change",
+            message: `${displayName}: ${changePct > 0 ? "Upward" : "Downward"} trend of ${Math.abs(changePct).toFixed(3)}% over last ${prices.length} ticks.`,
             confidence: Math.min(80, Math.round(Math.abs(changePct) * 1000)),
             reasoning: [`First half avg: ${firstMean.toFixed(4)}`, `Second half avg: ${secondMean.toFixed(4)}`, `Change: ${changePct.toFixed(3)}%`],
             timestamp: now,

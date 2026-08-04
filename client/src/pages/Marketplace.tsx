@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
-import { CandlestickChart, Sparkles, TrendingUp, Clock, Bot, Loader2, ChevronDown, ChevronRight, FlaskConical, Users, Code, Shield, CheckCircle2, XCircle, BookOpen, Star, Upload } from "lucide-react";
+import { CandlestickChart, Sparkles, TrendingUp, Clock, Bot, Loader2, ChevronDown, ChevronRight, FlaskConical, Users, Code, Shield, ShieldCheck, CheckCircle2, XCircle, BookOpen, Star, Upload } from "lucide-react";
 import { useLocation } from "wouter";
 import { toast } from "@/components/Toast";
 import { getValidSymbols, getSymbolDisplayName } from "@/lib/symbols";
@@ -165,6 +165,12 @@ export default function Marketplace() {
                       <p className="text-sm text-[var(--text-secondary)] mt-1">{sig.description}</p>
                       <div className="flex items-center gap-4 mt-3 text-xs">
                         <span className="flex items-center gap-1 text-[var(--text-muted)]"><TrendingUp className="w-3 h-3" /> In-sample win rate <b className={win >= 65 ? "text-[var(--green)]" : "text-[var(--red)]"}>{win}%</b></span>
+                        {sig.oosWinRate != null && (
+                          <span className="flex items-center gap-1 text-[var(--text-muted)]" title="Out-of-sample: the rule held on a forward (unseen) portion of the tick window, so it is not curve-fit.">
+                            <ShieldCheck className="w-3 h-3" /> Out-of-sample <b className={Number(sig.oosWinRate) >= 60 ? "text-[var(--green)]" : "text-[var(--red)]"}>{sig.oosWinRate}%</b>
+                            <span className="text-[var(--text-muted)]">({sig.oosSampleSize ?? "—"} samples)</span>
+                          </span>
+                        )}
                         <span className="text-[var(--text-muted)]">Samples <b className="text-white">{sig.sampleSize}</b></span>
                         <span className="text-[var(--text-muted)]">Stake <b className="text-[var(--accent)]">${(Math.max(0.35, +(2 * (Number(sig.confidence) || 50) / 100)).toFixed(2))}</b> <span className="text-[var(--text-muted)]">(scaled)</span></span>
                         <span className="flex items-center gap-1 text-[var(--text-muted)]"><Clock className="w-3 h-3" /> {new Date((sig.discoveredAt || 0) * 1000).toLocaleString()}</span>

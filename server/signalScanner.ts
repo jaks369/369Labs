@@ -2,116 +2,213 @@ import { getDb, saveSignal as dbSaveSignal } from "./db";
 import { getTickHistory, normalizeSymbol } from "./aitools";
 import { notifyUser } from "./_core/notification";
 import { lastDigitOf, getDecimalPlaces } from "@shared/lastDigit";
+import { actionToContractType, simulateOutcome } from "@shared/contractSim";
 
 // Signals decay: digit patterns on volatile symbols lose edge quickly.
 // A signal is considered valid for this many minutes after discovery.
 export const SIGNAL_TTL_MIN = 60;
 
-// Pattern types the scanner knows how to detect over a tick window.
-export type PatternType = "digit_streak" | "digit_bias" | "even_odd_run" | "momentum_after_digit";
+// Pattern categories the scanner can detect over a tick window. Covers the
+// Digit "markets" offered by Deriv: Rise/Fall, Over/Under, Even/Odd, Match/Diff.
+export type PatternType =
+  | "digit_bias" // a specific digit -> next tick RISE / FALL
+  | "digit_streak" // 3× same digit in a row -> reversion
+  | "even_odd_run" // even/odd digit -> RISE / FALL
+  | "even_odd" // an even/odd digit -> next digit EVEN / ODD
+  | "over_under" // a specific digit -> next digit OVER / UNDER a barrier
+  | "match_diff" // a specific digit -> next digit MATCHES / DIFFERS
+  | "momentum_after_digit";
+export type PatternCat = "any" | PatternType;
 
 interface ScanOptions {
   userId: number;
   symbol: string;
   sampleSize?: number; // number of ticks to analyze
-  minWinRate?: number; // 0..100 threshold to record a signal
+  minWinRate?: number; // 0..100 threshold to record a signal (applied to BOTH in-sample and OOS)
   patternType?: PatternType | "any";
+  // Out-of-sample validation: the tick window is split; the rule is discovered
+  // on the earlier portion and must also hold forward on the later portion.
+  oosSplitRatio?: number; // in (0,1): fraction used for in-sample discovery
+  oosMinSamples?: number; // minimum validated samples to accept
 }
 
-// Analyze a window of {price, epoch} ticks and emit candidate signals.
+interface Candidate {
+  rule: any;
+  desc: string;
+  pType: PatternType;
+}
+
+// Analyze a window of {price, timestamp(ms)} ticks and emit candidate signals.
+// Each candidate is validated out-of-sample (forward half) before being returned.
 export async function scanTicks(opts: ScanOptions): Promise<any[]> {
   const symbol = normalizeSymbol(opts.symbol);
   const decimals = getDecimalPlaces(symbol);
   const sample = opts.sampleSize || 300;
   const minWin = opts.minWinRate ?? 55;
-  const ticks = await getTickHistory(symbol, sample); // [{price, timestamp(ms)}]
+  const oosRatio = opts.oosSplitRatio ?? 0.6;
+  const oosMin = opts.oosMinSamples ?? 20;
+  const ticks = await getTickHistory(symbol, sample); // [{price, timestamp(ms)}] old->new
   if (ticks.length < 30) return [];
 
-  const digits = ticks.map((t) => lastDigitOf(Number(t.price), decimals));
   const prices = ticks.map((t) => Number(t.price));
-  const found: any[] = [];
+  const digits = prices.map((p) => lastDigitOf(p, decimals));
   const nowSec = Math.floor(Date.now() / 1000);
 
-  const testRule = (rule: any, desc: string, pType: PatternType, evidenceTicks: any[]) => {
-    // Simulate the rule against the window: count how often entry -> next tick outcome matches action.
-    // A flat tick (next price === entry price) is a draw/refund on Deriv, counted as neither win nor loss.
-    let wins = 0,
-      losses = 0;
-    for (let i = 0; i < ticks.length - 1; i++) {
-      const triggered = evaluateTrigger(rule.condition, digits, i);
-      if (!triggered) continue;
-      const entry = prices[i];
-      const next = prices[i + 1];
-      const outcome = simulateOutcome(entry, next, rule.action.tradeType);
-      if (outcome === "win") wins++;
-      else if (outcome === "loss") losses++;
-    }
-    const total = wins + losses;
-    if (total >= 20 && (wins / total) * 100 >= minWin) {
-      found.push({
-        symbol,
-        title: `${desc} on ${symbol}`,
-        description: `${desc} on ${symbol}: triggered ${total} times, won ${wins} (${((wins / total) * 100).toFixed(1)}% win rate over last ${ticks.length} ticks).`,
-        rule,
-        evidence: evidenceTicks.slice(0, 60),
-        patternType: pType,
-        sampleSize: total,
-        winRate: ((wins / total) * 100).toFixed(2),
-        confidence: Math.min(99, Math.round((wins / total) * 100)).toFixed(2),
-        startEpoch: Math.floor(ticks[0].timestamp / 1000),
-        endEpoch: Math.floor(ticks[ticks.length - 1].timestamp / 1000),
-        discoveredAt: nowSec,
-        expiresAt: nowSec + SIGNAL_TTL_MIN * 60,
-        source: "watch",
-      });
-    }
+  // Split: in-sample discovery (earlier) vs out-of-sample forward test (later).
+  const splitIdx = Math.max(20, Math.floor(ticks.length * oosRatio));
+
+  // Evidence keeps the digit trail for human inspection, but is never used to
+  // tune the rule (it is the whole window, for display only).
+  const evidenceTicks = ticks.slice(-60).map((t) => ({
+    epoch: Math.floor(t.timestamp / 1000),
+    price: Number(t.price),
+    lastDigit: lastDigitOf(Number(t.price), decimals),
+  }));
+
+  const found: any[] = [];
+
+  const record = (
+    rule: any,
+    desc: string,
+    pType: PatternType,
+    inTotal: number,
+    inWins: number,
+    oosTotal: number,
+    oosWins: number,
+  ) => {
+    const inRate = (inWins / inTotal) * 100;
+    const oosRate = (oosWins / oosTotal) * 100;
+    // Require BOTH halves to clear the bar, so the pattern actually holds forward.
+    if (!(inRate >= minWin && oosRate >= minWin)) return;
+    if (oosTotal < oosMin) return;
+    found.push({
+      symbol,
+      title: `${desc} on ${symbol}`,
+      description: `${desc} on ${symbol}: in-sample ${inRate.toFixed(1)}% (${inTotal} triggers) — out-of-sample ${oosRate.toFixed(1)}% (${oosTotal} triggers) over last ${ticks.length} ticks.`,
+      rule,
+      evidence: evidenceTicks,
+      patternType: pType,
+      sampleSize: inTotal, // kept for backward-compat with existing UI ("samples")
+      winRate: inRate.toFixed(2),
+      confidence: Math.min(99, Math.round(oosRate * 100)).toFixed(2),
+      oos_sample_size: oosTotal,
+      oos_win_rate: oosRate.toFixed(2),
+      oosValidated: true,
+      startEpoch: Math.floor(ticks[Math.min(splitIdx, ticks.length - 1)].timestamp / 1000),
+      endEpoch: Math.floor(ticks[ticks.length - 1].timestamp / 1000),
+      discoveredAt: nowSec,
+      expiresAt: nowSec + SIGNAL_TTL_MIN * 60,
+      source: "watch",
+    });
   };
 
-  const evidenceTicks = ticks
-    .slice(-60)
-    .map((t) => ({ epoch: Math.floor(t.timestamp / 1000), price: Number(t.price), lastDigit: lastDigitOf(Number(t.price), decimals) }));
+  // For every candidate rule, run it on both halves and record if OOS holds.
+  const evaluate = (rule: any, desc: string, pType: PatternType) => {
+    const is = patternMatches(rule, prices, digits, 0, splitIdx, decimals);
+    const oos = patternMatches(rule, prices, digits, splitIdx, ticks.length, decimals);
+    const inTotal = is.wins + is.losses;
+    const oosTotal = oos.wins + oos.losses;
+    if (inTotal < 20 || oosTotal < oosMin) return;
+    record(rule, desc, pType, inTotal, is.wins, oosTotal, oos.wins);
+  };
+  // --- Digit market conversion of a trigger digit d into the NEXT-tick digit ----
+  // The "match" walks the tick stream: if the trigger digit occurs at tick i,
+  // we bet the contract and settle on tick i+1's outcome.
 
-  // 1. Digit bias: a specific digit appears, next tick rises/falls
+  // 1. Rise/Fall (Digit bias): after digit d, next price RISE / FALL
   for (let d = 0; d <= 9; d++) {
-    testRule(
+    evaluate(
       { condition: { indicator: "last_digit", comparison: "equals", count: 1, barrier: d }, action: { tradeType: "buy_rise" } },
       `After digit ${d}, price tends to RISE`,
       "digit_bias",
-      evidenceTicks,
     );
-    testRule(
+    evaluate(
       { condition: { indicator: "last_digit", comparison: "equals", count: 1, barrier: d }, action: { tradeType: "buy_fall" } },
       `After digit ${d}, price tends to FALL`,
       "digit_bias",
-      evidenceTicks,
     );
   }
 
-  // 2. Even/Odd run: after an even digit, next tick direction
-  testRule(
-    { condition: { indicator: "parity", comparison: "equals", count: 1, barrier: 0 }, action: { tradeType: "buy_rise" } },
-    `After an EVEN last digit, price tends to RISE`,
-    "even_odd_run",
-    evidenceTicks,
-  );
-  testRule(
-    { condition: { indicator: "parity", comparison: "equals", count: 1, barrier: 0 }, action: { tradeType: "buy_fall" } },
-    `After an EVEN last digit, price tends to FALL`,
-    "even_odd_run",
-    evidenceTicks,
-  );
+  // 1b. Even/Odd run: after an even digit, next price direction
+  for (const [parity, label] of [[0, "EVEN"], [1, "ODD"]] as [number, string][]) {
+    evaluate(
+      { condition: { indicator: "parity", comparison: "equals", count: 1, barrier: parity }, action: { tradeType: "buy_rise" } },
+      `After an ${label} last digit, price tends to RISE`,
+      "even_odd_run",
+    );
+    evaluate(
+      { condition: { indicator: "parity", comparison: "equals", count: 1, barrier: parity }, action: { tradeType: "buy_fall" } },
+      `After an ${label} last digit, price tends to FALL`,
+      "even_odd_run",
+    );
+  }
 
-  // 3. Digit streak: 3 same digits in a row, then revert
+  // 1c. Digit streak: 3 same digits in a row, then reversion
   for (let d = 0; d <= 9; d++) {
-    testRule(
+    evaluate(
       { condition: { indicator: "digit_streak", comparison: "appears_consecutively", count: 3, barrier: d }, action: { tradeType: "buy_fall" } },
       `After digit ${d} appears 3× in a row, price tends to FALL (reversion)`,
       "digit_streak",
-      evidenceTicks,
+    );
+  }
+
+  // 2. Even/Odd (EvenOdd): after trigger digit d, next tick digit EVEN / ODD
+  for (let d = 0; d <= 9; d++) {
+    evaluate(
+      { condition: { indicator: "last_digit", comparison: "equals", count: 1, barrier: d }, action: { tradeType: "buy_even" } },
+      `After digit ${d}, next digit tends to be EVEN`,
+      "even_odd",
+    );
+    evaluate(
+      { condition: { indicator: "last_digit", comparison: "equals", count: 1, barrier: d }, action: { tradeType: "buy_odd" } },
+      `After digit ${d}, next digit tends to be ODD`,
+      "even_odd",
+    );
+  }
+
+  // 3. Over/Under: after trigger digit d, next digit OVER / UNDER barrier d
+  for (let d = 0; d <= 9; d++) {
+    evaluate(
+      { condition: { indicator: "last_digit", comparison: "equals", count: 1, barrier: d }, action: { tradeType: "buy_over", barrier: d } },
+      `After digit ${d}, next digit tends to be OVER ${d}`,
+      "over_under",
+    );
+    evaluate(
+      { condition: { indicator: "last_digit", comparison: "equals", count: 1, barrier: d }, action: { tradeType: "buy_under", barrier: d } },
+      `After digit ${d}, next digit tends to be UNDER ${d}`,
+      "over_under",
+    );
+  }
+
+  // 4. Match/Diff: after trigger d, next digit MATCHES / DIFFERS from d
+  for (let d = 0; d <= 9; d++) {
+    evaluate(
+      { condition: { indicator: "last_digit", comparison: "equals", count: 1, barrier: d }, action: { tradeType: "buy_digit_match", barrier: d } },
+      `After digit ${d}, next digit tends to MATCH ${d}`,
+      "match_diff",
+    );
+    evaluate(
+      { condition: { indicator: "last_digit", comparison: "equals", count: 1, barrier: d }, action: { tradeType: "buy_digit_diff", barrier: d } },
+      `After digit ${d}, next digit tends to DIFFER from ${d}`,
+      "match_diff",
     );
   }
 
   return found;
+}
+
+// Evaluate a rule between tick index ranges [start, end). Trigger at i settles on i+1.
+function patternMatches(rule: any, prices: number[], digits: number[], start: number, end: number, decimals: number): { wins: number; losses: number } {
+  const { contractType, barrier } = actionToContractType(rule);
+  let wins = 0, losses = 0;
+  for (let i = start; i < end - 1; i++) {
+    if (!evaluateTrigger(rule.condition, digits, i)) continue;
+    const outcome = simulateOutcome(prices[i], prices[i + 1], contractType, barrier, decimals);
+    // "draw" (flat rise/fall tick) counts as neither winner nor loser on Deriv.
+    if (outcome === "win") wins++;
+    else if (outcome === "loss") losses++;
+  }
+  return { wins, losses };
 }
 
 function evaluateTrigger(cond: any, digits: number[], i: number): boolean {
@@ -124,15 +221,7 @@ function evaluateTrigger(cond: any, digits: number[], i: number): boolean {
   return false;
 }
 
-function simulateOutcome(entry: number, next: number, tradeType: string): "win" | "loss" | "draw" {
-  if (next === entry) return "draw";
-  const up = next > entry;
-  if (tradeType === "buy_rise") return up ? "win" : "loss";
-  if (tradeType === "buy_fall") return up ? "loss" : "win";
-  return "loss";
-}
-
-// Run a scan and persist any signals found.
+// Run a scan and persist any signals found (only OOS-validated signals survive).
 export async function runWatch(opts: ScanOptions): Promise<any[]> {
   const db = await getDb();
   if (!db) return [];
@@ -151,6 +240,9 @@ export async function runWatch(opts: ScanOptions): Promise<any[]> {
         sampleSize: f.sampleSize,
         winRate: f.winRate,
         confidence: f.confidence,
+        oosWinRate: Number(f.oos_win_rate),
+        oosSampleSize: f.oos_sample_size,
+        oosValidated: f.oosValidated ? "true" : "false",
         discoveredAt: f.discoveredAt,
         expiresAt: f.expiresAt,
         startEpoch: f.startEpoch,
@@ -162,8 +254,8 @@ export async function runWatch(opts: ScanOptions): Promise<any[]> {
         opts.userId,
         "signalDetected",
         "New Signal Detected",
-        `A ${f.patternType} pattern was found on ${f.symbol} with ${f.winRate}% win rate.`,
-        `Symbol: ${f.symbol}\nPattern: ${f.patternType}\nWin Rate: ${f.winRate}%\nConfidence: ${f.confidence}%\nDescription: ${f.description}`,
+        `A ${f.patternType} pattern was found on ${f.symbol} (${f.winRate}% in-sample, ${f.oos_win_rate}% out-of-sample).`,
+        `Symbol: ${f.symbol}\nPattern: ${f.patternType}\nIn-sample: ${f.winRate}%\nOut-of-sample: ${f.oos_win_rate}% (${f.oos_sample_size} samples)\nDescription: ${f.description}`,
       );
     } catch (e) {
       console.error("[signalScanner] save failed", e);

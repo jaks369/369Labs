@@ -198,6 +198,11 @@ export const signals = mysqlTable("signals", {
   sampleSize: int("sampleSize").notNull(),
   winRate: decimal("winRate", { precision: 5, scale: 2 }).notNull(),
   confidence: decimal("confidence", { precision: 5, scale: 2 }).notNull(),
+  // Out-of-sample validation results: the rule must hold on a forward (later)
+  // portion of the tick window before the signal is persisted.
+  oosWinRate: decimal("oosWinRate", { precision: 5, scale: 2 }),
+  oosSampleSize: int("oosSampleSize"),
+  oosValidated: varchar("oosValidated", { length: 8 }).default("true"),
   discoveredAt: bigint("discoveredAt", { mode: "number" }).notNull(),
   startEpoch: bigint("startEpoch", { mode: "number" }).notNull(),
   endEpoch: bigint("endEpoch", { mode: "number" }).notNull(),

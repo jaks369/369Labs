@@ -201,7 +201,7 @@ export default function Backtesting() {
               <input type="number" value={stake} onChange={e => setStake(Number(e.target.value))} min={0.35} step={0.5} className="w-full mt-1 bg-[var(--card)] border border-[var(--border)] rounded-lg px-3 py-2 text-white text-sm" />
             </div>
 
-            <Button onClick={runBacktestHandler} disabled={running || !selectedStrategyId} className="w-full bg-[var(--accent)] hover:bg-[var(--accent)] text-white">
+            <Button onClick={runBacktestHandler} disabled={running || (!selectedStrategyId && !signalRule)} className="w-full bg-[var(--accent)] hover:bg-[var(--accent)] text-white">
               {running ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Fetching ticks...</> : <><Play className="w-4 h-4 mr-2" /> Run Backtest</>}
             </Button>
           </div>
