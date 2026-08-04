@@ -185,8 +185,11 @@ class DerivWebSocketService {
       this.ws.onopen = () => {
         console.log(`[Deriv WS] Connected (${authenticated ? "authenticated" : "public"})`);
         this.reconnectAttempts = 0;
+        this.tickReconnectAttempts = 0;
         this.subErrors.clear();
         this.processPendingSubscriptions();
+        this.resubscribeAllTicks();
+        this.startKeepAlive(this.ws!, "main");
         if (authenticated) {
           this.authorized = true;
           this.notifyConnect();
@@ -400,6 +403,8 @@ class DerivWebSocketService {
       this.tickWs.onopen = () => {
         this.tickWsReady = true;
         this.processPendingSubscriptions();
+        this.resubscribeAllTicks();
+        this.startKeepAlive(this.tickWs!, "tick");
       };
       this.tickWs.onmessage = (event) => {
         try {
@@ -419,9 +424,51 @@ class DerivWebSocketService {
       this.tickWs.onclose = () => {
         this.tickWsReady = false;
         this.tickWs = null;
+        // The tick feed is what keeps charts/prices alive. If it drops, the
+        // auth socket can still report "connected" while the market appears
+        // frozen — so reconnect the feed instead of leaving it dead.
+        if (!this.intentionallyDisconnected) {
+          this.tickReconnectAttempts++;
+          const delay = Math.min(this.baseReconnectDelay * 2 ** (this.tickReconnectAttempts - 1), 15000);
+          setTimeout(() => this.ensureTickWs(), delay);
+        }
       };
+      this.startKeepAlive(this.tickWs, "tick");
     } catch (e) {
       console.error("[Deriv WS] Tick WS setup failed:", e);
+    }
+  }
+
+  private tickReconnectAttempts = 0;
+
+  private keepAliveTimers: ReturnType<typeof setInterval>[] = [];
+
+  private startKeepAlive(socket: WebSocket, label: string) {
+    try {
+      socket.send(JSON.stringify({ ping: 1, req_id: this.msgId++ }));
+    } catch {}
+    const timer = setInterval(() => {
+      if (socket.readyState !== WebSocket.OPEN) {
+        clearInterval(timer);
+        return;
+      }
+      try {
+        socket.send(JSON.stringify({ ping: 1, req_id: this.msgId++ }));
+      } catch {}
+    }, 15000);
+    this.keepAliveTimers.push(timer);
+    socket.addEventListener("close", () => clearInterval(timer));
+  }
+
+  private resubscribeAllTicks() {
+    const target = this.wsForTicks();
+    if (!target || target.readyState !== WebSocket.OPEN) return;
+    for (const symbol of this.subscribedSymbols) {
+      try {
+        target.send(JSON.stringify({ ticks: symbol, subscribe: 1, req_id: this.msgId++ }));
+      } catch (error) {
+        console.error("[Deriv WS] Failed to re-subscribe:", error);
+      }
     }
   }
 
@@ -429,17 +476,15 @@ class DerivWebSocketService {
     const pending = [...this.pendingSubscriptionSymbols];
     this.pendingSubscriptionSymbols = [];
     if (pending.length === 0) return;
-    setTimeout(() => {
-      for (const symbol of pending) {
-        if (!symbol || typeof symbol !== "string") continue;
-        try {
-          const target = this.authorized ? (this.tickWsReady ? this.tickWs : this.ws) : this.ws;
-          target?.send(JSON.stringify({ ticks: symbol, subscribe: 1, req_id: this.msgId++ }));
-        } catch (error) {
-          console.error("[Deriv WS] Failed to subscribe:", error);
-        }
+    for (const symbol of pending) {
+      if (!symbol || typeof symbol !== "string") continue;
+      try {
+        const target = this.authorized ? (this.tickWsReady ? this.tickWs : this.ws) : this.ws;
+        target?.send(JSON.stringify({ ticks: symbol, subscribe: 1, req_id: this.msgId++ }));
+      } catch (error) {
+        console.error("[Deriv WS] Failed to subscribe:", error);
       }
-    }, 500);
+    }
   }
 
   public fetchBalance() {
@@ -949,6 +994,8 @@ class DerivWebSocketService {
   }
   public disconnect(): void {
     this.intentionallyDisconnected = true;
+    this.keepAliveTimers.forEach((t) => clearInterval(t));
+    this.keepAliveTimers = [];
     if (this.ws) {
       this.ws.close();
       this.ws = null;
