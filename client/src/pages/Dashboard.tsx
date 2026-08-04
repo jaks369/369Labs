@@ -88,12 +88,10 @@ export default function Dashboard() {
     { enabled: historyTab === "prices", staleTime: 30000, gcTime: 60000 },
   );
 
-  // Live tick buffer: stream ticks from the Deriv WS so the Price History table
-  // updates in real time (newest on top, pushing older rows down).
-  // Always subscribe when on prices tab, but keep buffer on tab switch.
+  // Live tick buffer: stream ticks from the Deriv WS so the header price and
+  // Price History table update in real time (newest on top).
   const [liveTicks, setLiveTicks] = useState<any[]>([]);
   useEffect(() => {
-    if (historyTab !== "prices") return;
     derivWS.markBackground(selectedSymbol);
     const subId = derivWS.subscribe(selectedSymbol);
     const listener = {
@@ -113,7 +111,7 @@ export default function Dashboard() {
       derivWS.removeListener(listener);
       derivWS.unsubscribe(subId);
     };
-  }, [selectedSymbol, historyTab]);
+  }, [selectedSymbol]);
 
   // Clear live ticks when symbol changes (but NOT on tab switch).
   const prevSymbolRef = useRef(selectedSymbol);
