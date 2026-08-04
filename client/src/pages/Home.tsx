@@ -108,24 +108,24 @@ export default function Home() {
 
       <main className="relative z-10">
         {/* Hero — floats on top of the full-bleed photo */}
-        <section className="relative max-w-4xl mx-auto px-6 pt-24 pb-16 text-center">
+        <section className="relative max-w-4xl mx-auto px-6 pt-16 pb-8 text-center">
           <motion.div initial="hidden" animate="visible" variants={stagger}>
-            <motion.h1 variants={fadeUp} className="text-4xl md:text-6xl font-bold text-white mb-5 tracking-tight leading-[1.1]">
+            <motion.h1 variants={fadeUp} className="text-3xl md:text-5xl font-bold text-white mb-4 tracking-tight leading-[1.1]">
               AI Intelligence,<br />
               <span className="aurora-gradient-text">Automated Execution.</span>
             </motion.h1>
-            <motion.p variants={fadeUp} className="text-base mb-8 text-[var(--text-secondary)] max-w-lg mx-auto leading-relaxed">
+            <motion.p variants={fadeUp} className="text-sm mb-6 text-[var(--text-secondary)] max-w-lg mx-auto leading-relaxed">
               One platform for AI strategy intelligence, automated execution, and trading infrastructure — analyze, build, test, and run without building your own stack.
             </motion.p>
-            <motion.div variants={fadeUp} className="flex flex-col sm:flex-row gap-3 justify-center items-center">
-              <button onClick={() => navigate("/login")} className="px-8 py-2.5 w-full sm:w-auto text-sm font-semibold rounded-full text-black transition-all hover:brightness-110" style={{ background: 'linear-gradient(135deg, #4ade80, #8b5cf6)' }}>Get Started Free</button>
-              <button onClick={() => navigate("/dashboard")} className="px-8 py-2.5 w-full sm:w-auto text-sm font-medium rounded-full border border-[rgba(255,255,255,0.15)] text-[var(--text-secondary)] hover:border-[rgba(255,255,255,0.25)] hover:text-white transition-all">Live Demo</button>
+            <motion.div variants={fadeUp} className="flex flex-col sm:flex-row gap-2 justify-center items-center">
+              <button onClick={() => navigate("/login")} className="px-6 py-2 w-full sm:w-auto text-sm font-semibold rounded-full text-black transition-all hover:brightness-110" style={{ background: 'linear-gradient(135deg, #4ade80, #8b5cf6)' }}>Get Started Free</button>
+              <button onClick={() => navigate("/dashboard")} className="px-6 py-2 w-full sm:w-auto text-sm font-medium rounded-full border border-[rgba(255,255,255,0.15)] text-[var(--text-secondary)] hover:border-[rgba(255,255,255,0.25)] hover:text-white transition-all">Live Demo</button>
             </motion.div>
           </motion.div>
         </section>
 
         {/* Stat strip */}
-        <section className="max-w-5xl mx-auto px-6 pb-16">
+        <section className="max-w-5xl mx-auto px-6 pb-8">
           <motion.div initial={{ opacity: 0, y: 12 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="flex md:grid md:grid-cols-6 gap-3 overflow-x-auto pb-2 snap-x snap-mandatory scrollbar-none">
             {[
               { label: "Active Bots", value: "—", demo: true },
@@ -135,17 +135,17 @@ export default function Home() {
               { label: "Signals Today", value: "—", demo: true },
               { label: "Uptime", value: "99.9%", demo: false },
             ].map((stat, i) => (
-              <div key={i} className="glass-surface rounded-lg p-3 text-center snap-start shrink-0 w-[120px] md:w-auto">
-                <div className="text-lg font-bold text-white tabular-nums">{stat.value}</div>
-                <div className="text-[11px] text-[var(--text-muted)] mt-0.5">{stat.label}</div>
-                {stat.demo && <div className="text-[9px] text-[var(--accent)] mt-1">Demo data</div>}
+              <div key={i} className="glass-surface rounded-lg p-2.5 text-center snap-start shrink-0 w-[110px] md:w-auto">
+                <div className="text-base font-bold text-white tabular-nums">{stat.value}</div>
+                <div className="text-[10px] text-[var(--text-muted)] mt-0.5">{stat.label}</div>
+                {stat.demo && <div className="text-[8px] text-[var(--accent)] mt-0.5">Demo data</div>}
               </div>
             ))}
           </motion.div>
         </section>
 
         {/* Trust bar */}
-        <section className="max-w-4xl mx-auto px-6 pb-20">
+        <section className="max-w-4xl mx-auto px-6 pb-8">
           <motion.div initial={{ opacity: 0 }} whileInView={{ opacity: 1 }} viewport={{ once: true }} className="flex flex-wrap justify-center gap-4 text-[11px] text-[var(--text-muted)]">
             <span className="flex items-center gap-1.5"><Server className="w-3 h-3" /> Powered by Deriv API</span>
             <span className="flex items-center gap-1.5"><Shield className="w-3 h-3" /> AES-256 encrypted</span>
@@ -154,7 +154,7 @@ export default function Home() {
           </motion.div>
 </section>
 
-        <footer className="border-t border-[rgba(255,255,255,0.08)] py-6 px-6">
+        <footer className="border-t border-[rgba(255,255,255,0.08)] py-4 px-6">
           <div className="max-w-6xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
             <div className="flex items-center gap-2">
               <div className="w-4 h-4 rounded flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #4ade80, #8b5cf6)' }}>
