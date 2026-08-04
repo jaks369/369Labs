@@ -94,9 +94,14 @@ export default function TerminalContextPanel(props: TerminalContextPanelProps) {
 
   const isRiseFall = contract.category === "rise_fall";
   const isFall = isRiseFall && contract.direction === "fall";
-  const accountBadge = accountType === "real" ? "REAL" : accountType === "demo" ? "DEMO" : tokenStatus === "invalid" ? "UNAUTHORIZED" : "NO TOKEN";
+  const accountBadge =
+    accountType === "real" ? "REAL"
+    : accountType === "demo" ? "DEMO"
+    : tokenStatus === "connected" ? "LIVE"
+    : tokenStatus === "invalid" ? "UNAUTHORIZED"
+    : "NO TOKEN";
   const accountBadgeCls =
-    accountType === "real" ? "badge-gray" : accountType === "demo" ? "badge-accent" : tokenStatus === "invalid" ? "badge-red" : "badge-gray";
+    accountType === "real" ? "badge-gray" : accountType === "demo" ? "badge-accent" : tokenStatus === "connected" ? "badge-green" : tokenStatus === "invalid" ? "badge-red" : "badge-gray";
 
   const buyLabel = (() => {
     switch (contract.category) {

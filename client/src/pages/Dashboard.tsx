@@ -433,15 +433,17 @@ export default function Dashboard() {
                 >
                   connected
                 </span>
-              )}
+)}
             </div>
-            <Button onClick={() => setShowTokenModal(true)} className="btn btn-primary gap-2 w-full sm:w-auto">
-              <Zap className="w-4 h-4 shrink-0" /> <span className="sm:inline">Connect</span>
-            </Button>
-            <Button onClick={() => setShowSymbolPicker((s) => !s)} className="btn btn-outline gap-2 w-full sm:w-auto">
-              <Activity className="w-4 h-4 shrink-0" /> <span className="truncate max-w-[100px] sm:max-w-none">{selectedDisplay}</span>
-              <ChevronDown className={`w-4 h-4 shrink-0 transition-transform ${showSymbolPicker ? "rotate-180" : ""}`} />
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button onClick={() => setShowSymbolPicker((s) => !s)} className="btn btn-outline gap-2 w-full sm:w-auto">
+                <Activity className="w-4 h-4 shrink-0" /> <span className="truncate max-w-[100px] sm:max-w-none">{selectedDisplay}</span>
+                <ChevronDown className={`w-4 h-4 shrink-0 transition-transform ${showSymbolPicker ? "rotate-180" : ""}`} />
+              </Button>
+              <Button onClick={() => setShowTokenModal(true)} className="btn btn-primary gap-2 w-full sm:w-auto">
+                <Zap className="w-4 h-4 shrink-0" /> <span className="sm:inline">Connect</span>
+              </Button>
+            </div>
           </div>
           <div className="flex items-center gap-2 overflow-x-auto scrollbar-none">
             <button
