@@ -65,11 +65,12 @@ class DerivWebSocketService {
   private tickWsReady = false;
   private listeners: Set<TickStreamListener> = new Set();
   private reconnectAttempts = 0;
-  private maxReconnectAttempts = 5;
-  private baseReconnectDelay = 3000;
+  private maxReconnectAttempts = 8;
+  private baseReconnectDelay = 800;
   private msgId = 1;
   private apiToken: string | null = null;
   private authorized = false;
+  private cachedOtpUrl: string | null = null;
   private subscribedSymbols: Set<string> = new Set();
   private backgroundSymbols: Set<string> = new Set();
   private tickBuffer: Map<string, Tick[]> = new Map();
@@ -806,10 +807,18 @@ class DerivWebSocketService {
     if (this.reconnectAttempts < this.maxReconnectAttempts) {
       this.reconnectAttempts++;
       console.log(`[Deriv WS] Reconnect attempt ${this.reconnectAttempts}/${this.maxReconnectAttempts}`);
-      const delay = this.baseReconnectDelay * 2 ** (this.reconnectAttempts - 1);
+      const delay = Math.min(this.baseReconnectDelay * 2 ** (this.reconnectAttempts - 1), 10000);
       setTimeout(() => {
+        // Cheap fast path: the OTP URL is still valid for a while, so reopen
+        // the authenticated socket directly instead of re-running the two REST
+        // calls (fetchAccounts + fetchOtpUrl) that make recovery slow.
         if (this.apiToken) {
-          this.connectWithOtp(this.apiToken).catch(() => this.connectPublic());
+          if (this.cachedOtpUrl) {
+            this.authorized = false;
+            this.connectWs(this.cachedOtpUrl, true);
+          } else {
+            this.connectWithOtp(this.apiToken).catch(() => this.connectPublic());
+          }
         } else {
           this.connectPublic();
         }
@@ -1060,6 +1069,7 @@ class DerivWebSocketService {
           this.apiMode = "v1";
           const { url, accountType } = await this.fetchOtpUrl(account.account_id);
           this.lastAccountType = accountType;
+          this.cachedOtpUrl = url;
           this.disconnect();
           this.connectWs(url, true);
         })(),

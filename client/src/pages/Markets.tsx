@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
-import { BarChart3, Search, RefreshCw, TrendingUp, TrendingDown, Minus, Loader2, ArrowRight } from "lucide-react";
+import { BarChart3, Search, RefreshCw, TrendingUp, TrendingDown, Minus, ArrowRight } from "lucide-react";
 import { derivWS } from "@/services/derivWebSocket";
 import { getAllSymbols, getSymbolDisplayName } from "@shared/symbols";
 import { PageContainer, PageSection } from "@/components/PageSection";
@@ -215,6 +215,7 @@ export default function Markets() {
                   const h = healthMap[sym];
                   const isHot = hotSet.has(sym);
                   const hasSignal = signals.some((s: any) => s.symbol === sym);
+                  const isLive = !!p && p.spark.length > 0;
                   const vol = h?.volatility || volMemo[sym] || null;
                   const trend = h?.trend != null ? h.trend : p ? (p.change >= 0.05 ? 1 : p.change <= -0.05 ? -1 : 0) : 0;
                   const score = h?.score;
@@ -230,7 +231,7 @@ export default function Markets() {
                         </div>
                       </td>
                       <td className="text-right font-mono tabular-nums text-white">
-                        {p ? Number(p.price).toFixed(decimalPlacesMemo[sym]) : <Loader2 className="w-3 h-3 animate-spin inline text-[var(--text-muted)]" />}
+                        {p ? Number(p.price).toFixed(decimalPlacesMemo[sym]) : <span className="text-[var(--text-disabled)]">—</span>}
                       </td>
                       <td className={`text-right font-mono tabular-nums font-bold ${p ? (p.change >= 0 ? "text-[var(--green)]" : "text-[var(--red)]") : "text-[var(--text-muted)]"}`}>
                         {p ? `${p.change >= 0 ? "+" : ""}${Number(p.change).toFixed(2)}%` : "—"}
@@ -252,11 +253,14 @@ export default function Markets() {
                         {p ? <SparklineMini points={p.spark} up={p.change >= 0} /> : <span className="w-16 inline-block" />}
                       </td>
                       <td>
-                        {hasSignal ? (
-                          <span className="text-[9px] uppercase tracking-wider font-bold px-1.5 py-0.5 rounded bg-[var(--green)]/15 text-[var(--green)] border border-[var(--green)]/25">Live</span>
+                        {isLive ? (
+                          <span className="inline-flex items-center gap-1 text-[9px] uppercase tracking-wider font-bold px-1.5 py-0.5 rounded bg-[var(--green)]/15 text-[var(--green)] border border-[var(--green)]/25">
+                            <span className="w-1.5 h-1.5 rounded-full bg-[var(--green)] animate-pulse" /> Live
+                          </span>
                         ) : (
                           <span className="text-[var(--text-disabled)] text-caption">—</span>
                         )}
+                        {hasSignal && <span className="ml-1.5 text-[9px] uppercase tracking-wider font-bold px-1.5 py-0.5 rounded bg-[var(--accent)]/15 text-[var(--accent)] border border-[var(--accent-border)]">AI</span>}
                       </td>
                     </tr>
                   );
