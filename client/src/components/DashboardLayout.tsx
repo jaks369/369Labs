@@ -221,6 +221,7 @@ export default function DashboardLayout({
 
   return (
     <SidebarProvider
+      defaultOpen={false}
       style={
         {
           "--sidebar-width": `${sidebarWidth}px`,
@@ -325,21 +326,21 @@ function DashboardLayoutContent({
   return (
     <div className="flex min-h-screen bg-[var(--bg)] overflow-x-hidden">
       {/* Desktop sidebar — hidden on mobile */}
-      <div className="relative hidden md:block" ref={sidebarRef}>
+      <div className="relative hidden md:block sticky top-0 h-screen z-40" ref={sidebarRef}>
         <Sidebar
           collapsible="icon"
-          className="border-r border-[var(--border)] bg-[var(--bg)]"
+          className="border-r border-[rgba(139,92,246,0.12)] bg-[rgba(10,10,26,0.85)] backdrop-blur-xl"
           disableTransition={isResizing}
         >
-          <SidebarHeader className="h-14 justify-center border-b border-[var(--border)]">
+          <SidebarHeader className="h-14 justify-center border-b border-[rgba(139,92,246,0.12)]">
             <div className="flex items-center gap-1 px-3">
               <button onClick={() => setLocation("/dashboard")} className="flex items-center gap-2.5 transition-all cursor-pointer group flex-1 text-left">
-                <div className="w-8 h-8 bg-[var(--accent)] rounded-lg flex items-center justify-center shrink-0">
-                  <Activity className="w-5 h-5 text-[#0A0C10]" />
+                <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0" style={{ background: 'linear-gradient(135deg, #4ade80, #8b5cf6)' }}>
+                  <Activity className="w-5 h-5 text-white" />
                 </div>
                 {!isCollapsed && (
                   <div className="flex flex-col">
-                    <span className="font-bold text-lg tracking-tight text-[var(--text-primary)]">
+                    <span className="font-bold text-lg tracking-tight text-white">
                       369Labs
                     </span>
                     <span className="text-[10px] font-medium text-[var(--text-disabled)] tracking-wider uppercase flex items-center gap-1">
@@ -375,6 +376,17 @@ function DashboardLayoutContent({
                 </button>
               </div>
             )}
+            {isCollapsed && (
+              <div className="mb-2 flex justify-center">
+                <button
+                  onClick={() => setLocation("/")}
+                  className={`aurora-nav-item ${location === "/" ? "active" : ""}`}
+                  title="Home"
+                >
+                  <Home className="w-[18px] h-[18px]" />
+                </button>
+              </div>
+            )}
 
             {navGroups.map((group) => {
               const isExpanded = expandedGroups[group.title] || false;
@@ -393,9 +405,25 @@ function DashboardLayoutContent({
                   </button>
                 )}
                 {(isCollapsed || isExpanded) && (
-                  <SidebarMenu className="gap-px">
+                  <SidebarMenu className={`gap-px ${isCollapsed ? 'flex flex-col items-center' : ''}`}>
                     {group.items.map((item) => {
                       const isActive = location === item.path;
+                      if (isCollapsed) {
+                        return (
+                          <SidebarMenuItem key={item.path}>
+                            <SidebarMenuButton
+                              isActive={isActive}
+                              onClick={() => setLocation(item.path)}
+                              tooltip={item.label}
+                              className={`aurora-nav-item ${isActive ? "active" : ""}`}
+                            >
+                              <item.icon
+                                className={`w-[18px] h-[18px] ${isActive ? "text-[#4ade80]" : ""}`}
+                              />
+                            </SidebarMenuButton>
+                          </SidebarMenuItem>
+                        );
+                      }
                       return (
                         <SidebarMenuItem key={item.path}>
                           <SidebarMenuButton
@@ -446,7 +474,7 @@ function DashboardLayoutContent({
             )}
           </SidebarContent>
 
-          <SidebarFooter className="p-2 border-t border-[var(--border)] space-y-1.5">
+          <SidebarFooter className="p-2 border-t border-[rgba(139,92,246,0.12)] space-y-1.5">
             {!isCollapsed && (
               <CollapsibleSection defaultOpen={false}>
                 <div className="space-y-1.5">
@@ -539,22 +567,22 @@ function DashboardLayoutContent({
         </Sidebar>
       </div>
 
-      <SidebarInset className="bg-[var(--bg)] flex flex-col max-w-full">
+      <SidebarInset className="bg-[var(--bg)] flex flex-col max-w-full overflow-hidden">
         {/* Mobile header — hamburger opens sidebar sheet */}
         {isMobile && (
-          <div className="flex border-b border-[var(--border)] h-12 items-center justify-between bg-[var(--bg)] px-4 sticky top-0 z-40">
+          <div className="flex border-b border-[rgba(139,92,246,0.12)] h-12 items-center justify-between bg-[rgba(10,10,26,0.9)] backdrop-blur-xl px-4 sticky top-0 z-40">
             <div className="flex items-center gap-2">
               <SidebarTrigger className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-white/5 rounded-md" />
-              <div className="w-6 h-6 bg-[var(--accent)] rounded flex items-center justify-center">
-                <Activity className="w-3.5 h-3.5 text-[#0A0C10]" />
+              <div className="w-6 h-6 rounded flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #4ade80, #8b5cf6)' }}>
+                <Activity className="w-3.5 h-3.5 text-white" />
               </div>
-              <span className="font-bold text-sm text-[var(--text-primary)]">369Labs</span>
+              <span className="font-bold text-sm text-white">369Labs</span>
             </div>
           </div>
         )}
         <main className={`flex-1 overflow-y-auto ${isMobile ? "pb-16" : ""}`}>
           {!riskDismissed && (
-            <div className="flex items-center gap-3 bg-[var(--bg)] border-b border-[var(--border)] px-4 py-1.5 text-micro leading-snug text-[var(--text-muted)]">
+            <div className="flex items-center gap-3 bg-[rgba(10,10,26,0.6)] border-b border-[rgba(139,92,246,0.12)] px-4 py-1.5 text-micro leading-snug text-[var(--text-muted)]">
               <span className="font-semibold uppercase tracking-wider text-[var(--text-muted)]/60 shrink-0 text-[9px]">Risk</span>
               <span className="flex-1">
                 Trading involves substantial risk. 369Labs is an analysis tool, not financial advice.

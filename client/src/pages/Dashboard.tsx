@@ -1,11 +1,11 @@
 import { useAuth } from "@/_core/hooks/useAuth";
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { CurrencyStat, PercentStat, IntegerStat, SignedCurrencyStat } from "@/components/LiveStat";
 import { formatMoney, formatSignedMoney, formatNumber } from "@/lib/format";
 import { PageContainer, PageSection } from "@/components/PageSection";
-import { Loader2, Activity, Zap, ChevronDown, Wallet, AlertCircle, BookOpen, BarChart3, Bot, Brain, Star, Search } from "lucide-react";
+import { Loader2, Activity, Zap, ChevronDown, Wallet, AlertCircle, BookOpen, BarChart3, Bot, Brain, Star, Search, Clock, TrendingUp, TrendingDown, History } from "lucide-react";
 import { useLocation, useSearch } from "wouter";
 import { useIsMobile } from "@/hooks/useMobile";
 import MobileTerminal from "@/pages/MobileTerminal";
@@ -16,9 +16,10 @@ import DerivTokenModal from "@/components/DerivTokenModal";
 import { ContractSelection } from "@/components/ContractTypeSelector";
 import { VOLATILITY_SYMBOLS, getSymbolDisplayName } from "@/lib/symbols";
 import { getDecimalPlaces, lastDigitOf } from "@shared/lastDigit";
-import WatchlistPanel from "@/components/WatchlistPanel";
 import TerminalContextPanel from "@/components/TerminalContextPanel";
 import { FilterPill } from "@/components/ui/filter-pill";
+import PopupPanel from "@/components/PopupPanel";
+import WatchlistPanel from "@/components/WatchlistPanel";
 
 const ALL_FALLBACK: DerivSymbol[] = VOLATILITY_SYMBOLS.map((s) => ({ ...s, decimalPlaces: 2 }));
 
@@ -70,6 +71,9 @@ export default function Dashboard() {
     onSuccess: () => alertsQuery.refetch(),
   });
   const [historyTab, setHistoryTab] = useState<"positions" | "trades" | "prices">("positions");
+  const [watchlistPopupOpen, setWatchlistPopupOpen] = useState(false);
+  const [historyPopupOpen, setHistoryPopupOpen] = useState(false);
+  const [pricesPopupOpen, setPricesPopupOpen] = useState(false);
 
   const urlSearch = useSearch();
   useEffect(() => {
@@ -392,587 +396,233 @@ export default function Dashboard() {
   }
 
   return (
-    <PageContainer className="page-container">
+    <div className="terminal-page">
       <PageSection>
-        <div className="flex flex-col gap-3 mb-6">
-          {/* Top row: balance + buttons */}
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div className="flex items-center gap-2 px-3 py-2 rounded-lg panel-secondary">
-              <Wallet className="w-4 h-4 text-[var(--green)]" />
-              <span className="text-xl font-bold text-[var(--text-primary)] font-mono tabular-nums">
-                <CurrencyStat value={balance} currency={balanceInfo?.currency || "USD"} /> {balanceInfo?.currency || "USD"}
-              </span>
-              {balanceInfo?.accountType ? (
-                <span
-                  className="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold"
-                  style={{
-                    background: balanceInfo.accountType === "demo" ? "var(--accent-soft)" : "var(--surface-elevated)",
-                    color: balanceInfo.accountType === "demo" ? "var(--accent)" : "var(--text-secondary)",
-                  }}
-                >
-                  {balanceInfo.accountType}
-                </span>
-              ) : tokenStatus === "invalid" ? (
-                <span
-                  className="inline-flex items-center px-[6px] py-[2px] rounded text-xs font-semibold"
-                  style={{ background: "rgba(239,68,68,0.15)", color: "var(--red)" }}
-                >
-                  {tokenError?.includes("invalid") || tokenError?.includes("expired") ? "BAD TOKEN" : "NOT CONNECTED"}
-                </span>
-              ) : tokenStatus === "none" ? (
-                <span
-                  className="inline-flex items-center px-[6px] py-[2px] rounded text-xs font-semibold"
-                  style={{ background: "rgba(107,114,128,0.15)", color: "var(--text-disabled)" }}
-                >
-                  no token
-                </span>
-              ) : (
-                <span
-                  className="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold"
-                  style={{ background: "rgba(34,197,94,0.15)", color: "var(--green)" }}
-                >
-                  connected
-                </span>
-)}
-            </div>
-            <div className="flex items-center gap-2">
-              <Button onClick={() => setShowSymbolPicker((s) => !s)} className="btn btn-outline gap-2 w-full sm:w-auto">
-                <Activity className="w-4 h-4 shrink-0" /> <span className="truncate max-w-[100px] sm:max-w-none">{selectedDisplay}</span>
-                <ChevronDown className={`w-4 h-4 shrink-0 transition-transform ${showSymbolPicker ? "rotate-180" : ""}`} />
-              </Button>
-              <Button onClick={() => setShowTokenModal(true)} className="btn btn-primary gap-2 w-full sm:w-auto">
-                <Zap className="w-4 h-4 shrink-0" /> <span className="sm:inline">Connect</span>
-              </Button>
-            </div>
-          </div>
-          <div className="flex items-center gap-2 overflow-x-auto scrollbar-none">
-            <button
-              onClick={() => navigate("/bots")}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-[var(--card)] border border-[var(--border)] hover:bg-[var(--surface-elevated)] transition-all text-caption text-[var(--text-secondary)] hover:text-white cursor-pointer"
-            >
-              <Bot className="w-5 h-5 text-[var(--accent)]" />
-              <span className="hidden sm:inline text-[13px] font-medium">Bots</span>
-            </button>
-            <button
-              onClick={() => navigate("/backtesting")}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-[var(--card)] border border-[var(--border)] hover:bg-[var(--surface-elevated)] transition-all text-caption text-[var(--text-secondary)] hover:text-white cursor-pointer"
-            >
-              <BarChart3 className="w-5 h-5 text-[var(--accent)]" />
-              <span className="hidden sm:inline text-[13px] font-medium">Backtest</span>
-            </button>
-            <button
-              onClick={() => navigate("/journal")}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-[var(--card)] border border-[var(--border)] hover:bg-[var(--surface-elevated)] transition-all text-caption text-[var(--text-secondary)] hover:text-white cursor-pointer"
-            >
-              <BookOpen className="w-5 h-5 text-[var(--green)]" />
-              <span className="hidden sm:inline text-[13px] font-medium">Journal</span>
-            </button>
-            <button
-              onClick={() => navigate("/ai-assistant")}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-[var(--card)] border border-[var(--border)] hover:bg-[var(--surface-elevated)] transition-all text-caption text-[var(--text-secondary)] hover:text-white cursor-pointer"
-            >
-              <Brain className="w-5 h-5 text-[var(--accent)]" />
-              <span className="hidden sm:inline text-[13px] font-medium">AI</span>
-            </button>
-          </div>
-        </div>
-      </PageSection>
-
-      {tokenError && (
-        <PageSection>
-          <div className="flex items-start justify-between gap-3 bg-[var(--red-soft)] border border-[var(--red)]/30 text-[var(--red)] text-sm rounded-[var(--radius)] px-4 py-3 mb-6">
-            <div className="flex items-start gap-2">
-              <AlertCircle className="w-5 h-5 shrink-0 mt-0.5" />
-              <div>
-                <p className="font-bold text-sm mb-1">Deriv Authentication Failed</p>
-                <p className="text-xs leading-relaxed">{tokenError}</p>
-              </div>
-            </div>
-            <Button
-              onClick={() => setShowTokenModal(true)}
-              className="shrink-0 bg-[var(--red)]/20 text-[var(--red)] border border-[var(--red)]/40 text-xs px-3 py-1 rounded-lg hover:bg-[var(--red)] hover:text-white transition-colors"
-            >
-              UPDATE TOKEN
-            </Button>
-          </div>
-        </PageSection>
-      )}
-
-      <PageSection>
-        {/* Workstation grid: watchlist | chart+history | order+intelligence */}
-        <div className={`grid grid-cols-1 lg:grid-cols-12 gap-4 xl:gap-6 ${watchlistOpen ? "" : "lg:grid-cols-1"}`}>
-          {/* Watchlist column — dense, sticky on desktop, hidden on mobile (sheet available) */}
-          {watchlistOpen && (
-          <div className="hidden lg:block lg:col-span-3 xl:col-span-2 xl:sticky xl:top-4 xl:self-start xl:max-h-[calc(100vh-120px)] animate-slideInRight">
-            <WatchlistPanel
-              compact
-              header={false}
-              selectedSymbol={selectedSymbol}
-              onSelect={(s) => {
-                setSelectedSymbol(s);
-                setShowSymbolPicker(false);
-              }}
-            />
-          </div>
-          )}
-
-          {/* Chart & History — the workspace */}
-          <div className={`space-y-4 xl:space-y-6 ${watchlistOpen ? "lg:col-span-9 xl:col-span-7" : "lg:col-span-12"}`}>
-            {/* Chart workspace — the heart of the OS */}
-            <div className={showSymbolPicker ? "bg-[var(--card)] rounded-xl p-4 elevation-1" : "chart-workspace"}>
-              {showSymbolPicker ? (
-                <div className="max-h-[300px] md:max-h-[420px] overflow-y-auto space-y-4">
-                  <div className="sticky top-0 z-10 pb-2 -mt-2 pt-2 bg-[var(--card)] space-y-2">
-                    <div className="relative">
-                      <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" />
-                      <input
-                        type="text"
-                        value={symbolSearch}
-                        onChange={(e) => setSymbolSearch(e.target.value)}
-                        placeholder="Search symbols..."
-                        className="input w-full text-sm pl-9"
-                      />
-                    </div>
-                    <div className="flex gap-1.5 overflow-x-auto scrollbar-none">
-                      {(
-                        [
-                          ["all", "All"],
-                          ["vol", "Volatility"],
-                          ["1s", "1s Indices"],
-                          ["boom", "Boom & Crash"],
-                          ["other", "Other Markets"],
-                        ] as [typeof marketFilter, string][]
-                      ).map(([key, label]) => (
-                        <FilterPill key={key} active={marketFilter === key} onClick={() => setMarketFilter(key)} label={label} />
-                      ))}
-                    </div>
-                  </div>
-                  {(() => {
-                    const q = symbolSearch.toLowerCase().trim();
-                    const filter = (s: DerivSymbol) => !q || s.symbol.toLowerCase().includes(q) || s.displayName.toLowerCase().includes(q);
-                    const inFilter = (s: DerivSymbol) =>
-                      marketFilter === "all" ||
-                      (marketFilter === "1s" && (vol1sSymbols.some((x) => x.symbol === s.symbol))) ||
-                      (marketFilter === "vol" && volRegularSymbols.some((x) => x.symbol === s.symbol)) ||
-                      (marketFilter === "boom" && boomCrashSymbols.some((x) => x.symbol === s.symbol)) ||
-                      (marketFilter === "other" && otherSymbols.some((x) => x.symbol === s.symbol));
-                    const sections: [string, DerivSymbol[]][] = [
-                      ["Volatility 1s Indices", vol1sSymbols.filter((s) => filter(s) && inFilter(s))],
-                      ["Volatility Indices", volRegularSymbols.filter((s) => filter(s) && inFilter(s))],
-                      ["Boom & Crash Indices", boomCrashSymbols.filter((s) => filter(s) && inFilter(s))],
-                      ["Other Markets", otherSymbols.filter((s) => filter(s) && inFilter(s))],
-                    ];
-                    const hasAny = sections.some(([, list]) => list.length > 0);
-                    if (!hasAny) {
-                      return <p className="text-sm text-[var(--text-muted)] text-center py-8">No symbols match "{symbolSearch}"</p>;
-                    }
-                    return (
-                      <div className="space-y-4">
-                        {sections.map(([title, list]) =>
-                          list.length > 0 ? (
-                            <div key={title}>
-                              <h3 className="section-title mb-2">{title}</h3>
-                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                                {list.map((s) => (
-                                  <button
-                                    key={s.symbol}
-                                    onClick={() => {
-                                      setSelectedSymbol(s.symbol);
-                                      setShowSymbolPicker(false);
-                                      setSymbolSearch("");
-                                    }}
-                                    className={`text-left px-3 py-2 rounded-lg text-xs font-semibold truncate transition-all ${selectedSymbol === s.symbol ? "bg-[var(--accent-soft)] text-[var(--accent-hover)] border border-[var(--accent-border)]" : "bg-white/5 text-[var(--text-secondary)] hover:bg-white/10 border border-transparent"}`}
-                                  >
-                                    <span className="block truncate" title={s.displayName || s.symbol}>{s.displayName || s.symbol}</span>
-                                  </button>
-                                ))}
-                              </div>
-                            </div>
-                          ) : null,
-                        )}
+        {/* Compact Terminal Layout: Chart + Trade Panel */}
+        <div className="terminal-layout">
+          {/* Left: Chart area */}
+          <div className="terminal-chart-area">
+            {/* Chart Header: Symbol + Price + Balance + Status */}
+            <div className="flex items-center justify-between px-4 py-2 border-b border-[rgba(139,92,246,0.12)] bg-[rgba(10,10,26,0.5)] backdrop-blur-sm shrink-0">
+              <div className="flex items-center gap-3">
+                {/* Symbol Picker */}
+                <div className="relative">
+                  <button
+                    onClick={() => setShowSymbolPicker((s) => !s)}
+                    className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/5 border border-[rgba(139,92,246,0.15)] hover:border-[rgba(139,92,246,0.3)] transition-colors text-sm font-semibold text-white"
+                  >
+                    <Activity className="w-3.5 h-3.5 text-[var(--accent)]" />
+                    <span className="truncate max-w-[120px]">{selectedDisplay}</span>
+                    <ChevronDown className={`w-3.5 h-3.5 text-[var(--text-muted)] transition-transform ${showSymbolPicker ? "rotate-180" : ""}`} />
+                  </button>
+                  {/* Symbol Picker Dropdown */}
+                  {showSymbolPicker && (
+                    <div className="symbol-picker-dropdown aurora-glass-panel rounded-lg p-2 shadow-2xl">
+                      <div className="relative mb-2">
+                        <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" />
+                        <input
+                          type="text"
+                          value={symbolSearch}
+                          onChange={(e) => setSymbolSearch(e.target.value)}
+                          placeholder="Search symbols..."
+                          className="w-full bg-[var(--bg)] border border-[var(--border)] rounded-md pl-8 pr-3 py-1.5 text-xs text-white placeholder-[var(--text-muted)]"
+                        />
                       </div>
-                    );
-                  })()}
-                </div>
-              ) : (
-                <div className="chart-plot" style={{ minHeight: "520px" }}>
-                  {(() => {
-                    const ticks = displayTicks;
-                    const last = ticks[0];
-                    const prev = ticks[1] || ticks[0];
-                    const price = last?.price;
-                    const digits = ticks.filter((t: any) => typeof t.lastDigit === "number").map((t: any) => t.lastDigit);
-                    const digitCounts: Record<number, number> = {};
-                    for (const d of digits) digitCounts[d] = (digitCounts[d] || 0) + 1;
-                    const hottest = digits.length >= 10 ? Object.entries(digitCounts).sort((a, b) => b[1] - a[1])[0] : null;
-                    const hotPct = hottest ? Math.round((Number(hottest[1]) / digits.length) * 100) : 0;
-                    const up = prev && price !== undefined ? price >= prev : null;
-                    return (
-                      <>
-                        <div className="flex flex-wrap items-center justify-between gap-3 px-5 pt-4 pb-3 border-b border-[var(--border)]">
-                          <div className="flex items-center gap-3">
-                            <div className="flex items-center gap-2">
-                              <span className="w-2 h-2 rounded-full bg-[var(--green)] animate-live-pulse" />
-                              <span className="text-[10px] font-bold uppercase tracking-widest text-[var(--text-muted)]">Live</span>
-                            </div>
-                            <button
-                              onClick={() => setWatchlistOpen((o) => !o)}
-                              className="hidden xl:flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white/5 border border-[var(--border)] text-[10px] font-bold uppercase tracking-wider text-[var(--text-muted)] hover:text-white transition-colors cursor-pointer"
-                              title={watchlistOpen ? "Hide watchlist" : "Show watchlist"}
-                            >
-                              <Star className={`w-3 h-3 ${watchlistOpen ? "text-[var(--accent)]" : ""}`} />
-                              Watchlist
-                            </button>
-                            <div className="flex items-baseline gap-2">
-                              <span
-                                className="text-xl font-bold font-mono tabular-nums text-white"
-                                style={{ color: up === null ? undefined : up ? "var(--green)" : "var(--red)" }}
-                              >
-                                {price !== undefined ? Number(price).toFixed(decimalPlaces) : "—"}
-                              </span>
-                              {up !== null && <span className={`text-sm font-bold ${up ? "text-[var(--green)]" : "text-[var(--red)]"}`}>{up ? "▲" : "▼"}</span>}
-                            </div>
-                            <div className="hidden sm:flex items-center gap-2 px-2.5 py-1 rounded-lg bg-white/5 border border-[var(--border)]">
-                              <span className="text-[10px] uppercase tracking-wider text-[var(--text-muted)] font-bold">Last Digit</span>
-                              <span className="text-sm font-bold font-mono" style={{ color: last?.lastDigit >= 5 ? "var(--green)" : "var(--red)" }}>
-                                {last?.lastDigit ?? "—"}
-                              </span>
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            {hottest && (
-                              <div className="hidden md:flex items-center gap-2 px-2.5 py-1 rounded-lg bg-[var(--accent-soft)] border border-[var(--accent-border)]">
-                                <span className="text-[10px] uppercase tracking-wider text-[var(--accent-hover)] font-bold">Hottest Digit</span>
-                                <span className="text-sm font-bold font-mono text-[var(--accent-hover)]">{hottest[0]}</span>
-                                <span className="text-xs font-mono text-[var(--accent-hover)]/70">{hotPct}%</span>
-                              </div>
-                            )}
-                            <div
-                              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg border ${
-                                derivStatus === "connected"
-                                  ? "bg-[var(--green-soft)] border-[var(--green)]/25"
-                                  : derivStatus === "reconnecting"
-                                    ? "border-amber-400/40"
-                                    : "bg-white/5 border-[var(--border)]"
-                              }`}
-                              style={derivStatus === "reconnecting" ? { background: "rgba(251,191,36,0.10)" } : undefined}
-                            >
-                              <span
-                                className={`w-1.5 h-1.5 rounded-full ${
-                                  derivStatus === "connected"
-                                    ? "bg-[var(--green)] animate-live-pulse"
-                                    : derivStatus === "reconnecting"
-                                      ? "bg-amber-400 animate-pulse"
-                                      : "bg-[var(--text-disabled)]"
-                                }`}
-                              />
-                              <span
-                                className={`text-[10px] font-bold uppercase tracking-wider ${
-                                  derivStatus === "connected"
-                                    ? "text-[var(--green)]"
-                                    : derivStatus === "reconnecting"
-                                      ? "text-amber-400"
-                                      : "text-[var(--text-muted)]"
-                                }`}
-                              >
-                                {derivStatus === "connected"
-                                  ? "Feed Connected"
-                                  : derivStatus === "needs_token"
-                                    ? "Token Required"
-                                    : derivStatus === "reconnecting"
-                                      ? "Feed Reconnecting"
-                                      : "Disconnected"}
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-                        <TickChart symbol={selectedSymbol} maxDataPoints={50} decimalPlaces={decimalPlaces} />
-                      </>
-                    );
-                  })()}
-                </div>
-              )}
-            </div>
-
-            {/* Session stats strip — dense table-like cells */}
-            <div className="panel px-3 py-2">
-              <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-xs">
-                <div className="flex items-center gap-2 min-w-[140px]">
-                  <span className="text-[10px] uppercase tracking-widest text-[var(--text-muted)] font-bold">Session P&L</span>
-                  <span className={`font-mono tabular-nums font-bold text-[13px] ${todayPnl >= 0 ? "text-[var(--green)]" : "text-[var(--red)]"}`}>
-                    {formatSignedMoney(todayPnl)}
-                  </span>
-                </div>
-                <div className="flex items-center gap-2 min-w-[110px]">
-                  <span className="text-[10px] uppercase tracking-widest text-[var(--text-muted)] font-bold">Win Rate</span>
-                  <span className="font-mono tabular-nums font-bold text-[13px] text-white">{todaySettled.length ? `${todayWinRate}%` : "—"}</span>
-                </div>
-                <div className="flex items-center gap-2 min-w-[100px]">
-                  <span className="text-[10px] uppercase tracking-widest text-[var(--text-muted)] font-bold">Trades</span>
-                  <span className="font-mono tabular-nums font-bold text-[13px] text-white">{todayTrades.length}</span>
-                </div>
-                <div className="flex items-center gap-2 min-w-[130px]">
-                  <span className="text-[10px] uppercase tracking-widest text-[var(--text-muted)] font-bold">Best Symbol</span>
-                  <span className="font-mono tabular-nums font-bold text-[13px] text-[var(--accent)]">
-                    {bestSymbol ? getSymbolDisplayName(bestSymbol[0]) : "—"}
-                  </span>
-                  {bestSymbol && (
-                    <span className={`font-mono tabular-nums ${Number(bestSymbol[1]) >= 0 ? "text-[var(--green)]" : "text-[var(--red)]"}`}>
-                      ({Number(bestSymbol[1]).toFixed(1)})
-                    </span>
-                  )}
-                </div>
-                <div className="flex items-center gap-2 min-w-[120px]">
-                  <span className="text-[10px] uppercase tracking-widest text-[var(--text-muted)] font-bold">Best Type</span>
-                  <span className="font-mono tabular-nums font-bold text-[13px] text-white">{bestType ? bestType[0] : "—"}</span>
-                </div>
-                <div className="flex items-center gap-2 min-w-[120px]">
-                  <span className="text-[10px] uppercase tracking-widest text-[var(--text-muted)] font-bold">Avg W/L</span>
-                  <span className="font-mono tabular-nums font-bold text-[13px]">
-                    <span className="text-[var(--green)]">{formatSignedMoney(avgWin)}</span>
-                    <span className="text-[var(--text-muted)]"> / </span>
-                    <span className="text-[var(--red)]">{formatMoney(-avgLoss)}</span>
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            {/* Positions / Trades / Price panel */}
-            <div className="panel">
-              <div className="panel-header">
-                <h2 className="text-lg font-bold">Positions</h2>
-                <div className="tabs">
-                  <button onClick={() => setHistoryTab("positions")} className={`tab ${historyTab === "positions" ? "active" : ""}`}>
-                    Positions
-                  </button>
-                  <button onClick={() => setHistoryTab("trades")} className={`tab ${historyTab === "trades" ? "active" : ""}`}>
-                    History
-                  </button>
-                  <button onClick={() => setHistoryTab("prices")} className={`tab ${historyTab === "prices" ? "active" : ""}`}>
-                    Price History
-                  </button>
-                </div>
-              </div>
-              {historyTab === "positions" ? (
-                <div>
-                  {(() => {
-                    const allTrades = tradesQuery.data || [];
-                    const open = allTrades.filter((t: any) => t.result === "pending");
-                    if (open.length === 0) {
-                      return (
-                        <div className="p-4">
-                          <div className="empty-state">
-                            <p className="empty-state-desc">No open positions. Place a trade to see it live here.</p>
-                          </div>
-                        </div>
-                      );
-                    }
-                    return (
-                      <div>
-                        {open.map((t: any) => (
-                          <div key={t.id} className="flex items-center justify-between px-4 py-3 border-b border-[var(--border)] last:border-0">
-                            <div className="flex items-center gap-3 min-w-0">
-                              <span className="w-1.5 h-1.5 rounded-full bg-[var(--accent)] animate-live-pulse shrink-0" />
-                              <div className="min-w-0">
-                                <p className="text-sm font-bold text-white truncate">
-                                  {getSymbolDisplayName(t.symbol)} <span className="text-[var(--text-muted)] font-medium">{t.contractType}</span>
-                                </p>
-                                <p className="text-xs text-[var(--text-muted)]">
-                                  #{t.contractId} · {new Date(t.entryTime).toLocaleTimeString()}
-                                </p>
-                              </div>
-                            </div>
-                            <div className="text-right shrink-0">
-                              <p className="text-sm font-bold text-[var(--accent)] font-mono tabular-nums">{formatMoney(t.stake)}</p>
-                              <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">
-                                entry {formatNumber(t.entryPrice, decimalPlaces)}
-                              </p>
-                            </div>
-                          </div>
+                      <div className="flex gap-1 mb-2 overflow-x-auto scrollbar-none">
+                        {([
+                          ["all", "All"],
+                          ["vol", "Vol"],
+                          ["1s", "1s"],
+                          ["boom", "B&C"],
+                          ["other", "Other"],
+                        ] as [typeof marketFilter, string][]).map(([key, label]) => (
+                          <button key={key} onClick={() => setMarketFilter(key)} className={`px-2 py-0.5 rounded text-[10px] font-bold whitespace-nowrap transition-colors ${marketFilter === key ? "bg-[var(--accent)] text-black" : "text-[var(--text-muted)] hover:text-white"}`}>
+                            {label}
+                          </button>
                         ))}
                       </div>
-                    );
-                  })()}
+                      <div className="max-h-[240px] overflow-y-auto space-y-2">
+                        {(() => {
+                          const q = symbolSearch.toLowerCase().trim();
+                          const filter = (s: DerivSymbol) => !q || s.symbol.toLowerCase().includes(q) || s.displayName.toLowerCase().includes(q);
+                          const inFilter = (s: DerivSymbol) =>
+                            marketFilter === "all" ||
+                            (marketFilter === "1s" && vol1sSymbols.some((x) => x.symbol === s.symbol)) ||
+                            (marketFilter === "vol" && volRegularSymbols.some((x) => x.symbol === s.symbol)) ||
+                            (marketFilter === "boom" && boomCrashSymbols.some((x) => x.symbol === s.symbol)) ||
+                            (marketFilter === "other" && otherSymbols.some((x) => x.symbol === s.symbol));
+                          const sections: [string, DerivSymbol[]][] = [
+                            ["Volatility 1s", vol1sSymbols.filter((s) => filter(s) && inFilter(s))],
+                            ["Volatility", volRegularSymbols.filter((s) => filter(s) && inFilter(s))],
+                            ["Boom & Crash", boomCrashSymbols.filter((s) => filter(s) && inFilter(s))],
+                            ["Other", otherSymbols.filter((s) => filter(s) && inFilter(s))],
+                          ];
+                          return sections.map(([title, list]) =>
+                            list.length > 0 ? (
+                              <div key={title}>
+                                <div className="text-[9px] uppercase tracking-widest text-[var(--text-muted)] font-bold px-1 mb-1">{title}</div>
+                                <div className="grid grid-cols-2 gap-1">
+                                  {list.map((s) => (
+                                    <button
+                                      key={s.symbol}
+                                      onClick={() => { setSelectedSymbol(s.symbol); setShowSymbolPicker(false); setSymbolSearch(""); }}
+                                      className={`text-left px-2 py-1 rounded text-[11px] font-semibold truncate transition-all ${selectedSymbol === s.symbol ? "bg-[var(--accent-soft)] text-[var(--accent-hover)]" : "text-[var(--text-secondary)] hover:bg-white/5"}`}
+                                    >
+                                      {s.displayName || s.symbol}
+                                    </button>
+                                  ))}
+                                </div>
+                              </div>
+                            ) : null,
+                          );
+                        })()}
+                      </div>
+                    </div>
+                  )}
                 </div>
-              ) : historyTab === "trades" ? (
-                <div>
-                  {/* Live trade activity log */}
-                  <div className="p-4 border-b border-[var(--border)]">
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-micro font-bold text-[var(--text-muted)] uppercase tracking-wider">Live Activity</span>
-                      <span className="inline-flex items-center gap-1.5">
-                        <span className="w-1.5 h-1.5 rounded-full bg-[var(--green)] animate-pulse-dot" />
-                        <span className="text-[10px] text-[var(--text-muted)]">realtime</span>
+                {/* Live Price */}
+                {(() => {
+                  const ticks = displayTicks;
+                  const last = ticks[0];
+                  const prev = ticks[1] || ticks[0];
+                  const price = last?.price;
+                  const up = prev && price !== undefined ? price >= prev : null;
+                  return (
+                    <div className="flex items-baseline gap-2">
+                      <span
+                        className="text-lg font-bold font-mono tabular-nums text-white"
+                        style={{ color: up === null ? undefined : up ? "var(--green)" : "var(--red)" }}
+                      >
+                        {price !== undefined ? Number(price).toFixed(decimalPlaces) : "—"}
+                      </span>
+                      {up !== null && <span className={`text-xs font-bold ${up ? "text-[var(--green)]" : "text-[var(--red)]"}`}>{up ? "▲" : "▼"}</span>}
+                    </div>
+                  );
+                })()}
+                {/* Last Digit */}
+                {(() => {
+                  const last = displayTicks[0];
+                  return last?.lastDigit !== undefined ? (
+                    <div className="hidden sm:flex items-center gap-1 px-2 py-0.5 rounded bg-white/5 border border-[var(--border)]">
+                      <span className="text-[9px] uppercase text-[var(--text-muted)] font-bold">D</span>
+                      <span className="text-xs font-bold font-mono" style={{ color: last.lastDigit >= 5 ? "var(--green)" : "var(--red)" }}>
+                        {last.lastDigit}
                       </span>
                     </div>
-                    {tradeLogs.length === 0 ? (
-                      <p className="text-xs text-[var(--text-muted)]">No trade activity yet. Place a trade to see live logs here.</p>
-                    ) : (
-                      <div className="space-y-1.5 max-h-[160px] overflow-y-auto">
-                        {tradeLogs.map((log, i) => (
-                          <div key={i} className="flex items-center gap-2 text-xs font-mono">
-                            <span className={`shrink-0 w-1.5 h-1.5 rounded-full ${log.kind === "ok" ? "bg-[var(--green)]" : "bg-[var(--red)]"}`} />
-                            <span className="text-[var(--text-muted)] shrink-0">{log.time.toLocaleTimeString()}</span>
-                            <span className={`truncate ${log.kind === "ok" ? "text-[var(--green)]" : "text-[var(--red)]"}`}>{log.text}</span>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
+                  ) : null;
+                })()}
+              </div>
+              <div className="flex items-center gap-3">
+                {/* Session Stats (compact inline) */}
+                <div className="hidden md:flex items-center gap-3 text-[11px]">
+                  <span className="text-[var(--text-muted)]">P&L <span className={`font-mono font-bold ${todayPnl >= 0 ? "text-[var(--green)]" : "text-[var(--red)]"}`}>{formatSignedMoney(todayPnl)}</span></span>
+                  <span className="text-[var(--text-muted)]">WR <span className="font-mono font-bold text-white">{todaySettled.length ? `${todayWinRate}%` : "—"}</span></span>
+                  <span className="text-[var(--text-muted)]">N <span className="font-mono font-bold text-white">{todayTrades.length}</span></span>
+                </div>
+                {/* Balance */}
+                <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white/5 border border-[var(--border)]">
+                  <Wallet className="w-3.5 h-3.5 text-[var(--green)]" />
+                  <span className="text-sm font-bold font-mono tabular-nums text-white">
+                    <CurrencyStat value={balance} currency={balanceInfo?.currency || "USD"} />
+                  </span>
+                  <span className="text-[10px] text-[var(--text-muted)]">{balanceInfo?.currency || "USD"}</span>
+                </div>
+                {/* Connection Status */}
+                <div className={`hidden sm:flex items-center gap-1.5 px-2 py-0.5 rounded ${derivStatus === "connected" ? "bg-[var(--green-soft)]" : "bg-white/5 border border-[var(--border)]"}`}>
+                  <span className={`w-1.5 h-1.5 rounded-full ${derivStatus === "connected" ? "bg-[var(--green)] animate-live-pulse" : "bg-[var(--text-disabled)]"}`} />
+                  <span className={`text-[10px] font-bold uppercase ${derivStatus === "connected" ? "text-[var(--green)]" : "text-[var(--text-muted)]"}`}>
+                    {derivStatus === "connected" ? "Live" : "Offline"}
+                  </span>
+                </div>
+                {/* Quick Access Popups */}
+                <div className="hidden md:flex items-center gap-1">
+                  <button onClick={() => setWatchlistPopupOpen(true)} className="flex items-center gap-1 px-2 py-0.5 rounded bg-white/5 border border-[var(--border)] text-[10px] font-bold text-[var(--text-muted)] hover:text-white hover:border-[rgba(139,92,246,0.3)] transition-colors" title="Watchlist">
+                    <Star className="w-3 h-3" /> Watchlist
+                  </button>
+                  <button onClick={() => setHistoryPopupOpen(true)} className="flex items-center gap-1 px-2 py-0.5 rounded bg-white/5 border border-[var(--border)] text-[10px] font-bold text-[var(--text-muted)] hover:text-white hover:border-[rgba(139,92,246,0.3)] transition-colors" title="Trade History">
+                    <History className="w-3 h-3" /> History
+                  </button>
+                  <button onClick={() => setPricesPopupOpen(true)} className="flex items-center gap-1 px-2 py-0.5 rounded bg-white/5 border border-[var(--border)] text-[10px] font-bold text-[var(--text-muted)] hover:text-white hover:border-[rgba(139,92,246,0.3)] transition-colors" title="Price History">
+                    <Clock className="w-3 h-3" /> Prices
+                  </button>
+                </div>
+                {/* Connect button */}
+                <button onClick={() => setShowTokenModal(true)} className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-[var(--accent)] text-black text-[11px] font-bold hover:brightness-110 transition-all">
+                  <Zap className="w-3 h-3" /> Connect
+                </button>
+              </div>
+            </div>
 
-                  {(() => {
-                    const allTrades = tradesQuery.data || [];
-                    const wins = allTrades.filter((t: any) => t.result === "win").length;
-                    const losses = allTrades.filter((t: any) => t.result === "loss").length;
-                    const net = allTrades.reduce((a: number, t: any) => a + parseFloat(t.profitLoss?.toString() || "0"), 0);
-                    const winRate = wins + losses ? Math.round((wins / (wins + losses)) * 100) : 0;
-                    return (
-                      <div className="p-4 grid grid-cols-2 md:grid-cols-3 gap-3 border-b border-[var(--border)]">
-                        <div className="kpi-card">
-                          <div className="kpi-label">Trades</div>
-                          <div className="kpi-value text-lg">
-                            <IntegerStat value={allTrades.length} />
-                          </div>
-                        </div>
-                        <div className="kpi-card">
-                          <div className="kpi-label">Win Rate</div>
-                          <div className="kpi-value text-lg">
-                            <PercentStat value={winRate} />
-                          </div>
-                        </div>
-                        <div className="kpi-card">
-                          <div className="kpi-label">P&L</div>
-                          <div className={`kpi-value text-lg ${net >= 0 ? "text-[var(--green)]" : "text-[var(--red)]"}`}>
-                            <SignedCurrencyStat value={net} currency={balanceInfo?.currency || "USD"} />
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })()}
-                  <div className="table-container border-0 rounded-none">
-                    {(() => {
-                      const rows = allTrades.slice(0, 20);
-                      if (rows.length === 0) {
-                        return (
-                          <div className="empty-state">
-                            <p className="empty-state-desc">No trades yet. Place a trade to build your history.</p>
-                          </div>
-                        );
-                      }
-                      return (
-                        <table className="table">
-                          <thead>
-                            <tr>
-                              <th>TIME</th>
-                              <th>SYMBOL</th>
-                              <th>TYPE</th>
-                              <th className="text-right">STAKE</th>
-                              <th className="text-right">ENTRY</th>
-                              <th>RESULT</th>
-                              <th className="text-right">P&L</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {rows.map((trade: any) => {
-                              const pl = parseFloat(trade.profitLoss?.toString() || "0");
-                              return (
-                                <tr key={trade.id}>
-                                  <td className="tabular-nums text-[var(--text-muted)]">
-                                    {trade.entryTime
-                                      ? new Date(trade.entryTime).toLocaleString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })
-                                      : "—"}
-                                  </td>
-                                  <td className={`font-mono font-bold ${(trade.symbol || "") === selectedSymbol ? "text-[var(--accent)]" : "text-white"}`}>
-                                    {getSymbolDisplayName(trade.symbol) || "—"}
-                                  </td>
-                                  <td>
-                                    <span className="tag">{trade.contractType || "-"}</span>
-                                  </td>
-                                  <td className="text-right tabular-nums">{formatMoney(trade.stake)}</td>
-                                  <td className="text-right font-mono tabular-nums">{formatNumber(trade.entryPrice, decimalPlaces)}</td>
-                                  <td>
-                                    <span className={`badge ${trade.result === "win" ? "badge-green" : trade.result === "loss" ? "badge-red" : "badge-gray"}`}>
-                                      {trade.result?.toUpperCase() || "-"}
-                                    </span>
-                                  </td>
-                                  <td className={`text-right font-bold font-mono tabular-nums ${pl >= 0 ? "text-[var(--green)]" : "text-[var(--red)]"}`}>
-                                    {formatSignedMoney(pl)}
-                                  </td>
-                                </tr>
-                              );
-                            })}
-                          </tbody>
-                        </table>
-                      );
-                    })()}
+            {/* Chart Plot */}
+            <div className="flex-1 min-h-0 relative" style={{ background: 'var(--bg)' }}>
+              {/* Trade Type Tabs */}
+              <div className="flex items-center gap-1 px-4 py-1.5 border-b border-[rgba(139,92,246,0.12)] bg-[rgba(10,10,26,0.3)] overflow-x-auto scrollbar-none">
+                {([
+                  { id: "rise_fall", label: "Rise/Fall", shortLabel: "R/F" },
+                  { id: "over_under", label: "Over/Under", shortLabel: "O/U" },
+                  { id: "even_odd", label: "Even/Odd", shortLabel: "E/O" },
+                  { id: "digits", label: "Digits", shortLabel: "Dig" },
+                  { id: "accumulator", label: "Accumulator", shortLabel: "Acc" },
+                ] as const).map((tab) => (
+                  <button
+                    key={tab.id}
+                    onClick={() => {
+                      const base: ContractSelection = { category: tab.id };
+                      if (tab.id === "rise_fall") base.direction = "rise";
+                      if (tab.id === "over_under") { base.overUnder = "over"; base.barrier = 5; }
+                      if (tab.id === "even_odd") base.digitMatch = "match";
+                      if (tab.id === "digits") { base.digitMatch = "match"; base.digit = 0; }
+                      if (tab.id === "accumulator") base.growthRate = 1;
+                      setContract(base);
+                    }}
+                    className={`trade-type-tab ${contract.category === tab.id ? "active" : ""}`}
+                  >
+                    <span className="hidden sm:inline">{tab.label}</span>
+                    <span className="sm:hidden">{tab.shortLabel}</span>
+                  </button>
+                ))}
+              </div>
+              <div className="chart-plot h-full" style={{ minHeight: 0 }}>
+                {(() => {
+                  const ticks = displayTicks;
+                  const last = ticks[0];
+                  const price = last?.price;
+                  return (
+                    <>
+                      <TickChart symbol={selectedSymbol} maxDataPoints={50} decimalPlaces={decimalPlaces} />
+                    </>
+                  );
+                })()}
+              </div>
+            </div>
+
+            {/* OHLC Strip */}
+            <div className="flex items-center gap-4 px-4 py-1.5 border-t border-[rgba(139,92,246,0.12)] bg-[rgba(10,10,26,0.5)] shrink-0">
+              {(() => {
+                const ticks = displayTicks;
+                const prices = ticks.map((t: any) => t.price).filter(Boolean);
+                if (prices.length < 2) return <span className="text-[10px] text-[var(--text-muted)]">Awaiting OHLC data</span>;
+                const open = prices[prices.length - 1];
+                const high = Math.max(...prices);
+                const low = Math.min(...prices);
+                const close = prices[0];
+                return [
+                  { label: "O", value: open, color: "text-white" },
+                  { label: "H", value: high, color: "text-[var(--green)]" },
+                  { label: "L", value: low, color: "text-[var(--red)]" },
+                  { label: "C", value: close, color: "text-white" },
+                ].map((item) => (
+                  <div key={item.label} className="flex items-center gap-1">
+                    <span className="text-[9px] text-[var(--text-muted)] font-bold">{item.label}</span>
+                    <span className={`text-[11px] font-mono tabular-nums font-semibold ${item.color}`}>{Number(item.value).toFixed(decimalPlaces)}</span>
                   </div>
-                </div>
-              ) : (
-                <div className="p-4">
-                  {priceQuery.isLoading ? (
-                    <div className="flex items-center justify-center p-10">
-                      <Loader2 className="w-6 h-6 animate-spin text-[var(--accent)]" />
-                    </div>
-                  ) : priceQuery.data?.ticks?.length ? (
-                    <div className="table-container border-0 rounded-none">
-                      <table className="table">
-                        <thead>
-                          <tr>
-                            <th>#</th>
-                            <th>TIME</th>
-                            <th className="text-right">PRICE</th>
-                            <th className="text-right">LAST DIGIT</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {displayTicks.map((t: any, i: number) => {
-                            const prevPrice = i < displayTicks.length - 1 ? displayTicks[i + 1]?.price : t.price;
-                            const dir = t.price > prevPrice ? "up" : t.price < prevPrice ? "down" : null;
-                            const isLatest = i === 0;
-                            return (
-                              <tr
-                                key={`${t.epoch}-${i}`}
-                                className="transition-colors duration-300"
-                                style={{
-                                  background:
-                                    isLatest && dir === "up"
-                                      ? "rgba(var(--green-rgb), 0.06)"
-                                      : isLatest && dir === "down"
-                                        ? "rgba(var(--red-rgb), 0.06)"
-                                        : "transparent",
-                                }}
-                              >
-                                <td className="text-[var(--text-muted)] font-mono">{i + 1}</td>
-                                <td className="tabular-nums">{new Date((t.epoch || 0) * 1000).toLocaleTimeString()}</td>
-                                <td className="text-right text-white font-mono tabular-nums">
-                                  {dir === "up" ? (
-                                    <span className="text-[var(--green)]">▲ </span>
-                                  ) : dir === "down" ? (
-                                    <span className="text-[var(--red)]">▼ </span>
-                                  ) : null}
-                                  {Number(t.price).toFixed(decimalPlaces)}
-                                </td>
-                                <td className="text-right font-mono" style={{ color: t.lastDigit >= 5 ? "var(--green)" : "var(--red)" }}>
-                                  {t.lastDigit}
-                                </td>
-                              </tr>
-                            );
-                          })}
-                        </tbody>
-                      </table>
-                    </div>
-                  ) : (
-                    <div className="empty-state">
-                      <p className="empty-state-desc">No price history for {selectedSymbol} yet.</p>
-                    </div>
-                  )}
-                </div>
-              )}
+                ));
+              })()}
             </div>
           </div>
 
-          {/* Context panel — always visible right rail (execution, AI, positions, alerts) */}
-          <div className="lg:col-span-12 xl:col-span-3 space-y-4 xl:space-y-6 xl:sticky xl:top-4 xl:self-start xl:max-h-[calc(100vh-120px)] xl:overflow-y-auto">
+          {/* Right: Trade Panel */}
+          <div className="terminal-trade-panel aurora-glass-panel">
             <TerminalContextPanel
               selectedSymbol={selectedSymbol}
               selectedDisplay={selectedDisplay}
@@ -1020,7 +670,98 @@ export default function Dashboard() {
         </div>
       </PageSection>
 
+      {/* Popup Panels */}
+      <PopupPanel
+        open={watchlistPopupOpen}
+        onClose={() => setWatchlistPopupOpen(false)}
+        title="Watchlist"
+        icon={<Star className="w-4 h-4 text-[var(--accent)]" />}
+        width="320px"
+      >
+        <div className="p-2">
+          <WatchlistPanel
+            selectedSymbol={selectedSymbol}
+            onSelect={(s) => { setSelectedSymbol(s); setShowSymbolPicker(false); setWatchlistPopupOpen(false); }}
+          />
+        </div>
+      </PopupPanel>
+
+      <PopupPanel
+        open={historyPopupOpen}
+        onClose={() => setHistoryPopupOpen(false)}
+        title="Trade History"
+        icon={<History className="w-4 h-4 text-[var(--accent)]" />}
+        width="420px"
+      >
+        <div className="p-3">
+          {(() => {
+            const rows = allTrades.slice(0, 30);
+            if (rows.length === 0) {
+              return <p className="text-xs text-[var(--text-muted)] text-center py-6">No trades yet.</p>;
+            }
+            return (
+              <div className="space-y-1">
+                {rows.map((trade: any) => {
+                  const pl = parseFloat(trade.profitLoss?.toString() || "0");
+                  return (
+                    <div key={trade.id} className="flex items-center justify-between py-2 px-2 rounded hover:bg-white/5 transition-colors">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${trade.result === "win" ? "bg-[var(--green)]" : trade.result === "loss" ? "bg-[var(--red)]" : "bg-[var(--accent)]"}`} />
+                        <div className="min-w-0">
+                          <p className="text-[11px] font-bold text-white truncate">{getSymbolDisplayName(trade.symbol)}</p>
+                          <p className="text-[9px] text-[var(--text-muted)]">{trade.contractType} · {trade.entryTime ? new Date(trade.entryTime).toLocaleTimeString() : "—"}</p>
+                        </div>
+                      </div>
+                      <div className="text-right shrink-0">
+                        <p className={`text-[11px] font-bold font-mono tabular-nums ${pl >= 0 ? "text-[var(--green)]" : "text-[var(--red)]"}`}>
+                          {pl >= 0 ? "+" : ""}{formatSignedMoney(pl)}
+                        </p>
+                        <p className="text-[9px] text-[var(--text-muted)]">{formatMoney(trade.stake)}</p>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            );
+          })()}
+        </div>
+      </PopupPanel>
+
+      <PopupPanel
+        open={pricesPopupOpen}
+        onClose={() => setPricesPopupOpen(false)}
+        title="Price History"
+        icon={<Clock className="w-4 h-4 text-[var(--accent)]" />}
+        width="360px"
+      >
+        <div className="p-3">
+          {displayTicks.length === 0 ? (
+            <p className="text-xs text-[var(--text-muted)] text-center py-6">No price data.</p>
+          ) : (
+            <div className="space-y-0.5">
+              {displayTicks.slice(0, 50).map((t: any, i: number) => {
+                const prevPrice = i < displayTicks.length - 1 ? displayTicks[i + 1]?.price : t.price;
+                const dir = t.price > prevPrice ? "up" : t.price < prevPrice ? "down" : null;
+                return (
+                  <div key={`${t.epoch}-${i}`} className="flex items-center justify-between py-1 px-2 rounded text-[11px]">
+                    <span className="text-[var(--text-muted)] font-mono text-[10px]">{new Date((t.epoch || 0) * 1000).toLocaleTimeString()}</span>
+                    <span className="flex items-center gap-1">
+                      {dir === "up" && <span className="text-[var(--green)]">▲</span>}
+                      {dir === "down" && <span className="text-[var(--red)]">▼</span>}
+                      <span className="font-mono tabular-nums text-white">{Number(t.price).toFixed(decimalPlaces)}</span>
+                    </span>
+                    <span className="font-mono text-[10px] font-bold" style={{ color: t.lastDigit >= 5 ? "var(--green)" : "var(--red)" }}>
+                      {t.lastDigit}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </PopupPanel>
+
       <DerivTokenModal open={showTokenModal} onClose={() => setShowTokenModal(false)} />
-    </PageContainer>
+    </div>
   );
 }

@@ -994,6 +994,11 @@
     min-height: 100vh;
     overflow-x: hidden;
   }
+  .terminal-page {
+    padding: 0;
+    background: var(--bg);
+    min-height: 100vh;
+  }
   @media (max-width: 768px) {
     .page-container { padding: var(--space-2) var(--space-1); padding-bottom: var(--space-6); }
   }
@@ -1305,6 +1310,97 @@
     transform: translateY(-4px);
   }
 
+  /* ─── Aurora Theme System ─────────────────────────────── */
+  .aurora-glass {
+    background: rgba(10, 10, 26, 0.65);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(139, 92, 246, 0.12);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  }
+  .aurora-glass:hover {
+    border-color: rgba(139, 92, 246, 0.25);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35), 0 0 24px rgba(139, 92, 246, 0.06);
+  }
+
+  .aurora-glass-panel {
+    background: rgba(10, 10, 26, 0.75);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(139, 92, 246, 0.08);
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.3);
+  }
+
+  .aurora-gradient-bg {
+    background: radial-gradient(ellipse at 20% 50%, rgba(74, 222, 128, 0.25) 0%, transparent 50%),
+                radial-gradient(ellipse at 80% 20%, rgba(139, 92, 246, 0.2) 0%, transparent 50%),
+                radial-gradient(ellipse at 50% 80%, rgba(236, 72, 153, 0.15) 0%, transparent 50%),
+                radial-gradient(ellipse at 60% 40%, rgba(20, 184, 166, 0.12) 0%, transparent 50%);
+    background-color: #0A0A1A;
+  }
+
+  .aurora-border {
+    border: 1px solid transparent;
+    background-clip: padding-box;
+    position: relative;
+  }
+  .aurora-border::before {
+    content: '';
+    position: absolute;
+    inset: -1px;
+    border-radius: inherit;
+    padding: 1px;
+    background: linear-gradient(135deg, rgba(77, 224, 172, 0.2), rgba(139, 92, 246, 0.3), rgba(236, 72, 153, 0.2));
+    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    pointer-events: none;
+  }
+
+  .aurora-glow-green { box-shadow: 0 0 20px rgba(77, 224, 172, 0.12), 0 0 60px rgba(77, 224, 172, 0.06); }
+  .aurora-glow-purple { box-shadow: 0 0 20px rgba(139, 92, 246, 0.12), 0 0 60px rgba(139, 92, 246, 0.06); }
+  .aurora-glow-magenta { box-shadow: 0 0 20px rgba(236, 72, 153, 0.12), 0 0 60px rgba(236, 72, 153, 0.06); }
+  .aurora-glow-teal { box-shadow: 0 0 20px rgba(20, 184, 166, 0.12), 0 0 60px rgba(20, 184, 166, 0.06); }
+
+  .aurora-gradient-text {
+    background: linear-gradient(135deg, #4ade80, #8b5cf6, #ec4899);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .aurora-bg {
+    background: linear-gradient(135deg, rgba(77, 224, 172, 0.04) 0%, rgba(139, 92, 246, 0.04) 50%, rgba(236, 72, 153, 0.04) 100%);
+  }
+
+  /* ─── Aurora Terminal Layout ──────────────────────────── */
+  .terminal-layout {
+    display: flex;
+    height: calc(100vh - 40px);
+    overflow: hidden;
+  }
+  .terminal-chart-area {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  .terminal-trade-panel {
+    width: 300px;
+    flex-shrink: 0;
+    overflow-y: auto;
+    border-left: 1px solid rgba(139, 92, 246, 0.12);
+  }
+  @media (max-width: 1280px) {
+    .terminal-trade-panel { width: 260px; }
+  }
+  @media (max-width: 1024px) {
+    .terminal-layout { flex-direction: column; height: auto; }
+    .terminal-trade-panel { width: 100%; border-left: none; border-top: 1px solid rgba(139, 92, 246, 0.12); }
+  }
+
   /* ─── Glow Effects ─────────────────────────────────────── */
   .glow-border-cyan {
     position: relative;
@@ -1364,12 +1460,106 @@
     100% { background-position: 0% 50%; }
   }
 
+  @keyframes aurora-drift {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+  }
+  @keyframes aurora-pulse {
+    0%, 100% { opacity: 0.4; }
+    50% { opacity: 0.8; }
+  }
+
   .animate-float { animation: float 6s ease-in-out infinite; }
   .animate-float-slow { animation: float-slow 8s ease-in-out infinite; }
   .animate-glow-pulse { animation: glow-pulse 3s ease-in-out infinite; }
   .animate-gradient {
     background-size: 200% 200%;
     animation: gradient-shift 4s ease infinite;
+  }
+
+  /* ─── Aurora Nav Item (icon-only sidebar) ─────────────── */
+  .aurora-nav-item {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    color: var(--text-muted);
+    transition: all 200ms ease;
+    position: relative;
+    cursor: pointer;
+  }
+  .aurora-nav-item:hover {
+    color: var(--text-primary);
+    background: rgba(139, 92, 246, 0.1);
+  }
+  .aurora-nav-item.active {
+    color: #4ade80;
+    background: rgba(77, 224, 172, 0.1);
+    box-shadow: 0 0 16px rgba(77, 224, 172, 0.12);
+  }
+  .aurora-nav-item.active::before {
+    content: '';
+    position: absolute;
+    left: -8px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 3px;
+    height: 20px;
+    border-radius: 0 2px 2px 0;
+    background: linear-gradient(180deg, #4ade80, #8b5cf6);
+  }
+
+  /* ─── Symbol Picker Dropdown ──────────────────────────── */
+  .symbol-picker-dropdown {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    width: 260px;
+    max-height: 320px;
+    overflow-y: auto;
+    z-index: 50;
+  }
+
+  /* ─── Trade Type Tabs ────────────────────────────────── */
+  .trade-type-tab {
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 600;
+    white-space: nowrap;
+    transition: all 150ms ease;
+    cursor: pointer;
+    background: transparent;
+    color: var(--text-muted);
+    border: 1px solid transparent;
+  }
+  .trade-type-tab:hover {
+    color: var(--text-secondary);
+    background: rgba(255, 255, 255, 0.03);
+  }
+  .trade-type-tab.active {
+    background: rgba(77, 224, 172, 0.1);
+    color: #4ade80;
+    border-color: rgba(77, 224, 172, 0.25);
+  }
+
+  /* ─── Crosshair Tooltip ───────────────────────────────── */
+  .crosshair-tooltip {
+    pointer-events: none;
+    position: absolute;
+    z-index: 20;
+    background: rgba(10, 10, 26, 0.9);
+    backdrop-filter: blur(8px);
+    border: 1px solid rgba(139, 92, 246, 0.2);
+    border-radius: 4px;
+    padding: 4px 8px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    font-weight: 600;
+    white-space: nowrap;
   }
 
   /* ─── Particle Container ───────────────────────────────── */

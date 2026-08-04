@@ -239,9 +239,9 @@ export default function MobileTerminal() {
   })();
 
   return (
-    <div className="min-h-screen bg-[var(--bg)] pb-20 lg:hidden">
+    <div className="min-h-screen bg-[#0A0A1A] pb-20 lg:hidden">
       {/* Header: symbol · live price · LIVE */}
-      <div className="sticky top-0 z-30 bg-[var(--card)] border-b border-[var(--border)] px-4 pt-3 pb-2">
+      <div className="sticky top-0 z-30 aurora-glass border-b border-[rgba(139,92,246,0.15)] px-4 pt-3 pb-2">
         <div className="flex items-center justify-between gap-3">
           <button onClick={() => setShowSymbolPicker((v) => !v)} className="flex items-center gap-2 min-w-0 cursor-pointer">
             <span className="font-bold text-lg text-white truncate">{selectedDisplay}</span>
@@ -260,7 +260,7 @@ export default function MobileTerminal() {
                 {derivWS.isAuthorized() ? "LIVE" : "OFFLINE"}
               </div>
             </div>
-            <span className="text-[10px] font-bold px-2 py-1 rounded-md bg-white/5 border border-[var(--border)] text-[var(--text-secondary)]">
+            <span className="text-[10px] font-bold px-2 py-1 rounded-md aurora-glass text-[#4ADE80]">
               {accountBadge}
             </span>
           </div>
@@ -287,7 +287,7 @@ export default function MobileTerminal() {
             <button
               key={tf.label}
               onClick={() => setTimeframe(i)}
-              className={`flex-1 py-3 rounded-md text-[11px] font-bold transition-colors cursor-pointer min-h-[44px] ${timeframe === i ? "bg-[var(--accent)] text-black" : "bg-white/5 text-[var(--text-muted)]"}`}
+              className={`flex-1 py-3 rounded-md text-[11px] font-bold transition-colors cursor-pointer min-h-[44px] ${timeframe === i ? "aurora-glow-green text-black" : "bg-white/5 text-[var(--text-muted)]"}`}
             >
               {tf.label}
             </button>
@@ -298,10 +298,10 @@ export default function MobileTerminal() {
       {showSymbolPicker && (
         <div className="fixed inset-0 z-[90] bg-black/60 flex items-start justify-center animate-modal-backdrop" onClick={() => setShowSymbolPicker(false)}>
           <div
-            className="w-full bg-[var(--card)] border-b border-[var(--border)] rounded-b-2xl shadow-2xl max-h-[68vh] overflow-y-auto animate-sheet-up"
+            className="w-full aurora-glass border-b border-[rgba(139,92,246,0.15)] rounded-b-2xl shadow-2xl max-h-[68vh] overflow-y-auto animate-sheet-up"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="px-4 py-3 border-b border-[var(--border)] flex items-center justify-between sticky top-0 bg-[var(--card)] z-10">
+            <div className="px-4 py-3 border-b border-[rgba(139,92,246,0.15)] flex items-center justify-between sticky top-0 aurora-glass z-10">
               <h3 className="text-sm font-bold text-white">Select Market</h3>
               <button onClick={() => setShowSymbolPicker(false)} className="text-[var(--text-muted)] hover:text-white">
                 <X className="w-4 h-4" />
@@ -366,7 +366,7 @@ export default function MobileTerminal() {
                                   setShowSymbolPicker(false);
                                   setSymbolSearch("");
                                 }}
-                                className={`text-left px-2.5 py-3 rounded-lg cursor-pointer min-h-[44px] ${symbol === s.symbol ? "bg-[var(--accent-soft)] text-[var(--accent-hover)] border border-[var(--accent-border)]" : "bg-white/5 text-[var(--text-secondary)] border border-transparent"}`}
+                                className={`text-left px-2.5 py-3 rounded-lg cursor-pointer min-h-[44px] ${symbol === s.symbol ? "aurora-glow-green text-white" : "bg-white/5 text-[var(--text-secondary)] border border-transparent"}`}
                               >
                                 <span className="block font-semibold text-xs truncate" title={s.displayName}>{s.displayName}</span>
                                 <span className="text-[9px] font-mono text-[var(--text-muted)]">{s.symbol}</span>
@@ -390,7 +390,7 @@ export default function MobileTerminal() {
       </div>
 
       {/* Balance — near trade controls */}
-      <div className="mx-4 mt-2 flex items-center justify-between px-3 py-2 rounded-lg bg-black/20 border border-[var(--border)]">
+      <div className="mx-4 mt-2 flex items-center justify-between px-3 py-2 rounded-lg aurora-glass">
         <span className="text-[10px] uppercase tracking-widest text-[var(--text-muted)] font-bold flex items-center gap-1.5">
           <Wallet className="w-3.5 h-3.5 text-[var(--green)]" /> Balance
         </span>
@@ -401,7 +401,7 @@ export default function MobileTerminal() {
 
       {/* Execution */}
       <div className="px-4 mt-2">
-        <div className="rounded-xl border border-[var(--border)] bg-[var(--card)] p-3 space-y-3">
+        <div className="rounded-xl aurora-glass p-3 space-y-3">
           <ContractTypeSelector selection={contract} onChange={setContract} />
           <div className="flex items-center gap-2">
             <button
@@ -427,7 +427,7 @@ export default function MobileTerminal() {
               <button
                 key={p}
                 onClick={() => setStake(p)}
-                className={`flex-1 py-3 rounded-md text-caption font-bold cursor-pointer min-h-[44px] ${stake === p ? "bg-[var(--accent)] text-black" : "bg-[var(--surface-secondary)] text-[var(--text-muted)]"}`}
+                className={`flex-1 py-3 rounded-md text-caption font-bold cursor-pointer min-h-[44px] ${stake === p ? "aurora-glow-green text-black" : "bg-[var(--surface-secondary)] text-[var(--text-muted)]"}`}
               >
                 ${p}
               </button>
@@ -465,7 +465,7 @@ export default function MobileTerminal() {
 
       {/* AI Market Health strip */}
       <div className="px-4 mt-3">
-        <div className="rounded-xl border border-[var(--border)] bg-[var(--card)] px-3 py-2.5">
+        <div className="rounded-xl aurora-glass px-3 py-2.5">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Activity className="w-3.5 h-3.5 text-[var(--accent)]" />
@@ -507,7 +507,7 @@ export default function MobileTerminal() {
       {/* Positions bar */}
       <button
         onClick={() => setShowPositions(true)}
-        className="mx-4 mt-3 w-[calc(100%-32px)] flex items-center justify-between rounded-xl border border-[var(--border)] bg-[var(--card)] px-3 py-3 cursor-pointer"
+        className="mx-4 mt-3 w-[calc(100%-32px)] flex items-center justify-between rounded-xl aurora-glass px-3 py-3 cursor-pointer"
       >
         <div className="flex items-center gap-2">
           <ShieldCheck className="w-4 h-4 text-[var(--accent)]" />
@@ -522,10 +522,10 @@ export default function MobileTerminal() {
       {showPositions && (
         <div className="fixed inset-0 z-[95] bg-black/60 flex items-end animate-modal-backdrop" onClick={() => setShowPositions(false)}>
           <div
-            className="w-full bg-[var(--card)] border-t border-[var(--border)] rounded-t-2xl max-h-[70vh] overflow-y-auto pb-6 animate-sheet-up"
+            className="w-full aurora-glass border-t border-[rgba(139,92,246,0.15)] rounded-t-2xl max-h-[70vh] overflow-y-auto pb-6 animate-sheet-up"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="sticky top-0 bg-[var(--card)] px-4 py-3 border-b border-[var(--border)] flex items-center justify-between">
+            <div className="sticky top-0 aurora-glass px-4 py-3 border-b border-[rgba(139,92,246,0.15)] flex items-center justify-between">
               <h3 className="text-sm font-bold text-white">Open Positions</h3>
               <button onClick={() => setShowPositions(false)} className="text-[var(--text-muted)] hover:text-white">
                 <X className="w-4 h-4" />

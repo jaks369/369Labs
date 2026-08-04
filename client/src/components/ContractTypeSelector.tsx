@@ -79,25 +79,25 @@ export default function ContractTypeSelector({ selection, onChange }: ContractTy
   };
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-2">
       {/* Pill trigger */}
       <div ref={ref} className="relative">
         <button
           onClick={toggle}
-          className="w-full flex items-center justify-between gap-2 h-9 px-3 rounded-lg bg-[var(--card)] border border-[var(--border)] text-[var(--text-primary)] text-sm font-medium hover:border-[var(--accent-border)] transition-colors"
+          className="w-full flex items-center justify-between gap-2 h-8 px-3 rounded-lg bg-white/5 border border-[rgba(139,92,246,0.15)] text-white text-xs font-medium hover:border-[rgba(139,92,246,0.3)] transition-colors"
         >
-          <span className="flex items-center gap-2">
+          <span className="flex items-center gap-1.5">
             <span className="text-[var(--accent)]">{current.icon}</span>
             {current.label}
           </span>
-          <ChevronDown className={`w-4 h-4 text-[var(--text-muted)] transition-transform ${open ? "rotate-180" : ""}`} />
+          <ChevronDown className={`w-3.5 h-3.5 text-[var(--text-muted)] transition-transform ${open ? "rotate-180" : ""}`} />
         </button>
 
 {/* Popover — portaled to body so it can't be clipped by scroll containers */}
         {open && pos && createPortal(
           <div
             ref={portalRef}
-            className="fixed z-[100] bg-[var(--card)] border border-[var(--border)] rounded-lg p-2 shadow-2xl"
+            className="fixed z-[100] aurora-glass-panel rounded-lg p-2 shadow-2xl"
             style={{ top: pos.top, left: pos.left, width: pos.width }}
           >
             <div className="grid grid-cols-2 gap-1.5">
@@ -105,19 +105,19 @@ export default function ContractTypeSelector({ selection, onChange }: ContractTy
                 <button
                   key={c.id}
                   onClick={() => setCat(c.id)}
-                  className={`flex flex-col items-start gap-0.5 p-4 rounded-lg text-left transition-all min-h-[44px] ${
+                  className={`flex flex-col items-start gap-0.5 p-3 rounded-lg text-left transition-all min-h-[40px] ${
                     selection.category === c.id
                       ? "bg-[var(--accent-soft)] border border-[var(--accent-border)]"
                       : "hover:bg-white/[0.04] border border-transparent"
                   }`}
                 >
                   <div className="flex items-center gap-1.5">
-                    <span className="text-[var(--accent)] text-sm">{c.icon}</span>
-                    <span className={`text-sm font-semibold ${selection.category === c.id ? "text-[var(--accent)]" : "text-[var(--text-primary)]"}`}>
+                    <span className="text-[var(--accent)] text-xs">{c.icon}</span>
+                    <span className={`text-xs font-semibold ${selection.category === c.id ? "text-[var(--accent)]" : "text-white"}`}>
                       {c.label}
                     </span>
                   </div>
-                  <span className="text-[10px] text-[var(--text-muted)] leading-tight">{c.desc}</span>
+                  <span className="text-[9px] text-[var(--text-muted)] leading-tight">{c.desc}</span>
                 </button>
               ))}
             </div>
@@ -127,12 +127,12 @@ export default function ContractTypeSelector({ selection, onChange }: ContractTy
       </div>
 
       {/* Sub-options */}
-      <div className="bg-[var(--surface-secondary)] p-3 rounded border border-[var(--border)]">
+      <div className="bg-white/5 p-2 rounded border border-[var(--border)]">
         {selection.category === "rise_fall" && (
-          <div className="flex rounded-lg bg-[var(--card)] p-0.5">
+          <div className="flex rounded-lg bg-white/5 p-0.5">
             <button
               onClick={() => onChange({ ...selection, direction: "rise" })}
-              className={`flex-1 py-4 text-center text-sm font-bold rounded-md transition-all min-h-[44px] ${
+              className={`flex-1 py-3 text-center text-xs font-bold rounded-md transition-all min-h-[36px] ${
                 selection.direction === "rise"
                   ? "bg-[var(--green)] text-white shadow-sm"
                   : "text-[var(--text-secondary)] hover:text-white"
@@ -142,7 +142,7 @@ export default function ContractTypeSelector({ selection, onChange }: ContractTy
             </button>
             <button
               onClick={() => onChange({ ...selection, direction: "fall" })}
-              className={`flex-1 py-4 text-center text-sm font-bold rounded-md transition-all min-h-[44px] ${
+              className={`flex-1 py-3 text-center text-xs font-bold rounded-md transition-all min-h-[36px] ${
                 selection.direction === "fall"
                   ? "bg-[var(--red)] text-white shadow-sm"
                   : "text-[var(--text-secondary)] hover:text-white"
@@ -154,11 +154,11 @@ export default function ContractTypeSelector({ selection, onChange }: ContractTy
         )}
 
 {selection.category === "over_under" && (
-          <div className="space-y-3">
-            <div className="flex rounded-lg bg-[var(--card)] p-0.5">
+          <div className="space-y-2">
+            <div className="flex rounded-lg bg-white/5 p-0.5">
               <button
                 onClick={() => onChange({ ...selection, overUnder: "over" })}
-                className={`flex-1 py-4 text-center text-sm font-bold rounded-md transition-all min-h-[44px] ${
+                className={`flex-1 py-3 text-center text-xs font-bold rounded-md transition-all min-h-[36px] ${
                   selection.overUnder === "over"
                     ? "bg-[var(--accent)] text-white shadow-sm"
                     : "text-[var(--text-secondary)] hover:text-white"
@@ -168,7 +168,7 @@ export default function ContractTypeSelector({ selection, onChange }: ContractTy
               </button>
               <button
                 onClick={() => onChange({ ...selection, overUnder: "under" })}
-                className={`flex-1 py-4 text-center text-sm font-bold rounded-md transition-all min-h-[44px] ${
+                className={`flex-1 py-3 text-center text-xs font-bold rounded-md transition-all min-h-[36px] ${
                   selection.overUnder === "under"
                     ? "bg-[var(--accent)] text-white shadow-sm"
                     : "text-[var(--text-secondary)] hover:text-white"
@@ -178,13 +178,13 @@ export default function ContractTypeSelector({ selection, onChange }: ContractTy
               </button>
             </div>
             <div>
-              <label className="text-micro font-bold text-[var(--text-muted)] uppercase">Barrier (0-9)</label>
-              <div className="grid grid-cols-5 gap-1.5 mt-2">
+              <label className="text-[9px] font-bold text-[var(--text-muted)] uppercase">Barrier (0-9)</label>
+              <div className="grid grid-cols-5 gap-1 mt-1.5">
                 {Array.from({ length: 10 }, (_, i) => (
                   <button
                     key={i}
                     onClick={() => onChange({ ...selection, barrier: i })}
-                    className="min-w-0 w-full aspect-square flex items-center justify-center rounded-lg text-xs font-bold transition-all"
+                    className="min-w-0 w-full aspect-square flex items-center justify-center rounded text-[10px] font-bold transition-all"
                     style={{
                       background: selection.barrier === i ? "var(--accent)" : "var(--card)",
                       color: selection.barrier === i ? "white" : "var(--text-secondary)",
@@ -199,10 +199,10 @@ export default function ContractTypeSelector({ selection, onChange }: ContractTy
         )}
 
         {selection.category === "even_odd" && (
-          <div className="flex rounded-lg bg-[var(--card)] p-0.5">
+          <div className="flex rounded-lg bg-white/5 p-0.5">
             <button
               onClick={() => onChange({ ...selection, digitMatch: "match" })}
-              className={`flex-1 py-4 text-center text-sm font-bold rounded-md transition-all min-h-[44px] ${
+              className={`flex-1 py-3 text-center text-xs font-bold rounded-md transition-all min-h-[36px] ${
                 selection.digitMatch === "match"
                   ? "bg-[var(--green)] text-white shadow-sm"
                   : "text-[var(--text-secondary)] hover:text-white"
@@ -212,7 +212,7 @@ export default function ContractTypeSelector({ selection, onChange }: ContractTy
             </button>
             <button
               onClick={() => onChange({ ...selection, digitMatch: "differ" })}
-              className={`flex-1 py-4 text-center text-sm font-bold rounded-md transition-all min-h-[44px] ${
+              className={`flex-1 py-3 text-center text-xs font-bold rounded-md transition-all min-h-[36px] ${
                 selection.digitMatch === "differ"
                   ? "bg-[var(--red)] text-white shadow-sm"
                   : "text-[var(--text-secondary)] hover:text-white"
@@ -224,11 +224,11 @@ export default function ContractTypeSelector({ selection, onChange }: ContractTy
         )}
 
 {selection.category === "digits" && (
-          <div className="space-y-3">
-            <div className="flex rounded-lg bg-[var(--card)] p-0.5">
+          <div className="space-y-2">
+            <div className="flex rounded-lg bg-white/5 p-0.5">
               <button
                 onClick={() => onChange({ ...selection, digitMatch: "match" })}
-                className={`flex-1 py-4 text-center text-sm font-bold rounded-md transition-all min-h-[44px] ${
+                className={`flex-1 py-3 text-center text-xs font-bold rounded-md transition-all min-h-[36px] ${
                   selection.digitMatch === "match"
                     ? "bg-[var(--green)] text-white shadow-sm"
                     : "text-[var(--text-secondary)] hover:text-white"
@@ -238,7 +238,7 @@ export default function ContractTypeSelector({ selection, onChange }: ContractTy
               </button>
               <button
                 onClick={() => onChange({ ...selection, digitMatch: "differ" })}
-                className={`flex-1 py-4 text-center text-sm font-bold rounded-md transition-all min-h-[44px] ${
+                className={`flex-1 py-3 text-center text-xs font-bold rounded-md transition-all min-h-[36px] ${
                   selection.digitMatch === "differ"
                     ? "bg-[var(--red)] text-white shadow-sm"
                     : "text-[var(--text-secondary)] hover:text-white"
@@ -248,13 +248,13 @@ export default function ContractTypeSelector({ selection, onChange }: ContractTy
               </button>
             </div>
             <div>
-              <label className="text-micro font-bold text-[var(--text-muted)] uppercase">Digit (0-9)</label>
-              <div className="grid grid-cols-5 gap-1.5 mt-2">
+              <label className="text-[9px] font-bold text-[var(--text-muted)] uppercase">Digit (0-9)</label>
+              <div className="grid grid-cols-5 gap-1 mt-1.5">
                 {Array.from({ length: 10 }, (_, i) => (
                   <button
                     key={i}
                     onClick={() => onChange({ ...selection, digit: i })}
-                    className="min-w-0 w-full aspect-square flex items-center justify-center rounded-lg text-xs font-bold transition-all"
+                    className="min-w-0 w-full aspect-square flex items-center justify-center rounded text-[10px] font-bold transition-all"
                     style={{
                       background: selection.digit === i ? "var(--accent)" : "var(--card)",
                       color: selection.digit === i ? "white" : "var(--text-secondary)",
@@ -269,14 +269,14 @@ export default function ContractTypeSelector({ selection, onChange }: ContractTy
         )}
 
         {selection.category === "accumulator" && (
-          <div className="space-y-3">
-            <label className="text-micro font-bold text-[var(--text-muted)] uppercase">Growth Rate</label>
-            <div className="grid grid-cols-4 gap-2">
+          <div className="space-y-2">
+            <label className="text-[9px] font-bold text-[var(--text-muted)] uppercase">Growth Rate</label>
+            <div className="grid grid-cols-4 gap-1.5">
               {[1, 2, 3, 5].map((rate) => (
                 <button
                   key={rate}
                   onClick={() => onChange({ ...selection, growthRate: rate })}
-                  className="py-4 rounded-lg text-xs font-bold transition-all min-h-[44px]"
+                  className="py-3 rounded-lg text-[10px] font-bold transition-all min-h-[36px]"
                   style={{
                     background: selection.growthRate === rate ? "var(--accent)" : "var(--card)",
                     color: selection.growthRate === rate ? "white" : "var(--text-secondary)",
