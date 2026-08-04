@@ -82,10 +82,31 @@ export default function Home() {
       <main className="relative z-10">
         {/* Hero with Nature Photo Background */}
         <section className="relative max-w-4xl mx-auto px-6 pt-24 pb-16 text-center overflow-hidden">
-          {/* Aurora gradient background */}
-          <div className="absolute inset-0 -z-10">
-            <div className="absolute inset-0 aurora-gradient-bg opacity-30" />
-            <div className="absolute inset-0" style={{ background: 'linear-gradient(180deg, rgba(10,10,26,0.6) 0%, rgba(10,10,26,0.95) 100%)' }} />
+          {/* Aurora morphism nature background */}
+          <div className="absolute inset-0 -z-10 overflow-hidden">
+            <div
+              className="absolute inset-0"
+              style={{
+                backgroundImage: 'url("/aurora-nature.jpg")',
+                backgroundSize: 'cover',
+                backgroundPosition: 'center 30%',
+                filter: 'blur(1px) saturate(0.7)',
+                opacity: 0.25,
+              }}
+            />
+            {/* Aurora color wash over image */}
+            <div className="absolute inset-0" style={{
+              background: 'linear-gradient(135deg, rgba(74,222,128,0.15) 0%, rgba(139,92,246,0.12) 40%, rgba(236,72,153,0.08) 70%, transparent 100%)',
+              mixBlendMode: 'screen',
+            }} />
+            {/* Dark gradient fade into page bg */}
+            <div className="absolute inset-0" style={{
+              background: 'linear-gradient(180deg, rgba(10,10,26,0.4) 0%, rgba(10,10,26,0.75) 50%, rgba(10,10,26,0.95) 100%)',
+            }} />
+            {/* Soft aurora glow at bottom edge — the "hill" effect */}
+            <div className="absolute bottom-0 left-0 right-0 h-32" style={{
+              background: 'radial-gradient(ellipse 120% 100% at 50% 100%, rgba(74,222,128,0.08) 0%, transparent 70%)',
+            }} />
           </div>
           <motion.div initial="hidden" animate="visible" variants={stagger}>
             <motion.h1 variants={fadeUp} className="text-4xl md:text-6xl font-bold text-white mb-5 tracking-tight leading-[1.1]">
