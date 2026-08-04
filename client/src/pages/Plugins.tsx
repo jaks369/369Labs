@@ -26,7 +26,7 @@ export default function Plugins() {
   const isAdmin = user?.role === "admin";
   if (!isAdmin) {
     return (
-      <div className="min-h-screen bg-[var(--bg)] p-6">
+      <div className="h-full p-6">
         <div className="max-w-4xl mx-auto text-center py-16">
           <ShieldOff className="w-12 h-12 text-[var(--accent)] mx-auto mb-4" />
           <h1 className="text-2xl font-bold text-white mb-2">Admin Only</h1>
@@ -53,7 +53,7 @@ export default function Plugins() {
   };
 
   return (
-    <div className="min-h-screen bg-[var(--bg)] p-6">
+    <div className="h-full p-6">
       <div className="max-w-4xl mx-auto space-y-6">
         <div>
           <h1 className="text-3xl font-bold text-white flex items-center gap-3">

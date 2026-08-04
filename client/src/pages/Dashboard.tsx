@@ -20,8 +20,18 @@ import TerminalContextPanel from "@/components/TerminalContextPanel";
 import { FilterPill } from "@/components/ui/filter-pill";
 import PopupPanel from "@/components/PopupPanel";
 import WatchlistPanel from "@/components/WatchlistPanel";
+import SymbolInsights from "@/components/SymbolInsights";
+import AIVerdicts from "@/components/AIVerdicts";
 
 const ALL_FALLBACK: DerivSymbol[] = VOLATILITY_SYMBOLS.map((s) => ({ ...s, decimalPlaces: 2 }));
+
+const contractLabels: Record<string, string> = {
+  rise_fall: "Rise / Fall",
+  over_under: "Over / Under",
+  even_odd: "Even / Odd",
+  digits: "Digits",
+  accumulator: "Accumulator",
+};
 
 export default function Dashboard() {
   const { user, isAuthenticated } = useAuth();
@@ -71,9 +81,10 @@ export default function Dashboard() {
     onSuccess: () => alertsQuery.refetch(),
   });
   const [historyTab, setHistoryTab] = useState<"positions" | "trades" | "prices">("positions");
-  const [watchlistPopupOpen, setWatchlistPopupOpen] = useState(false);
-  const [historyPopupOpen, setHistoryPopupOpen] = useState(false);
-  const [pricesPopupOpen, setPricesPopupOpen] = useState(false);
+  const [dataPopupOpen, setDataPopupOpen] = useState(false);
+  const [dataPopupTab, setDataPopupTab] = useState<"watchlist" | "trades" | "prices">("watchlist");
+  const [tradeTypePopupOpen, setTradeTypePopupOpen] = useState(false);
+  const [insightPopupOpen, setInsightPopupOpen] = useState(false);
 
   const urlSearch = useSearch();
   useEffect(() => {
@@ -366,6 +377,16 @@ export default function Dashboard() {
     return () => {};
   }, []);
 
+  useEffect(() => {
+    if (!tradeTypePopupOpen) return;
+    const handler = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (!target.closest('[data-trade-type-popup]')) setTradeTypePopupOpen(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [tradeTypePopupOpen]);
+
   const symbolList = symbols.length > 0 ? symbols : ALL_FALLBACK;
   const pickerSymbols = symbols.length > 0 ? symbols : ALL_FALLBACK;
   const vol1sSymbols = pickerSymbols.filter((s) => /^1HZ/i.test(s.symbol) || /\(1s\)/i.test(s.displayName));
@@ -510,42 +531,38 @@ export default function Dashboard() {
                   ) : null;
                 })()}
               </div>
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2 flex-shrink-0">
                 {/* Session Stats (compact inline) */}
-                <div className="hidden md:flex items-center gap-3 text-[11px]">
+                <div className="hidden lg:flex items-center gap-2 text-[11px] shrink-0">
                   <span className="text-[var(--text-muted)]">P&L <span className={`font-mono font-bold ${todayPnl >= 0 ? "text-[var(--green)]" : "text-[var(--red)]"}`}>{formatSignedMoney(todayPnl)}</span></span>
                   <span className="text-[var(--text-muted)]">WR <span className="font-mono font-bold text-white">{todaySettled.length ? `${todayWinRate}%` : "—"}</span></span>
                   <span className="text-[var(--text-muted)]">N <span className="font-mono font-bold text-white">{todayTrades.length}</span></span>
                 </div>
                 {/* Balance */}
-                <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white/5 border border-[var(--border)]">
+                <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-white/5 border border-[var(--border)] shrink-0">
                   <Wallet className="w-3.5 h-3.5 text-[var(--green)]" />
                   <span className="text-sm font-bold font-mono tabular-nums text-white">
                     <CurrencyStat value={balance} currency={balanceInfo?.currency || "USD"} />
                   </span>
-                  <span className="text-[10px] text-[var(--text-muted)]">{balanceInfo?.currency || "USD"}</span>
                 </div>
                 {/* Connection Status */}
-                <div className={`hidden sm:flex items-center gap-1.5 px-2 py-0.5 rounded ${derivStatus === "connected" ? "bg-[var(--green-soft)]" : "bg-white/5 border border-[var(--border)]"}`}>
+                <div className={`hidden sm:flex items-center gap-1 px-2 py-0.5 rounded shrink-0 ${derivStatus === "connected" ? "bg-[var(--green-soft)]" : "bg-white/5 border border-[var(--border)]"}`}>
                   <span className={`w-1.5 h-1.5 rounded-full ${derivStatus === "connected" ? "bg-[var(--green)] animate-live-pulse" : "bg-[var(--text-disabled)]"}`} />
                   <span className={`text-[10px] font-bold uppercase ${derivStatus === "connected" ? "text-[var(--green)]" : "text-[var(--text-muted)]"}`}>
                     {derivStatus === "connected" ? "Live" : "Offline"}
                   </span>
                 </div>
-                {/* Quick Access Popups */}
-                <div className="hidden md:flex items-center gap-1">
-                  <button onClick={() => setWatchlistPopupOpen(true)} className="flex items-center gap-1 px-2 py-0.5 rounded bg-white/5 border border-[var(--border)] text-[10px] font-bold text-[var(--text-muted)] hover:text-white hover:border-[rgba(139,92,246,0.3)] transition-colors" title="Watchlist">
-                    <Star className="w-3 h-3" /> Watchlist
+                {/* Quick Access Popups — single toggle */}
+                <div className="hidden md:flex items-center gap-0.5 shrink-0">
+                  <button onClick={() => { setDataPopupTab("watchlist"); setDataPopupOpen(true); }} className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-white/5 border border-[var(--border)] text-[10px] font-bold text-[var(--text-muted)] hover:text-white hover:border-[rgba(139,92,246,0.3)] transition-colors" title="Data: Watchlist, Trade History, Prices">
+                    <Star className="w-3 h-3" />
                   </button>
-                  <button onClick={() => setHistoryPopupOpen(true)} className="flex items-center gap-1 px-2 py-0.5 rounded bg-white/5 border border-[var(--border)] text-[10px] font-bold text-[var(--text-muted)] hover:text-white hover:border-[rgba(139,92,246,0.3)] transition-colors" title="Trade History">
-                    <History className="w-3 h-3" /> History
-                  </button>
-                  <button onClick={() => setPricesPopupOpen(true)} className="flex items-center gap-1 px-2 py-0.5 rounded bg-white/5 border border-[var(--border)] text-[10px] font-bold text-[var(--text-muted)] hover:text-white hover:border-[rgba(139,92,246,0.3)] transition-colors" title="Price History">
-                    <Clock className="w-3 h-3" /> Prices
+                  <button onClick={() => setInsightPopupOpen(true)} className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-white/5 border border-[var(--border)] text-[10px] font-bold text-[var(--text-muted)] hover:text-white hover:border-[rgba(139,92,246,0.3)] transition-colors" title="Market Insight & Intel">
+                    <Brain className="w-3 h-3" />
                   </button>
                 </div>
                 {/* Connect button */}
-                <button onClick={() => setShowTokenModal(true)} className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-[var(--accent)] text-black text-[11px] font-bold hover:brightness-110 transition-all">
+                <button onClick={() => setShowTokenModal(true)} className="flex items-center gap-1 px-2 py-1 rounded-lg bg-[var(--accent)] text-black text-[11px] font-bold hover:brightness-110 transition-all shrink-0">
                   <Zap className="w-3 h-3" /> Connect
                 </button>
               </div>
@@ -553,32 +570,45 @@ export default function Dashboard() {
 
             {/* Chart Plot */}
             <div className="flex-1 min-h-0 relative" style={{ background: 'var(--bg)' }}>
-              {/* Trade Type Tabs */}
-              <div className="flex items-center gap-1 px-4 py-1.5 border-b border-[rgba(139,92,246,0.12)] bg-[rgba(10,10,26,0.3)] overflow-x-auto scrollbar-none">
-                {([
-                  { id: "rise_fall", label: "Rise/Fall", shortLabel: "R/F" },
-                  { id: "over_under", label: "Over/Under", shortLabel: "O/U" },
-                  { id: "even_odd", label: "Even/Odd", shortLabel: "E/O" },
-                  { id: "digits", label: "Digits", shortLabel: "Dig" },
-                  { id: "accumulator", label: "Accumulator", shortLabel: "Acc" },
-                ] as const).map((tab) => (
-                  <button
-                    key={tab.id}
-                    onClick={() => {
-                      const base: ContractSelection = { category: tab.id };
-                      if (tab.id === "rise_fall") base.direction = "rise";
-                      if (tab.id === "over_under") { base.overUnder = "over"; base.barrier = 5; }
-                      if (tab.id === "even_odd") base.digitMatch = "match";
-                      if (tab.id === "digits") { base.digitMatch = "match"; base.digit = 0; }
-                      if (tab.id === "accumulator") base.growthRate = 1;
-                      setContract(base);
-                    }}
-                    className={`trade-type-tab ${contract.category === tab.id ? "active" : ""}`}
-                  >
-                    <span className="hidden sm:inline">{tab.label}</span>
-                    <span className="sm:hidden">{tab.shortLabel}</span>
-                  </button>
-                ))}
+              {/* Trade Type Dropdown (Deriv style) */}
+              <div data-trade-type-popup className="relative px-4 py-1.5 border-b border-[rgba(139,92,246,0.12)] bg-[rgba(10,10,26,0.3)]">
+                <button
+                  onClick={() => setTradeTypePopupOpen((v) => !v)}
+                  className="flex items-center gap-2 px-3 py-1 rounded-lg bg-white/5 border border-[rgba(139,92,246,0.15)] hover:border-[rgba(139,92,246,0.3)] transition-colors text-xs font-semibold text-white"
+                >
+                  <Zap className="w-3 h-3 text-[var(--accent)]" />
+                  <span>{contractLabels[contract.category] || "Rise/Fall"}</span>
+                  <ChevronDown className={`w-3 h-3 text-[var(--text-muted)] transition-transform ${tradeTypePopupOpen ? "rotate-180" : ""}`} />
+                </button>
+                {tradeTypePopupOpen && (
+                  <div className="absolute top-full left-4 mt-1 z-50 aurora-glass-panel rounded-lg p-2 shadow-2xl w-[220px]">
+                    {([
+                      { id: "rise_fall", label: "Rise / Fall", desc: "Predict direction" },
+                      { id: "over_under", label: "Over / Under", desc: "Digit above/below barrier" },
+                      { id: "even_odd", label: "Even / Odd", desc: "Last digit parity" },
+                      { id: "digits", label: "Digits", desc: "Match or differ" },
+                      { id: "accumulator", label: "Accumulator", desc: "Compounding ticks" },
+                    ] as const).map((t) => (
+                      <button
+                        key={t.id}
+                        onClick={() => {
+                          const base: ContractSelection = { category: t.id };
+                          if (t.id === "rise_fall") base.direction = "rise";
+                          if (t.id === "over_under") { base.overUnder = "over"; base.barrier = 5; }
+                          if (t.id === "even_odd") base.digitMatch = "match";
+                          if (t.id === "digits") { base.digitMatch = "match"; base.digit = 0; }
+                          if (t.id === "accumulator") base.growthRate = 1;
+                          setContract(base);
+                          setTradeTypePopupOpen(false);
+                        }}
+                        className={`w-full text-left px-3 py-2 rounded-md transition-colors ${contract.category === t.id ? "bg-[var(--accent)]/10 border border-[var(--accent)]/20" : "hover:bg-white/5 border border-transparent"}`}
+                      >
+                        <span className={`text-xs font-bold ${contract.category === t.id ? "text-[var(--accent)]" : "text-white"}`}>{t.label}</span>
+                        <span className="block text-[10px] text-[var(--text-muted)] mt-0.5">{t.desc}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
               <div className="chart-plot h-full" style={{ minHeight: 0 }}>
                 {(() => {
@@ -668,92 +698,122 @@ export default function Dashboard() {
         </div>
       </PageSection>
 
-      {/* Popup Panels */}
+      {/* Consolidated Data Popup: Watchlist / Trades / Prices */}
       <PopupPanel
-        open={watchlistPopupOpen}
-        onClose={() => setWatchlistPopupOpen(false)}
-        title="Watchlist"
+        open={dataPopupOpen}
+        onClose={() => setDataPopupOpen(false)}
+        title="Data"
         icon={<Star className="w-4 h-4 text-[var(--accent)]" />}
-        width="320px"
-      >
-        <div className="p-2">
-          <WatchlistPanel
-            selectedSymbol={selectedSymbol}
-            onSelect={(s) => { setSelectedSymbol(s); setShowSymbolPicker(false); setWatchlistPopupOpen(false); }}
-          />
-        </div>
-      </PopupPanel>
-
-      <PopupPanel
-        open={historyPopupOpen}
-        onClose={() => setHistoryPopupOpen(false)}
-        title="Trade History"
-        icon={<History className="w-4 h-4 text-[var(--accent)]" />}
         width="420px"
       >
-        <div className="p-3">
-          {(() => {
-            const rows = allTrades.slice(0, 30);
-            if (rows.length === 0) {
-              return <p className="text-xs text-[var(--text-muted)] text-center py-6">No trades yet.</p>;
-            }
-            return (
-              <div className="space-y-1">
-                {rows.map((trade: any) => {
-                  const pl = parseFloat(trade.profitLoss?.toString() || "0");
-                  return (
-                    <div key={trade.id} className="flex items-center justify-between py-2 px-2 rounded hover:bg-white/5 transition-colors">
-                      <div className="flex items-center gap-2 min-w-0">
-                        <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${trade.result === "win" ? "bg-[var(--green)]" : trade.result === "loss" ? "bg-[var(--red)]" : "bg-[var(--accent)]"}`} />
-                        <div className="min-w-0">
-                          <p className="text-[11px] font-bold text-white truncate">{getSymbolDisplayName(trade.symbol)}</p>
-                          <p className="text-[9px] text-[var(--text-muted)]">{trade.contractType} · {trade.entryTime ? new Date(trade.entryTime).toLocaleTimeString() : "—"}</p>
+        <div className="flex border-b border-[rgba(139,92,246,0.12)]">
+          {([
+            { id: "watchlist" as const, label: "Watchlist", icon: <Star className="w-3 h-3" /> },
+            { id: "trades" as const, label: "Trades", icon: <History className="w-3 h-3" /> },
+            { id: "prices" as const, label: "Prices", icon: <Clock className="w-3 h-3" /> },
+          ]).map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setDataPopupTab(tab.id)}
+              className={`flex-1 flex items-center justify-center gap-1.5 py-2 text-[11px] font-bold transition-colors ${dataPopupTab === tab.id ? "text-[var(--accent)] border-b-2 border-[var(--accent)]" : "text-[var(--text-muted)] hover:text-white"}`}
+            >
+              {tab.icon} {tab.label}
+            </button>
+          ))}
+        </div>
+        <div className="max-h-[400px] overflow-y-auto">
+          {dataPopupTab === "watchlist" && (
+            <div className="p-2">
+              <WatchlistPanel
+                selectedSymbol={selectedSymbol}
+                onSelect={(s) => { setSelectedSymbol(s); setShowSymbolPicker(false); setDataPopupOpen(false); }}
+              />
+            </div>
+          )}
+          {dataPopupTab === "trades" && (
+            <div className="p-3">
+              {allTrades.slice(0, 30).length === 0 ? (
+                <p className="text-xs text-[var(--text-muted)] text-center py-6">No trades yet.</p>
+              ) : (
+                <div className="space-y-1">
+                  {allTrades.slice(0, 30).map((trade: any) => {
+                    const pl = parseFloat(trade.profitLoss?.toString() || "0");
+                    return (
+                      <div key={trade.id} className="flex items-center justify-between py-2 px-2 rounded hover:bg-white/5 transition-colors">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${trade.result === "win" ? "bg-[var(--green)]" : trade.result === "loss" ? "bg-[var(--red)]" : "bg-[var(--accent)]"}`} />
+                          <div className="min-w-0">
+                            <p className="text-[11px] font-bold text-white truncate">{getSymbolDisplayName(trade.symbol)}</p>
+                            <p className="text-[9px] text-[var(--text-muted)]">{trade.contractType} · {trade.entryTime ? new Date(trade.entryTime).toLocaleTimeString() : "—"}</p>
+                          </div>
+                        </div>
+                        <div className="text-right shrink-0">
+                          <p className={`text-[11px] font-bold font-mono tabular-nums ${pl >= 0 ? "text-[var(--green)]" : "text-[var(--red)]"}`}>
+                            {pl >= 0 ? "+" : ""}{formatSignedMoney(pl)}
+                          </p>
+                          <p className="text-[9px] text-[var(--text-muted)]">{formatMoney(trade.stake)}</p>
                         </div>
                       </div>
-                      <div className="text-right shrink-0">
-                        <p className={`text-[11px] font-bold font-mono tabular-nums ${pl >= 0 ? "text-[var(--green)]" : "text-[var(--red)]"}`}>
-                          {pl >= 0 ? "+" : ""}{formatSignedMoney(pl)}
-                        </p>
-                        <p className="text-[9px] text-[var(--text-muted)]">{formatMoney(trade.stake)}</p>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
+          {dataPopupTab === "prices" && (
+            <div className="p-3">
+              {displayTicks.length === 0 ? (
+                <p className="text-xs text-[var(--text-muted)] text-center py-6">No price data.</p>
+              ) : (
+                <div className="space-y-0.5">
+                  {displayTicks.slice(0, 50).map((t: any, i: number) => {
+                    const prevPrice = i < displayTicks.length - 1 ? displayTicks[i + 1]?.price : t.price;
+                    const dir = t.price > prevPrice ? "up" : t.price < prevPrice ? "down" : null;
+                    return (
+                      <div key={`${t.epoch}-${i}`} className="flex items-center justify-between py-1 px-2 rounded text-[11px]">
+                        <span className="text-[var(--text-muted)] font-mono text-[10px]">{new Date((t.epoch || 0) * 1000).toLocaleTimeString()}</span>
+                        <span className="flex items-center gap-1">
+                          {dir === "up" && <span className="text-[var(--green)]">▲</span>}
+                          {dir === "down" && <span className="text-[var(--red)]">▼</span>}
+                          <span className="font-mono tabular-nums text-white">{Number(t.price).toFixed(decimalPlaces)}</span>
+                        </span>
+                        <span className="font-mono text-[10px] font-bold" style={{ color: t.lastDigit >= 5 ? "var(--green)" : "var(--red)" }}>
+                          {t.lastDigit}
+                        </span>
                       </div>
-                    </div>
-                  );
-                })}
-              </div>
-            );
-          })()}
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </PopupPanel>
 
+      {/* Market Insight & Intel Popup */}
       <PopupPanel
-        open={pricesPopupOpen}
-        onClose={() => setPricesPopupOpen(false)}
-        title="Price History"
-        icon={<Clock className="w-4 h-4 text-[var(--accent)]" />}
-        width="360px"
+        open={insightPopupOpen}
+        onClose={() => setInsightPopupOpen(false)}
+        title="Market Insight & Intel"
+        icon={<Brain className="w-4 h-4 text-[var(--accent)]" />}
+        width="420px"
       >
-        <div className="p-3">
-          {displayTicks.length === 0 ? (
-            <p className="text-xs text-[var(--text-muted)] text-center py-6">No price data.</p>
-          ) : (
-            <div className="space-y-0.5">
-              {displayTicks.slice(0, 50).map((t: any, i: number) => {
-                const prevPrice = i < displayTicks.length - 1 ? displayTicks[i + 1]?.price : t.price;
-                const dir = t.price > prevPrice ? "up" : t.price < prevPrice ? "down" : null;
-                return (
-                  <div key={`${t.epoch}-${i}`} className="flex items-center justify-between py-1 px-2 rounded text-[11px]">
-                    <span className="text-[var(--text-muted)] font-mono text-[10px]">{new Date((t.epoch || 0) * 1000).toLocaleTimeString()}</span>
-                    <span className="flex items-center gap-1">
-                      {dir === "up" && <span className="text-[var(--green)]">▲</span>}
-                      {dir === "down" && <span className="text-[var(--red)]">▼</span>}
-                      <span className="font-mono tabular-nums text-white">{Number(t.price).toFixed(decimalPlaces)}</span>
-                    </span>
-                    <span className="font-mono text-[10px] font-bold" style={{ color: t.lastDigit >= 5 ? "var(--green)" : "var(--red)" }}>
-                      {t.lastDigit}
-                    </span>
+        <div className="p-3 space-y-3">
+          <SymbolInsights symbol={selectedSymbol} ticks={displayTicks} trades={(tradesQuery.data || []) as any} decimalPlaces={decimalPlaces} />
+          <div className="border-t border-[rgba(139,92,246,0.12)] pt-3">
+            <AIVerdicts symbol={selectedSymbol} ticks={displayTicks} trades={(tradesQuery.data || []) as any} decimalPlaces={decimalPlaces} />
+          </div>
+          {signalsQuery.data && signalsQuery.data.length > 0 && (
+            <div className="border-t border-[rgba(139,92,246,0.12)] pt-3">
+              <h4 className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-wider mb-2">AI Signals</h4>
+              {signalsQuery.data.slice(0, 3).map((sig: any, i: number) => (
+                <div key={i} className="py-2 border-b border-[var(--border)] last:border-0">
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="ai-badge text-[8px]">{getSymbolDisplayName(sig.symbol)}</span>
                   </div>
-                );
-              })}
+                  <p className="text-[10px] text-[var(--text-secondary)] leading-relaxed line-clamp-2">{sig.description}</p>
+                </div>
+              ))}
             </div>
           )}
         </div>

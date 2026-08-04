@@ -40,7 +40,7 @@ export default function Portfolio() {
 
   if (tradesQuery.isLoading) {
     return (
-      <div className="min-h-screen bg-[var(--bg)] flex items-center justify-center">
+      <div className="h-full flex items-center justify-center">
         <Loader2 className="w-8 h-8 animate-spin text-[var(--accent)]" />
       </div>
     );

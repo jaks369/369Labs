@@ -21,7 +21,7 @@ const ENTRIES = [
 
 export default function Changelog() {
   return (
-    <div className="min-h-screen bg-[var(--bg)] p-6">
+    <div className="h-full p-6">
       <div className="max-w-2xl mx-auto space-y-8">
         <div className="flex items-center gap-3">
           <GitCommit className="w-7 h-7 text-[var(--accent)]" />

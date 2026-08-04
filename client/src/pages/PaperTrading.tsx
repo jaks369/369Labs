@@ -8,7 +8,7 @@ export default function PaperTrading() {
   const [, navigate] = useLocation();
   if (!isAuthenticated) { navigate("/login"); return null; }
   return (
-    <div className="min-h-screen bg-[var(--bg)] p-6">
+    <div className="h-full p-6">
       <div className="max-w-3xl mx-auto text-center space-y-8 pt-20">
         <div className="flex items-center justify-center gap-3">
           <Sparkles className="w-8 h-8 text-[var(--accent)]" />

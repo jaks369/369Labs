@@ -30,7 +30,7 @@ export default function Logs() {
   const logs = logsQuery.data?.logs || [];
 
   return (
-    <div className="min-h-screen bg-[var(--bg)] p-6">
+    <div className="h-full p-6">
       <div className="max-w-5xl mx-auto space-y-6">
         <div>
           <h1 className="text-3xl font-bold text-white flex items-center gap-3">

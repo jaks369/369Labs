@@ -31,7 +31,7 @@ export default function Home() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   return (
-    <div className="min-h-screen bg-[var(--bg)] text-[var(--text-primary)] selection:bg-[var(--accent)]/20">
+    <div className="h-full text-[var(--text-primary)] selection:bg-[var(--accent)]/20">
       {/* Aurora background glow */}
       <div className="fixed inset-0 pointer-events-none">
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[500px] h-[350px] blur-[200px] rounded-full opacity-[0.08]" style={{ background: 'linear-gradient(135deg, #4ade80, #8b5cf6)' }} />

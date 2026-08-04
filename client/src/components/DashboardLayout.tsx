@@ -192,7 +192,7 @@ export default function DashboardLayout({
 
   if (!user) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-[var(--bg)]">
+      <div className="flex items-center justify-center h-full bg-[var(--bg)]">
         <div className="flex flex-col items-center gap-6 p-8 max-w-md w-full card">
           <div className="flex flex-col items-center gap-4">
             <div className="w-10 h-10 bg-[var(--accent)] rounded-lg flex items-center justify-center">
@@ -324,7 +324,7 @@ function DashboardLayoutContent({
   }, [isResizing, setSidebarWidth]);
 
   return (
-    <div className="flex min-h-screen bg-[var(--bg)] overflow-x-hidden">
+    <div className="flex h-screen bg-[var(--bg)] overflow-x-hidden">
       {/* Desktop sidebar — hidden on mobile */}
       <div className="relative hidden md:block sticky top-0 h-screen z-40" ref={sidebarRef}>
         <Sidebar
@@ -333,8 +333,8 @@ function DashboardLayoutContent({
           disableTransition={isResizing}
         >
           <SidebarHeader className="h-14 justify-center border-b border-[rgba(139,92,246,0.12)]">
-            <div className="flex items-center gap-1 px-3">
-              <button onClick={() => setLocation("/dashboard")} className="flex items-center gap-2.5 transition-all cursor-pointer group flex-1 text-left">
+            <div className={`flex items-center px-3 ${isCollapsed ? "justify-center" : "justify-between"}`}>
+              <button onClick={() => setLocation("/dashboard")} className="flex items-center gap-2.5 transition-all cursor-pointer group">
                 <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0" style={{ background: 'linear-gradient(135deg, #4ade80, #8b5cf6)' }}>
                   <Activity className="w-5 h-5 text-white" />
                 </div>
@@ -351,13 +351,15 @@ function DashboardLayoutContent({
                 )}
               </button>
               {!isCollapsed && (
-                <button onClick={() => setGlobalSearchOpen(true)} className="w-6 h-6 rounded-md flex items-center justify-center text-[var(--text-muted)] hover:text-white hover:bg-white/5 transition-all" title="Search (Ctrl+K)">
-                  <Search className="w-3.5 h-3.5" />
-                </button>
+                <div className="flex items-center gap-0.5">
+                  <button onClick={() => setGlobalSearchOpen(true)} className="w-7 h-7 rounded-md flex items-center justify-center text-[var(--text-muted)] hover:text-white hover:bg-white/5 transition-all" title="Search (Ctrl+K)">
+                    <Search className="w-3.5 h-3.5" />
+                  </button>
+                  <button onClick={toggleSidebar} className="w-7 h-7 rounded-md flex items-center justify-center text-[var(--text-muted)] hover:text-white hover:bg-white/5 transition-all" title="Collapse sidebar (Ctrl+B)">
+                    <PanelLeftClose className="w-3.5 h-3.5" />
+                  </button>
+                </div>
               )}
-              <button onClick={toggleSidebar} className="w-6 h-6 rounded-md flex items-center justify-center text-[var(--text-muted)] hover:text-white hover:bg-white/5 transition-all" title={isCollapsed ? "Expand sidebar (Ctrl+B)" : "Collapse sidebar (Ctrl+B)"}>
-                <PanelLeftClose className="w-3.5 h-3.5" />
-              </button>
             </div>
           </SidebarHeader>
 
@@ -567,7 +569,7 @@ function DashboardLayoutContent({
         </Sidebar>
       </div>
 
-      <SidebarInset className="bg-[var(--bg)] flex flex-col max-w-full overflow-hidden">
+      <SidebarInset className="bg-[var(--bg)] flex flex-col flex-1 min-w-0 h-screen">
         {/* Mobile header — hamburger opens sidebar sheet */}
         {isMobile && (
           <div className="flex border-b border-[rgba(139,92,246,0.12)] h-12 items-center justify-between bg-[rgba(10,10,26,0.9)] backdrop-blur-xl px-4 sticky top-0 z-40">
@@ -580,7 +582,7 @@ function DashboardLayoutContent({
             </div>
           </div>
         )}
-        <main className={`flex-1 overflow-y-auto ${isMobile ? "pb-16" : ""}`}>
+        <main className={`flex-1 overflow-y-auto min-h-0 ${isMobile ? "pb-16" : ""}`}>
           {!riskDismissed && (
             <div className="flex items-center gap-3 bg-[rgba(10,10,26,0.6)] border-b border-[rgba(139,92,246,0.12)] px-4 py-1.5 text-micro leading-snug text-[var(--text-muted)]">
               <span className="font-semibold uppercase tracking-wider text-[var(--text-muted)]/60 shrink-0 text-[9px]">Risk</span>

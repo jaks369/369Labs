@@ -65,6 +65,7 @@ export default function PriceChart({
   const [visibleBars, setVisibleBars] = useState<number>(Math.max(MIN_BARS, data.length || 1));
   const [scrollBack, setScrollBack] = useState<number>(0);
   const [dragging, setDragging] = useState<{ startX: number; startScroll: number } | null>(null);
+  const [crosshair, setCrosshair] = useState<{ x: number; y: number; price: number; time: string; barIdx: number } | null>(null);
 
   // Reserve ~18% of the visible window as continuation space on the right.
   const rightOffset = Math.max(8, Math.round((visibleBars || 1) * 0.2));
@@ -233,6 +234,32 @@ export default function PriceChart({
     setScrollBack(Math.max(0, Math.min(liveEdge - 0, dragging.startScroll - delta)));
   }, [dragging, chartW, totalBars, liveEdge]);
 
+  const onCrosshairMove = useCallback((e: React.PointerEvent) => {
+    if (dragging || chartW <= 0) { setCrosshair(null); return; }
+    const rect = containerRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    const mx = e.clientX - rect.left;
+    const my = e.clientY - rect.top;
+    if (mx < padX || mx > padX + chartW || my < padTop || my > padTop + chartH) {
+      setCrosshair(null);
+      return;
+    }
+    const frac = (mx - padX) / chartW;
+    const barIdx = Math.round(leftIdx + frac * (totalBars - 1));
+    const dataIdx = Math.max(0, Math.min(barIdx, data.length - 1));
+    const priceFrac = 1 - (my - padTop) / chartH;
+    const priceAtCursor = scale.start + priceFrac * yRange + base;
+    setCrosshair({
+      x: mx,
+      y: my,
+      price: priceAtCursor,
+      time: data[dataIdx]?.time ?? "",
+      barIdx: dataIdx,
+    });
+  }, [dragging, chartW, chartH, padX, padTop, leftIdx, totalBars, scale.start, yRange, base, data]);
+
+  const onCrosshairLeave = useCallback(() => setCrosshair(null), []);
+
   const onPointerUp = useCallback(() => setDragging(null), []);
 
   const returnToLive = useCallback(() => {
@@ -282,9 +309,9 @@ export default function PriceChart({
         ref={containerRef}
         onWheel={onWheel}
         onPointerDown={onPointerDown}
-        onPointerMove={onPointerMove}
+        onPointerMove={(e) => { onPointerMove(e); onCrosshairMove(e); }}
         onPointerUp={onPointerUp}
-        onPointerLeave={onPointerUp}
+        onPointerLeave={() => { onPointerUp(); onCrosshairLeave(); }}
         className={`w-full relative rounded-xl overflow-hidden border border-[var(--border-subtle)] select-none ${heightClass || defaultHeight}`}
         style={{ background: `linear-gradient(180deg, color-mix(in srgb, ${color} 6%, transparent) 0%, color-mix(in srgb, ${color} 1.5%, transparent) 60%, transparent 100%)`, cursor: dragging ? "grabbing" : "grab" }}
       >
@@ -362,6 +389,25 @@ export default function PriceChart({
                 {tl.label}
               </text>
             ))}
+
+            {/* Crosshair */}
+            {crosshair && (
+              <g>
+                <line x1={crosshair.x} y1={padTop} x2={crosshair.x} y2={padTop + chartH} stroke="var(--text-muted)" strokeWidth="0.5" strokeDasharray="3,3" opacity="0.5" />
+                <line x1={padX} y1={crosshair.y} x2={padX + chartW} y2={crosshair.y} stroke="var(--text-muted)" strokeWidth="0.5" strokeDasharray="3,3" opacity="0.5" />
+                <circle cx={crosshair.x} cy={crosshair.y} r="3" fill={color} stroke="var(--bg)" strokeWidth="1.5" />
+                {/* Price tag on Y axis */}
+                <rect x={0} y={crosshair.y - 10} width={padX - 4} height={20} rx="3" fill={color} />
+                <text x={(padX - 4) / 2} y={crosshair.y + 4} textAnchor="middle" fontSize="9" fontWeight="bold" fill="var(--bg)" fontFamily="JetBrains Mono, monospace">
+                  {crosshair.price.toFixed(labelDecimals)}
+                </text>
+                {/* Time tag on X axis */}
+                <rect x={crosshair.x - 30} y={padTop + chartH + 2} width={60} height={16} rx="3" fill={color} />
+                <text x={crosshair.x} y={padTop + chartH + 13} textAnchor="middle" fontSize="9" fontWeight="bold" fill="var(--bg)" fontFamily="JetBrains Mono, monospace">
+                  {crosshair.time}
+                </text>
+              </g>
+            )}
           </svg>
         ) : (
           <div className="absolute inset-0 flex flex-col items-center justify-center gap-2">

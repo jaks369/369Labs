@@ -166,7 +166,7 @@ export default function Analytics() {
   };
 
   return (
-    <div className="min-h-screen bg-[var(--bg)] p-6">
+    <div className="h-full p-6">
       <div className="max-w-6xl mx-auto space-y-8">
         <div className="flex items-center justify-between">
           <div>

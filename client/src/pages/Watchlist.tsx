@@ -82,7 +82,7 @@ export default function Watchlist() {
   if (!isAuthenticated) { navigate("/login"); return null; }
 
   return (
-    <div className="min-h-screen bg-[var(--bg)] p-4 md:p-6">
+    <div className="h-full p-4 md:p-6">
       <div className="max-w-6xl mx-auto space-y-6">
         <div className="flex items-center justify-between flex-wrap gap-3">
           <div className="flex items-center gap-3">

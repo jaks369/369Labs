@@ -4,7 +4,7 @@ import { AlertTriangle, Home, RefreshCw } from "lucide-react";
 export default function ServerError() {
   const [, navigate] = useLocation();
   return (
-    <div className="min-h-screen bg-[var(--bg)] flex items-center justify-center p-6">
+    <div className="h-full flex items-center justify-center p-6">
       <div className="text-center max-w-md">
         <div className="w-16 h-16 mx-auto mb-6 rounded-2xl bg-[var(--red-soft)] border border-[var(--red)]/30 flex items-center justify-center">
           <AlertTriangle className="w-8 h-8 text-[var(--red)]" />

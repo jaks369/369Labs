@@ -142,7 +142,7 @@ export default function AutoReports() {
   const openReport = (id: number) => setViewReportId(id);
 
   return (
-    <div className="min-h-screen bg-[var(--bg)] p-6">
+    <div className="h-full p-6">
       <div className="max-w-3xl mx-auto space-y-8">
         <div className="flex items-center gap-3">
           <FileText className="w-7 h-7 text-[var(--accent)]" />

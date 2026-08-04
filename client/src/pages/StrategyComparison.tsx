@@ -87,7 +87,7 @@ export default function StrategyComparison() {
   const loading = strategiesQuery.isLoading || tradesQuery.isLoading;
 
   return (
-    <div className="min-h-screen bg-[var(--bg)] p-6">
+    <div className="h-full p-6">
       <div className="max-w-4xl mx-auto space-y-6">
         <div className="flex items-center gap-3">
           <GitCompare className="w-7 h-7 text-[var(--accent)]" />

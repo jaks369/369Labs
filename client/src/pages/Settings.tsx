@@ -304,7 +304,7 @@ export default function Settings() {
 
   if (settingsLoading) {
     return (
-      <div className="min-h-screen bg-[var(--bg)] flex items-center justify-center">
+      <div className="h-full flex items-center justify-center">
         <Loader2 className="w-8 h-8 animate-spin text-[var(--accent)]" />
       </div>
     );
@@ -313,7 +313,7 @@ export default function Settings() {
   const settingsError = derivTokenQuery.isError || telegramQuery.isError || notificationsQuery.isError || memoryQuery.isError;
 
   return (
-    <div className="min-h-screen bg-[var(--bg)] text-[var(--text-primary)] p-4 md:p-8">
+    <div className="h-full text-[var(--text-primary)] p-4 md:p-8">
       <div className="max-w-[900px] mx-auto">
         <div className="mb-8">
           <h1 className="text-lg font-bold text-[var(--text-primary)] mb-1">Settings</h1>

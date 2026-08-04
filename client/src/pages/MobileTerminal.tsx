@@ -239,7 +239,7 @@ export default function MobileTerminal() {
   })();
 
   return (
-    <div className="min-h-screen bg-[#0A0A1A] pb-20 lg:hidden">
+    <div className="h-full bg-[#0A0A1A] pb-20 lg:hidden">
       {/* Header: symbol · live price · LIVE */}
       <div className="sticky top-0 z-30 aurora-glass border-b border-[rgba(139,92,246,0.15)] px-4 pt-3 pb-2">
         <div className="flex items-center justify-between gap-3">

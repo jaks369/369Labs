@@ -74,7 +74,7 @@ export default function Marketplace() {
   const pluginList = Array.isArray(pluginsQuery.data) ? pluginsQuery.data : [];
 
   return (
-    <div className="min-h-screen bg-[var(--bg)] text-white">
+    <div className="h-full text-white">
       <div className="p-4 md:p-6 border-b border-[var(--border)] flex flex-wrap items-center justify-between gap-3 bg-[var(--card)] sticky top-0 z-10">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 bg-[var(--accent-soft)] rounded-xl flex items-center justify-center border border-[var(--accent-border)]">
