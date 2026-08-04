@@ -276,3 +276,47 @@ The manual terminal path passes SL/TP to Deriv (`Dashboard.tsx`), but the bot en
 - client `npm run build` succeeds (chunk-size warning only)
 
 Changes pending commit & push in this pass.
+
+## Appendix D — Production deep-audit round 3 (all-market scanning, OOS validation & UX)
+
+Third full pass over the signal scanner, trading terminal UX, and AI performance instrumentation.
+
+### B11 — Signal scanner only watched a few pre-selected markets
+The always-on scanner launched rules only for a small hand-picked symbol set, so the AI signal feed (and the Marketplace) never reflected most instruments.
+
+**Fix:** `server/signalScanner.ts` rewritten to scan **all** markets (R_10…R_100, 1HZ 1s variants, Boom/Crash) with Rise/Fall, Even/Odd, Over/Under, Match/Diff, digit-streak and even/odd-run rules; `patternType` zod enum + tool description updated to the new category set; `runTool` cast union extended.
+
+### B12 — Signals persisted without any out-of-sample validation
+Every discovered signal was recorded straight from in-sample backtest win rates, so the Marketplace could show overfitted, non-reproducible edges.
+
+**Fix:** scanner now splits history into an in-sample window (discovery) and a **forward out-of-sample** window, and only persists a signal if the OOS half also clears `minWinRate` with enough `oosMinSamples`. New `oosWinRate` / `oosSampleSize` / `oosValidated` columns added (drizzle schema + idempotent `ensureSignalOosColumns` ALTER in `db.ts`, wired at server startup). Marketplace signal cards render an "Out-of-sample" line with the validated rate and sample count.
+
+### B13 — Contract-type picker popup swallowed its own clicks (stuck on Rise/Fall)
+`ContractTypeSelector` renders its option grid in a portal to `document.body`, but the outside-click handler only checked the trigger, so the portal's own `mousedown` closed the popover before the option's `click` could fire — switching to Over/Under, Even/Odd, etc. never applied.
+
+**Fix:** added `portalRef` and excluded the portal from the outside-click handler. Option clicks now register and the contract type actually changes.
+
+### B14 — Price history refetched from the DB every 3s
+The Prices tab combined a live tick stream with a 3-second `refetchInterval` server poll, causing visible refresh churn even though live ticks already stream.
+
+**Fix:** removed the interval poll (`Dashboard.tsx`) so history loads once per symbol; the live-tick buffer still updates rows in real time.
+
+### B15 — AI Performance Accuracy and avgConfidence always 0
+`aiMemory.logAccuracy` (the only writer of `accuracy_log` rows) was never invoked, so `getAccuracyStats` returned zeros and `AIPerformance.overview` showed Accuracy 0% / avgConfidence 0 regardless of results.
+
+**Fix:** `AIIntelligenceHub.processTradeCompletion` now builds the `TradeReviewData` once and passes it to `aiMemory.logAccuracy`, so every settled trade review writes an accuracy log; `accuracyPct` and `avgConfidence` now populate from real outcomes. (Both the SettlementTracker and manual settle paths already call `processTradeCompletion`.)
+
+### B16 — Run Backtest button disabled when arriving from a signal
+Navigating from a signal into Backtesting set only `signalRule`, but the Run button was gated on `selectedStrategyId`, so it stayed permanently disabled.
+
+**Fix:** `Backtesting.tsx` enables Run when either a strategy **or** a signal rule is present.
+
+### B17 — Sidebar scroll reset on every navigation
+`PageTransition key={location}` wrapped the whole route switch, remounting the layout (and sidebar) on each navigation so the sidebar lost its scroll position.
+
+**Fix:** per-route transitions only; the layout container keys the content area, so sidebar scroll persists across navigations.
+
+### Residual & verification
+- `npx tsc --noEmit` clean
+- `npx vitest run` 105/105 passing
+- client `npm run build` succeeds (chunk-size warning only)

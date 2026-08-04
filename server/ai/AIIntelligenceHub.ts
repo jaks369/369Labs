@@ -84,19 +84,22 @@ export class AIIntelligenceHub {
       ].join(" | "),
     };
 
+    const reviewData = {
+      context: { symbol: trade.symbol, contractType: trade.contractType, snapshot: marketContext },
+      result: { outcome: trade.result, pnl, review: review.whyTradeWasTaken },
+    };
+
     await db.saveAiKnowledge({
       userId: trade.userId,
       knowledgeType: AIKnowledgeType.TRADE_REVIEW,
       symbol: trade.symbol,
-      data: {
-        context: { symbol: trade.symbol, contractType: trade.contractType, snapshot: marketContext },
-        result: { outcome: trade.result, pnl, review: review.whyTradeWasTaken },
-      } as any,
+      data: reviewData as any,
       relatedTradeId: trade.id,
       relatedStrategyId: trade.strategyId,
       source: "AIIntelligenceHub",
     });
 
+    await aiMemory.logAccuracy(trade.userId, reviewData as any);
     await aiMemory.storeTradeContext(trade.userId, tradeContext);
 
     await this.emit({
