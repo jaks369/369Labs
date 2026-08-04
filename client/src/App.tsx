@@ -10,6 +10,9 @@ import CommandPalette from "./components/CommandPalette";
 import DashboardLayout from "./components/DashboardLayout";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import Home from "./pages/Home";
+import HowItWorks from "./pages/HowItWorks";
+import AI369 from "./pages/AI369";
+import Pricing from "./pages/Pricing";
 import Dashboard from "./pages/Dashboard";
 import Settings from "./pages/Settings";
 import AIAssistant from "./pages/AIAssistant";
@@ -81,6 +84,9 @@ function Router() {
   return (
     <Switch>
       <Route path={"/"}><PageTransition><Home /></PageTransition></Route>
+      <Route path={"/how-it-works"}><PageTransition><HowItWorks /></PageTransition></Route>
+      <Route path={"/369ai"}><PageTransition><AI369 /></PageTransition></Route>
+      <Route path={"/pricing"}><PageTransition><Pricing /></PageTransition></Route>
       <Route path={"/login"}><PageTransition><Login /></PageTransition></Route>
       <Route path={"/forgot-password"}><PageTransition><ForgotPassword /></PageTransition></Route>
       <Route path={"/reset"}><PageTransition><ResetPassword /></PageTransition></Route>

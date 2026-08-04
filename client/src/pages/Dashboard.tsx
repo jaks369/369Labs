@@ -415,8 +415,8 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="terminal-page">
-      <PageSection>
+    <div className="terminal-page h-full">
+      <PageSection className="h-full">
         {/* Compact Terminal Layout: Chart + Trade Panel */}
         <div className="terminal-layout">
           {/* Left: Chart area */}
@@ -639,7 +639,7 @@ export default function Dashboard() {
                   </div>
                 </div>
               )}
-              <div className="chart-plot h-full" style={{ minHeight: 0 }}>
+              <div className="chart-plot h-full glass-surface" style={{ minHeight: 0, borderRadius: '16px' }}>
                 {(() => {
                   const ticks = displayTicks;
                   const last = ticks[0];
@@ -655,7 +655,7 @@ export default function Dashboard() {
           </div>
 
           {/* Right: Trade Panel */}
-          <div className="terminal-trade-panel aurora-glass-panel">
+          <div className="terminal-trade-panel glass-surface border-l border-[rgba(255,255,255,0.08)]">
             <TerminalContextPanel
               selectedSymbol={selectedSymbol}
               selectedDisplay={selectedDisplay}

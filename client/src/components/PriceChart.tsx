@@ -324,16 +324,16 @@ export default function PriceChart({
           <svg viewBox={`0 0 ${dims.w} ${dims.h}`} preserveAspectRatio="none" className="absolute inset-0 w-full h-full">
             <defs>
               <linearGradient id={gradId} x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor={color} stopOpacity="0.18" />
-                <stop offset="70%" stopColor={color} stopOpacity="0.04" />
+                <stop offset="0%" stopColor={color} stopOpacity="0.06" />
+                <stop offset="60%" stopColor={color} stopOpacity="0.02" />
                 <stop offset="100%" stopColor={color} stopOpacity="0" />
               </linearGradient>
               <linearGradient id={lineGradId} x1="0" y1="0" x2="1" y2="0">
-                <stop offset="0%" stopColor={color} stopOpacity="0.6" />
+                <stop offset="0%" stopColor={color} stopOpacity="0.9" />
                 <stop offset="100%" stopColor={color} stopOpacity="1" />
               </linearGradient>
-              <filter id={glowId} x="-10%" y="-30%" width="120%" height="160%">
-                <feGaussianBlur stdDeviation="2.5" result="blur" />
+              <filter id={glowId} x="-5%" y="-15%" width="110%" height="130%">
+                <feGaussianBlur stdDeviation="0.8" result="blur" />
                 <feMerge>
                   <feMergeNode in="blur" />
                   <feMergeNode in="SourceGraphic" />
@@ -343,14 +343,14 @@ export default function PriceChart({
 
             {/* Grid lines */}
             {gridLines.map((gl, i) => (
-              <line key={`grid-${i}`} x1={padX} y1={gl.y} x2={padX + chartW} y2={gl.y} stroke="var(--border-subtle)" strokeWidth="1" opacity="0.6" />
+              <line key={`grid-${i}`} x1={padX} y1={gl.y} x2={padX + chartW} y2={gl.y} stroke="var(--border-subtle)" strokeWidth="1" opacity="0.4" />
             ))}
 
             {/* Area fill */}
             {mode === "area" && <path d={areaD} fill={`url(#${gradId})`} />}
 
-            {/* Line */}
-            <path d={pathD} fill="none" stroke={`url(#${lineGradId})`} strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" vectorEffect="non-scaling-stroke" filter={`url(#${glowId})`} />
+            {/* Line — thin, Deriv-style */}
+            <path d={pathD} fill="none" stroke={`url(#${lineGradId})`} strokeWidth="1.2" strokeLinejoin="round" strokeLinecap="round" vectorEffect="non-scaling-stroke" filter={`url(#${glowId})`} />
 
             {/* Current price dashed line */}
             {lastPrice != null && (

@@ -41,28 +41,44 @@
 }
 
 :root {
-  /* 369Labs "Signal" Design System v2.0 — Dark Terminal */
-  --bg: #0A0C10;
-  --surface-dim: #08080c;
-  --surface: #10131A;
-  --surface-secondary: rgba(255, 255, 255, 0.03);
-  --surface-elevated: rgba(255, 255, 255, 0.05);
-  --card: rgba(255, 255, 255, 0.04);
-  --surface-floating: rgba(255, 255, 255, 0.05);
-  --border: #212936;
-  --border-subtle: #1A212C;
+  /* ─── Exact Aurora Morphism Color System (Part 0) ─── */
+  --bg-base: #0a0e17;
+  --bg-base-2: #0d1320;
+  --aurora-teal: #2dd4bf;
+  --aurora-green: #34e0a1;
+  --aurora-purple: #a78bfa;
+  --aurora-magenta: #e879f9;
+  --aurora-pink: #f472b6;
+
+  --glass-fill: rgba(255,255,255,0.045);
+  --glass-fill-strong: rgba(255,255,255,0.08);
+  --glass-border: rgba(255,255,255,0.09);
+  --glass-blur: 20px;
+  --glass-shadow: 0 8px 32px rgba(0,0,0,0.45);
+  --glass-inner-highlight: inset 0 1px 0 rgba(255,255,255,0.06);
+
+  /* Legacy aliases for compatibility */
+  --bg: var(--bg-base);
+  --surface-dim: var(--bg-base-2);
+  --surface: var(--bg-base-2);
+  --surface-secondary: var(--glass-fill);
+  --surface-elevated: var(--glass-fill-strong);
+  --card: var(--glass-fill);
+  --surface-floating: var(--glass-fill-strong);
+  --border: var(--glass-border);
+  --border-subtle: var(--glass-border);
 
   --text-primary: #EDEFF3;
   --text-secondary: #8A93A3;
   --text-muted: #778196;
   --text-disabled: #3D4556;
 
-  /* Single brand accent — cool electric teal */
-  --accent: #2FD9C4;
-  --accent-hover: #4CE8D5;
-  --accent-soft: rgba(47, 217, 196, 0.10);
-  --accent-border: rgba(47, 217, 196, 0.24);
-  --accent-glow: rgba(47, 217, 196, 0.18);
+  /* Aurora accent palette */
+  --accent: var(--aurora-teal);
+  --accent-hover: var(--aurora-green);
+  --accent-soft: rgba(45,212,191,0.10);
+  --accent-border: rgba(45,212,191,0.24);
+  --accent-glow: rgba(45,212,191,0.18);
 
   /* Primary CTA — solid off-white pill */
   --cta-fill: #F4F6F8;
@@ -78,6 +94,7 @@
   --red: #EA3943;
   --red-rgb: 234, 57, 67;
   --red-soft: rgba(234, 57, 67, 0.10);
+  --red-border: rgba(234, 57, 67, 0.24);
   --red-border: rgba(234, 57, 67, 0.24);
 
   /* Typography scale — modular scale (1.25 ratio) */
@@ -246,28 +263,17 @@
     line-height: 1.55;
   }
 
-  /* Fixed full-viewport background — covers everything, never clips */
+  /* ─── Global Aurora Glow Layer (Part 0) — behind ALL pages ─── */
   body::before {
-    content: '';
-    position: fixed;
-    inset: 0;
-    z-index: -2;
-    background: var(--bg);
-    pointer-events: none;
-  }
-
-  /* Aurora glow layer — soft radial gradients behind all content */
-  body::after {
-    content: '';
+    content: "";
     position: fixed;
     inset: 0;
     z-index: -1;
-    background:
-      radial-gradient(ellipse at 10% 0%, rgba(45, 212, 191, 0.15) 0%, transparent 50%),
-      radial-gradient(ellipse at 90% 0%, rgba(167, 139, 250, 0.12) 0%, transparent 50%),
-      radial-gradient(ellipse at 50% 100%, rgba(232, 121, 249, 0.08) 0%, transparent 50%),
-      radial-gradient(ellipse at 70% 40%, rgba(74, 222, 128, 0.06) 0%, transparent 50%);
-    filter: blur(120px);
+    background: var(--bg-base);
+    background-image:
+      radial-gradient(ellipse 800px 600px at 15% -10%, rgba(45,212,191,0.16), transparent 60%),
+      radial-gradient(ellipse 900px 700px at 90% 0%, rgba(167,139,250,0.18), transparent 60%),
+      radial-gradient(ellipse 700px 500px at 50% 100%, rgba(232,121,249,0.10), transparent 60%);
     pointer-events: none;
   }
 
@@ -1298,20 +1304,23 @@
 
   /* ─── Terminal Watchlist Column ─────────────────────────── */
   .watchlist-terminal {
-    background: var(--card);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
+    background: var(--glass-fill);
+    backdrop-filter: blur(var(--glass-blur));
+    -webkit-backdrop-filter: blur(var(--glass-blur));
+    border: 1px solid var(--glass-border);
+    box-shadow: var(--glass-shadow), var(--glass-inner-highlight);
+    border-radius: 16px;
     overflow: hidden;
   }
 
   /* ─── Floating Surface (Trade Studio terminal) ──────────── */
   .surface-floating {
-    background: rgba(255, 255, 255, 0.05);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    border-radius: var(--radius);
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+    background: var(--glass-fill);
+    backdrop-filter: blur(var(--glass-blur));
+    -webkit-backdrop-filter: blur(var(--glass-blur));
+    border: 1px solid var(--glass-border);
+    box-shadow: var(--glass-shadow), var(--glass-inner-highlight);
+    border-radius: 16px;
     position: relative;
   }
 
@@ -1343,62 +1352,80 @@
 
   /* ─── Glassmorphism ────────────────────────────────────── */
   .glass {
-    background: rgba(255, 255, 255, 0.04);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+    background: var(--glass-fill);
+    backdrop-filter: blur(var(--glass-blur));
+    -webkit-backdrop-filter: blur(var(--glass-blur));
+    border: 1px solid var(--glass-border);
+    box-shadow: var(--glass-shadow), var(--glass-inner-highlight);
+    border-radius: 16px;
   }
   .glass-strong {
-    background: rgba(255, 255, 255, 0.06);
-    backdrop-filter: blur(24px);
-    -webkit-backdrop-filter: blur(24px);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.45);
+    background: var(--glass-fill-strong);
+    backdrop-filter: blur(var(--glass-blur));
+    -webkit-backdrop-filter: blur(var(--glass-blur));
+    border: 1px solid var(--glass-border);
+    box-shadow: var(--glass-shadow), var(--glass-inner-highlight);
+    border-radius: 16px;
   }
   .glass-card {
-    background: rgba(255, 255, 255, 0.03);
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    border-radius: var(--radius);
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+    background: var(--glass-fill);
+    backdrop-filter: blur(var(--glass-blur));
+    -webkit-backdrop-filter: blur(var(--glass-blur));
+    border: 1px solid var(--glass-border);
+    box-shadow: var(--glass-shadow), var(--glass-inner-highlight);
+    border-radius: 16px;
     transition: all 300ms var(--ease-out-expo);
   }
   .glass-card:hover {
-    background: rgba(255, 255, 255, 0.06);
-    border-color: rgba(255, 255, 255, 0.12);
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.05);
+    background: var(--glass-fill-strong);
+    backdrop-filter: blur(var(--glass-blur));
+    -webkit-backdrop-filter: blur(var(--glass-blur));
+    border: 1px solid var(--glass-border);
+    box-shadow: var(--glass-shadow), var(--glass-inner-highlight);
+    border-radius: 16px;
     transform: translateY(-4px);
+  }
+
+  /* ─── Glass Surface (Part 0) — exact spec, apply to EVERY card/panel/popup ─── */
+  .glass-surface {
+    background: var(--glass-fill);
+    backdrop-filter: blur(var(--glass-blur));
+    -webkit-backdrop-filter: blur(var(--glass-blur));
+    border: 1px solid var(--glass-border);
+    box-shadow: var(--glass-shadow), var(--glass-inner-highlight);
+    border-radius: 16px;
+  }
+  .glass-surface-strong {
+    background: var(--glass-fill-strong);
+    backdrop-filter: blur(var(--glass-blur));
+    -webkit-backdrop-filter: blur(var(--glass-blur));
+    border: 1px solid var(--glass-border);
+    box-shadow: var(--glass-shadow), var(--glass-inner-highlight);
+    border-radius: 16px;
   }
 
   /* ─── Aurora Theme System ─────────────────────────────── */
   .aurora-glass {
-    background: rgba(255, 255, 255, 0.04);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    box-shadow:
-      0 8px 32px rgba(0, 0, 0, 0.4),
-      inset 0 1px 0 rgba(255, 255, 255, 0.05);
+    background: var(--glass-fill);
+    backdrop-filter: blur(var(--glass-blur));
+    -webkit-backdrop-filter: blur(var(--glass-blur));
+    border: 1px solid var(--glass-border);
+    box-shadow: var(--glass-shadow), var(--glass-inner-highlight);
+    border-radius: 16px;
   }
   .aurora-glass:hover {
-    background: rgba(255, 255, 255, 0.06);
-    border-color: rgba(255, 255, 255, 0.12);
-    box-shadow:
-      0 8px 32px rgba(0, 0, 0, 0.4),
-      0 0 20px rgba(139, 92, 246, 0.04),
-      inset 0 1px 0 rgba(255, 255, 255, 0.05);
+    background: var(--glass-fill-strong);
+    border-color: rgba(255, 255, 255, 0.14);
+    box-shadow: var(--glass-shadow), var(--glass-inner-highlight), 0 0 20px rgba(45,212,191,0.06);
   }
 
   .aurora-glass-panel {
-    background: rgba(255, 255, 255, 0.05);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    box-shadow:
-      0 8px 32px rgba(0, 0, 0, 0.4),
-      inset 0 1px 0 rgba(255, 255, 255, 0.04);
+    background: var(--glass-fill);
+    backdrop-filter: blur(var(--glass-blur));
+    -webkit-backdrop-filter: blur(var(--glass-blur));
+    border: 1px solid var(--glass-border);
+    box-shadow: var(--glass-shadow), var(--glass-inner-highlight);
+    border-radius: 16px;
   }
 
   .aurora-gradient-bg {
