@@ -1040,9 +1040,7 @@
   /* ─── Page Container ────────────────────────────────────── */
   .page-container {
     padding: var(--space-4) var(--space-5);
-    background:
-      radial-gradient(ellipse 800px 400px at 50% 20%, var(--accent-glow) 0%, transparent 70%),
-      var(--bg);
+    background: transparent;
     min-height: 100vh;
     overflow-x: hidden;
   }
