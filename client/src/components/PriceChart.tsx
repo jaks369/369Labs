@@ -347,7 +347,7 @@ export default function PriceChart({
         onPointerMove={(e) => { onPointerMove(e); onCrosshairMove(e); }}
         onPointerUp={onPointerUp}
         onPointerLeave={() => { onPointerUp(); onCrosshairLeave(); }}
-        className={`w-full relative rounded-xl overflow-hidden border border-[var(--border-subtle)] select-none ${fillHeight ? "flex-1 min-h-0" : heightClass || defaultHeight}`}
+        className={`w-full relative select-none ${fillHeight ? "flex-1 min-h-0" : heightClass || defaultHeight}`}
         style={{ background: `linear-gradient(180deg, color-mix(in srgb, ${color} 6%, transparent) 0%, color-mix(in srgb, ${color} 1.5%, transparent) 60%, transparent 100%)`, cursor: dragging ? "grabbing" : "grab" }}
       >
         {error ? (

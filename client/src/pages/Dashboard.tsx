@@ -620,14 +620,14 @@ export default function Dashboard() {
 
             {/* Chart Plot */}
             <div className="flex-1 min-h-0 relative terminal-chart-panel">
-              <div className="chart-plot h-full glass-surface" style={{ background: 'rgba(10, 14, 23, 0.35)', backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)', minHeight: 0, borderRadius: '16px' }}>
+              <div className="chart-plot h-full" style={{ background: 'transparent', minHeight: 0 }}>
                 <TickChart symbol={selectedSymbol} maxDataPoints={50} decimalPlaces={decimalPlaces} fillHeight />
               </div>
             </div>
           </div>
 
           {/* Right: Trade Panel */}
-          <div className="terminal-trade-panel glass-surface border-l border-[rgba(255,255,255,0.08)]">
+          <div className="terminal-trade-panel" style={{ background: 'transparent' }}>
             <TerminalContextPanel
               selectedSymbol={selectedSymbol}
               selectedDisplay={selectedDisplay}
