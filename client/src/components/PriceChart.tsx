@@ -156,7 +156,7 @@ export default function PriceChart({
   const glowId = `pc-${uid}-glow`;
 
   // ===== Viewport math (logical range → pixels) =====
-  const padX = 48;
+  const padX = 72;
   const padTop = 12;
   const padBottom = 28;
   const chartW = dims.w - padX;
