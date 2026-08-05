@@ -434,7 +434,7 @@ export default function Dashboard() {
           {/* Left: Chart area */}
           <div className="terminal-chart-area">
             {/* Chart Header: Symbol + Price + Balance + Status */}
-            <div className="flex items-center justify-between px-4 py-2 border-b border-[rgba(255,255,255,0.08)] aurora-glass shrink-0">
+            <div className="flex items-center justify-between px-4 py-2 border-b border-[rgba(255,255,255,0.08)] shrink-0" style={{ background: 'transparent' }}>
               <div className="flex items-center gap-3">
                 {/* Symbol Picker */}
                 <div className="relative">
@@ -582,7 +582,7 @@ export default function Dashboard() {
             </div>
 
             {/* Trade Type Pill Row — always visible above chart */}
-            <div className="flex items-center gap-1 px-3 py-1.5 border-b border-[rgba(255,255,255,0.08)] aurora-glass shrink-0 overflow-x-auto scrollbar-none">
+            <div className="flex items-center gap-1 px-3 py-1.5 border-b border-[rgba(255,255,255,0.08)] shrink-0 overflow-x-auto scrollbar-none" style={{ background: 'transparent' }}>
               {([
                 { id: "rise_fall", label: "Rise/Fall" },
                 { id: "over_under", label: "Over/Under" },
