@@ -88,7 +88,7 @@ export default function TeamPage() {
                   <span className="text-sm text-white">{m.email}</span>
                   <div className="flex items-center gap-2">
                     <span className="text-xs text-[var(--accent)]">{m.status === "pending" ? "Pending" : "Accepted"}</span>
-                    <button onClick={() => remove(m.id)} className="text-[var(--red)] hover:text-red-300"><XCircle className="w-3.5 h-3.5" /></button>
+                    <button onClick={() => remove(m.id)} className="text-[var(--red)] hover:text-[var(--red)]"><XCircle className="w-3.5 h-3.5" /></button>
                   </div>
                 </div>
               ))}

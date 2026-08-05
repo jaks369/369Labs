@@ -239,7 +239,7 @@ export default function MobileTerminal() {
   })();
 
   return (
-    <div className="h-full bg-[#0A0A1A] pb-20 lg:hidden">
+    <div className="h-full bg-[var(--bg-base)] pb-20 lg:hidden">
       {/* Header: symbol · live price · LIVE */}
       <div className="sticky top-0 z-30 aurora-glass border-b border-[rgba(255,255,255,0.08)] px-4 pt-3 pb-2">
         <div className="flex items-center justify-between gap-3">
@@ -260,7 +260,7 @@ export default function MobileTerminal() {
                 {derivWS.isAuthorized() ? "LIVE" : "OFFLINE"}
               </div>
             </div>
-            <span className="text-[10px] font-bold px-2 py-1 rounded-md aurora-glass text-[#4ADE80]">
+            <span className="text-[10px] font-bold px-2 py-1 rounded-md aurora-glass text-[var(--green)]">
               {accountBadge}
             </span>
           </div>

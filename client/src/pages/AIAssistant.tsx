@@ -7,6 +7,8 @@ import { derivWS } from "@/services/derivWebSocket";
 import { pushTimeline } from "@/components/AITimeline";
 import { getSymbolDisplayName } from "@/lib/symbols";
 import { toast } from "@/components/Toast";
+import MarketAnalysisView from "@/components/MarketAnalysisView";
+import RiskManagementView from "@/components/RiskManagementView";
 
 interface Message { role: "user" | "ai"; content: string; steps?: any[]; }
 interface PendingAction { action: string; params: any; }
@@ -19,7 +21,8 @@ export default function AIAssistant() {
   const { user, isAuthenticated } = useAuth();
   const [, navigate] = useLocation();
   const [input, setInput] = useState("");
-  const [tab, setTab] = useState<"chat" | "journal" | "alerts" | "schedule">("chat");
+  const [tab, setTab] = useState<"chat" | "journal" | "alerts" | "schedule" | "analysis" | "risk">("chat");
+  const [viewSymbol, setViewSymbol] = useState("R_100");
   const [messages, setMessages] = useState<Message[]>([
     { role: "ai", content: "369AI online. I analyze live Deriv ticks, suggest strategies, and can place trades or run backtests on your say-so. What are we trading today?" }
   ]);
@@ -175,6 +178,8 @@ export default function AIAssistant() {
       <div className="flex gap-1 px-4 md:px-6 pt-2 border-b border-[var(--border)]">
         {([
           { id: "chat" as const, label: "Chat", icon: CandlestickChart },
+          { id: "analysis" as const, label: "Market Analysis", icon: LineChart },
+          { id: "risk" as const, label: "Risk Management", icon: ShieldCheck },
           { id: "journal" as const, label: "Auto Journal", icon: BookOpen },
           { id: "alerts" as const, label: "AI Alerts", icon: Bell },
           { id: "schedule" as const, label: "Scheduler", icon: Clock },
@@ -235,6 +240,14 @@ export default function AIAssistant() {
                 </div>
               </div>
             </div>
+          )}
+
+          {tab === "analysis" && (
+            <MarketAnalysisView symbol={viewSymbol} onSymbolChange={setViewSymbol} />
+          )}
+
+          {tab === "risk" && (
+            <RiskManagementView symbol={viewSymbol} onSymbolChange={setViewSymbol} />
           )}
 
           {tab === "journal" && (
@@ -322,13 +335,14 @@ export default function AIAssistant() {
 
       <div className="p-4 md:p-6 border-t border-[var(--border)] bg-[var(--card)]">
         <div className="max-w-4xl mx-auto space-y-4">
-          {messages.length < 3 && (
+          {tab === "chat" && messages.length < 3 && (
             <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
               {suggestions.map(s => (
                 <button key={s} onClick={() => setInput(s)} className="whitespace-nowrap px-4 py-2 rounded-full bg-[var(--card)] border border-[var(--card)] text-xs text-[var(--text-secondary)] hover:border-[var(--accent)] hover:text-[var(--accent)] transition-all">{s}</button>
               ))}
             </div>
           )}
+          {tab === "chat" && (
           <div className="relative">
             <textarea
               value={input}
@@ -341,11 +355,12 @@ export default function AIAssistant() {
               <Send className="w-4 h-4" />
             </button>
           </div>
+          )}
           <div className="flex flex-wrap items-center justify-center gap-3 text-micro">
-            <button onClick={() => handleSend("Give me a live market analysis: pick an active volatility symbol, read its recent ticks, and tell me the current trend, hottest/odd last digits, and any repeatable pattern forming right now.")} className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[var(--card)] border border-[var(--card)] text-[var(--text-secondary)] hover:border-[var(--accent)] hover:text-[var(--accent)] transition-all">
+            <button onClick={() => setTab("analysis")} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border transition-all ${tab === "analysis" ? "bg-[var(--accent-soft)] border-[var(--accent)] text-[var(--accent)]" : "bg-[var(--card)] border-[var(--card)] text-[var(--text-secondary)] hover:border-[var(--accent)] hover:text-[var(--accent)]"}`}>
               <LineChart className="w-3 h-3" /> Market Analysis
             </button>
-            <button onClick={() => handleSend("What is my risk on the current bots and open positions? Recommend stake sizing, stop-loss and take-profit rules based on the volatility symbols I am trading.")} className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[var(--card)] border border-[var(--card)] text-[var(--text-secondary)] hover:border-[var(--accent)] hover:text-[var(--accent)] transition-all">
+            <button onClick={() => setTab("risk")} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border transition-all ${tab === "risk" ? "bg-[var(--accent-soft)] border-[var(--accent)] text-[var(--accent)]" : "bg-[var(--card)] border-[var(--card)] text-[var(--text-secondary)] hover:border-[var(--accent)] hover:text-[var(--accent)]"}`}>
               <ShieldCheck className="w-3 h-3" /> Risk Management
             </button>
           </div>

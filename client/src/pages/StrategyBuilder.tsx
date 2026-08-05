@@ -335,7 +335,7 @@ export function StrategyBuilderContent({ embedded = false, onClose, onSaved }: S
   const blockTypes: { type: StrategyBlock["type"]; icon: any; color: string; borderColor: string }[] = [
     { type: "market", icon: Database, color: "text-[var(--accent)]", borderColor: "border-l-[var(--accent)]" },
     { type: "condition", icon: Activity, color: "text-[var(--accent)]", borderColor: "border-l-[var(--accent)]" },
-    { type: "indicator", icon: Layers, color: "text-[#a78bfa]", borderColor: "border-l-[#a78bfa]" },
+    { type: "indicator", icon: Layers, color: "text-[var(--aurora-purple)]", borderColor: "border-l-[var(--aurora-purple)]" },
     { type: "risk", icon: ShieldCheck, color: "text-[var(--accent)]", borderColor: "border-l-[var(--accent)]" },
     { type: "trade", icon: Zap, color: "text-[var(--green)]", borderColor: "border-l-[var(--green)]" },
     { type: "exit", icon: ChevronRight, color: "text-[var(--red)]", borderColor: "border-l-[var(--red)]" },

@@ -41,7 +41,7 @@ export default function Pricing() {
           mixBlendMode: 'screen',
         }} />
         <div className="absolute inset-0" style={{
-          background: 'linear-gradient(135deg, rgba(139,92,246,0.18) 0%, rgba(236,72,153,0.12) 30%, transparent 60%)',
+          background: 'linear-gradient(135deg, rgba(167,139,250,0.18) 0%, rgba(232,121,249,0.12) 30%, transparent 60%)',
           mixBlendMode: 'soft-light',
         }} />
         <div className="absolute bottom-0 inset-x-0 h-[25vh]" style={{
@@ -54,7 +54,7 @@ export default function Pricing() {
         <div className="max-w-6xl mx-auto px-6 h-14 flex justify-between items-center">
           <div className="flex items-center gap-8">
             <div className="flex items-center gap-2 cursor-pointer" onClick={() => navigate("/")}>
-              <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #4ade80, #8b5cf6)' }}>
+              <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ background: 'linear-gradient(135deg, var(--aurora-teal), var(--aurora-purple))' }}>
                 <Activity className="w-4 h-4 text-white" />
               </div>
               <span className="text-base font-bold text-white">369Labs</span>
@@ -95,7 +95,7 @@ export default function Pricing() {
                 { name: "Enterprise", price: "$99", features: ["Everything in Pro", "Dedicated infrastructure", "Custom AI models", "SLA guarantee", "Team management"], cta: "Contact Sales" },
               ].map((plan, i) => (
                 <motion.div key={i} variants={fadeUp} className={`relative p-5 rounded-xl ${plan.popular ? "border-[rgba(255,255,255,0.18)]" : ""}`} style={{ background: 'rgba(10,14,23,0.5)', backdropFilter: 'blur(20px) saturate(1.3)', WebkitBackdropFilter: 'blur(20px) saturate(1.3)', border: '1px solid rgba(255,255,255,0.1)', boxShadow: '0 8px 32px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.06)' }}>
-                  {plan.popular && <div className="absolute -top-2.5 left-6 px-3 py-0.5 text-[var(--bg)] text-[10px] font-bold rounded-full" style={{ background: 'linear-gradient(135deg, #4ade80, #8b5cf6)' }}>Most Popular</div>}
+                  {plan.popular && <div className="absolute -top-2.5 left-6 px-3 py-0.5 text-[var(--bg)] text-[10px] font-bold rounded-full" style={{ background: 'linear-gradient(135deg, var(--aurora-teal), var(--aurora-purple))' }}>Most Popular</div>}
                   <h3 className="text-base font-semibold text-white mb-1">{plan.name}</h3>
                   <p className="text-2xl font-bold text-white mb-4">{plan.price}<span className="text-xs text-[var(--text-muted)] font-normal ml-1">{plan.price !== "$0" ? "/mo" : ""}</span></p>
                   <ul className="space-y-2 mb-5">
@@ -103,7 +103,7 @@ export default function Pricing() {
                       <li key={f} className="flex items-center gap-2 text-sm text-[var(--text-muted)]"><CheckCircle2 className="w-3.5 h-3.5 text-[var(--green)] shrink-0" /> {f}</li>
                     ))}
                   </ul>
-                  <button onClick={() => navigate("/login")} className={`w-full py-2.5 rounded-lg text-sm font-semibold transition-all ${plan.popular ? "text-black hover:brightness-110" : "border border-[rgba(255,255,255,0.12)] text-[var(--text-secondary)] hover:border-[rgba(255,255,255,0.20)] hover:text-white"}`} style={plan.popular ? { background: 'linear-gradient(135deg, #4ade80, #8b5cf6)' } : undefined}>{plan.cta}</button>
+                  <button onClick={() => navigate("/login")} className={`w-full py-2.5 rounded-lg text-sm font-semibold transition-all ${plan.popular ? "text-black hover:brightness-110" : "border border-[rgba(255,255,255,0.12)] text-[var(--text-secondary)] hover:border-[rgba(255,255,255,0.20)] hover:text-white"}`} style={plan.popular ? { background: 'linear-gradient(135deg, var(--aurora-teal), var(--aurora-purple))' } : undefined}>{plan.cta}</button>
                 </motion.div>
               ))}
             </div>
@@ -113,7 +113,7 @@ export default function Pricing() {
         <footer className="border-t border-[rgba(255,255,255,0.1)] py-6 px-6" style={{ background: 'rgba(10,14,23,0.4)', backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)' }}>
           <div className="max-w-6xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
             <div className="flex items-center gap-2">
-              <div className="w-4 h-4 rounded flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #4ade80, #8b5cf6)' }}>
+              <div className="w-4 h-4 rounded flex items-center justify-center" style={{ background: 'linear-gradient(135deg, var(--aurora-teal), var(--aurora-purple))' }}>
                 <Activity className="w-2.5 h-2.5 text-white" />
               </div>
               <span className="text-sm font-semibold text-white">369Labs</span>

@@ -20,7 +20,7 @@ export default function Particles({ count = 50 }: { count?: number }) {
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    const accent = getComputedStyle(document.documentElement).getPropertyValue("--accent").trim() || "#2FD9C4";
+    const accent = getComputedStyle(document.documentElement).getPropertyValue("--accent").trim() || "#2dd4bf";
     let animationId: number;
     let particles: Particle[] = [];
 

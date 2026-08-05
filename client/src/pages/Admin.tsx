@@ -74,7 +74,7 @@ export default function Admin() {
                         <button onClick={() => demoteMutation.mutate({ userId: u.id })} className="text-xs text-[var(--text-muted)] hover:underline hover:text-[var(--accent)]">Demote</button>
                       ))}
                       {u.id !== user.id && (
-                        <button onClick={() => { if (confirm(`Delete user ${u.email}?`)) deleteMutation.mutate({ userId: u.id }); }} className="text-xs text-red-500 hover:underline">Delete</button>
+                        <button onClick={() => { if (confirm(`Delete user ${u.email}?`)) deleteMutation.mutate({ userId: u.id }); }} className="text-xs text-[var(--red)] hover:underline">Delete</button>
                       )}
                     </div>
                   </td>

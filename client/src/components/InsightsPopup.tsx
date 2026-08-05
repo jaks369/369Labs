@@ -98,8 +98,8 @@ export default function InsightsPopup(props: InsightsPopupProps) {
 
         <div className="flex items-center justify-between px-4 py-3 border-b border-[rgba(255,255,255,0.08)] shrink-0 relative">
           <div className="flex items-center gap-2">
-            <div className="w-6 h-6 rounded-md flex items-center justify-center" style={{ background: "linear-gradient(135deg, #2dd4bf, #a78bfa, #e879f9)" }}>
-              <Brain className="w-3.5 h-3.5 text-[#0A0C10]" />
+            <div className="w-6 h-6 rounded-md flex items-center justify-center" style={{ background: "linear-gradient(135deg, var(--aurora-teal), var(--aurora-purple), var(--aurora-magenta))" }}>
+              <Brain className="w-3.5 h-3.5 text-[var(--cta-text)]" />
             </div>
             <span className="text-sm font-bold text-white">Insights</span>
             <span className="text-[9px] uppercase tracking-widest text-[var(--text-muted)] font-bold hidden sm:inline">{props.displayName}</span>
@@ -243,7 +243,7 @@ export default function InsightsPopup(props: InsightsPopupProps) {
                   onClick={props.onCreateAlert}
                   disabled={props.createAlertPending || !props.newAlertPrice}
                   className="w-full py-1.5 rounded text-[10px] font-bold text-black transition-all disabled:opacity-50"
-                  style={{ background: "linear-gradient(135deg, #2dd4bf, #a78bfa, #e879f9)" }}
+                  style={{ background: "linear-gradient(135deg, var(--aurora-teal), var(--aurora-purple), var(--aurora-magenta))" }}
                 >
                   {props.createAlertPending ? "Creating..." : "Create Alert"}
                 </button>

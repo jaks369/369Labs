@@ -184,7 +184,7 @@ export default function Home() {
         <div
           className="absolute inset-0"
           style={{
-            background: "linear-gradient(135deg, rgba(139,92,246,0.18) 0%, rgba(236,72,153,0.12) 30%, transparent 60%)",
+            background: "linear-gradient(135deg, rgba(167,139,250,0.18) 0%, rgba(232,121,249,0.12) 30%, transparent 60%)",
             mixBlendMode: "soft-light",
           }}
         />
@@ -207,7 +207,7 @@ export default function Home() {
       >
         <div className="max-w-6xl mx-auto px-6 h-14 flex justify-between items-center">
           <div className="flex items-center gap-2 cursor-pointer" onClick={() => navigate("/")}>
-            <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ background: "linear-gradient(135deg, #4ade80, #8b5cf6)" }}>
+            <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ background: "linear-gradient(135deg, var(--aurora-teal), var(--aurora-purple))" }}>
               <Activity className="w-4 h-4 text-white" />
             </div>
             <span className="text-base font-bold text-white">369Labs</span>
@@ -250,7 +250,7 @@ export default function Home() {
                       One platform for AI strategy intelligence, automated execution, and trading infrastructure — analyze, build, test, and run without building your own stack.
                     </p>
                     <div className="flex flex-col sm:flex-row gap-2 justify-center items-center">
-                      <button onClick={() => navigate("/login")} className="px-6 py-2 w-full sm:w-auto text-sm font-semibold rounded-full text-black transition-all hover:brightness-110" style={{ background: "linear-gradient(135deg, #4ade80, #8b5cf6)" }}>Get Started Free</button>
+                      <button onClick={() => navigate("/login")} className="px-6 py-2 w-full sm:w-auto text-sm font-semibold rounded-full text-black transition-all hover:brightness-110" style={{ background: "linear-gradient(135deg, var(--aurora-teal), var(--aurora-purple))" }}>Get Started Free</button>
                       <button onClick={() => navigate("/dashboard")} className="px-6 py-2 w-full sm:w-auto text-sm font-medium rounded-full border border-[rgba(255,255,255,0.15)] text-[var(--text-secondary)] hover:border-[rgba(255,255,255,0.25)] hover:text-white transition-all" style={TEXT_SHADOW}>Live Demo</button>
                     </div>
                   </div>
@@ -303,11 +303,11 @@ export default function Home() {
               <CarouselItem className="h-full">
                 <SlideShell maxWidth="max-w-6xl">
                   <div className="relative overflow-hidden rounded-2xl p-6 md:p-10" style={GLASS_CARD}>
-                    <div className="absolute -top-16 right-0 w-[300px] h-[300px] blur-[160px] rounded-full opacity-[0.1] pointer-events-none" style={{ background: "linear-gradient(135deg, #4ade80, #8b5cf6)" }} />
+                    <div className="absolute -top-16 right-0 w-[300px] h-[300px] blur-[160px] rounded-full opacity-[0.1] pointer-events-none" style={{ background: "linear-gradient(135deg, var(--aurora-teal), var(--aurora-purple))" }} />
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-10 items-center relative">
                       <div>
                         <div className="flex items-center gap-2 mb-4">
-                          <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: "linear-gradient(135deg, #4ade80, #8b5cf6)" }}>
+                          <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: "linear-gradient(135deg, var(--aurora-teal), var(--aurora-purple))" }}>
                             <Brain className="w-5 h-5 text-white" />
                           </div>
                           <span className="text-sm font-bold text-[var(--accent)]">369AI</span>
@@ -358,7 +358,7 @@ export default function Home() {
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
                     {PLANS.map((plan) => (
                       <div key={plan.name} className={`relative p-5 rounded-xl ${plan.popular ? "border-[rgba(255,255,255,0.2)]" : ""}`} style={GLASS_CARD}>
-                        {plan.popular && <div className="absolute -top-2.5 left-6 px-3 py-0.5 text-[var(--bg)] text-[10px] font-bold rounded-full" style={{ background: "linear-gradient(135deg, #4ade80, #8b5cf6)" }}>Most Popular</div>}
+                        {plan.popular && <div className="absolute -top-2.5 left-6 px-3 py-0.5 text-[var(--bg)] text-[10px] font-bold rounded-full" style={{ background: "linear-gradient(135deg, var(--aurora-teal), var(--aurora-purple))" }}>Most Popular</div>}
                         <h3 className="text-base font-semibold text-white mb-1">{plan.name}</h3>
                         <p className="text-2xl font-bold text-white mb-4">{plan.price}<span className="text-xs text-[var(--text-muted)] font-normal ml-1">{plan.price !== "$0" ? "/mo" : ""}</span></p>
                         <ul className="space-y-2 mb-5">
@@ -366,7 +366,7 @@ export default function Home() {
                             <li key={f} className="flex items-center gap-2 text-sm text-[var(--text-muted)]"><CheckCircle2 className="w-3.5 h-3.5 text-[var(--green)] shrink-0" /> {f}</li>
                           ))}
                         </ul>
-                        <button onClick={() => navigate("/login")} className={`w-full py-2.5 rounded-lg text-sm font-semibold transition-all ${plan.popular ? "text-black hover:brightness-110" : "border border-[rgba(255,255,255,0.12)] text-[var(--text-secondary)] hover:border-[rgba(255,255,255,0.20)] hover:text-white"}`} style={plan.popular ? { background: "linear-gradient(135deg, #4ade80, #8b5cf6)" } : undefined}>{plan.cta}</button>
+                        <button onClick={() => navigate("/login")} className={`w-full py-2.5 rounded-lg text-sm font-semibold transition-all ${plan.popular ? "text-black hover:brightness-110" : "border border-[rgba(255,255,255,0.12)] text-[var(--text-secondary)] hover:border-[rgba(255,255,255,0.20)] hover:text-white"}`} style={plan.popular ? { background: "linear-gradient(135deg, var(--aurora-teal), var(--aurora-purple))" } : undefined}>{plan.cta}</button>
                       </div>
                     ))}
                   </div>
@@ -407,7 +407,7 @@ export default function Home() {
                 className="rounded-full transition-all duration-300"
                 style={
                   i === current
-                    ? { width: 28, height: 8, background: "linear-gradient(135deg, #4ade80, #8b5cf6)", boxShadow: "0 0 12px rgba(139,92,246,0.5)" }
+                    ? { width: 28, height: 8, background: "linear-gradient(135deg, var(--aurora-teal), var(--aurora-purple))", boxShadow: "0 0 12px rgba(167,139,250,0.5)" }
                     : { width: 8, height: 8, background: "rgba(255,255,255,0.22)", border: "1px solid rgba(255,255,255,0.18)" }
                 }
               />

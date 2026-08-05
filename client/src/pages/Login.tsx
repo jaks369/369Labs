@@ -126,7 +126,7 @@ export default function Login() {
         <div
           className="absolute inset-0"
           style={{
-            background: "linear-gradient(135deg, rgba(139,92,246,0.18) 0%, rgba(236,72,153,0.12) 30%, transparent 60%)",
+            background: "linear-gradient(135deg, rgba(167,139,250,0.18) 0%, rgba(232,121,249,0.12) 30%, transparent 60%)",
             mixBlendMode: "soft-light",
           }}
         />
@@ -140,7 +140,7 @@ export default function Login() {
           boxShadow: "0 8px 32px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.08)",
         }}
       >
-        <div className="absolute -top-3 left-4 bg-[#0a0e17] px-2 text-sm font-bold text-[var(--accent)]">
+        <div className="absolute -top-3 left-4 bg-[var(--bg-base)] px-2 text-sm font-bold text-[var(--accent)]">
           {mode === "login" ? "LOG IN" : "SIGN UP"}
         </div>
 

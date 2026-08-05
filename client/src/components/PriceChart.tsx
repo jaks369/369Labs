@@ -36,6 +36,36 @@ function niceScale(min: number, max: number, ticks: number) {
   return { start, end, step };
 }
 
+// Monotone cubic Hermite path (Fritsch–Carlson), same curve family as
+// Recharts' curveMonotoneX: smooth without overshooting the data extremes,
+// so spikes in a volatility index stay honest instead of ringing.
+function smoothPath(pts: { x: number; y: number }[]) {
+  if (!pts.length) return "";
+  if (pts.length === 1) return `M${pts[0].x.toFixed(2)},${pts[0].y.toFixed(2)}`;
+  const slopes: number[] = [];
+  for (let i = 0; i < pts.length - 1; i++) {
+    const dx = pts[i + 1].x - pts[i].x;
+    slopes.push(dx === 0 ? 0 : (pts[i + 1].y - pts[i].y) / dx);
+  }
+  const tan: number[] = [slopes[0]];
+  for (let i = 1; i < slopes.length; i++) {
+    const a = slopes[i - 1];
+    const b = slopes[i];
+    tan.push(a * b <= 0 ? 0 : 2 / (1 / a + 1 / b));
+  }
+  tan.push(slopes[slopes.length - 1]);
+  let d = `M${pts[0].x.toFixed(2)},${pts[0].y.toFixed(2)}`;
+  for (let i = 0; i < pts.length - 1; i++) {
+    const dx = pts[i + 1].x - pts[i].x;
+    const cp1x = pts[i].x + dx / 3;
+    const cp1y = pts[i].y + (tan[i] * dx) / 3;
+    const cp2x = pts[i + 1].x - dx / 3;
+    const cp2y = pts[i + 1].y - (tan[i + 1] * dx) / 3;
+    d += ` C${cp1x.toFixed(2)},${cp1y.toFixed(2)} ${cp2x.toFixed(2)},${cp2y.toFixed(2)} ${pts[i + 1].x.toFixed(2)},${pts[i + 1].y.toFixed(2)}`;
+  }
+  return d;
+}
+
 export default function PriceChart({
   data,
   error = null,
@@ -169,7 +199,7 @@ export default function PriceChart({
   const points = data
     .map((d, i) => ({ x: xOf(i), y: padTop + chartH - ((d.price - base - scale.start) / yRange) * chartH }))
     .filter((p) => p.x >= padX - 1 && p.x <= padX + chartW + 1);
-  const pathD = points.map((p, i) => `${i === 0 ? "M" : "L"}${p.x},${p.y}`).join(" ");
+  const pathD = smoothPath(points);
   const areaD = `${pathD} L${padX + chartW},${padTop + chartH} L${padX},${padTop + chartH} Z`;
 
   const gridLines: { value: number; y: number }[] = [];

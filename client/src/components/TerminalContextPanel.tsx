@@ -121,7 +121,7 @@ export default function TerminalContextPanel(props: TerminalContextPanelProps) {
               onClick={() => onQuickTrade()}
               disabled={tradeBusy}
               className="w-full h-10 flex items-center justify-center gap-2 rounded-lg text-sm font-bold text-white transition-all disabled:opacity-60 hover:brightness-110"
-              style={{ background: "linear-gradient(135deg, #2dd4bf, #a78bfa, #e879f9)" }}
+              style={{ background: "linear-gradient(135deg, var(--aurora-teal), var(--aurora-purple), var(--aurora-magenta))" }}
             >
               {tradeBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Zap className="w-4 h-4" />}
               Buy

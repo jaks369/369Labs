@@ -63,9 +63,9 @@ export default function AIPerformance() {
         {currentQuery.isLoading ? (
           <div className="flex items-center justify-center py-20"><Loader2 className="w-6 h-6 animate-spin text-[var(--accent)]" /></div>
         ) : currentQuery.error ? (
-          <div className="bg-red-900/20 border border-red-500/30 rounded-xl p-6 text-center">
-            <AlertCircle className="w-8 h-8 text-red-400 mx-auto mb-2" />
-            <p className="text-red-400 text-sm">Failed to load data: {currentQuery.error.message}</p>
+          <div className="bg-[var(--red-soft)] border border-[var(--red)]/30 rounded-xl p-6 text-center">
+            <AlertCircle className="w-8 h-8 text-[var(--red)] mx-auto mb-2" />
+            <p className="text-[var(--red)] text-sm">Failed to load data: {currentQuery.error.message}</p>
           </div>
         ) : data && Object.keys(data).length > 0 ? (
           <div className="space-y-4">
@@ -77,7 +77,7 @@ export default function AIPerformance() {
                 </div>
               ))}
             </div>
-            <pre className="rounded-lg p-4 text-sm font-mono overflow-auto max-h-[400px] leading-relaxed" style={{background: "#0a0a0f", border: "1px solid var(--border)", color: "var(--text-secondary)"}}>{JSON.stringify(data, null, 2)}</pre>
+            <pre className="rounded-lg p-4 text-sm font-mono overflow-auto max-h-[400px] leading-relaxed" style={{background: "var(--bg-base)", border: "1px solid var(--border)", color: "var(--text-secondary)"}}>{JSON.stringify(data, null, 2)}</pre>
           </div>
         ) : (
           <div className="empty-state"><p className="empty-state-desc">No data available. AI performance metrics will populate as the AI analyzes trades.</p></div>

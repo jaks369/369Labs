@@ -134,12 +134,12 @@ const menuItems: NavItem[] = navGroups.flatMap((g) => g.items);
 
 // Aurora accent per group — pulls from the landing palette (teal/purple/magenta).
 const groupAccent: Record<string, string> = {
-  Trade: "#2dd4bf",
-  Automate: "#a78bfa",
-  Intelligence: "#e879f9",
-  Analyze: "#38bdf8",
-  Account: "#4ade80",
-  Resources: "#fbbf24",
+  Trade: "var(--aurora-teal)",
+  Automate: "var(--aurora-purple)",
+  Intelligence: "var(--aurora-magenta)",
+  Analyze: "var(--aurora-purple)",
+  Account: "var(--aurora-green)",
+  Resources: "var(--aurora-pink)",
 };
 
 export default function DashboardLayout({
@@ -229,8 +229,8 @@ function NavDrawer({
         {/* Header */}
         <div className="flex items-center justify-between px-4 h-14 border-b border-[rgba(255,255,255,0.08)] shrink-0 relative">
           <button onClick={() => go("/dashboard")} className="flex items-center gap-2.5 transition-all cursor-pointer group">
-            <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0" style={{ background: 'linear-gradient(135deg, #2dd4bf, #a78bfa, #e879f9)' }}>
-              <Activity className="w-5 h-5 text-[#0A0C10]" />
+            <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0" style={{ background: 'linear-gradient(135deg, var(--aurora-teal), var(--aurora-purple), var(--aurora-magenta))' }}>
+              <Activity className="w-5 h-5 text-[var(--cta-text)]" />
             </div>
             <div className="flex flex-col">
               <span className="font-bold text-lg tracking-tight text-white leading-none">369Labs</span>
@@ -336,7 +336,7 @@ function NavDrawer({
               {(user as any)?.avatarUrl ? (
                 <AvatarImage src={(user as any).avatarUrl} alt="Avatar" className="object-cover" />
               ) : null}
-              <AvatarFallback className="bg-[var(--accent)] text-[#0A0C10] text-[11px] font-bold">
+              <AvatarFallback className="bg-[var(--accent)] text-[var(--cta-text)] text-[11px] font-bold">
                 {user?.name?.charAt(0).toUpperCase()}
               </AvatarFallback>
             </Avatar>
@@ -389,8 +389,8 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
           <span className="text-xs font-bold hidden lg:inline">Menu</span>
         </button>
         <button onClick={() => setLocation("/dashboard")} className="flex items-center gap-2 transition-all cursor-pointer group shrink-0">
-          <div className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0" style={{ background: 'linear-gradient(135deg, #2dd4bf, #a78bfa, #e879f9)' }}>
-            <Activity className="w-4 h-4 text-[#0A0C10]" />
+          <div className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0" style={{ background: 'linear-gradient(135deg, var(--aurora-teal), var(--aurora-purple), var(--aurora-magenta))' }}>
+            <Activity className="w-4 h-4 text-[var(--cta-text)]" />
           </div>
           <span className="font-bold text-sm tracking-tight text-white">369Labs</span>
         </button>
@@ -412,7 +412,7 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
                   {(user as any)?.avatarUrl ? (
                     <AvatarImage src={(user as any).avatarUrl} alt="Avatar" className="object-cover" />
                   ) : null}
-                  <AvatarFallback className="bg-[var(--accent)] text-[#0A0C10] text-[10px] font-bold">
+                  <AvatarFallback className="bg-[var(--accent)] text-[var(--cta-text)] text-[10px] font-bold">
                     {user?.name?.charAt(0).toUpperCase()}
                   </AvatarFallback>
                 </Avatar>
@@ -443,8 +443,8 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
             <button onClick={openNav} className="w-8 h-8 rounded-md flex items-center justify-center text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-white/5 transition-colors cursor-pointer" title="Menu">
               <Menu className="w-4 h-4" />
             </button>
-            <div className="w-6 h-6 rounded flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #2dd4bf, #a78bfa, #e879f9)' }}>
-              <Activity className="w-3.5 h-3.5 text-[#0A0C10]" />
+            <div className="w-6 h-6 rounded flex items-center justify-center" style={{ background: 'linear-gradient(135deg, var(--aurora-teal), var(--aurora-purple), var(--aurora-magenta))' }}>
+              <Activity className="w-3.5 h-3.5 text-[var(--cta-text)]" />
             </div>
             <span className="font-bold text-sm text-white">369Labs</span>
           </div>

@@ -80,7 +80,7 @@ export default function AIChatWindow() {
           <Settings2 className="w-3 h-3" /> Model
         </button>
         {messages.length > 0 && (
-          <button onClick={clearConversation} className="flex items-center gap-1 px-2 py-1 rounded text-[9px] text-[var(--text-secondary)] hover:text-red-400 border border-[var(--border)] hover:border-red-400/50 transition-all">
+          <button onClick={clearConversation} className="flex items-center gap-1 px-2 py-1 rounded text-[9px] text-[var(--text-secondary)] hover:text-[var(--red)] border border-[var(--border)] hover:border-[var(--red)]/50 transition-all">
             <Trash2 className="w-3 h-3" /> Clear
           </button>
         )}

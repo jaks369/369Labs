@@ -63,7 +63,7 @@ export default function WebhooksPage() {
                     <span className="text-sm font-bold text-white">{wh.label || "Unlabeled"}</span>
                     <span className={`ml-2 text-[9px] px-1.5 py-0.5 rounded ${wh.active ? "bg-[var(--green-soft)] text-[var(--green)]" : "bg-[var(--red-soft)] text-[var(--red)]"}`}>{wh.active ? "Active" : "Inactive"}</span>
                   </div>
-                  <button onClick={() => { if (confirm("Delete this webhook?")) deleteMutation.mutate({ id: wh.id }); }} className="text-[var(--text-muted)] hover:text-red-400"><Trash2 className="w-3.5 h-3.5" /></button>
+                  <button onClick={() => { if (confirm("Delete this webhook?")) deleteMutation.mutate({ id: wh.id }); }} className="text-[var(--text-muted)] hover:text-[var(--red)]"><Trash2 className="w-3.5 h-3.5" /></button>
                 </div>
                 <p className="text-xs text-[var(--text-secondary)] font-mono truncate">{wh.url}</p>
                 <div className="flex flex-wrap gap-1 mt-2">

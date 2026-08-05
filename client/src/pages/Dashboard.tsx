@@ -569,7 +569,7 @@ export default function Dashboard() {
                   <button onClick={() => { setDataPopupTab("watchlist"); setDataPopupOpen(true); }} className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-white/5 border border-[var(--border)] text-[10px] font-bold text-[var(--text-muted)] hover:text-white hover:border-[rgba(255,255,255,0.15)] transition-colors" title="Data: Watchlist, Trade History, Prices">
                     <Star className="w-3 h-3" />
                   </button>
-                  <button onClick={() => setInsightPopupOpen(true)} className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-bold transition-colors text-black hover:brightness-110" style={{ background: "linear-gradient(135deg, #2dd4bf, #a78bfa, #e879f9)" }} title="Insights — Digit Frequency, AI Insight, 369AI Verdicts, Risk Controls">
+                  <button onClick={() => setInsightPopupOpen(true)} className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-bold transition-colors text-black hover:brightness-110" style={{ background: "linear-gradient(135deg, var(--aurora-teal), var(--aurora-purple), var(--aurora-magenta))" }} title="Insights — Digit Frequency, AI Insight, 369AI Verdicts, Risk Controls">
                     <Brain className="w-3 h-3" />
                     <span className="hidden lg:inline">Insights</span>
                   </button>
