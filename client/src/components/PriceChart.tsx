@@ -184,7 +184,7 @@ export default function PriceChart({
   const yMin = relMin - padding;
   const yMax = relMax + padding;
 
-  const scale = niceScale(yMin, yMax, 5);
+  const scale = niceScale(yMin, yMax, 3);
   const yRange = scale.end - scale.start || 1;
 
   // Precision for the left grid labels: always show at least the symbol's
@@ -379,7 +379,7 @@ export default function PriceChart({
 
             {/* Grid lines */}
             {gridLines.map((gl, i) => (
-              <line key={`grid-${i}`} x1={padX} y1={gl.y} x2={padX + chartW} y2={gl.y} stroke="var(--border-subtle)" strokeWidth="1" opacity="0.4" />
+              <line key={`grid-${i}`} x1={padX} y1={gl.y} x2={padX + chartW} y2={gl.y} stroke="var(--border-subtle)" strokeWidth="0.5" opacity="0.15" />
             ))}
 
             {/* Area fill */}
