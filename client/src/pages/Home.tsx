@@ -236,7 +236,7 @@ export default function Home() {
 
       <main className="relative z-10 h-[calc(100vh-3.5rem)] flex flex-col">
         <div className="relative flex-1 min-h-0">
-          <Carousel setApi={setApi} className="carousel-fill h-full" opts={{ duration: 200, startIndex: getInitialSlide() }}>
+          <Carousel setApi={setApi} className="carousel-fill h-full" opts={{ duration: 15, startIndex: getInitialSlide() }}>
             <CarouselContent className="h-full">
               {/* ── Slide 1 · Home ─────────────────────────────────── */}
               <CarouselItem className="h-full">
