@@ -62,9 +62,9 @@ export default function TerminalContextPanel(props: TerminalContextPanelProps) {
   const payoutEst = stake > 0 ? formatMoney(stake * 1.95) : "—";
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full terminal-chart-panel" style={{ backgroundBlendMode: 'screen' }}>
       {/* EXECUTION */}
-      <div className="aurora-glass-panel border-b border-[rgba(255,255,255,0.08)]">
+      <div className="border-b border-[rgba(255,255,255,0.08)]" style={{ background: 'rgba(10, 14, 23, 0.40)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)' }}>
         <div className="p-3 space-y-2.5">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2 min-w-0">

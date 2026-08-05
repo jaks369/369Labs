@@ -482,21 +482,21 @@ export default function PriceChart({
       {/* Stats row */}
       {showStats && (
       <div className={`mt-3 grid grid-cols-4 gap-2 md:gap-3 ${fillHeight ? "shrink-0" : ""}`}>
-        <div className="bg-[var(--card)] p-2.5 rounded-lg border border-[var(--border-subtle)]">
+        <div className="terminal-chart-panel p-2.5 rounded-lg border border-[var(--border-subtle)]" style={{ background: 'rgba(10, 14, 23, 0.35)', backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)' }}>
           <span className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">Open</span>
-          <p className="text-sm font-bold text-[var(--text-primary)] tabular-nums">{ohlc ? ohlc.open.toFixed(decimalPlaces) : "—"}</p>
+          <p className="text-sm font-bold text-[var(--text-primary)] tabular-nums" style={{ textShadow: '0 1px 2px rgba(0,0,0,0.6)' }}>{ohlc ? ohlc.open.toFixed(decimalPlaces) : "—"}</p>
         </div>
-        <div className="bg-[var(--card)] p-2.5 rounded-lg border border-[var(--border-subtle)]">
+        <div className="terminal-chart-panel p-2.5 rounded-lg border border-[var(--border-subtle)]" style={{ background: 'rgba(10, 14, 23, 0.35)', backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)' }}>
           <span className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">High</span>
-          <p className="text-sm font-bold text-[var(--green)] tabular-nums">{ohlc ? ohlc.high.toFixed(decimalPlaces) : "—"}</p>
+          <p className="text-sm font-bold text-[var(--green)] tabular-nums" style={{ textShadow: '0 1px 2px rgba(0,0,0,0.6)' }}>{ohlc ? ohlc.high.toFixed(decimalPlaces) : "—"}</p>
         </div>
-        <div className="bg-[var(--card)] p-2.5 rounded-lg border border-[var(--border-subtle)]">
+        <div className="terminal-chart-panel p-2.5 rounded-lg border border-[var(--border-subtle)]" style={{ background: 'rgba(10, 14, 23, 0.35)', backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)' }}>
           <span className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">Low</span>
-          <p className="text-sm font-bold text-[var(--red)] tabular-nums">{ohlc ? ohlc.low.toFixed(decimalPlaces) : "—"}</p>
+          <p className="text-sm font-bold text-[var(--red)] tabular-nums" style={{ textShadow: '0 1px 2px rgba(0,0,0,0.6)' }}>{ohlc ? ohlc.low.toFixed(decimalPlaces) : "—"}</p>
         </div>
-        <div className="bg-[var(--card)] p-2.5 rounded-lg border border-[var(--border-subtle)]">
+        <div className="terminal-chart-panel p-2.5 rounded-lg border border-[var(--border-subtle)]" style={{ background: 'rgba(10, 14, 23, 0.35)', backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)' }}>
           <span className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">Close</span>
-          <p className="text-sm font-bold text-[var(--text-primary)] tabular-nums">{ohlc ? ohlc.close.toFixed(decimalPlaces) : "—"}</p>
+          <p className="text-sm font-bold text-[var(--text-primary)] tabular-nums" style={{ textShadow: '0 1px 2px rgba(0,0,0,0.6)' }}>{ohlc ? ohlc.close.toFixed(decimalPlaces) : "—"}</p>
         </div>
       </div>
       )}
