@@ -367,7 +367,8 @@ export default function PriceChart({
                 <stop offset="0%" stopColor={color} stopOpacity="0.9" />
                 <stop offset="100%" stopColor={color} stopOpacity="1" />
               </linearGradient>
-              <filter id={glowId} x="-5%" y="-15%" width="110%" height="130%">
+              <filter id={glowId} x="-20%" y="-20%" width="140%" height="140%">
+                <feDropShadow dx="0" dy="1" stdDeviation="2" floodColor="#000000" floodOpacity="0.8" />
                 <feGaussianBlur stdDeviation="0.8" result="blur" />
                 <feMerge>
                   <feMergeNode in="blur" />

@@ -619,8 +619,8 @@ export default function Dashboard() {
             </div>
 
             {/* Chart Plot */}
-            <div className="flex-1 min-h-0 relative" style={{ background: 'var(--bg)' }}>
-              <div className="chart-plot h-full glass-surface" style={{ minHeight: 0, borderRadius: '16px' }}>
+            <div className="flex-1 min-h-0 relative terminal-chart-panel">
+              <div className="chart-plot h-full glass-surface" style={{ background: 'rgba(10, 14, 23, 0.35)', backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)', minHeight: 0, borderRadius: '16px' }}>
                 <TickChart symbol={selectedSymbol} maxDataPoints={50} decimalPlaces={decimalPlaces} fillHeight />
               </div>
             </div>
