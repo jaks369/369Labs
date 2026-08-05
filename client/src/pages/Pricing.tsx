@@ -29,7 +29,7 @@ export default function Pricing() {
             backgroundSize: 'cover',
             backgroundPosition: 'center 30%',
             backgroundAttachment: 'fixed',
-            filter: 'hue-rotate(15deg) saturate(1.1) brightness(0.82) contrast(1.05)',
+            filter: 'brightness(0.75) contrast(1.05)',
           }}
         />
         <div className="absolute inset-0" style={{
@@ -50,7 +50,7 @@ export default function Pricing() {
       </div>
 
       {/* Nav — glass-surface floating on photo */}
-      <nav className="relative z-50 border-b border-[rgba(255,255,255,0.09)] sticky top-0 glass-surface">
+      <nav className="relative z-50 border-b border-[rgba(255,255,255,0.12)] sticky top-0" style={{ background: 'rgba(10,14,23,0.55)', backdropFilter: 'blur(24px) saturate(1.4)', WebkitBackdropFilter: 'blur(24px) saturate(1.4)', boxShadow: '0 8px 32px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.08)' }}>
         <div className="max-w-6xl mx-auto px-6 h-14 flex justify-between items-center">
           <div className="flex items-center gap-8">
             <div className="flex items-center gap-2 cursor-pointer" onClick={() => navigate("/")}>
@@ -58,11 +58,6 @@ export default function Pricing() {
                 <Activity className="w-4 h-4 text-white" />
               </div>
               <span className="text-base font-bold text-white">369Labs</span>
-            </div>
-            <div className="hidden md:flex items-center gap-6">
-              {[{ label: "Dashboard", path: "/dashboard" }, { label: "Strategy Builder", path: "/strategy-builder" }, { label: "Marketplace", path: "/marketplace" }, { label: "Backtesting", path: "/backtesting" }].map((item) => (
-                <button key={item.path} onClick={() => navigate(item.path)} className="text-sm text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors">{item.label}</button>
-              ))}
             </div>
           </div>
           <div className="flex items-center gap-4">
@@ -99,7 +94,7 @@ export default function Pricing() {
                 { name: "Pro", price: "$29", features: ["Real trading", "Advanced backtesting", "Unlimited bots", "AI signals & alerts", "Priority support"], cta: "Start Free Trial", popular: true },
                 { name: "Enterprise", price: "$99", features: ["Everything in Pro", "Dedicated infrastructure", "Custom AI models", "SLA guarantee", "Team management"], cta: "Contact Sales" },
               ].map((plan, i) => (
-                <motion.div key={i} variants={fadeUp} className={`relative p-5 rounded-xl glass-surface ${plan.popular ? "border-[rgba(255,255,255,0.15)]" : ""}`}>
+                <motion.div key={i} variants={fadeUp} className={`relative p-5 rounded-xl ${plan.popular ? "border-[rgba(255,255,255,0.18)]" : ""}`} style={{ background: 'rgba(10,14,23,0.5)', backdropFilter: 'blur(20px) saturate(1.3)', WebkitBackdropFilter: 'blur(20px) saturate(1.3)', border: '1px solid rgba(255,255,255,0.1)', boxShadow: '0 8px 32px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.06)' }}>
                   {plan.popular && <div className="absolute -top-2.5 left-6 px-3 py-0.5 text-[var(--bg)] text-[10px] font-bold rounded-full" style={{ background: 'linear-gradient(135deg, #4ade80, #8b5cf6)' }}>Most Popular</div>}
                   <h3 className="text-base font-semibold text-white mb-1">{plan.name}</h3>
                   <p className="text-2xl font-bold text-white mb-4">{plan.price}<span className="text-xs text-[var(--text-muted)] font-normal ml-1">{plan.price !== "$0" ? "/mo" : ""}</span></p>
@@ -115,7 +110,7 @@ export default function Pricing() {
           </motion.div>
         </section>
 
-        <footer className="border-t border-[rgba(255,255,255,0.08)] py-6 px-6">
+        <footer className="border-t border-[rgba(255,255,255,0.1)] py-6 px-6" style={{ background: 'rgba(10,14,23,0.4)', backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)' }}>
           <div className="max-w-6xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
             <div className="flex items-center gap-2">
               <div className="w-4 h-4 rounded flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #4ade80, #8b5cf6)' }}>

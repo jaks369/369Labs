@@ -42,8 +42,7 @@ export default function Home() {
             backgroundSize: 'cover',
             backgroundPosition: 'center 30%',
             backgroundAttachment: 'fixed',
-            /* Color grade: shift vegetation greens → teal, sky → purple/violet, shadows → navy, reduce brightness 15-20% */
-            filter: 'hue-rotate(15deg) saturate(1.1) brightness(0.82) contrast(1.05)',
+            filter: 'brightness(0.75) contrast(1.05)',
           }}
         />
         {/* Aurora glow layer — screen blend so light emits from within the photo */}
@@ -67,7 +66,7 @@ export default function Home() {
       </div>
 
       {/* Nav — glass-surface floating on photo */}
-      <nav className="relative z-50 border-b border-[rgba(255,255,255,0.09)] sticky top-0 glass-surface">
+      <nav className="relative z-50 border-b border-[rgba(255,255,255,0.12)] sticky top-0" style={{ background: 'rgba(10,14,23,0.55)', backdropFilter: 'blur(24px) saturate(1.4)', WebkitBackdropFilter: 'blur(24px) saturate(1.4)', boxShadow: '0 8px 32px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.08)' }}>
         <div className="max-w-6xl mx-auto px-6 h-14 flex justify-between items-center">
           <div className="flex items-center gap-8">
             <div className="flex items-center gap-2 cursor-pointer" onClick={() => navigate("/")}>
@@ -129,7 +128,7 @@ export default function Home() {
               { label: "Signals Today", value: "—", demo: true },
               { label: "Uptime", value: "99.9%", demo: false },
             ].map((stat, i) => (
-              <div key={i} className="glass-surface rounded-lg p-2.5 text-center snap-start shrink-0 w-[110px] md:w-auto">
+              <div key={i} className="rounded-lg p-2.5 text-center snap-start shrink-0 w-[110px] md:w-auto" style={{ background: 'rgba(10,14,23,0.5)', backdropFilter: 'blur(20px) saturate(1.3)', WebkitBackdropFilter: 'blur(20px) saturate(1.3)', border: '1px solid rgba(255,255,255,0.1)', boxShadow: '0 8px 32px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.06)' }}>
                 <div className="text-base font-bold text-white tabular-nums">{stat.value}</div>
                 <div className="text-[10px] text-[var(--text-muted)] mt-0.5">{stat.label}</div>
                 {stat.demo && <div className="text-[8px] text-[var(--accent)] mt-0.5">Demo data</div>}
@@ -148,7 +147,7 @@ export default function Home() {
           </motion.div>
 </section>
 
-        <footer className="border-t border-[rgba(255,255,255,0.08)] py-4 px-6">
+        <footer className="border-t border-[rgba(255,255,255,0.1)] py-4 px-6" style={{ background: 'rgba(10,14,23,0.4)', backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)' }}>
           <div className="max-w-6xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
             <div className="flex items-center gap-2">
               <div className="w-4 h-4 rounded flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #4ade80, #8b5cf6)' }}>

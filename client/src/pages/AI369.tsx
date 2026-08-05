@@ -29,7 +29,7 @@ export default function AI369() {
             backgroundSize: 'cover',
             backgroundPosition: 'center 30%',
             backgroundAttachment: 'fixed',
-            filter: 'hue-rotate(15deg) saturate(1.1) brightness(0.82) contrast(1.05)',
+            filter: 'brightness(0.75) contrast(1.05)',
           }}
         />
         <div className="absolute inset-0" style={{
@@ -50,7 +50,7 @@ export default function AI369() {
       </div>
 
       {/* Nav — glass-surface floating on photo */}
-      <nav className="relative z-50 border-b border-[rgba(255,255,255,0.09)] sticky top-0 glass-surface">
+      <nav className="relative z-50 border-b border-[rgba(255,255,255,0.12)] sticky top-0" style={{ background: 'rgba(10,14,23,0.55)', backdropFilter: 'blur(24px) saturate(1.4)', WebkitBackdropFilter: 'blur(24px) saturate(1.4)', boxShadow: '0 8px 32px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.08)' }}>
         <div className="max-w-6xl mx-auto px-6 h-14 flex justify-between items-center">
           <div className="flex items-center gap-8">
             <div className="flex items-center gap-2 cursor-pointer" onClick={() => navigate("/")}>
@@ -58,11 +58,6 @@ export default function AI369() {
                 <Activity className="w-4 h-4 text-white" />
               </div>
               <span className="text-base font-bold text-white">369Labs</span>
-            </div>
-            <div className="hidden md:flex items-center gap-6">
-              {[{ label: "Dashboard", path: "/dashboard" }, { label: "Strategy Builder", path: "/strategy-builder" }, { label: "Marketplace", path: "/marketplace" }, { label: "Backtesting", path: "/backtesting" }].map((item) => (
-                <button key={item.path} onClick={() => navigate(item.path)} className="text-sm text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors">{item.label}</button>
-              ))}
             </div>
           </div>
           <div className="flex items-center gap-4">
@@ -92,7 +87,7 @@ export default function AI369() {
 
         {/* 369AI Section */}
         <section className="max-w-6xl mx-auto px-6 py-16">
-          <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={stagger} className="relative overflow-hidden rounded-2xl border border-[rgba(255,255,255,0.12)] glass-surface p-8 md:p-12">
+          <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={stagger} className="relative overflow-hidden rounded-2xl border border-[rgba(255,255,255,0.12)] p-8 md:p-12" style={{ background: 'rgba(10,14,23,0.5)', backdropFilter: 'blur(24px) saturate(1.4)', WebkitBackdropFilter: 'blur(24px) saturate(1.4)', boxShadow: '0 8px 32px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.08)' }}>
             <div className="absolute -top-16 right-0 w-[300px] h-[300px] blur-[160px] rounded-full opacity-[0.1] pointer-events-none" style={{ background: 'linear-gradient(135deg, #4ade80, #8b5cf6)' }} />
             <div className="grid grid-cols-1 md:grid-cols-2 gap-10 items-center relative">
               <div>
@@ -128,7 +123,7 @@ export default function AI369() {
                   { label: "Strategy Review", value: "Live", note: "AI critiques risk & logic before you deploy" },
                   { label: "Verdict", value: "Live", note: "Top symbol & contract type ranked from your session" },
                 ].map((row) => (
-                  <div key={row.label} className="glass-surface rounded-xl p-4">
+                  <div key={row.label} className="rounded-xl p-4" style={{ background: 'rgba(10,14,23,0.45)', backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)', border: '1px solid rgba(255,255,255,0.08)', boxShadow: '0 4px 16px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.05)' }}>
                     <div className="flex items-center justify-between mb-2">
                       <span className="text-[11px] uppercase tracking-widest text-[var(--text-muted)] font-bold">{row.label}</span>
                       <span className="text-sm font-bold font-mono tabular-nums text-[var(--accent)]">{row.value}</span>
@@ -141,7 +136,7 @@ export default function AI369() {
           </motion.div>
         </section>
 
-        <footer className="border-t border-[rgba(255,255,255,0.08)] py-6 px-6">
+        <footer className="border-t border-[rgba(255,255,255,0.1)] py-6 px-6" style={{ background: 'rgba(10,14,23,0.4)', backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)' }}>
           <div className="max-w-6xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
             <div className="flex items-center gap-2">
               <div className="w-4 h-4 rounded flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #4ade80, #8b5cf6)' }}>
