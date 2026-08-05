@@ -234,7 +234,7 @@ export default function Home() {
 
       <main className="relative z-10 h-[calc(100vh-3.5rem)] flex flex-col">
         <div className="relative flex-1 min-h-0">
-          <Carousel setApi={setApi} className="carousel-fill h-full" opts={{ duration: 350, startIndex: getInitialSlide() }}>
+          <Carousel setApi={setApi} className="carousel-fill h-full" opts={{ duration: 200, startIndex: getInitialSlide() }}>
             <CarouselContent className="h-full">
               {/* ── Slide 1 · Home ─────────────────────────────────── */}
               <CarouselItem className="h-full">
@@ -300,29 +300,20 @@ export default function Home() {
               {/* ── Slide 3 · 369AI ────────────────────────────────── */}
               <CarouselItem className="h-full">
                 <SlideShell maxWidth="max-w-6xl">
-                  <div className="text-center mb-6">
-                    <h1 className="text-3xl md:text-5xl font-bold text-white mb-4 tracking-tight leading-[1.1]" style={TEXT_SHADOW}>
-                      Your Intelligence Layer,<br />
-                      <span className="aurora-gradient-text">Embedded Where You Trade.</span>
-                    </h1>
-                    <p className="text-sm md:text-base mb-2 text-[var(--text-secondary)] max-w-xl mx-auto leading-relaxed" style={TEXT_SHADOW}>
-                      369AI doesn't live in a corner of the app. It watches the market beside your chart, reviews your strategies before you deploy them, and scores every decision you make — turning raw market data into a calm, contextual edge.
-                    </p>
-                  </div>
-                  <div className="relative overflow-hidden rounded-2xl p-6 md:p-8" style={GLASS_CARD}>
+                  <div className="relative overflow-hidden rounded-2xl p-6 md:p-10" style={GLASS_CARD}>
                     <div className="absolute -top-16 right-0 w-[300px] h-[300px] blur-[160px] rounded-full opacity-[0.1] pointer-events-none" style={{ background: "linear-gradient(135deg, #4ade80, #8b5cf6)" }} />
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center relative">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-10 items-center relative">
                       <div>
                         <div className="flex items-center gap-2 mb-4">
-                          <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ background: "linear-gradient(135deg, #4ade80, #8b5cf6)" }}>
+                          <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: "linear-gradient(135deg, #4ade80, #8b5cf6)" }}>
                             <Brain className="w-5 h-5 text-white" />
                           </div>
                           <span className="text-sm font-bold text-[var(--accent)]">369AI</span>
                         </div>
-                        <h2 className="text-2xl md:text-3xl font-bold text-white tracking-tight mb-3" style={TEXT_SHADOW}>
+                        <h2 className="text-3xl md:text-4xl font-bold text-white tracking-tight mb-4" style={TEXT_SHADOW}>
                           Your intelligence layer,<br />embedded where you trade.
                         </h2>
-                        <p className="text-sm text-[var(--text-secondary)] leading-relaxed mb-5" style={TEXT_SHADOW}>
+                        <p className="text-sm md:text-base text-[var(--text-secondary)] leading-relaxed mb-6" style={TEXT_SHADOW}>
                           369AI doesn't live in a corner of the app. It watches the market beside your chart, reviews your strategies before you deploy them, and scores every decision you make — turning raw market data into a calm, contextual edge.
                         </p>
                         <div className="grid grid-cols-2 gap-3 max-w-md">
