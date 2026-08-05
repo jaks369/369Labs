@@ -1096,6 +1096,10 @@
     from { opacity: 0; transform: translateX(16px); }
     to { opacity: 1; transform: translateX(0); }
   }
+  @keyframes slideInLeft {
+    from { opacity: 0; transform: translateX(-16px); }
+    to { opacity: 1; transform: translateX(0); }
+  }
   @keyframes scaleIn {
     from { opacity: 0; transform: scale(0.96); }
     to { opacity: 1; transform: scale(1); }
@@ -1121,6 +1125,7 @@
   .animate-slideUp { animation: slideUp 300ms ease both; }
   .animate-pulse-dot { animation: pulse-dot 1.5s ease-in-out infinite; }
   .animate-slideInRight { animation: slideInRight 200ms ease both; }
+  .animate-slideInLeft { animation: slideInLeft 200ms ease both; }
   .animate-scaleIn { animation: scaleIn 200ms ease both; }
   .animate-slideUpFade { animation: slideUpFade 300ms var(--ease-out-expo) both; }
   .animate-cardEnter { animation: cardEnter 350ms var(--ease-out-expo) both; }

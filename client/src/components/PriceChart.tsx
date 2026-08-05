@@ -22,6 +22,7 @@ interface PriceChartProps {
   heightClass?: string;
   showStats?: boolean;
   followLabel?: string;
+  fillHeight?: boolean;
 }
 
 function niceScale(min: number, max: number, ticks: number) {
@@ -50,6 +51,7 @@ export default function PriceChart({
   heightClass,
   showStats = !compact,
   followLabel = "Return to live",
+  fillHeight = false,
 }: PriceChartProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [dims, setDims] = useState({ w: 800, h: 320 });
@@ -244,17 +246,20 @@ export default function PriceChart({
       setCrosshair(null);
       return;
     }
+    if (!data.length) { setCrosshair(null); return; }
+    // Snap to the nearest actual data point by X (time) — the cursor's Y is only
+    // used to decide if we're over the plot; the snapped price is the real tick.
     const frac = (mx - padX) / chartW;
-    const barIdx = Math.round(leftIdx + frac * (totalBars - 1));
-    const dataIdx = Math.max(0, Math.min(barIdx, data.length - 1));
-    const priceFrac = 1 - (my - padTop) / chartH;
-    const priceAtCursor = scale.start + priceFrac * yRange + base;
+    const barIdx = Math.max(0, Math.min(Math.round(leftIdx + frac * (totalBars - 1)), data.length - 1));
+    const point = data[barIdx];
+    const px = padX + ((barIdx - leftIdx) / (totalBars - 1 || 1)) * chartW;
+    const py = padTop + chartH - ((point.price - base - scale.start) / yRange) * chartH;
     setCrosshair({
-      x: mx,
-      y: my,
-      price: priceAtCursor,
-      time: data[dataIdx]?.time ?? "",
-      barIdx: dataIdx,
+      x: px,
+      y: py,
+      price: point.price,
+      time: point.time,
+      barIdx,
     });
   }, [dragging, chartW, chartH, padX, padTop, leftIdx, totalBars, scale.start, yRange, base, data]);
 
@@ -276,9 +281,9 @@ export default function PriceChart({
   const defaultHeight = fullscreen ? "h-full min-h-[80vh]" : compact ? "h-[220px]" : "h-[280px] md:h-[340px]";
 
   return (
-    <div className="w-full">
+    <div className={`w-full ${fillHeight ? "h-full flex flex-col min-h-0" : ""}`}>
       {/* Chart toolbar */}
-      <div className="flex items-center justify-between gap-2 px-1 pb-2">
+      <div className="flex items-center justify-between gap-2 px-1 pb-2 shrink-0">
         <div className="flex items-center gap-1">
           {timeframes?.map((t) => (
             <button
@@ -312,7 +317,7 @@ export default function PriceChart({
         onPointerMove={(e) => { onPointerMove(e); onCrosshairMove(e); }}
         onPointerUp={onPointerUp}
         onPointerLeave={() => { onPointerUp(); onCrosshairLeave(); }}
-        className={`w-full relative rounded-xl overflow-hidden border border-[var(--border-subtle)] select-none ${heightClass || defaultHeight}`}
+        className={`w-full relative rounded-xl overflow-hidden border border-[var(--border-subtle)] select-none ${fillHeight ? "flex-1 min-h-0" : heightClass || defaultHeight}`}
         style={{ background: `linear-gradient(180deg, color-mix(in srgb, ${color} 6%, transparent) 0%, color-mix(in srgb, ${color} 1.5%, transparent) 60%, transparent 100%)`, cursor: dragging ? "grabbing" : "grab" }}
       >
         {error ? (
@@ -390,24 +395,40 @@ export default function PriceChart({
               </text>
             ))}
 
-            {/* Crosshair */}
-            {crosshair && (
-              <g>
-                <line x1={crosshair.x} y1={padTop} x2={crosshair.x} y2={padTop + chartH} stroke="var(--text-muted)" strokeWidth="0.5" strokeDasharray="3,3" opacity="0.5" />
-                <line x1={padX} y1={crosshair.y} x2={padX + chartW} y2={crosshair.y} stroke="var(--text-muted)" strokeWidth="0.5" strokeDasharray="3,3" opacity="0.5" />
-                <circle cx={crosshair.x} cy={crosshair.y} r="3" fill={color} stroke="var(--bg)" strokeWidth="1.5" />
-                {/* Price tag on Y axis */}
-                <rect x={0} y={crosshair.y - 10} width={padX - 4} height={20} rx="3" fill={color} />
-                <text x={(padX - 4) / 2} y={crosshair.y + 4} textAnchor="middle" fontSize="9" fontWeight="bold" fill="var(--bg)" fontFamily="JetBrains Mono, monospace">
-                  {crosshair.price.toFixed(labelDecimals)}
-                </text>
-                {/* Time tag on X axis */}
-                <rect x={crosshair.x - 30} y={padTop + chartH + 2} width={60} height={16} rx="3" fill={color} />
-                <text x={crosshair.x} y={padTop + chartH + 13} textAnchor="middle" fontSize="9" fontWeight="bold" fill="var(--bg)" fontFamily="JetBrains Mono, monospace">
-                  {crosshair.time}
-                </text>
-              </g>
-            )}
+            {/* Crosshair — snapped to the nearest actual data point */}
+            {crosshair && (() => {
+              const tipW = 116;
+              const tipH = 22;
+              let tipX = crosshair.x + 10;
+              if (tipX + tipW > padX + chartW) tipX = crosshair.x - tipW - 10;
+              let tipY = crosshair.y - tipH - 10;
+              if (tipY < padTop) tipY = crosshair.y + 10;
+              return (
+                <g>
+                  <line x1={crosshair.x} y1={padTop} x2={crosshair.x} y2={padTop + chartH} stroke="var(--text-muted)" strokeWidth="0.5" strokeDasharray="3,3" opacity="0.5" />
+                  <line x1={padX} y1={crosshair.y} x2={padX + chartW} y2={crosshair.y} stroke="var(--text-muted)" strokeWidth="0.5" strokeDasharray="3,3" opacity="0.5" />
+                  <circle cx={crosshair.x} cy={crosshair.y} r="3" fill={color} stroke="var(--bg)" strokeWidth="1.5" />
+                  {/* Price tag on Y axis */}
+                  <rect x={0} y={crosshair.y - 10} width={padX - 4} height={20} rx="3" fill={color} />
+                  <text x={(padX - 4) / 2} y={crosshair.y + 4} textAnchor="middle" fontSize="9" fontWeight="bold" fill="var(--bg)" fontFamily="JetBrains Mono, monospace">
+                    {crosshair.price.toFixed(labelDecimals)}
+                  </text>
+                  {/* Time tag on X axis */}
+                  <rect x={crosshair.x - 30} y={padTop + chartH + 2} width={60} height={16} rx="3" fill={color} />
+                  <text x={crosshair.x} y={padTop + chartH + 13} textAnchor="middle" fontSize="9" fontWeight="bold" fill="var(--bg)" fontFamily="JetBrains Mono, monospace">
+                    {crosshair.time}
+                  </text>
+                  {/* Floating tooltip — the real snapped price and its real timestamp */}
+                  <rect x={tipX} y={tipY} width={tipW} height={tipH} rx="4" fill="rgba(10,14,23,0.92)" stroke="rgba(255,255,255,0.12)" />
+                  <text x={tipX + 8} y={tipY + 14.5} fontSize="9" fontWeight="bold" fill={color} fontFamily="JetBrains Mono, monospace">
+                    {crosshair.price.toFixed(labelDecimals)}
+                  </text>
+                  <text x={tipX + tipW / 2 + 10} y={tipY + 14.5} textAnchor="middle" fontSize="8" fill="var(--text-muted)" fontFamily="JetBrains Mono, monospace">
+                    {crosshair.time}
+                  </text>
+                </g>
+              );
+            })()}
           </svg>
         ) : (
           <div className="absolute inset-0 flex flex-col items-center justify-center gap-2">
@@ -429,7 +450,7 @@ export default function PriceChart({
 
       {/* Stats row */}
       {showStats && (
-      <div className="mt-3 grid grid-cols-4 gap-2 md:gap-3">
+      <div className={`mt-3 grid grid-cols-4 gap-2 md:gap-3 ${fillHeight ? "shrink-0" : ""}`}>
         <div className="bg-[var(--card)] p-2.5 rounded-lg border border-[var(--border-subtle)]">
           <span className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">Open</span>
           <p className="text-sm font-bold text-[var(--text-primary)] tabular-nums">{ohlc ? ohlc.open.toFixed(decimalPlaces) : "—"}</p>

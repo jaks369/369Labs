@@ -8,9 +8,10 @@ interface TickChartProps {
   maxDataPoints?: number;
   decimalPlaces?: number;
   compact?: boolean;
+  fillHeight?: boolean;
 }
 
-export default function TickChart({ symbol, maxDataPoints = 100, decimalPlaces = 3, compact = false }: TickChartProps) {
+export default function TickChart({ symbol, maxDataPoints = 100, decimalPlaces = 3, compact = false, fillHeight = false }: TickChartProps) {
   const [data, setData] = useState<PriceChartPoint[]>([]);
   const [timeframe, setTimeframe] = useState<number>(maxDataPoints || 100);
   const [error, setError] = useState<string | null>(null);
@@ -71,6 +72,7 @@ export default function TickChart({ symbol, maxDataPoints = 100, decimalPlaces =
       symbol={symbol}
       decimalPlaces={decimalPlaces}
       compact={compact}
+      fillHeight={fillHeight}
       timeframes={[25, 50, 100, 200]}
       timeframe={timeframe}
       onTimeframeChange={setTimeframe}

@@ -2,10 +2,10 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import { useEffect, useState, useRef, useCallback } from "react";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
-import { CurrencyStat, PercentStat, IntegerStat, SignedCurrencyStat } from "@/components/LiveStat";
-import { formatMoney, formatSignedMoney, formatNumber } from "@/lib/format";
-import { PageContainer, PageSection } from "@/components/PageSection";
-import { Loader2, Activity, Zap, ChevronDown, Wallet, AlertCircle, BookOpen, BarChart3, Bot, Brain, Star, Search, Clock, TrendingUp, TrendingDown, History } from "lucide-react";
+import { CurrencyStat } from "@/components/LiveStat";
+import { formatMoney, formatSignedMoney } from "@/lib/format";
+import { PageSection } from "@/components/PageSection";
+import { Loader2, Activity, Zap, ChevronDown, Wallet, BarChart3, Bot, Brain, Star, Search, Clock, History } from "lucide-react";
 import { useLocation, useSearch } from "wouter";
 import { useIsMobile } from "@/hooks/useMobile";
 import MobileTerminal from "@/pages/MobileTerminal";
@@ -17,11 +17,9 @@ import { ContractSelection } from "@/components/ContractTypeSelector";
 import { VOLATILITY_SYMBOLS, getSymbolDisplayName } from "@/lib/symbols";
 import { getDecimalPlaces, lastDigitOf } from "@shared/lastDigit";
 import TerminalContextPanel from "@/components/TerminalContextPanel";
-import { FilterPill } from "@/components/ui/filter-pill";
+import InsightsPopup from "@/components/InsightsPopup";
 import PopupPanel from "@/components/PopupPanel";
 import WatchlistPanel from "@/components/WatchlistPanel";
-import SymbolInsights from "@/components/SymbolInsights";
-import AIVerdicts from "@/components/AIVerdicts";
 
 const ALL_FALLBACK: DerivSymbol[] = VOLATILITY_SYMBOLS.map((s) => ({ ...s, decimalPlaces: 2 }));
 
@@ -557,9 +555,9 @@ export default function Dashboard() {
                   <button onClick={() => { setDataPopupTab("watchlist"); setDataPopupOpen(true); }} className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-white/5 border border-[var(--border)] text-[10px] font-bold text-[var(--text-muted)] hover:text-white hover:border-[rgba(255,255,255,0.15)] transition-colors" title="Data: Watchlist, Trade History, Prices">
                     <Star className="w-3 h-3" />
                   </button>
-                  <button onClick={() => setInsightPopupOpen(true)} className="flex items-center gap-1 px-2 py-1 rounded-lg bg-[var(--accent)]/10 border border-[var(--accent)]/20 text-[10px] font-bold text-[var(--accent)] hover:bg-[var(--accent)]/20 transition-colors" title="AI Insights — 369AI">
+                  <button onClick={() => setInsightPopupOpen(true)} className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-bold transition-colors text-black hover:brightness-110" style={{ background: "linear-gradient(135deg, #2dd4bf, #a78bfa, #e879f9)" }} title="Insights — Digit Frequency, AI Insight, 369AI Verdicts, Risk Controls">
                     <Brain className="w-3 h-3" />
-                    <span className="hidden lg:inline">AI Insights</span>
+                    <span className="hidden lg:inline">Insights</span>
                   </button>
                 </div>
                 {/* Connect button */}
@@ -640,16 +638,7 @@ export default function Dashboard() {
                 </div>
               )}
               <div className="chart-plot h-full glass-surface" style={{ minHeight: 0, borderRadius: '16px' }}>
-                {(() => {
-                  const ticks = displayTicks;
-                  const last = ticks[0];
-                  const price = last?.price;
-                  return (
-                    <>
-                      <TickChart symbol={selectedSymbol} maxDataPoints={50} decimalPlaces={decimalPlaces} />
-                    </>
-                  );
-                })()}
+                <TickChart symbol={selectedSymbol} maxDataPoints={50} decimalPlaces={decimalPlaces} fillHeight />
               </div>
             </div>
           </div>
@@ -667,37 +656,8 @@ export default function Dashboard() {
               onContractChange={setContract}
               stake={stake}
               onStakeChange={setStake}
-              stopLoss={stopLoss}
-              takeProfit={takeProfit}
-              onStopLossChange={setStopLoss}
-              onTakeProfitChange={setTakeProfit}
               onQuickTrade={handleQuickTrade}
               tradeBusy={tradeBusy}
-              openPositions={(tradesQuery.data || []).filter((t: any) => t.result === "pending")}
-              onSelectSymbol={(s) => {
-                setSelectedSymbol(s);
-                setShowSymbolPicker(false);
-              }}
-              signals={signalsQuery.data || []}
-              ticks={displayTicks}
-              trades={tradesQuery.data || []}
-              onViewSignals={() => navigate("/marketplace")}
-              alerts={alertsQuery.data || []}
-              alertsLoading={alertsQuery.isLoading}
-              alertsOpen={alertsOpen}
-              onToggleAlerts={() => setAlertsOpen((v) => !v)}
-              newAlertSym={newAlertSym}
-              newAlertDir={newAlertDir}
-              newAlertPrice={newAlertPrice}
-              onNewAlertSym={setNewAlertSym}
-              onNewAlertDir={setNewAlertDir}
-              onNewAlertPrice={setNewAlertPrice}
-              onCreateAlert={() => {
-                if (!newAlertPrice) return;
-                createAlertMutation.mutate({ symbol: newAlertSym || selectedSymbol, direction: newAlertDir, targetPrice: Number(newAlertPrice) });
-              }}
-              createAlertPending={createAlertMutation.isPending}
-              onDisableAlert={(id) => disableAlertMutation.mutate({ id })}
             />
           </div>
         </div>
@@ -832,34 +792,43 @@ export default function Dashboard() {
         </div>
       </PopupPanel>
 
-      {/* Market Insight & Intel Popup */}
-      <PopupPanel
+      {/* Insights Drawer — Digit Frequency, AI Insight, 369AI Verdicts, Risk Controls, Positions, Alerts */}
+      <InsightsPopup
         open={insightPopupOpen}
         onClose={() => setInsightPopupOpen(false)}
-        title="Market Insight & Intel"
-        icon={<Brain className="w-4 h-4 text-[var(--accent)]" />}
-        width="420px"
-      >
-        <div className="p-3 space-y-3">
-          <SymbolInsights symbol={selectedSymbol} ticks={displayTicks} trades={(tradesQuery.data || []) as any} decimalPlaces={decimalPlaces} />
-          <div className="border-t border-[rgba(255,255,255,0.08)] pt-3">
-            <AIVerdicts symbol={selectedSymbol} ticks={displayTicks} trades={(tradesQuery.data || []) as any} decimalPlaces={decimalPlaces} />
-          </div>
-          {signalsQuery.data && signalsQuery.data.length > 0 && (
-            <div className="border-t border-[rgba(255,255,255,0.08)] pt-3">
-              <h4 className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-wider mb-2">AI Signals</h4>
-              {signalsQuery.data.slice(0, 3).map((sig: any, i: number) => (
-                <div key={i} className="py-2 border-b border-[var(--border)] last:border-0">
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="ai-badge text-[8px]">{getSymbolDisplayName(sig.symbol)}</span>
-                  </div>
-                  <p className="text-[10px] text-[var(--text-secondary)] leading-relaxed line-clamp-2">{sig.description}</p>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      </PopupPanel>
+        symbol={selectedSymbol}
+        displayName={selectedDisplay}
+        decimalPlaces={decimalPlaces}
+        stopLoss={stopLoss}
+        takeProfit={takeProfit}
+        onStopLossChange={setStopLoss}
+        onTakeProfitChange={setTakeProfit}
+        openPositions={(tradesQuery.data || []).filter((t: any) => t.result === "pending")}
+        onSelectSymbol={(s) => {
+          setSelectedSymbol(s);
+          setShowSymbolPicker(false);
+        }}
+        signals={signalsQuery.data || []}
+        ticks={displayTicks}
+        trades={(tradesQuery.data || []) as any}
+        onViewSignals={() => navigate("/marketplace")}
+        alerts={alertsQuery.data || []}
+        alertsLoading={alertsQuery.isLoading}
+        alertsOpen={alertsOpen}
+        onToggleAlerts={() => setAlertsOpen((v) => !v)}
+        newAlertSym={newAlertSym}
+        newAlertDir={newAlertDir}
+        newAlertPrice={newAlertPrice}
+        onNewAlertSym={setNewAlertSym}
+        onNewAlertDir={setNewAlertDir}
+        onNewAlertPrice={setNewAlertPrice}
+        onCreateAlert={() => {
+          if (!newAlertPrice) return;
+          createAlertMutation.mutate({ symbol: newAlertSym || selectedSymbol, direction: newAlertDir, targetPrice: Number(newAlertPrice) });
+        }}
+        createAlertPending={createAlertMutation.isPending}
+        onDisableAlert={(id) => disableAlertMutation.mutate({ id })}
+      />
 
       <DerivTokenModal open={showTokenModal} onClose={() => setShowTokenModal(false)} />
     </div>

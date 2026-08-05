@@ -4,6 +4,7 @@ import { derivWS } from "@/services/derivWebSocket";
 import { useLocation } from "wouter";
 import { Play, Pause, RotateCcw, FastForward, TrendingUp, TrendingDown, Loader2, GraduationCap } from "lucide-react";
 import Sparkline from "@/components/Sparkline";
+import PageBackButton from "@/components/PageBackButton";
 import { getValidSymbols, getSymbolDisplayName } from "@/lib/symbols";
 import { lastDigitOf, getDecimalPlaces } from "@shared/lastDigit";
 
@@ -127,13 +128,16 @@ export default function Replay() {
     <div className="h-full p-6">
       <div className="max-w-5xl mx-auto space-y-6">
         <div className="flex items-center justify-between flex-wrap gap-4">
-          <div>
-            <h1 className="text-3xl font-bold text-white flex items-center gap-3">
-              <GraduationCap className="w-7 h-7 text-[var(--accent-hover)]" /> Replay Mode
-            </h1>
-            <p className="text-[var(--text-secondary)] text-sm mt-1">
-              Replay historical ticks and practice reading the tape. Predictions are scored, but no real orders are placed.
-            </p>
+          <div className="flex items-center gap-3">
+            <PageBackButton fallback="/backtesting" label="Backtesting" />
+            <div>
+              <h1 className="text-3xl font-bold text-white flex items-center gap-3">
+                <GraduationCap className="w-7 h-7 text-[var(--accent-hover)]" /> Replay Mode
+              </h1>
+              <p className="text-[var(--text-secondary)] text-sm mt-1">
+                Replay historical ticks and practice reading the tape. Predictions are scored, but no real orders are placed.
+              </p>
+            </div>
           </div>
           <select
             value={symbol}

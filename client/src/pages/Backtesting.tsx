@@ -8,6 +8,7 @@ import { toast } from "@/components/Toast";
 import { derivWS } from "@/services/derivWebSocket";
 import { runBacktest, BacktestResult } from "@/services/BacktestEngine";
 import Sparkline from "@/components/Sparkline";
+import PageBackButton from "@/components/PageBackButton";
 import { StrategyRule } from "@/components/RuleBuilder";
 import { getValidSymbols } from "@/lib/symbols";
 import { getAllSymbols, getSymbolDisplayName } from "@shared/symbols";
@@ -147,9 +148,12 @@ export default function Backtesting() {
     <div className="h-full p-6">
       <div className="max-w-6xl mx-auto space-y-8">
         <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold text-white">Backtesting Engine</h1>
-            <p className="text-[var(--text-secondary)] text-sm mt-1">Test your strategies against historical market data from Deriv</p>
+          <div className="flex items-center gap-3">
+            <PageBackButton fallback="/strategy-builder" label="Strategies" />
+            <div>
+              <h1 className="text-3xl font-bold text-white">Backtesting Engine</h1>
+              <p className="text-[var(--text-secondary)] text-sm mt-1">Test your strategies against historical market data from Deriv</p>
+            </div>
           </div>
         </div>
 
