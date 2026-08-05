@@ -1404,6 +1404,19 @@
     border-radius: 16px;
   }
 
+  /* ─── Landing Carousel Fill (Home) ─────────────────────── */
+  /* Embla track + overflow wrapper stretch to the carousel's full height so each slide fills the viewport. */
+  .carousel-fill,
+  .carousel-fill > div {
+    height: 100%;
+  }
+
+  /* ─── Landing Text Legibility ─────────────────────────── */
+  /* Subtle dark shadow behind headline/body text over the aurora photo. */
+  .text-shadow-strong {
+    text-shadow: 0 2px 12px rgba(0, 0, 0, 0.6);
+  }
+
   /* ─── Aurora Theme System ─────────────────────────────── */
   .aurora-glass {
     background: var(--glass-fill);
