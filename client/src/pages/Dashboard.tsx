@@ -638,6 +638,7 @@ export default function Dashboard() {
               contract={contract}
               stake={stake}
               onStakeChange={setStake}
+              onContractChange={setContract}
               onQuickTrade={handleQuickTrade}
               tradeBusy={tradeBusy}
             />

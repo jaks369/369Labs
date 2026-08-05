@@ -12,6 +12,7 @@ interface TerminalContextPanelProps {
   contract: ContractSelection;
   stake: number;
   onStakeChange: (n: number) => void;
+  onContractChange: (c: ContractSelection) => void;
   onQuickTrade: (dir?: "rise" | "fall") => void;
   tradeBusy: boolean;
 }
@@ -25,12 +26,30 @@ export default function TerminalContextPanel(props: TerminalContextPanelProps) {
     contract,
     stake,
     onStakeChange,
+    onContractChange,
     onQuickTrade,
     tradeBusy,
   } = props;
 
   const isRiseFall = contract.category === "rise_fall";
   const isFall = isRiseFall && contract.direction === "fall";
+
+  const buyLabel = (() => {
+    switch (contract.category) {
+      case "rise_fall":
+        return contract.direction === "fall" ? "Buy Fall" : "Buy Rise";
+      case "over_under":
+        return `Buy ${contract.overUnder === "under" ? "Under" : "Over"} ${contract.barrier ?? ""}`.replace(/\s+$/g, "");
+      case "even_odd":
+        return contract.digitMatch === "differ" ? "Buy Odd" : "Buy Even";
+      case "digits":
+        return `${contract.digitMatch === "differ" ? "Buy Differs" : "Buy Matches"} ${contract.digit ?? ""}`.replace(/\s+$/g, "");
+      default:
+        return "Buy Accumulator";
+    }
+  })();
+
+  const buyIsDown = isFall || (contract.category === "even_odd" && contract.digitMatch === "differ");
   const accountBadge =
     accountType === "real" ? "REAL"
     : accountType === "demo" ? "DEMO"
@@ -54,6 +73,168 @@ export default function TerminalContextPanel(props: TerminalContextPanelProps) {
             </div>
             <span className={`badge text-[9px] ${accountBadgeCls}`}>{accountBadge}</span>
           </div>
+
+          {/* Contract option picker — pick your side/barrier per contract type */}
+          {contract.category === "rise_fall" && (
+            <div className="flex rounded-lg bg-white/5 p-0.5">
+              <button
+                onClick={() => onContractChange({ ...contract, direction: "rise" })}
+                className={`flex-1 flex items-center justify-center gap-1 py-2 text-[11px] font-bold rounded-md transition-all ${
+                  contract.direction === "rise"
+                    ? "bg-[var(--green)] text-white shadow-sm"
+                    : "text-[var(--text-secondary)] hover:text-white"
+                }`}
+              >
+                <TrendingUp className="w-3.5 h-3.5" /> Rise
+              </button>
+              <button
+                onClick={() => onContractChange({ ...contract, direction: "fall" })}
+                className={`flex-1 flex items-center justify-center gap-1 py-2 text-[11px] font-bold rounded-md transition-all ${
+                  contract.direction === "fall"
+                    ? "bg-[var(--red)] text-white shadow-sm"
+                    : "text-[var(--text-secondary)] hover:text-white"
+                }`}
+              >
+                <TrendingDown className="w-3.5 h-3.5" /> Fall
+              </button>
+            </div>
+          )}
+
+          {contract.category === "even_odd" && (
+            <div className="flex rounded-lg bg-white/5 p-0.5">
+              <button
+                onClick={() => onContractChange({ ...contract, digitMatch: "match" })}
+                className={`flex-1 py-2 text-[11px] font-bold rounded-md transition-all ${
+                  contract.digitMatch === "match"
+                    ? "bg-[var(--green)] text-white shadow-sm"
+                    : "text-[var(--text-secondary)] hover:text-white"
+                }`}
+              >
+                Even
+              </button>
+              <button
+                onClick={() => onContractChange({ ...contract, digitMatch: "differ" })}
+                className={`flex-1 py-2 text-[11px] font-bold rounded-md transition-all ${
+                  contract.digitMatch === "differ"
+                    ? "bg-[var(--red)] text-white shadow-sm"
+                    : "text-[var(--text-secondary)] hover:text-white"
+                }`}
+              >
+                Odd
+              </button>
+            </div>
+          )}
+
+          {contract.category === "over_under" && (
+            <div className="space-y-1.5">
+              <div className="flex rounded-lg bg-white/5 p-0.5">
+                <button
+                  onClick={() => onContractChange({ ...contract, overUnder: "over" })}
+                  className={`flex-1 py-2 text-[11px] font-bold rounded-md transition-all ${
+                    contract.overUnder === "over"
+                      ? "bg-[var(--accent)] text-white shadow-sm"
+                      : "text-[var(--text-secondary)] hover:text-white"
+                  }`}
+                >
+                  Over
+                </button>
+                <button
+                  onClick={() => onContractChange({ ...contract, overUnder: "under" })}
+                  className={`flex-1 py-2 text-[11px] font-bold rounded-md transition-all ${
+                    contract.overUnder === "under"
+                      ? "bg-[var(--accent)] text-white shadow-sm"
+                      : "text-[var(--text-secondary)] hover:text-white"
+                  }`}
+                >
+                  Under
+                </button>
+              </div>
+              <div>
+                <span className="text-[9px] font-bold text-[var(--text-muted)] uppercase">Barrier (0-9)</span>
+                <div className="grid grid-cols-5 gap-1 mt-1">
+                  {Array.from({ length: 10 }, (_, i) => (
+                    <button
+                      key={i}
+                      onClick={() => onContractChange({ ...contract, barrier: i })}
+                      className="min-w-0 w-full aspect-square flex items-center justify-center rounded text-[10px] font-bold transition-all"
+                      style={{
+                        background: contract.barrier === i ? "var(--accent)" : "var(--card)",
+                        color: contract.barrier === i ? "white" : "var(--text-secondary)",
+                      }}
+                    >
+                      {i}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {contract.category === "digits" && (
+            <div className="space-y-1.5">
+              <div className="flex rounded-lg bg-white/5 p-0.5">
+                <button
+                  onClick={() => onContractChange({ ...contract, digitMatch: "match" })}
+                  className={`flex-1 py-2 text-[11px] font-bold rounded-md transition-all ${
+                    contract.digitMatch === "match"
+                      ? "bg-[var(--green)] text-white shadow-sm"
+                      : "text-[var(--text-secondary)] hover:text-white"
+                  }`}
+                >
+                  Matches
+                </button>
+                <button
+                  onClick={() => onContractChange({ ...contract, digitMatch: "differ" })}
+                  className={`flex-1 py-2 text-[11px] font-bold rounded-md transition-all ${
+                    contract.digitMatch === "differ"
+                      ? "bg-[var(--red)] text-white shadow-sm"
+                      : "text-[var(--text-secondary)] hover:text-white"
+                  }`}
+                >
+                  Differs
+                </button>
+              </div>
+              <div>
+                <span className="text-[9px] font-bold text-[var(--text-muted)] uppercase">Digit (0-9)</span>
+                <div className="grid grid-cols-5 gap-1 mt-1">
+                  {Array.from({ length: 10 }, (_, i) => (
+                    <button
+                      key={i}
+                      onClick={() => onContractChange({ ...contract, digit: i })}
+                      className="min-w-0 w-full aspect-square flex items-center justify-center rounded text-[10px] font-bold transition-all"
+                      style={{
+                        background: contract.digit === i ? "var(--accent)" : "var(--card)",
+                        color: contract.digit === i ? "white" : "var(--text-secondary)",
+                      }}
+                    >
+                      {i}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {contract.category === "accumulator" && (
+            <div>
+              <span className="text-[9px] font-bold text-[var(--text-muted)] uppercase">Growth Rate</span>
+              <div className="grid grid-cols-4 gap-1 mt-1">
+                {[1, 2, 3, 5].map((rate) => (
+                  <button
+                    key={rate}
+                    onClick={() => onContractChange({ ...contract, growthRate: rate })}
+                    className="py-2 rounded-lg text-[10px] font-bold transition-all"
+                    style={{
+                      background: contract.growthRate === rate ? "var(--accent)" : "var(--card)",
+                      color: contract.growthRate === rate ? "white" : "var(--text-secondary)",
+                    }}
+                  >
+                    {rate}%
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Stake stepper */}
           <div>
@@ -107,24 +288,26 @@ export default function TerminalContextPanel(props: TerminalContextPanelProps) {
           {/* Buy button */}
           {isRiseFall ? (
             <button
-              onClick={() => onQuickTrade(isFall ? "fall" : "rise")}
+              onClick={() => onQuickTrade(contract.direction)}
               disabled={tradeBusy}
               className={`w-full h-10 flex items-center justify-center gap-2 rounded-lg text-sm font-bold text-white transition-all disabled:opacity-60 hover:brightness-110 ${
-                isFall ? "bg-[var(--red)]" : "bg-[var(--green)]"
+                buyIsDown ? "bg-[var(--red)]" : "bg-[var(--green)]"
               }`}
             >
-              {tradeBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : isFall ? <TrendingDown className="w-4 h-4" /> : <TrendingUp className="w-4 h-4" />}
-              Buy
+              {tradeBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : buyIsDown ? <TrendingDown className="w-4 h-4" /> : <TrendingUp className="w-4 h-4" />}
+              {buyLabel}
             </button>
           ) : (
             <button
               onClick={() => onQuickTrade()}
               disabled={tradeBusy}
-              className="w-full h-10 flex items-center justify-center gap-2 rounded-lg text-sm font-bold text-white transition-all disabled:opacity-60 hover:brightness-110"
-              style={{ background: "linear-gradient(135deg, var(--aurora-teal), var(--aurora-purple), var(--aurora-magenta))" }}
+              className={`w-full h-10 flex items-center justify-center gap-2 rounded-lg text-sm font-bold text-white transition-all disabled:opacity-60 hover:brightness-110 ${
+                contract.category === "even_odd" ? (buyIsDown ? "bg-[var(--red)]" : "bg-[var(--green)]") : ""
+              }`}
+              style={contract.category === "even_odd" ? undefined : { background: "linear-gradient(135deg, var(--aurora-teal), var(--aurora-purple), var(--aurora-magenta))" }}
             >
               {tradeBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Zap className="w-4 h-4" />}
-              Buy
+              {buyLabel}
             </button>
           )}
 
