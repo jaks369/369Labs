@@ -77,9 +77,6 @@ export default function Home() {
               <span className="text-base font-bold text-white">369Labs</span>
             </div>
             <div className="hidden md:flex items-center gap-6">
-              {[{ label: "Dashboard", path: "/dashboard" }, { label: "Strategy Builder", path: "/strategy-builder" }, { label: "Marketplace", path: "/marketplace" }, { label: "Backtesting", path: "/backtesting" }].map((item) => (
-                <button key={item.path} onClick={() => navigate(item.path)} className="text-sm text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors">{item.label}</button>
-              ))}
             </div>
           </div>
           <div className="flex items-center gap-4">
@@ -94,9 +91,6 @@ export default function Home() {
         {mobileMenuOpen && (
           <div className="md:hidden border-t border-[rgba(255,255,255,0.09)] glass-surface">
             <div className="px-6 py-4 space-y-2">
-              {[{ label: "Dashboard", path: "/dashboard" }, { label: "Strategy Builder", path: "/strategy-builder" }, { label: "Marketplace", path: "/marketplace" }, { label: "Backtesting", path: "/backtesting" }].map((item) => (
-                <button key={item.path} onClick={() => { navigate(item.path); setMobileMenuOpen(false); }} className="block w-full text-left py-2 text-sm text-[var(--text-secondary)] hover:text-[var(--text-primary)]">{item.label}</button>
-              ))}
               <div className="pt-3 border-t border-[var(--border)]/50 space-y-2">
                 <button onClick={() => { navigate("/login"); setMobileMenuOpen(false); }} className="block w-full text-left py-2 text-sm text-[var(--text-secondary)]">Login</button>
                 <button onClick={() => { navigate("/login"); setMobileMenuOpen(false); }} className="block w-full text-center py-2.5 text-sm font-semibold rounded-full bg-[var(--cta-fill)] text-[var(--cta-text)]">Get Started</button>
