@@ -1,5 +1,6 @@
 import { useAuth } from "@/_core/hooks/useAuth";
 import { useEffect, useState, useRef, useCallback } from "react";
+import { createPortal } from "react-dom";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { CurrencyStat } from "@/components/LiveStat";
@@ -83,6 +84,19 @@ export default function Dashboard() {
   const [dataPopupTab, setDataPopupTab] = useState<"watchlist" | "trades" | "prices" | "ohlc">("watchlist");
   const [tradeTypePopupOpen, setTradeTypePopupOpen] = useState(false);
   const [insightPopupOpen, setInsightPopupOpen] = useState(false);
+  const moreBtnRef = useRef<HTMLButtonElement>(null);
+  const [tradeTypePos, setTradeTypePos] = useState<{ top: number; left: number } | null>(null);
+
+  useEffect(() => {
+    if (!tradeTypePopupOpen) return;
+    const btn = moreBtnRef.current;
+    if (!btn) return;
+    const r = btn.getBoundingClientRect();
+    const w = 320;
+    let left = r.left;
+    if (left + w > window.innerWidth - 8) left = window.innerWidth - w - 8;
+    setTradeTypePos({ top: Math.min(r.bottom + 4, window.innerHeight - 340), left });
+  }, [tradeTypePopupOpen]);
 
   const urlSearch = useSearch();
   useEffect(() => {
@@ -593,9 +607,11 @@ export default function Dashboard() {
                 </button>
               ))}
               <button
+                ref={moreBtnRef}
                 onClick={() => setTradeTypePopupOpen((v) => !v)}
                 className="flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-bold text-[var(--accent)] hover:bg-[var(--accent)]/10 transition-colors shrink-0"
                 title="All Trade Types"
+                data-trade-type-popup
               >
                 <Zap className="w-3 h-3" />
                 <span>More</span>
@@ -604,39 +620,6 @@ export default function Dashboard() {
 
             {/* Chart Plot */}
             <div className="flex-1 min-h-0 relative" style={{ background: 'var(--bg)' }}>
-              {/* Trade Types Popup Grid */}
-              {tradeTypePopupOpen && (
-                <div className="absolute top-full left-4 mt-1 z-50 aurora-glass-panel rounded-lg p-3 shadow-2xl w-[320px]">
-                  <div className="text-[10px] uppercase tracking-widest text-[var(--text-muted)] font-bold mb-2">All Trade Types</div>
-                  <div className="grid grid-cols-2 gap-1.5">
-                    {([
-                      { id: "rise_fall", label: "Rise / Fall", desc: "Predict if price goes up or down" },
-                      { id: "over_under", label: "Over / Under", desc: "Last digit above or below barrier" },
-                      { id: "even_odd", label: "Even / Odd", desc: "Last digit is even or odd" },
-                      { id: "digits", label: "Matches / Differs", desc: "Last digit matches or differs" },
-                      { id: "accumulator", label: "Accumulator", desc: "Compounding tick trades" },
-                    ] as const).map((t) => (
-                      <button
-                        key={t.id}
-                        onClick={() => {
-                          const base: ContractSelection = { category: t.id };
-                          if (t.id === "rise_fall") base.direction = "rise";
-                          if (t.id === "over_under") { base.overUnder = "over"; base.barrier = 5; }
-                          if (t.id === "even_odd") base.digitMatch = "match";
-                          if (t.id === "digits") { base.digitMatch = "match"; base.digit = 0; }
-                          if (t.id === "accumulator") base.growthRate = 1;
-                          setContract(base);
-                          setTradeTypePopupOpen(false);
-                        }}
-                        className={`text-left p-2 rounded-lg transition-colors ${contract.category === t.id ? "bg-[var(--accent)]/10 border border-[var(--accent)]/20" : "hover:bg-white/5 border border-transparent"}`}
-                      >
-                        <span className={`text-[11px] font-bold block ${contract.category === t.id ? "text-[var(--accent)]" : "text-white"}`}>{t.label}</span>
-                        <span className="text-[9px] text-[var(--text-muted)] leading-tight">{t.desc}</span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
               <div className="chart-plot h-full glass-surface" style={{ minHeight: 0, borderRadius: '16px' }}>
                 <TickChart symbol={selectedSymbol} maxDataPoints={50} decimalPlaces={decimalPlaces} fillHeight />
               </div>
@@ -653,7 +636,6 @@ export default function Dashboard() {
               tokenStatus={tokenStatus}
               isAuthorized={derivWS.isAuthorized()}
               contract={contract}
-              onContractChange={setContract}
               stake={stake}
               onStakeChange={setStake}
               onQuickTrade={handleQuickTrade}
@@ -829,6 +811,47 @@ export default function Dashboard() {
         createAlertPending={createAlertMutation.isPending}
         onDisableAlert={(id) => disableAlertMutation.mutate({ id })}
       />
+
+      {/* All Trade Types popup — anchored to the "More" button, portal to body to avoid row overflow clipping */}
+      {tradeTypePopupOpen &&
+        tradeTypePos &&
+        createPortal(
+          <div
+            data-trade-type-popup
+            className="aurora-glass-panel rounded-lg p-3 shadow-2xl"
+            style={{ position: "fixed", top: tradeTypePos.top, left: tradeTypePos.left, width: 320, zIndex: 70 }}
+          >
+            <div className="text-[10px] uppercase tracking-widest text-[var(--text-muted)] font-bold mb-2">All Trade Types</div>
+            <div className="grid grid-cols-2 gap-1.5">
+              {([
+                { id: "rise_fall", label: "Rise / Fall", desc: "Predict if price goes up or down" },
+                { id: "over_under", label: "Over / Under", desc: "Last digit above or below barrier" },
+                { id: "even_odd", label: "Even / Odd", desc: "Last digit is even or odd" },
+                { id: "digits", label: "Matches / Differs", desc: "Last digit matches or differs" },
+                { id: "accumulator", label: "Accumulator", desc: "Compounding tick trades" },
+              ] as const).map((t) => (
+                <button
+                  key={t.id}
+                  onClick={() => {
+                    const base: ContractSelection = { category: t.id };
+                    if (t.id === "rise_fall") base.direction = "rise";
+                    if (t.id === "over_under") { base.overUnder = "over"; base.barrier = 5; }
+                    if (t.id === "even_odd") base.digitMatch = "match";
+                    if (t.id === "digits") { base.digitMatch = "match"; base.digit = 0; }
+                    if (t.id === "accumulator") base.growthRate = 1;
+                    setContract(base);
+                    setTradeTypePopupOpen(false);
+                  }}
+                  className={`text-left p-2 rounded-lg transition-colors ${contract.category === t.id ? "bg-[var(--accent)]/10 border border-[var(--accent)]/20" : "hover:bg-white/5 border border-transparent"}`}
+                >
+                  <span className={`text-[11px] font-bold block ${contract.category === t.id ? "text-[var(--accent)]" : "text-white"}`}>{t.label}</span>
+                  <span className="text-[9px] text-[var(--text-muted)] leading-tight">{t.desc}</span>
+                </button>
+              ))}
+            </div>
+          </div>,
+          document.body
+        )}
 
       <DerivTokenModal open={showTokenModal} onClose={() => setShowTokenModal(false)} />
     </div>

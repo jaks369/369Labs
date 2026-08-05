@@ -1,5 +1,5 @@
 import { Loader2, Zap, TrendingUp, TrendingDown, Wallet } from "lucide-react";
-import ContractTypeSelector, { ContractSelection } from "@/components/ContractTypeSelector";
+import type { ContractSelection } from "@/components/ContractTypeSelector";
 import { formatMoney } from "@/lib/format";
 
 interface TerminalContextPanelProps {
@@ -10,7 +10,6 @@ interface TerminalContextPanelProps {
   tokenStatus: "none" | "invalid" | "connected";
   isAuthorized: boolean;
   contract: ContractSelection;
-  onContractChange: (c: ContractSelection) => void;
   stake: number;
   onStakeChange: (n: number) => void;
   onQuickTrade: (dir?: "rise" | "fall") => void;
@@ -24,7 +23,6 @@ export default function TerminalContextPanel(props: TerminalContextPanelProps) {
     tokenStatus,
     isAuthorized,
     contract,
-    onContractChange,
     stake,
     onStakeChange,
     onQuickTrade,
@@ -132,12 +130,6 @@ export default function TerminalContextPanel(props: TerminalContextPanelProps) {
 
           {!isAuthorized && <p className="text-[10px] text-[var(--text-muted)]">Connect a Deriv token to enable trading.</p>}
         </div>
-      </div>
-
-      {/* Contract Type Selector (compact) */}
-      <div className="p-3">
-        <div className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-wider mb-2">Contract Type</div>
-        <ContractTypeSelector selection={contract} onChange={onContractChange} />
       </div>
     </div>
   );

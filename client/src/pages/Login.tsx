@@ -99,9 +99,48 @@ export default function Login() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4">
-      <div className="w-full max-w-sm border border-[var(--accent-border)] bg-[var(--card)] rounded p-6 relative">
-        <div className="absolute -top-3 left-4 bg-[var(--bg)] px-2 text-sm font-bold text-[var(--accent)]">
+    <div className="min-h-screen relative flex items-center justify-center px-4 overflow-hidden">
+      {/* Aurora backdrop — same effect as the landing page (image + aurora glow). */}
+      <div className="fixed inset-0 pointer-events-none">
+        <div
+          className="absolute inset-0"
+          style={{
+            backgroundImage: 'url("/aurora-nature.jpg")',
+            backgroundSize: "cover",
+            backgroundPosition: "center 30%",
+            backgroundAttachment: "fixed",
+            filter: "brightness(0.75) contrast(1.05)",
+          }}
+        />
+        <div
+          className="absolute inset-0"
+          style={{
+            background: `
+              radial-gradient(ellipse 1000px 700px at 30% 10%, rgba(52,224,161,0.35), transparent 55%),
+              radial-gradient(ellipse 900px 800px at 75% 0%, rgba(167,139,250,0.35), transparent 55%),
+              radial-gradient(ellipse 700px 600px at 55% 25%, rgba(232,121,249,0.20), transparent 60%)
+            `,
+            mixBlendMode: "screen",
+          }}
+        />
+        <div
+          className="absolute inset-0"
+          style={{
+            background: "linear-gradient(135deg, rgba(139,92,246,0.18) 0%, rgba(236,72,153,0.12) 30%, transparent 60%)",
+            mixBlendMode: "soft-light",
+          }}
+        />
+      </div>
+      <div
+        className="w-full max-w-sm border border-[rgba(255,255,255,0.14)] rounded p-6 relative z-10"
+        style={{
+          background: "linear-gradient(160deg, rgba(255,255,255,0.10) 0%, rgba(10,14,23,0.78) 100%)",
+          backdropFilter: "blur(20px) saturate(1.3)",
+          WebkitBackdropFilter: "blur(20px) saturate(1.3)",
+          boxShadow: "0 8px 32px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.08)",
+        }}
+      >
+        <div className="absolute -top-3 left-4 bg-[#0a0e17] px-2 text-sm font-bold text-[var(--accent)]">
           {mode === "login" ? "LOG IN" : "SIGN UP"}
         </div>
 

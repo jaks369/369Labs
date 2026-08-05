@@ -213,6 +213,7 @@ export default function Home() {
             <span className="text-base font-bold text-white">369Labs</span>
           </div>
           <div className="flex items-center gap-4">
+            <button onClick={() => navigate("/dashboard")} className="hidden sm:block text-sm font-semibold px-5 py-2 rounded-full border border-[rgba(255,255,255,0.18)] text-white hover:border-[rgba(255,255,255,0.32)] hover:bg-white/5 transition-colors">Dashboard</button>
             <button onClick={() => navigate("/login")} className="hidden sm:block text-sm text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors">Login</button>
             <button onClick={() => navigate("/login")} className="hidden sm:block text-sm font-semibold px-5 py-2 rounded-full bg-[var(--cta-fill)] text-[var(--cta-text)] hover:bg-[var(--cta-fill-hover)] transition-colors">Get Started</button>
             <button onClick={() => setMobileMenuOpen(!mobileMenuOpen)} className="md:hidden p-2 text-[var(--text-muted)] hover:text-[var(--text-primary)]">
@@ -224,6 +225,7 @@ export default function Home() {
           <div className="md:hidden border-t border-[rgba(255,255,255,0.09)]" style={GLASS_PILL}>
             <div className="px-6 py-4 space-y-2">
               <div className="pt-3 border-t border-[var(--border)]/50 space-y-2">
+                <button onClick={() => { navigate("/dashboard"); setMobileMenuOpen(false); }} className="block w-full text-left py-2 text-sm text-[var(--text-secondary)]">Dashboard</button>
                 <button onClick={() => { navigate("/login"); setMobileMenuOpen(false); }} className="block w-full text-left py-2 text-sm text-[var(--text-secondary)]">Login</button>
                 <button onClick={() => { navigate("/login"); setMobileMenuOpen(false); }} className="block w-full text-center py-2.5 text-sm font-semibold rounded-full bg-[var(--cta-fill)] text-[var(--cta-text)]">Get Started</button>
               </div>
