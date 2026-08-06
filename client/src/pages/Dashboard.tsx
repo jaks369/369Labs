@@ -448,7 +448,7 @@ export default function Dashboard() {
                   </button>
                   {/* Symbol Picker Dropdown */}
                   {showSymbolPicker && (
-                    <div className="symbol-picker-dropdown aurora-glass-panel rounded-lg p-2 shadow-2xl">
+                    <div className="symbol-picker-dropdown rounded-lg p-2 shadow-2xl">
                       <div className="relative mb-2">
                         <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" />
                         <input
