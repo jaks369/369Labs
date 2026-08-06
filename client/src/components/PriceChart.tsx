@@ -232,25 +232,58 @@ export default function PriceChart({
   }
 
   // ===== Interaction handlers =====
+  // Keep the current viewport in a ref so the (rAF-throttled) wheel handler can
+  // compute the next range atomically instead of nesting a setState inside a
+  // setState updater (which misbehaves under React batching and made zooming
+  // feel stuck/laggy).
+  const viewportRef = useRef({ visibleBars, scrollBack });
+  useEffect(() => {
+    viewportRef.current = { visibleBars, scrollBack };
+  }, [visibleBars, scrollBack]);
+
   const zoomBy = useCallback((factor: number, anchorX?: number) => {
-    setVisibleBars((cur) => {
-      const next = Math.round(Math.min(200, Math.max(MIN_BARS, cur * factor)));
-      if (anchorX != null && dims.w > padX) {
-        const frac = (anchorX - padX) / chartW;
-        const anchorIdx = leftIdx + frac * (totalBars - 1);
-        const newLeft = anchorIdx - frac * (next + rightOffset - 1);
-        setScrollBack(Math.max(0, Math.round(liveEdge - (newLeft + next - 1))));
-      } else {
-        setScrollBack((s) => (s > 0 ? s : 0));
-      }
-      return next;
-    });
+    const cur = viewportRef.current.visibleBars;
+    const next = Math.round(Math.min(200, Math.max(MIN_BARS, cur * factor)));
+    if (anchorX != null && dims.w > padX) {
+      const frac = (anchorX - padX) / chartW;
+      const anchorIdx = leftIdx + frac * (totalBars - 1);
+      const newLeft = anchorIdx - frac * (next + rightOffset - 1);
+      setScrollBack(Math.max(0, Math.round(liveEdge - (newLeft + next - 1))));
+    } else {
+      setScrollBack((s) => (s > 0 ? s : 0));
+    }
+    setVisibleBars(next);
   }, [dims.w, chartW, leftIdx, totalBars, rightOffset, liveEdge]);
 
-  const onWheel = useCallback((e: React.WheelEvent) => {
-    const rect = containerRef.current?.getBoundingClientRect();
-    const anchorX = rect ? e.clientX - rect.left : undefined;
-    zoomBy(e.deltaY > 0 ? 1.15 : 1 / 1.15, anchorX);
+  // Native, NON-passive wheel listener. React's synthetic onWheel is attached
+  // passively, so preventDefault is ignored there: wheel-scrolling over the
+  // chart scrolled the page instead of zooming. We also coalesce wheel events
+  // to one zoom step per animation frame so a fast scroll/pinch doesn't issue
+  // dozens of full SVG re-renders per second on top of live tick re-renders
+  // (which made the line freeze/lag while zooming).
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    let raf = 0;
+    let pending: WheelEvent | null = null;
+    const onNativeWheel = (e: WheelEvent) => {
+      e.preventDefault();
+      pending = e;
+      if (raf) return;
+      raf = requestAnimationFrame(() => {
+        raf = 0;
+        const ev = pending;
+        pending = null;
+        if (!ev) return;
+        const rect = el.getBoundingClientRect();
+        zoomBy(ev.deltaY > 0 ? 1.15 : 1 / 1.15, ev.clientX - rect.left);
+      });
+    };
+    el.addEventListener("wheel", onNativeWheel, { passive: false });
+    return () => {
+      el.removeEventListener("wheel", onNativeWheel);
+      if (raf) cancelAnimationFrame(raf);
+    };
   }, [zoomBy]);
 
   const onPointerDown = useCallback((e: React.PointerEvent) => {
@@ -342,7 +375,6 @@ export default function PriceChart({
 
       <div
         ref={containerRef}
-        onWheel={onWheel}
         onPointerDown={onPointerDown}
         onPointerMove={(e) => { onPointerMove(e); onCrosshairMove(e); }}
         onPointerUp={onPointerUp}
