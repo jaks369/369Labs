@@ -266,15 +266,15 @@ export default function Bots() {
         {/* Active Bots List */}
         <div className="lg:col-span-2 space-y-6">
           <div className="panel">
-            <div className="p-4 border-b border-[var(--border)] flex items-center justify-between bg-black/20">
-              <h2 className="text-micro">Running Instances</h2>
-              <div className="flex items-center gap-2">
-                <span className="text-caption text-price-up font-bold">{runningBots.length} Active</span>
-              </div>
+<div className="p-4 border-b border-[var(--border)] flex items-center justify-between bg-black/20">
+            <h2 className="text-micro">Running Instances</h2>
+            <div className="flex items-center gap-2">
+              <span className="text-caption text-price-up font-bold">{runningBots.filter(b => b.status === "running").length} Active</span>
             </div>
+          </div>
 
             <div className="p-0">
-              {runningBots.length === 0 ? (
+              {runningBots.filter(b => b.status === "running").length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-20 text-center">
                   <div className="w-12 h-12 bg-[var(--card)] rounded-full flex items-center justify-center mb-4 border border-[var(--border)]">
                     <Bot className="w-6 h-6 text-[var(--text-muted)]" />
@@ -286,7 +286,7 @@ export default function Bots() {
                 </div>
               ) : (
                 <div className="divide-y divide-[var(--border)]">
-                  {runningBots.map((bot) => (
+                  {runningBots.filter(b => b.status === "running").map((bot) => (
                     <div key={bot.runId} className="p-6 flex items-center justify-between hover:bg-white/5 transition-colors">
                       <div className="flex items-center gap-4">
                         <div className={`w-10 h-10 rounded-lg flex items-center justify-center border ${
