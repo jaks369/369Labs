@@ -329,8 +329,9 @@ function NavDrawer({
             <AITimeline compact />
           </div>
           <button
-            onClick={async () => { await logout(); window.location.href = "/"; }}
+            onClick={() => { go("/settings?tab=profile"); }}
             className="w-full flex items-center gap-2 rounded-lg px-2 py-2 hover:bg-white/[0.03] transition-all duration-150 text-left group cursor-pointer"
+            title="Open profile settings"
           >
             <Avatar className="h-8 w-8 border border-[var(--border)] shrink-0">
               {(user as any)?.avatarUrl ? (
@@ -344,7 +345,16 @@ function NavDrawer({
               <p className="text-[13px] font-medium text-[var(--text-primary)] truncate leading-none">{user?.name || "Trader"}</p>
               <p className="text-[11px] text-[var(--text-disabled)] truncate mt-0.5">{user?.email || "Connected"}</p>
             </div>
-            <LogOut className="w-4 h-4 text-[var(--text-muted)] group-hover:text-[var(--red)] transition-colors" />
+            <span
+              role="button"
+              tabIndex={0}
+              onClick={(e) => { e.stopPropagation(); logout(); window.location.href = "/"; }}
+              onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.stopPropagation(); logout(); window.location.href = "/"; } }}
+              className="w-4 h-4 text-[var(--text-muted)] group-hover:text-[var(--red)] transition-colors cursor-pointer"
+              title="Sign out"
+            >
+              <LogOut className="w-4 h-4" />
+            </span>
           </button>
         </div>
       </div>
