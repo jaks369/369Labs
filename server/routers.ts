@@ -1840,7 +1840,19 @@ save: protectedProcedure
         chatId: z.string().optional(),
       }))
       .mutation(async ({ ctx, input }) => {
-        if (!process.env.AI_API_KEY) return { reply: "AI not configured. Add AI_API_KEY to .env" };
+        // Offline fallback: when no AI provider key is set, or the provider call
+        // fails, answer from the local template/intent engine instead of showing
+        // a dead "trouble reaching the AI service" message.
+        const offlineFallback = async () => {
+          try {
+            const { getAIChatEngine } = await import("./ai/AIChatEngine");
+            const r = await getAIChatEngine().sendMessage(ctx.user.id, input.message);
+            return { reply: r.answer, steps: [] as any[], action: undefined as any, agent: "369AI", agentLabel: "369AI (offline)" };
+          } catch {
+            return { reply: "I'm having trouble reaching the AI service right now. Please try again in a moment.", steps: [] as any[], action: undefined as any };
+          }
+        };
+        if (!process.env.AI_API_KEY) return offlineFallback();
         try {
           const ai = await getAI();
           const key = (ctx.user?.id ? String(ctx.user.id) : "anon") + ":" + (input.chatId || "default");
@@ -1977,15 +1989,15 @@ When you use a tool, briefly note which specialist is acting (e.g. "[Market Anal
                 const msg2 = saved.length
                   ? `I watched ${intent.symbol} and found ${saved.length} repeatable pattern${saved.length > 1 ? "s" : ""} (win rates ${saved.map((s: any) => s.winRate + "%").join(", ")}). Check the AI Signals page - each has full evidence and a Backtest button.`
                   : `I watched ${intent.symbol} for ${intent.durationMinutes} min and didn't find any pattern clearing my confidence threshold this time. I'll keep scanning - you can also ask me to watch again with a wider window.`;
-                return { reply: msg2, steps: [{ tool: "startWatch", args: intent, result: { signalsFound: saved.length } }] };
+                return { reply: msg2, steps: [{ tool: "startWatch", args: intent, result: { signalsFound: saved.length } }], action: undefined as any };
               } catch (e) { console.error("[watch fallback]", e); }
             }
           }
 
-          return { reply, steps, agent: agent.id, agentLabel: agent.label };
+          return { reply, steps, action: undefined as any, agent: agent.id, agentLabel: agent.label };
         } catch (e) {
           console.error("[AI]", e);
-          return { reply: "I'm having trouble reaching the AI service right now. Please try again in a moment." };
+          return offlineFallback();
         }
       }),
     parseRule: protectedProcedure
