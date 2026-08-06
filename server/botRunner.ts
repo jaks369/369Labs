@@ -56,6 +56,7 @@ class BotRunner {
       totalProfitLoss: existing?.totalProfitLoss || 0,
       lossStreak: existing?.lossStreak || 0,
       hasOpenTrade: false,
+      lastError: existing?.lastError,
       lastDailyReset: now,
     };
     this.bots.set(opts.id, runtime);
@@ -66,7 +67,10 @@ class BotRunner {
         userId: opts.userId, 
         strategyId: opts.strategyId!, 
         status: "running",
-        safety: opts.safety || {}
+        safety: opts.safety || {},
+        lossStreak: 0,
+        hasOpenTrade: false,
+        lastDailyReset: new Date(now),
       });
     } catch (e) {
       console.error("[botRunner] Failed to save bot run:", e);
@@ -86,7 +90,11 @@ class BotRunner {
         totalTrades: bot.totalTrades,
         totalProfitLoss: bot.totalProfitLoss.toString(),
         errorMessage: reason,
-        safety: bot.def.safety
+        safety: bot.def.safety,
+        lossStreak: bot.lossStreak,
+        hasOpenTrade: bot.hasOpenTrade,
+        lastError: bot.lastError,
+        lastDailyReset: bot.lastDailyReset ? new Date(bot.lastDailyReset) : undefined,
       });
     } catch (e) {
       console.error("[botRunner] Failed to update bot run:", e);
@@ -143,17 +151,30 @@ class BotRunner {
       await db.updateBotRun(parseInt(id), userId, { 
         totalTrades: bot.totalTrades,
         totalProfitLoss: bot.totalProfitLoss.toString(),
-        safety: bot.def.safety
+        safety: bot.def.safety,
+        lossStreak: bot.lossStreak,
+        hasOpenTrade: bot.hasOpenTrade,
+        lastError: bot.lastError,
+        lastDailyReset: bot.lastDailyReset ? new Date(bot.lastDailyReset) : undefined,
       });
     } catch (e) {
       console.error("[botRunner] Failed to update trade stats:", e);
     }
   }
 
-  setOpenTrade(id: string, userId: number, hasOpen: boolean): void {
+  async setOpenTrade(id: string, userId: number, hasOpen: boolean): Promise<void> {
     const bot = this.bots.get(id);
     if (!bot || bot.def.userId !== userId) return;
     bot.hasOpenTrade = hasOpen;
+    
+    // Persist open trade state
+    try {
+      await db.updateBotRun(parseInt(id), userId, { 
+        hasOpenTrade: hasOpen,
+      });
+    } catch (e) {
+      console.error("[botRunner] Failed to update open trade state:", e);
+    }
   }
 
   cleanupUser(userId: number): void {
@@ -197,9 +218,10 @@ class BotRunner {
           status: "running",
           totalTrades: run.totalTrades,
           totalProfitLoss: parseFloat(run.totalProfitLoss?.toString() || "0"),
-          lossStreak: 0,
-          hasOpenTrade: false,
-          lastDailyReset: new Date(run.startTime).getTime(),
+          lossStreak: run.lossStreak || 0,
+          hasOpenTrade: run.hasOpenTrade || false,
+          lastError: run.lastError || undefined,
+          lastDailyReset: run.lastDailyReset ? new Date(run.lastDailyReset).getTime() : Date.now(),
         });
         
         // Reconnect Deriv for this user

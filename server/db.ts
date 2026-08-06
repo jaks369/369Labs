@@ -1097,7 +1097,7 @@ export async function getBotRunById(id: number, userId: number): Promise<BotRun 
 export async function updateBotRun(
   id: number,
   userId: number,
-  updates: Partial<Pick<InsertBotRun, "status" | "endTime" | "totalTrades" | "totalProfitLoss" | "errorMessage" | "safety">>,
+  updates: Partial<Pick<InsertBotRun, "status" | "endTime" | "totalTrades" | "totalProfitLoss" | "errorMessage" | "safety" | "lossStreak" | "hasOpenTrade" | "lastError" | "lastDailyReset">>,
 ): Promise<BotRun | undefined> {
   const db = await getDb();
   if (!db) return undefined;

@@ -4,6 +4,77 @@ import { notifyUser } from "./_core/notification";
 import { lastDigitOf, getDecimalPlaces } from "@shared/lastDigit";
 import { actionToContractType, simulateOutcome } from "@shared/contractSim";
 
+// Benjamini-Hochberg FDR correction for multiple comparisons
+function benjaminiHochbergFDR(pValues: number[], fdrLevel = 0.05): boolean[] {
+  const m = pValues.length;
+  const indexed = pValues.map((p, i) => ({ p, i }));
+  indexed.sort((a, b) => a.p - b.p);
+  
+  const rejected = new Array(m).fill(false);
+  for (let k = 0; k < m; k++) {
+    const critical = ((k + 1) / m) * fdrLevel;
+    if (indexed[k].p <= critical) {
+      rejected[indexed[k].i] = true;
+    } else {
+      break;
+    }
+  }
+  return rejected;
+}
+
+// Binomial test p-value (two-tailed) for win rate vs 50% null
+function binomialPValue(wins: number, total: number): number {
+  if (total === 0) return 1;
+  const p = 0.5;
+  const k = wins;
+  const n = total;
+  
+  // Use normal approximation for large n, exact for small n
+  if (n >= 20) {
+    const mean = n * p;
+    const std = Math.sqrt(n * p * (1 - p));
+    const z = (k - mean) / std;
+    // Two-tailed p-value from standard normal
+    return 2 * (1 - normalCDF(Math.abs(z)));
+  }
+  
+  // Exact binomial test (sum of probabilities as or more extreme)
+  let pValue = 0;
+  const observedProb = binomPMF(k, n, p);
+  for (let x = 0; x <= n; x++) {
+    if (binomPMF(x, n, p) <= observedProb + 1e-12) {
+      pValue += binomPMF(x, n, p);
+    }
+  }
+  return Math.min(1, pValue);
+}
+
+function binomPMF(k: number, n: number, p: number): number {
+  if (k < 0 || k > n) return 0;
+  // Use log to avoid overflow
+  const logP = logFactorial(n) - logFactorial(k) - logFactorial(n - k) + k * Math.log(p) + (n - k) * Math.log(1 - p);
+  return Math.exp(logP);
+}
+
+function logFactorial(n: number): number {
+  if (n <= 1) return 0;
+  // Stirling's approximation for large n, exact for small
+  if (n > 170) {
+    return n * Math.log(n) - n + 0.5 * Math.log(2 * Math.PI * n);
+  }
+  let sum = 0;
+  for (let i = 2; i <= n; i++) sum += Math.log(i);
+  return sum;
+}
+
+function normalCDF(x: number): number {
+  // Approximation of standard normal CDF
+  const t = 1 / (1 + 0.2316419 * x);
+  const d = 0.3989423 * Math.exp(-x * x / 2);
+  const prob = d * t * (0.3193815 + t * (-0.3565638 + t * (1.781478 + t * (-1.821256 + t * 1.330274))));
+  return 1 - prob;
+}
+
 // Signals decay: digit patterns on volatile symbols lose edge quickly.
 // A signal is considered valid for this many minutes after discovery.
 export const SIGNAL_TTL_MIN = 60;
@@ -65,51 +136,19 @@ export async function scanTicks(opts: ScanOptions): Promise<any[]> {
     lastDigit: lastDigitOf(Number(t.price), decimals),
   }));
 
-  const found: any[] = [];
+  const candidates: { rule: any; desc: string; pType: PatternType; inWins: number; inTotal: number; oosWins: number; oosTotal: number; pValue: number }[] = [];
 
-  const record = (
-    rule: any,
-    desc: string,
-    pType: PatternType,
-    inTotal: number,
-    inWins: number,
-    oosTotal: number,
-    oosWins: number,
-  ) => {
-    const inRate = (inWins / inTotal) * 100;
-    const oosRate = (oosWins / oosTotal) * 100;
-    // Require BOTH halves to clear the bar, so the pattern actually holds forward.
-    if (!(inRate >= minWin && oosRate >= minWin)) return;
-    if (oosTotal < oosMin) return;
-    found.push({
-      symbol,
-      title: `${desc} on ${symbol}`,
-      description: `${desc} on ${symbol}: in-sample ${inRate.toFixed(1)}% (${inTotal} triggers) — out-of-sample ${oosRate.toFixed(1)}% (${oosTotal} triggers) over last ${ticks.length} ticks.`,
-      rule,
-      evidence: evidenceTicks,
-      patternType: pType,
-      sampleSize: inTotal, // kept for backward-compat with existing UI ("samples")
-      winRate: inRate.toFixed(2),
-      confidence: Math.min(99, Math.round(oosRate * 100)).toFixed(2),
-      oos_sample_size: oosTotal,
-      oos_win_rate: oosRate.toFixed(2),
-      oosValidated: true,
-      startEpoch: Math.floor(ticks[Math.min(splitIdx, ticks.length - 1)].timestamp / 1000),
-      endEpoch: Math.floor(ticks[ticks.length - 1].timestamp / 1000),
-      discoveredAt: nowSec,
-      expiresAt: nowSec + SIGNAL_TTL_MIN * 60,
-      source: "watch",
-    });
-  };
-
-  // For every candidate rule, run it on both halves and record if OOS holds.
   const evaluate = (rule: any, desc: string, pType: PatternType) => {
     const is = patternMatches(rule, prices, digits, 0, splitIdx, decimals);
     const oos = patternMatches(rule, prices, digits, splitIdx, ticks.length, decimals);
     const inTotal = is.wins + is.losses;
     const oosTotal = oos.wins + oos.losses;
     if (inTotal < 20 || oosTotal < oosMin) return;
-    record(rule, desc, pType, inTotal, is.wins, oosTotal, oos.wins);
+    
+    // Compute p-value for in-sample win rate vs 50% null
+    const pValue = binomialPValue(is.wins, inTotal);
+    
+    candidates.push({ rule, desc, pType, inWins: is.wins, inTotal, oosWins: oos.wins, oosTotal, pValue });
   };
   // --- Digit market conversion of a trigger digit d into the NEXT-tick digit ----
   // The "match" walks the tick stream: if the trigger digit occurs at tick i,
@@ -193,6 +232,42 @@ export async function scanTicks(opts: ScanOptions): Promise<any[]> {
       "match_diff",
     );
   }
+
+  // Apply Benjamini-Hochberg FDR correction to control false discovery rate
+  const pValues = candidates.map(c => c.pValue);
+  const rejected = benjaminiHochbergFDR(pValues, 0.05);
+
+  const found: any[] = [];
+
+  candidates.forEach((c, idx) => {
+    if (!rejected[idx]) return;
+    
+    const inRate = (c.inWins / c.inTotal) * 100;
+    const oosRate = (c.oosWins / c.oosTotal) * 100;
+    // Require BOTH halves to clear the bar, so the pattern actually holds forward.
+    if (!(inRate >= minWin && oosRate >= minWin)) return;
+    if (c.oosTotal < oosMin) return;
+    
+    found.push({
+      symbol,
+      title: `${c.desc} on ${symbol}`,
+      description: `${c.desc} on ${symbol}: in-sample ${inRate.toFixed(1)}% (${c.inTotal} triggers) — out-of-sample ${oosRate.toFixed(1)}% (${c.oosTotal} triggers) over last ${ticks.length} ticks.`,
+      rule: c.rule,
+      evidence: evidenceTicks,
+      patternType: c.pType,
+      sampleSize: c.inTotal,
+      winRate: inRate.toFixed(2),
+      confidence: Math.min(99, Math.round(oosRate * 100)).toFixed(2),
+      oos_sample_size: c.oosTotal,
+      oos_win_rate: oosRate.toFixed(2),
+      oosValidated: true,
+      startEpoch: Math.floor(ticks[Math.min(splitIdx, ticks.length - 1)].timestamp / 1000),
+      endEpoch: Math.floor(ticks[ticks.length - 1].timestamp / 1000),
+      discoveredAt: nowSec,
+      expiresAt: nowSec + SIGNAL_TTL_MIN * 60,
+      source: "watch",
+    });
+  });
 
   return found;
 }

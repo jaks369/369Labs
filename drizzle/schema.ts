@@ -133,6 +133,10 @@ export const botRuns = mysqlTable("botRuns", {
   totalProfitLoss: decimal("totalProfitLoss", { precision: 18, scale: 8 }).default("0").notNull(),
   errorMessage: text("errorMessage"),
   safety: json("safety"), // BotSafety config persisted with the run
+  lossStreak: int("lossStreak").default(0).notNull(),
+  hasOpenTrade: boolean("hasOpenTrade").default(false).notNull(),
+  lastError: text("lastError"),
+  lastDailyReset: timestamp("lastDailyReset"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
