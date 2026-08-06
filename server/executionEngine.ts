@@ -208,8 +208,8 @@ async function executeBotCycle(): Promise<void> {
       });
       fireWebhookEvent(bot.def.userId, "trade.executed", { botId: bot.def.id, symbol, stake, contractId: buy.buy.contract_id }).catch(() => {});
       traded++;
-    } catch {
-      // bot continues running; error is isolated to this trade
+    } catch (e: any) {
+      console.error(`[ExecutionEngine] Trade cycle error for bot ${bot.def.id}:`, e?.message || e);
     }
   }
 }
@@ -218,7 +218,7 @@ export function startExecutionEngine(): void {
   if (intervalId) return;
   console.log("[ExecutionEngine] Starting — polling every 500ms for active bots");
   intervalId = setInterval(() => {
-    executeBotCycle().catch(() => {});
+    executeBotCycle().catch((e) => console.error("[ExecutionEngine] Cycle error:", e?.message || e));
   }, POLL_INTERVAL);
 }
 

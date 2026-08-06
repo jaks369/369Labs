@@ -63,7 +63,9 @@ export class SettlementTracker {
             const { eq } = await import("drizzle-orm");
             const dbConn = await db.getDb();
             if (dbConn) await dbConn.update(trades).set({ result: "stuck", profitLoss: trade.profitLoss || "0", exitTime: new Date() }).where(eq(trades.id, tradeId));
-          } catch {}
+          } catch (e: any) {
+            console.error("[SettlementTracker] Failed to mark trade as stuck:", e?.message || e);
+          }
           console.warn(`[SettlementTracker] Trade #${tradeId} marked stuck after ${MAX_RETRIES} retries`);
           continue;
         }
@@ -71,9 +73,10 @@ export class SettlementTracker {
         try {
           await this.reconcile(trade);
           stats.settled++;
-        } catch {
+        } catch (e: any) {
           stats.errors++;
           this.retryCount.set(tradeId, (this.retryCount.get(tradeId) || 0) + 1);
+          console.error(`[SettlementTracker] Reconcile failed for trade ${tradeId}:`, e?.message || e);
         }
       }
     } catch (e) {
