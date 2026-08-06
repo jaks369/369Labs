@@ -197,7 +197,14 @@ async function executeBotCycle(): Promise<void> {
         result: "pending",
         contractId: String(buy.buy.contract_id),
         entryTime: new Date(),
-        botRunId: parseInt(bot.def.id) || undefined,
+        botRunId: (() => {
+          const parsed = parseInt(bot.def.id, 10);
+          if (isNaN(parsed)) {
+            console.error(`[ExecutionEngine] Invalid bot run ID: ${bot.def.id} (must be numeric)`);
+            return undefined;
+          }
+          return parsed;
+        })(),
       });
       fireWebhookEvent(bot.def.userId, "trade.executed", { botId: bot.def.id, symbol, stake, contractId: buy.buy.contract_id }).catch(() => {});
       traded++;
