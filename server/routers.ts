@@ -313,10 +313,19 @@ async function runTool(name: string, args: any, ctxUser?: any) {
         if (!strategy) return { error: "Strategy not found" };
         const rule = (strategy.config as any)?.rule;
         if (!rule || !rule.symbol) return { error: "Strategy has no executable rule" };
-        const { derivManager } = await import("./derivConnection");
-        const conn = await derivManager.ensureConnected(ctxUser.id);
-        if (!conn) return { error: "Deriv not connected — cannot fetch ticks for backtest" };
-        const ticks = await conn.getTickHistory(rule.symbol, Math.min(args.tickCount || 1000, 2000));
+        // Use live Deriv tick history via aitools (no auth required for public tick history)
+        let ticks: { price: number; timestamp: number }[] = [];
+        try {
+          const { getTickHistory } = await import("./aitools");
+          ticks = await getTickHistory(rule.symbol, Math.min(args.tickCount || 1000, 2000));
+        } catch {
+          // Fallback: try server-side Deriv connection if available
+          const { derivManager } = await import("./derivConnection");
+          const conn = await derivManager.ensureConnected(ctxUser.id);
+          if (conn) {
+            ticks = await conn.getTickHistory(rule.symbol, Math.min(args.tickCount || 1000, 2000));
+          }
+        }
         if (!ticks.length) return { error: "No tick data available for backtest" };
         const { runBacktest } = await import("./backtest");
         const result = await runBacktest(ticks, rule, args.stake || rule.params?.stake || 1, rule.symbol);
@@ -1254,10 +1263,20 @@ export const appRouter = router({
           const config = strat.config as { rule?: { symbol?: string; params?: { stake?: number } } };
           const rule = config.rule;
           if (!rule || !rule.symbol) continue;
+          // Use live Deriv tick history via aitools (fresh data)
+          let ticks: { price: number; timestamp: number }[] = [];
+          try {
+            const { getTickHistory } = await import("./aitools");
+            const liveTicks = await getTickHistory(rule.symbol, 1000);
+            ticks = liveTicks.map((t) => ({ price: t.price, timestamp: t.timestamp }));
+          } catch {
+            // Fallback to DB (stale)
+            const rows = await db.getTickHistory(rule.symbol, 1000);
+            if (rows.length < 50) continue;
+            ticks = rows.map((r: any) => ({ price: Number(r.price), timestamp: Number(r.epoch) * 1000 }));
+          }
+          if (ticks.length < 50) continue;
           const { runBacktest } = await import("./backtest");
-          const rows = await db.getTickHistory(rule.symbol, 1000);
-          if (rows.length < 50) continue;
-          const ticks = rows.map((r: any) => ({ price: Number(r.price), timestamp: Number(r.epoch) * 1000 }));
           const res = await runBacktest(ticks, rule, Number(rule.params?.stake) || 1, rule.symbol);
           results.push({ strategyId: id, name: strat.name, ...res });
         }
@@ -2226,16 +2245,29 @@ watch: protectedProcedure
     getHistory: publicProcedure
       .input(z.object({ symbol: z.string(), limit: z.number().default(1000) }))
       .query(async ({ input }) => {
+        // Try live Deriv tick history first (fresh data), fall back to DB
         try {
-          const rows = await db.getTickHistory(input.symbol, input.limit);
-          return { ticks: rows.map((r) => ({
-            symbol: r.symbol,
-            price: r.price,
-            lastDigit: r.lastDigit,
-            epoch: Number(r.epoch),
+          const { getTickHistory } = await import("./aitools");
+          const liveTicks = await getTickHistory(input.symbol, Math.min(input.limit, 2000));
+          return { ticks: liveTicks.map((t) => ({
+            symbol: input.symbol,
+            price: t.price,
+            lastDigit: 0, // computed client-side from price
+            epoch: Math.floor(t.timestamp / 1000),
           })) };
         } catch {
-          return { ticks: [] };
+          // Fallback to DB (stale data)
+          try {
+            const rows = await db.getTickHistory(input.symbol, input.limit);
+            return { ticks: rows.map((r) => ({
+              symbol: r.symbol,
+              price: r.price,
+              lastDigit: r.lastDigit,
+              epoch: Number(r.epoch),
+            })) };
+          } catch {
+            return { ticks: [] };
+          }
         }
       }),
     checkTrigger: protectedProcedure
@@ -2755,10 +2787,20 @@ watch: protectedProcedure
           const config = strat.config as { rule?: { symbol?: string; params?: { stake?: number } } };
           const rule = config.rule;
           if (!rule || !rule.symbol) continue;
+          // Use live Deriv tick history via aitools (fresh data)
+          let ticks: { price: number; timestamp: number }[] = [];
+          try {
+            const { getTickHistory } = await import("./aitools");
+            const liveTicks = await getTickHistory(rule.symbol, 1000);
+            ticks = liveTicks.map((t) => ({ price: t.price, timestamp: t.timestamp }));
+          } catch {
+            // Fallback to DB (stale)
+            const rows = await db.getTickHistory(rule.symbol, 1000);
+            if (rows.length < 50) continue;
+            ticks = rows.map((r: any) => ({ price: Number(r.price), timestamp: Number(r.epoch) * 1000 }));
+          }
+          if (ticks.length < 50) continue;
           const { runBacktest } = await import("./backtest");
-          const rows = await db.getTickHistory(rule.symbol, 1000);
-          if (rows.length < 50) continue;
-          const ticks = rows.map((r: any) => ({ price: Number(r.price), timestamp: Number(r.epoch) * 1000 }));
           const res = await runBacktest(ticks, rule, Number(rule.params?.stake) || 1, rule.symbol);
           results.push({ strategyId: id, name: strat.name, ...res });
         }
