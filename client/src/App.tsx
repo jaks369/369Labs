@@ -70,6 +70,26 @@ function AppLayout({ children }: { children: React.ReactNode }) {
 
 function PageTransition({ children }: { children: React.ReactNode }) {
   const [location] = useLocation();
+  const scrollRef = useRef<Map<string, number>>(new Map());
+
+  useEffect(() => {
+    const saved = scrollRef.current.get(location);
+    if (saved !== undefined) {
+      window.scrollTo({ top: saved, behavior: "auto" });
+    } else {
+      window.scrollTo({ top: 0, behavior: "auto" });
+    }
+  }, [location]);
+
+  const handleScroll = () => {
+    scrollRef.current.set(location, window.scrollY);
+  };
+
+  useEffect(() => {
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, [location]);
+
   return (
     <div key={location} className="animate-page-fade min-h-screen">
       {children}
