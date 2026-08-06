@@ -20,7 +20,7 @@ export interface ChatMessage {
   timestamp: number;
 }
 
-/* G��G��G�� In-memory conversation history G��G��G�� */
+/* = In-memory conversation history = */
 const conversations = new Map<number, ChatMessage[]>();
 const MAX_HISTORY = 50;
 const MAX_CONVERSATIONS = 1000;
@@ -42,7 +42,7 @@ export function getConversationCount(): number {
   return conversations.size;
 }
 
-/* G��G��G�� Intent detection G��G��G�� */
+/* = Intent detection = */
 
 function detectIntent(message: string): string {
   const m = message.toLowerCase();
@@ -55,7 +55,7 @@ function detectIntent(message: string): string {
   return "general";
 }
 
-/* G��G��G�� Intent handlers G��G��G�� */
+/* = Intent handlers = */
 
 async function handleTrades(userId: number, message: string): Promise<ChatResponse> {
   const engines: string[] = ["TradeReviewEngine"];
@@ -280,7 +280,7 @@ async function handleMarket(userId: number, message: string): Promise<ChatRespon
     }
 
     evidence.push(`${targetSymbol}: score ${health.score}, trend ${health.trend}, volatility ${health.volatility}, momentum ${health.momentum}, noise ${health.noise}`);
-    if (risk) evidence.push(`Risk: ${risk.riskLevel} G�� ${risk.recommendation}`);
+    if (risk) evidence.push(`Risk: ${risk.riskLevel} — ${risk.recommendation}`);
     if (predictions.length > 0) evidence.push(`Prediction: ${predictions[0].prediction} @ ${predictions[0].confidence}% confidence`);
 
     let answer = `${targetSymbol} health score is ${health.score}/100 (${health.score >= 60 ? "favorable" : health.score >= 40 ? "moderate" : "poor"}). `;
@@ -371,7 +371,7 @@ async function handleAI(userId: number, message: string): Promise<ChatResponse> 
     }
     let answer = `Your overall AI prediction accuracy is ${recentAccuracy}% over ${accuracy.totalPredictions} predictions. `;
     if (worst) answer += `Your lowest accuracy is on ${worst[0]} (${worst[1].accuracyPct}%). `;
-    if (recentAccuracy < 40) answer += "Accuracy is low G�� predictions may need recalibration. Consider reviewing market conditions.";
+    if (recentAccuracy < 40) answer += "Accuracy is low — predictions may need recalibration. Consider reviewing market conditions.";
     else if (recentAccuracy >= 60) answer += "Accuracy is reasonable. Continue monitoring for consistency.";
     else answer += "Accuracy is moderate. Focus on symbols and contract types where accuracy is highest.";
     return { answer, confidence: 80, evidence, enginesUsed: engines, timestamp: Date.now() };
@@ -581,7 +581,7 @@ async function handleGeneral(userId: number, message: string): Promise<ChatRespo
   const m = message.toLowerCase();
   if (/\b(hello|hi|hey)\b/.test(m)) {
     return {
-      answer: "Hello! I'm 369AI G�� your trading assistant. I can help with questions about your trades, strategies, market conditions, AI performance, and more. Try asking: \"How is my trading going?\", \"Which strategy is best?\", or \"How healthy is R_100?\"",
+      answer: "Hello! I'm 369AI — your trading assistant. I can help with questions about your trades, strategies, market conditions, AI performance, and more. Try asking: \"How is my trading going?\", \"Which strategy is best?\", or \"How healthy is R_100?\"",
       confidence: 100,
       evidence,
       enginesUsed: ["AIChatEngine"],
@@ -615,7 +615,7 @@ async function handleGeneral(userId: number, message: string): Promise<ChatRespo
   };
 }
 
-/* G��G��G�� Main handler G��G��G�� */
+/* = Main handler = */
 
 function buildIntentResponse(intent: string, userId: number, message: string): Promise<ChatResponse> {
   switch (intent) {
@@ -629,7 +629,7 @@ function buildIntentResponse(intent: string, userId: number, message: string): P
   }
 }
 
-/* G��G��G�� LLM integration G��G��G�� */
+/* = LLM integration = */
 
 let _aiClient: any = null;
 
@@ -720,7 +720,7 @@ async function tryLLMResponse(userId: number, message: string): Promise<ChatResp
   }
 }
 
-/* G��G��G�� Exported engine G��G��G�� */
+/* = Exported engine = */
 
 let engineInstance: AIChatEngine | null = null;
 

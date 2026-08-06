@@ -286,7 +286,7 @@ export class AIPerformanceEngine {
       const total = results.length;
       const pnl = trades.reduce((sum, t) => sum + Number(t.profitLoss || 0), 0);
       const streakSummary = total > 0
-        ? `${wins}W / ${losses}L (${Math.round((wins / total) * 100)}%) GÇö PnL: ${pnl >= 0 ? "+" : ""}${Math.round(pnl * 100) / 100}`
+        ? `${wins}W / ${losses}L (${Math.round((wins / total) * 100)}%) â€” PnL: ${pnl >= 0 ? "+" : ""}${Math.round(pnl * 100) / 100}`
         : "No completed trades";
 
       return {
@@ -377,7 +377,7 @@ export class AIPerformanceEngine {
         .filter(([, v]) => v.total >= 3)
         .sort(([, a], [, b]) => a.accuracyPct - b.accuracyPct)[0];
       if (worstSymbol && worstSymbol[1].accuracyPct < 50) {
-        recs.push(`Consider avoiding ${worstSymbol[0]} GÇö accuracy is only ${worstSymbol[1].accuracyPct}% over ${worstSymbol[1].total} predictions.`);
+        recs.push(`Consider avoiding ${worstSymbol[0]} â€” accuracy is only ${worstSymbol[1].accuracyPct}% over ${worstSymbol[1].total} predictions.`);
       }
 
       const bestType = Object.entries(accuracy.byContractType)
@@ -389,7 +389,7 @@ export class AIPerformanceEngine {
 
       const recentLosses = trades.filter((t) => t.result === "loss" && t.updatedAt).slice(0, 5);
       if (recentLosses.length >= 3) {
-        recs.push(`Recent performance suggests reducing exposure GÇö ${recentLosses.length} recent losses detected.`);
+        recs.push(`Recent performance suggests reducing exposure â€” ${recentLosses.length} recent losses detected.`);
       }
 
       if (summary.winRate < 40 && summary.totalTradeReviews >= 5) {
@@ -413,7 +413,7 @@ export class AIPerformanceEngine {
         .filter(([, v]) => v.total >= 3)
         .sort(([, a], [, b]) => a.pnl - b.pnl)[0];
       if (worstPnl && worstPnl[1].pnl < -10) {
-        recs.push(`Net loss of ${Math.abs(worstPnl[1].pnl).toFixed(1)} on ${worstPnl[0]} GÇö consider reduced allocation.`);
+        recs.push(`Net loss of ${Math.abs(worstPnl[1].pnl).toFixed(1)} on ${worstPnl[0]} â€” consider reduced allocation.`);
       }
 
       const consLosses = (() => {

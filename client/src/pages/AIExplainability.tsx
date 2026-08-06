@@ -35,7 +35,7 @@ function formatFactors(data: any): string[] {
       lines.push(...formatFactors(v));
     } else {
       const label = k.replace(/([A-Z])/g, " $1").replace(/^./, s => s.toUpperCase());
-      lines.push(`${label}: ${Array.isArray(v) ? v.join(", ") : String(v).slice(0, 100)}`);
+      lines.push(`${label}: ${Array.isArray(v) ? v.map(item => typeof item === "object" && item !== null ? JSON.stringify(item) : item).join(", ") : String(v).slice(0, 100)}`);
     }
     if (lines.length >= 6) break;
   }
@@ -142,7 +142,7 @@ export default function AIExplainability() {
                       <div>
                         <h3 className="text-sm font-bold text-white">{cfg.title}</h3>
                         <span className={`text-xs font-bold ${isPositive ? "text-[var(--green)]" : "text-[var(--red)]"}`}>
-                          {signal} · {confidence}% confidence
+                          {signal} â†’ {confidence}% confidence
                           <span className="text-[var(--text-muted)] font-normal ml-2">({typeLabel})</span>
                         </span>
                       </div>
