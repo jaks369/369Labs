@@ -106,25 +106,91 @@ export async function createApp() {
     }
   });
 
-  // Lightweight in-memory rate limiter (per-IP + per-key). Stricter caps on auth/trading/bot endpoints.
-  const rateBuckets: Record<string, { count: number; reset: number }> = {};
-  const RATE = (limit: number, windowMs: number) => (req: any, res: any, next: any) => {
-    const ip = req.headers["x-forwarded-for"]?.toString().split(",")[0]?.trim() || req.socket?.remoteAddress || "unknown";
-    const apiKey = req.headers.authorization?.startsWith("Bearer ") ? req.headers.authorization.slice(7).slice(0, 16) : "";
-    const key = apiKey ? `key:${apiKey}` : `ip:${ip}`;
+// Redis-backed rate limiter with in-memory fallback
+const rateBuckets: Record<string, { count: number; reset: number }> = {};
+let redisClient: any = null;
+
+async function initRedis(): Promise<void> {
+  try {
+    // Use require to allow optional Redis dependency at compile time
+    const RedisClient = require("ioredis");
+    redisClient = new RedisClient({
+      host: process.env.REDIS_HOST || "localhost",
+      port: parseInt(process.env.REDIS_PORT || "6379"),
+      password: process.env.REDIS_PASSWORD || undefined,
+      maxRetriesPerRequest: 3,
+      retryStrategy: (times: number) => Math.min(times * 100, 3000),
+      lazyConnect: true,
+    });
+    redisClient.on("error", (e: Error) => console.warn("[Redis] connection error:", e.message));
+    await redisClient.connect();
+    console.log("[Redis] Connected for distributed rate limiting");
+} catch (e: any) {
+    console.warn("[Redis] Not available, falling back to in-memory rate limiting:", e?.message || e);
+    redisClient = null;
+  }
+}
+
+// Initialize Redis (non-blocking)
+initRedis().catch(() => {});
+
+async function rateLimitRedis(key: string, limit: number, windowMs: number): Promise<{ allowed: boolean; remaining: number; reset: number }> {
+  if (!redisClient) {
+    // Fallback to in-memory
     const now = Date.now();
     const b = rateBuckets[key] || { count: 0, reset: now + windowMs };
     if (now > b.reset) { b.count = 0; b.reset = now + windowMs; }
     b.count++;
     rateBuckets[key] = b;
-    if (b.count > limit) { 
-      req.log?.warn("Rate limit exceeded", { limit, windowMs, ip });
-      res.status(429).json({ error: "Too many requests, slow down." }); 
-      return; 
-    }
-    next();
-  };
-  app.use("/api/trpc", (req: any, res: any, next: any) => {
+    return { allowed: b.count <= limit, remaining: Math.max(0, limit - b.count), reset: b.reset };
+  }
+
+  const keyPrefix = "ratelimit:";
+  const redisKey = keyPrefix + key;
+  const windowSec = Math.ceil(windowMs / 1000);
+  
+  try {
+    const multi = redisClient.multi();
+    multi.incr(redisKey);
+    multi.pexpire(redisKey, windowMs);
+    const results = await multi.exec();
+    
+    const count = results[0][1] as number;
+    const ttl = await redisClient.pttl(redisKey);
+    const reset = Date.now() + (ttl > 0 ? ttl : windowMs);
+    
+    return { allowed: count <= limit, remaining: Math.max(0, limit - count), reset };
+  } catch (e: any) {
+    console.warn("[Redis] rate limit error, fallback to memory:", e?.message || e);
+    const now = Date.now();
+    const b = rateBuckets[key] || { count: 0, reset: now + windowMs };
+    if (now > b.reset) { b.count = 0; b.reset = now + windowMs; }
+    b.count++;
+    rateBuckets[key] = b;
+    return { allowed: b.count <= limit, remaining: Math.max(0, limit - b.count), reset: b.reset };
+  }
+}
+
+const RATE = (limit: number, windowMs: number) => async (req: any, res: any, next: any) => {
+  const ip = req.headers["x-forwarded-for"]?.toString().split(",")[0]?.trim() || req.socket?.remoteAddress || "unknown";
+  const apiKey = req.headers.authorization?.startsWith("Bearer ") ? req.headers.authorization.slice(7).slice(0, 16) : "";
+  const key = apiKey ? `key:${apiKey}` : `ip:${ip}`;
+  
+  const { allowed, remaining, reset } = await rateLimitRedis(key, limit, windowMs);
+  
+  res.setHeader("X-RateLimit-Limit", limit);
+  res.setHeader("X-RateLimit-Remaining", remaining);
+  res.setHeader("X-RateLimit-Reset", Math.ceil(reset / 1000));
+  
+  if (!allowed) { 
+    req.log?.warn("Rate limit exceeded", { limit, windowMs, ip });
+    res.setHeader("Retry-After", Math.ceil((reset - Date.now()) / 1000));
+    res.status(429).json({ error: "Too many requests, slow down." }); 
+    return; 
+  }
+  next();
+};
+  app.use("/api/trpc", async (req: any, res: any, next: any) => {
     const url: string = req.url || "";
     if (url.includes("signup") || url.includes("login") || url.includes("saveToken") || url.includes("removeToken") || url.includes("deleteAccount")) {
       return RATE(10, 60_000)(req, res, next); // 10 auth/token writes per minute
