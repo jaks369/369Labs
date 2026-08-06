@@ -6,6 +6,7 @@ import PriceChart, { PriceChartPoint } from "@/components/PriceChart";
 interface TickChartProps {
   symbol: string;
   maxDataPoints?: number;
+  decimalPlaces?: number; // ignored - fetched from Deriv active_symbols
   compact?: boolean;
   fillHeight?: boolean;
 }

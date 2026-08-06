@@ -128,7 +128,7 @@ export const botRuns = mysqlTable("botRuns", {
   strategyId: int("strategyId").notNull(),
   startTime: timestamp("startTime").defaultNow().notNull(),
   endTime: timestamp("endTime"),
-  status: mysqlEnum("status", ["running", "stopped", "error"]).default("running").notNull(),
+  status: mysqlEnum("status", ["running", "stopped", "error", "paused", "restarting"]).default("running").notNull(),
   totalTrades: int("totalTrades").default(0).notNull(),
   totalProfitLoss: decimal("totalProfitLoss", { precision: 18, scale: 8 }).default("0").notNull(),
   errorMessage: text("errorMessage"),
