@@ -151,7 +151,7 @@ export async function createApp() {
     })
   );
 
-  if (!process.env.VERCEL && process.env.NODE_ENV !== "development") {
+  if (!process.env.VERCEL) {
     serveStatic(app);
     const port = parseInt(process.env.PORT || "3000");
     // Bind the port FIRST so Render's port scanner always sees an open port,
@@ -162,7 +162,11 @@ export async function createApp() {
     // Non-critical startup work - fully isolated so a failure can never
     // take the server (and its open port) down.
     (async () => {
-      try { startTickCollector(); } catch (e) { logger.error("[startup] startTickCollector failed", { error: String(e) }); }
+      try { 
+        if (process.env.NODE_ENV !== "development") {
+          startTickCollector(); 
+        }
+      } catch (e) { logger.error("[startup] startTickCollector failed", { error: String(e) }); }
       try { startAlwaysOnScanner(); } catch (e) { logger.error("[startup] startAlwaysOnScanner failed", { error: String(e) }); }
       try { await ensureSessionsTable(); } catch (e) { logger.error("[startup] ensureSessionsTable failed", { error: String(e) }); }
       try { await ensureSubscriptionsTable(); } catch (e) { logger.error("[startup] ensureSubscriptionsTable failed", { error: String(e) }); }

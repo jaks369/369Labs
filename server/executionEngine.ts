@@ -98,7 +98,10 @@ async function executeBotCycle(): Promise<void> {
     // Place trade via Deriv API
     try {
       const conn = await derivManager.ensureConnected(bot.def.userId);
-      if (!conn) continue;
+      if (!conn) {
+        console.warn(`[ExecutionEngine] No Deriv connection/token for bot ${bot.def.id} (user ${bot.def.userId}). Skipping.`);
+        continue;
+      }
 
       const { contractType, barrier: actionBarrier } = actionToContractType(rule);
       const barrier = rule.condition?.barrier !== undefined ? Number(rule.condition.barrier) : actionBarrier;
@@ -113,7 +116,7 @@ async function executeBotCycle(): Promise<void> {
         currency: "USD",
         duration: 1,
         duration_unit: "t",
-        underlying_symbol: symbol,
+        symbol,
       };
       if (isDigit && barrier !== undefined) proposalPayload.barrier = String(barrier);
       // Enforce the strategy's stop-loss / take-profit on the live contract,
@@ -122,15 +125,24 @@ async function executeBotCycle(): Promise<void> {
       const tp = Number(rule.params?.takeProfit);
       if (sl > 0) proposalPayload.stop_loss = String(sl);
       if (tp > 0) proposalPayload.take_profit = String(tp);
-      const proposal = await (conn as any).sendRaw(proposalPayload).catch(() => null);
-      if (!proposal?.proposal?.id) continue;
+      const proposal = await (conn as any).sendRaw(proposalPayload).catch((e: any) => {
+        console.warn(`[ExecutionEngine] Deriv proposal failed for bot ${bot.def.id}: ${e?.message || e}`);
+        return null;
+      });
+      if (!proposal?.proposal?.id) {
+        console.warn(`[ExecutionEngine] Deriv proposal returned no id for bot ${bot.def.id}. Response: ${JSON.stringify(proposal)}`);
+        continue;
+      }
 
       const buy = await (conn as any)
         .sendRaw({
           buy: proposal.proposal.id,
           price: proposal.proposal.ask_price,
         })
-        .catch(() => null);
+        .catch((e: any) => {
+          console.warn(`[ExecutionEngine] Deriv buy failed for bot ${bot.def.id}: ${e?.message || e}`);
+          return null;
+        });
       if (!buy?.buy?.contract_id) {
         // Real fill failed. Do NOT fabricate a fake win/loss and record it as a
         // real trade in the user's history/portfolio/analytics — that silently
