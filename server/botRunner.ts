@@ -2,6 +2,34 @@ import { notifyUser } from "./_core/notification";
 import * as db from "./db";
 import { derivManager } from "./derivConnection";
 
+// Simple per-key mutex to prevent race conditions on Map operations
+class AsyncMutex {
+  private locks = new Map<string, Promise<void>>();
+  private resolvers = new Map<string, () => void>();
+
+  async lock(key: string): Promise<() => void> {
+    while (this.locks.has(key)) {
+      await this.locks.get(key);
+    }
+    let release: () => void;
+    const promise = new Promise<void>(resolve => { release = resolve; });
+    this.locks.set(key, promise);
+    this.resolvers.set(key, release!);
+    return release!;
+  }
+
+  unlock(key: string): void {
+    const release = this.resolvers.get(key);
+    if (release) {
+      release();
+      this.locks.delete(key);
+      this.resolvers.delete(key);
+    }
+  }
+}
+
+const mutex = new AsyncMutex();
+
 interface BotSafety {
   maxRiskPerTrade?: number;
   maxDailyLoss?: number;
@@ -37,79 +65,91 @@ class BotRunner {
   private bots = new Map<string, BotRuntime>();
 
   async start(opts: { id: string; userId: number; name: string; strategy: any; strategyId?: number; safety: BotSafety }): Promise<void> {
-    const existing = this.bots.get(opts.id);
-    if (existing && existing.status === "running") return;
-    
-    const now = Date.now();
-    const runtime: BotRuntime = {
-      def: {
-        id: opts.id,
-        userId: opts.userId,
-        name: opts.name,
-        strategy: opts.strategy,
-        strategyId: opts.strategyId,
-        safety: opts.safety || {},
-        startedAt: Date.now(),
-      },
-      status: "running",
-      totalTrades: existing?.totalTrades || 0,
-      totalProfitLoss: existing?.totalProfitLoss || 0,
-      lossStreak: existing?.lossStreak || 0,
-      hasOpenTrade: false,
-      lastError: existing?.lastError,
-      lastDailyReset: now,
-    };
-    this.bots.set(opts.id, runtime);
-    
-    // Persist to DB with safety config
+    const release = await mutex.lock(opts.id);
     try {
-      await db.saveBotRun({ 
-        userId: opts.userId, 
-        strategyId: opts.strategyId!, 
+      const existing = this.bots.get(opts.id);
+      if (existing && existing.status === "running") return;
+      
+      const now = Date.now();
+      const runtime: BotRuntime = {
+        def: {
+          id: opts.id,
+          userId: opts.userId,
+          name: opts.name,
+          strategy: opts.strategy,
+          strategyId: opts.strategyId,
+          safety: opts.safety || {},
+          startedAt: Date.now(),
+        },
         status: "running",
-        safety: opts.safety || {},
-        lossStreak: 0,
+        totalTrades: existing?.totalTrades || 0,
+        totalProfitLoss: existing?.totalProfitLoss || 0,
+        lossStreak: existing?.lossStreak || 0,
         hasOpenTrade: false,
-        lastDailyReset: new Date(now),
-      });
-    } catch (e) {
-      console.error("[botRunner] Failed to save bot run:", e);
+        lastError: existing?.lastError,
+        lastDailyReset: now,
+      };
+      this.bots.set(opts.id, runtime);
+      
+      // Persist to DB with safety config
+      try {
+        await db.saveBotRun({ 
+          userId: opts.userId, 
+          strategyId: opts.strategyId!, 
+          status: "running",
+          safety: opts.safety || {},
+          lossStreak: 0,
+          hasOpenTrade: false,
+          lastDailyReset: new Date(now),
+        });
+      } catch (e) {
+        console.error("[botRunner] Failed to save bot run:", e);
+      }
+    } finally {
+      release();
     }
   }
 
   async stop(id: string, userId: number, status: BotRuntime["status"], reason?: string): Promise<void> {
-    const bot = this.bots.get(id);
-    if (!bot || bot.def.userId !== userId) return;
-    bot.status = status;
-    
-    // Update DB with safety config
+    const release = await mutex.lock(id);
     try {
-      await db.updateBotRun(parseInt(id), userId, { 
-        status, 
-        endTime: new Date(),
-        totalTrades: bot.totalTrades,
-        totalProfitLoss: bot.totalProfitLoss.toString(),
-        errorMessage: reason,
-        safety: bot.def.safety,
-        lossStreak: bot.lossStreak,
-        hasOpenTrade: bot.hasOpenTrade,
-        lastError: bot.lastError,
-        lastDailyReset: bot.lastDailyReset ? new Date(bot.lastDailyReset) : undefined,
-      });
-    } catch (e) {
-      console.error("[botRunner] Failed to update bot run:", e);
-    }
+      const bot = this.bots.get(id);
+      if (!bot || bot.def.userId !== userId) {
+        return;
+      }
+      bot.status = status;
     
-    if (status === "error") {
-      notifyUser(userId, "botError", "Bot Error", `Bot "${bot.def.name}" stopped due to an error. ${reason || ""}`, bot.lastError || reason || "Unknown error");
+      // Update DB with safety config
       try {
-        const { fireWebhookEvent } = require("./webhookExecutor");
-        fireWebhookEvent(userId, "bot.error", {
-          botId: id,
-          botName: bot.def.name,
-          error: bot.lastError || reason,
-        }).catch(() => {});
-      } catch {}
+        await db.updateBotRun(parseInt(id), userId, { 
+          status, 
+          endTime: new Date(),
+          totalTrades: bot.totalTrades,
+          totalProfitLoss: bot.totalProfitLoss.toString(),
+          errorMessage: reason,
+          safety: bot.def.safety,
+          lossStreak: bot.lossStreak,
+          hasOpenTrade: bot.hasOpenTrade,
+          lastError: bot.lastError,
+          lastDailyReset: bot.lastDailyReset ? new Date(bot.lastDailyReset) : undefined,
+        });
+      } catch (e) {
+        console.error("[botRunner] Failed to update bot run:", e);
+      }
+      
+      if (status === "error") {
+        notifyUser(userId, "botError", "Bot Error", `Bot "${bot.def.name}" stopped due to an error. ${reason || ""}`, bot.lastError || reason || "Unknown error");
+        try {
+          const { fireWebhookEvent } = require("./webhookExecutor");
+          fireWebhookEvent(userId, "bot.error", {
+            botId: id,
+            botName: bot.def.name,
+            error: bot.lastError || reason,
+          }).catch(() => {});
+        } catch {}
+      }
+    } finally {
+      release();
     }
   }
 
