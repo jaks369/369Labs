@@ -390,6 +390,25 @@ export const webhooks = mysqlTable("webhooks", {
 export type Webhook = typeof webhooks.$inferSelect;
 export type InsertWebhook = typeof webhooks.$inferInsert;
 
+// Webhook delivery tracking (for retry / dead letter queue)
+export const webhookDeliveries = mysqlTable("webhook_deliveries", {
+  id: int("id").autoincrement().primaryKey(),
+  webhookId: int("webhookId").notNull().references(() => webhooks.id, { onDelete: "cascade" }),
+  userId: int("userId").notNull().references(() => users.id, { onDelete: "cascade" }),
+  event: varchar("event", { length: 64 }).notNull(),
+  payload: json("payload").notNull(),
+  status: mysqlEnum("status", ["pending", "delivered", "failed", "dead"]).default("pending").notNull(),
+  attempts: int("attempts").default(0).notNull(),
+  lastError: text("lastError"),
+  nextRetryAt: timestamp("nextRetryAt"),
+  deliveredAt: timestamp("deliveredAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type WebhookDelivery = typeof webhookDeliveries.$inferSelect;
+export type InsertWebhookDelivery = typeof webhookDeliveries.$inferInsert;
+
 // Stripe subscriptions (one per user; nullable until they subscribe)
 export const subscriptions = mysqlTable("subscriptions", {
   id: int("id").autoincrement().primaryKey(),

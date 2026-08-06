@@ -61,6 +61,12 @@ import {
   subscriptions,
   Subscription,
   InsertSubscription,
+  webhooks,
+  Webhook,
+  InsertWebhook,
+  webhookDeliveries,
+  WebhookDelivery,
+  InsertWebhookDelivery,
 } from "../drizzle/schema";
 import { ENV } from "./_core/env";
 import { encrypt, decrypt } from "./_core/encryption";
@@ -2038,6 +2044,19 @@ export async function getWebhooksByUserId(userId: number): Promise<any[]> {
   }
 }
 
+export async function getWebhookById(id: number): Promise<any> {
+  const db = await getDb();
+  if (!db) return null;
+  try {
+    const rows = await db.execute(sql`SELECT * FROM webhooks WHERE id = ${id} LIMIT 1`);
+    const rowsArr = (rows as any)[0] ?? [];
+    return rowsArr[0] || null;
+  } catch (e: any) {
+    console.error("[getWebhookById] failed", e?.message || e);
+    return null;
+  }
+}
+
 export async function createWebhook(data: { userId: number; url: string; events: string[]; label?: string }): Promise<any> {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
@@ -2084,6 +2103,40 @@ export async function getActiveWebhooksForEvent(userId: number, event: string): 
   }
 }
 
+export async function createWebhookDelivery(data: InsertWebhookDelivery): Promise<WebhookDelivery> {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const result = await db.insert(webhookDeliveries).values(data);
+  const id = result[0].insertId;
+  return (await db.select().from(webhookDeliveries).where(eq(webhookDeliveries.id, id as number)).limit(1))[0];
+}
+
+export async function updateWebhookDelivery(id: number, updates: Partial<Pick<InsertWebhookDelivery, "status" | "attempts" | "lastError" | "nextRetryAt" | "deliveredAt">>): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(webhookDeliveries).set(updates).where(eq(webhookDeliveries.id, id));
+}
+
+export async function getPendingWebhookDeliveries(limit: number = 100): Promise<WebhookDelivery[]> {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(webhookDeliveries).where(and(eq(webhookDeliveries.status, "pending"), sql`${webhookDeliveries.nextRetryAt} IS NULL OR ${webhookDeliveries.nextRetryAt} <= NOW()`)).limit(limit);
+}
+
+export async function getDeadWebhookDeliveries(limit: number = 100): Promise<WebhookDelivery[]> {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(webhookDeliveries).where(eq(webhookDeliveries.status, "dead")).orderBy(desc(webhookDeliveries.createdAt)).limit(limit);
+}
+
+export async function retryWebhookDelivery(id: number): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(webhookDeliveries).set({ status: "pending", attempts: 0, lastError: null, nextRetryAt: null }).where(eq(webhookDeliveries.id, id));
+}
+
+const SAFE_COL_RE = /^[a-zA-Z_][a-zA-Z0-9_]*$/;
+
 export async function exportUserData(userId: number): Promise<Record<string, any>> {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
@@ -2096,8 +2149,6 @@ export async function exportUserData(userId: number): Promise<Record<string, any
   ]);
   return { strategies, trades, journals, workflows, bots, exportedAt: new Date().toISOString() };
 }
-
-const SAFE_COL_RE = /^[a-zA-Z_][a-zA-Z0-9_]*$/;
 
 export async function importUserData(userId: number, data: Record<string, any>): Promise<{ imported: number }> {
   const db = await getDb();

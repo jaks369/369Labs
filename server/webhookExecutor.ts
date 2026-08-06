@@ -96,6 +96,8 @@ async function fetchWithRetry(urlStr: string, options: RequestInit, maxRetries =
   throw lastError || new Error("Max retries exceeded");
 }
 
+const MAX_DELIVERY_ATTEMPTS = 5;
+
 export async function fireWebhookEvent(
   userId: number,
   event: string,
@@ -108,17 +110,106 @@ export async function fireWebhookEvent(
     const body = JSON.stringify({ event, data: payload, timestamp: Date.now() });
 
     for (const wh of webhooks) {
-      try {
-        await fetchWithRetry(wh.url, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body,
-        }, 3, 1000);
-      } catch (e: any) {
-        console.warn(`[webhookExecutor] Webhook delivery failed for user ${userId}, event ${event}, url ${wh.url}:`, e?.message || e);
-      }
+      // Create delivery record
+      const delivery = await db.createWebhookDelivery({
+        webhookId: wh.id,
+        userId,
+        event,
+        payload,
+        status: "pending",
+        attempts: 0,
+      });
+
+      await attemptDelivery(delivery.id, wh.url, body);
     }
   } catch (e: any) {
     console.warn(`[webhookExecutor] Unexpected error firing webhooks for user ${userId}, event ${event}:`, e?.message || e);
   }
+}
+
+async function attemptDelivery(deliveryId: number, url: string, body: string): Promise<void> {
+  const maxAttempts = 5;
+  
+  for (let attempt = 1; attempt <= 5; attempt++) {
+    try {
+      // Update attempt count
+      await db.updateWebhookDelivery(deliveryId, { attempts: attempt });
+      
+      // Check URL safety
+      const check = await checkSafeURL(url);
+      if (!check) {
+        await db.updateWebhookDelivery(deliveryId, { 
+          status: "dead", 
+          lastError: "URL failed safety check",
+        });
+        return;
+      }
+      
+      // Use first resolved IP, set Host header to original hostname for TLS SNI
+      const targetIP = check.resolvedIPs[0];
+      const isHttps = check.protocol === "https:";
+      const targetURL = `${check.protocol}//${targetIP}${check.path}`;
+      
+      const headers = { "Content-Type": "application/json", Host: check.hostname } as Record<string, string>;
+      
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 10000);
+      
+      const response = await fetch(targetURL, { 
+        method: "POST",
+        headers,
+        body,
+        signal: controller.signal,
+      });
+      clearTimeout(timeout);
+      
+      if (response.status >= 500) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+      
+      // Success!
+      await db.updateWebhookDelivery(deliveryId, { 
+        status: "delivered", 
+        deliveredAt: new Date(),
+      });
+      return;
+      
+    } catch (e: any) {
+      console.warn(`[webhookExecutor] Delivery attempt ${attempt} failed for ${url}:`, e?.message || e);
+      
+      if (attempt < 5) {
+        const delay = 1000 * Math.pow(2, attempt - 1) + Math.random() * 1000;
+        await new Promise(r => setTimeout(r, delay));
+        continue;
+      }
+      
+      // Max attempts reached - mark as dead
+      await db.updateWebhookDelivery(deliveryId, { 
+        status: "dead", 
+        lastError: e?.message || String(e),
+      });
+    }
+  }
+}
+
+export async function retryDeadWebhooks(): Promise<number> {
+  const dead = await db.getDeadWebhookDeliveries(100);
+  let retried = 0;
+  for (const d of dead) {
+    await db.updateWebhookDelivery(d.id, { status: "pending", attempts: 0, lastError: null, nextRetryAt: null });
+    retried++;
+  }
+  return retried;
+}
+
+export async function processPendingWebhooks(): Promise<number> {
+  const pending = await db.getPendingWebhookDeliveries(100);
+  let processed = 0;
+  for (const d of pending) {
+    const webhook = await db.getWebhookById(d.webhookId);
+    if (!webhook) continue;
+    await attemptDelivery(d.id, webhook.url, JSON.stringify(d.payload));
+    processed++;
+  }
+  return processed;
 }
