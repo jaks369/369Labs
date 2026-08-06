@@ -30,6 +30,7 @@ interface BotRuntime {
   lossStreak: number;
   hasOpenTrade: boolean;
   lastError?: string;
+  lastDailyReset?: number;
 }
 
 class BotRunner {
@@ -39,6 +40,7 @@ class BotRunner {
     const existing = this.bots.get(opts.id);
     if (existing && existing.status === "running") return;
     
+    const now = Date.now();
     const runtime: BotRuntime = {
       def: {
         id: opts.id,
@@ -54,12 +56,18 @@ class BotRunner {
       totalProfitLoss: existing?.totalProfitLoss || 0,
       lossStreak: existing?.lossStreak || 0,
       hasOpenTrade: false,
+      lastDailyReset: now,
     };
     this.bots.set(opts.id, runtime);
     
-    // Persist to DB
+    // Persist to DB with safety config
     try {
-      await db.saveBotRun({ userId: opts.userId, strategyId: opts.strategyId!, status: "running" });
+      await db.saveBotRun({ 
+        userId: opts.userId, 
+        strategyId: opts.strategyId!, 
+        status: "running",
+        safety: opts.safety || {}
+      });
     } catch (e) {
       console.error("[botRunner] Failed to save bot run:", e);
     }
@@ -70,14 +78,15 @@ class BotRunner {
     if (!bot || bot.def.userId !== userId) return;
     bot.status = status;
     
-    // Update DB
+    // Update DB with safety config
     try {
       await db.updateBotRun(parseInt(id), userId, { 
         status, 
         endTime: new Date(),
         totalTrades: bot.totalTrades,
         totalProfitLoss: bot.totalProfitLoss.toString(),
-        errorMessage: reason 
+        errorMessage: reason,
+        safety: bot.def.safety
       });
     } catch (e) {
       console.error("[botRunner] Failed to update bot run:", e);
@@ -129,11 +138,12 @@ class BotRunner {
     if (pnl >= 0) bot.lossStreak = 0;
     else bot.lossStreak++;
     
-    // Persist to DB
+    // Persist to DB with safety config
     try {
       await db.updateBotRun(parseInt(id), userId, { 
         totalTrades: bot.totalTrades,
         totalProfitLoss: bot.totalProfitLoss.toString(),
+        safety: bot.def.safety
       });
     } catch (e) {
       console.error("[botRunner] Failed to update trade stats:", e);
@@ -170,6 +180,9 @@ class BotRunner {
         const rule = (strategy.config as any)?.rule || strategy.config;
         if (!rule?.condition) continue;
         
+        // Restore safety config from DB
+        const safety = (run as any).safety || {};
+        
         // Restore the bot in memory
         this.bots.set(String(run.id), {
           def: {
@@ -178,7 +191,7 @@ class BotRunner {
             name: strategy.name,
             strategy: rule,
             strategyId: strategy.id,
-            safety: {},
+            safety,
             startedAt: new Date(run.startTime).getTime(),
           },
           status: "running",
@@ -186,6 +199,7 @@ class BotRunner {
           totalProfitLoss: parseFloat(run.totalProfitLoss?.toString() || "0"),
           lossStreak: 0,
           hasOpenTrade: false,
+          lastDailyReset: new Date(run.startTime).getTime(),
         });
         
         // Reconnect Deriv for this user

@@ -132,6 +132,7 @@ export const botRuns = mysqlTable("botRuns", {
   totalTrades: int("totalTrades").default(0).notNull(),
   totalProfitLoss: decimal("totalProfitLoss", { precision: 18, scale: 8 }).default("0").notNull(),
   errorMessage: text("errorMessage"),
+  safety: json("safety"), // BotSafety config persisted with the run
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });

@@ -92,7 +92,7 @@ export async function authenticateRequest(req: Request): Promise<{ user: Sanitiz
 
   const payload = await verifySessionToken(sessionToken);
   if (!payload) {
-    console.log(`[auth] FAIL verifySessionToken — token=${sessionToken ? sessionToken.slice(0,15)+"..." : "null"}`);
+    console.log(`[auth] FAIL verifySessionToken — token invalid`);
     throw ForbiddenError("Invalid session cookie");
   }
 

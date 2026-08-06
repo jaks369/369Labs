@@ -155,13 +155,7 @@ async function runTool(name: string, args: any, ctxUser?: any) {
         if (!strategy) return { error: "Strategy not found" };
         const rule = (strategy.config as any)?.rule;
         if (!rule || !rule.symbol) return { error: "Strategy has no executable rule" };
-        const botRun = await db.saveBotRun({ userId: ctxUser.id, strategyId: args.strategyId, status: "running" });
-        await botRunner.start({
-          id: String(botRun.id),
-          userId: ctxUser.id,
-          name: strategy.name,
-          strategy: rule,
-          safety: {
+        const safety = {
             maxRiskPerTrade: args.maxRiskPerTrade,
             maxDailyLoss: args.maxDailyLoss,
             maxDailyTrades: args.maxDailyTrades,
@@ -169,7 +163,14 @@ async function runTool(name: string, args: any, ctxUser?: any) {
             allowedHours: args.allowedHours,
             confidenceThreshold: args.confidenceThreshold,
             maxConsecutiveLosses: args.maxConsecutiveLosses,
-          },
+          };
+        const botRun = await db.saveBotRun({ userId: ctxUser.id, strategyId: args.strategyId, status: "running", safety });
+        await botRunner.start({
+          id: String(botRun.id),
+          userId: ctxUser.id,
+          name: strategy.name,
+          strategy: rule,
+          safety,
         });
         return { data: { started: true, runId: botRun.id, name: strategy.name, strategy: rule.symbol } };
       }
@@ -351,20 +352,26 @@ async function runTool(name: string, args: any, ctxUser?: any) {
         if (!strategy) return { error: "Strategy not found" };
         const rule = (strategy.config as any)?.rule;
         if (!rule) return { error: "Strategy has no executable rule" };
-        const botRun = await db.saveBotRun({ userId: ctxUser.id, strategyId: args.strategyId, status: "running" });
-        await botRunner.start({ id: String(botRun.id), userId: ctxUser.id, name: strategy.name, strategy: rule, safety: {} });
+        // Get safety config from the existing bot run
+        const existingRun = await db.getBotRunById(args.runId, ctxUser.id);
+        const safety = (existingRun as any)?.safety || {};
+        const botRun = await db.saveBotRun({ userId: ctxUser.id, strategyId: args.strategyId, status: "running", safety });
+        await botRunner.start({ id: String(botRun.id), userId: ctxUser.id, name: strategy.name, strategy: rule, safety });
         return { data: { resumed: true, runId: botRun.id } };
       }
       if (name === "restartBot") {
         if (!ctxUser) return { error: "Not authenticated" };
         const { botRunner } = await import("./botRunner");
+        // Get safety config from the existing bot run before stopping
+        const existingRun = await db.getBotRunById(args.runId, ctxUser.id);
+        const safety = (existingRun as any)?.safety || {};
         await botRunner.stop(String(args.runId), ctxUser.id, "restarting");
         const strategy = await db.getStrategyById(args.strategyId, ctxUser.id);
         if (!strategy) return { error: "Strategy not found" };
         const rule = (strategy.config as any)?.rule;
         if (!rule) return { error: "Strategy has no executable rule" };
-        const botRun = await db.saveBotRun({ userId: ctxUser.id, strategyId: args.strategyId, status: "running" });
-        await botRunner.start({ id: String(botRun.id), userId: ctxUser.id, name: strategy.name, strategy: rule, safety: {} });
+        const botRun = await db.saveBotRun({ userId: ctxUser.id, strategyId: args.strategyId, status: "running", safety });
+        await botRunner.start({ id: String(botRun.id), userId: ctxUser.id, name: strategy.name, strategy: rule, safety });
         return { data: { restarted: true, runId: botRun.id } };
       }
       if (name === "cloneBot") {
@@ -381,8 +388,10 @@ async function runTool(name: string, args: any, ctxUser?: any) {
         if (args.start) {
           const rule = (copy.config as any)?.rule;
           if (rule) {
-            const botRun = await db.saveBotRun({ userId: ctxUser.id, strategyId: copy.id, status: "running" });
-            await botRunner.start({ id: String(botRun.id), userId: ctxUser.id, name: copy.name, strategy: rule, safety: {} });
+            // Use safety config from the source bot
+            const safety = rt.def.safety || {};
+            const botRun = await db.saveBotRun({ userId: ctxUser.id, strategyId: copy.id, status: "running", safety });
+            await botRunner.start({ id: String(botRun.id), userId: ctxUser.id, name: copy.name, strategy: rule, safety });
             runId = botRun.id;
           }
         }
@@ -409,12 +418,14 @@ async function runTool(name: string, args: any, ctxUser?: any) {
           maxConsecutiveLosses: args.maxConsecutiveLosses ?? rt.def.safety.maxConsecutiveLosses,
         };
         rt.def.safety = safety;
+        // Persist safety config to DB
+        await db.updateBotRun(parseInt(args.runId), ctxUser.id, { safety });
         return { data: { updated: true, runId: args.runId, safety } };
       }
       if (name === "deleteStrategy") {
         if (!ctxUser) return { error: "Not authenticated" };
         const { botRunner } = await import("./botRunner");
-        const running = botRunner.listForUser(ctxUser.id).some((b: any) => b.id === String(args.id));
+        const running = botRunner.listForUser(ctxUser.id).some((b: any) => b.def.strategyId === args.id);
         if (running) return { error: "Stop the bot running this strategy before deleting it" };
         const ok = await db.deleteStrategy?.(args.id, ctxUser.id);
         if (!ok) return { error: "Strategy not found or cannot be deleted" };
@@ -1551,6 +1562,7 @@ save: protectedProcedure
             userId: ctx.user.id,
             strategyId: input.strategyId,
             status: "running",
+            safety: input.safety || {},
           });
 
           const { botRunner } = await import("./botRunner");

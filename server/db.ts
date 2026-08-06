@@ -1082,10 +1082,22 @@ export async function getBotRunsByUserId(userId: number): Promise<BotRun[]> {
   return db.select().from(botRuns).where(eq(botRuns.userId, userId)).orderBy(desc(botRuns.createdAt));
 }
 
+export async function getBotRunById(id: number, userId: number): Promise<BotRun | undefined> {
+  const db = await getDb();
+  if (!db) return undefined;
+
+  const result = await db
+    .select()
+    .from(botRuns)
+    .where(and(eq(botRuns.id, id), eq(botRuns.userId, userId)))
+    .limit(1);
+  return result[0];
+}
+
 export async function updateBotRun(
   id: number,
   userId: number,
-  updates: Partial<Pick<InsertBotRun, "status" | "endTime" | "totalTrades" | "totalProfitLoss" | "errorMessage">>,
+  updates: Partial<Pick<InsertBotRun, "status" | "endTime" | "totalTrades" | "totalProfitLoss" | "errorMessage" | "safety">>,
 ): Promise<BotRun | undefined> {
   const db = await getDb();
   if (!db) return undefined;

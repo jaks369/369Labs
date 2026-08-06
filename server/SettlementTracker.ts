@@ -120,8 +120,8 @@ export class SettlementTracker {
       try {
         await botRunner.updateTradeStats(String(trade.botRunId), trade.userId, profit);
         await botRunner.setOpenTrade(String(trade.botRunId), trade.userId, false);
-      } catch {
-        /* non-critical */
+      } catch (e: any) {
+        console.warn(`[SettlementTracker] botRunner update failed for trade ${trade.id}:`, e?.message || e);
       }
     }
 
@@ -142,9 +142,9 @@ export class SettlementTracker {
         contractId: trade.contractId,
         entryPrice: trade.entryPrice?.toString() || "0",
         exitPrice,
-      }).catch(() => {});
-    } catch {
-      /* non-critical */
+      }).catch((e: any) => console.warn(`[SettlementTracker] AI hub process failed for trade ${trade.id}:`, e?.message || e));
+    } catch (e: any) {
+      console.warn(`[SettlementTracker] AI hub import failed for trade ${trade.id}:`, e?.message || e);
     }
 
     console.log(`[SettlementTracker] Trade #${trade.id} settled: ${outcome} (${profit.toFixed(2)})`);
@@ -152,9 +152,9 @@ export class SettlementTracker {
     if (trade.strategyId) {
       try {
         const { strategyPerformanceTracker } = await import("./ai/StrategyEngine/StrategyPerformanceTracker");
-        strategyPerformanceTracker.recordOutcome(trade.userId, String(trade.strategyId), 50, 50, 1, outcome === "win", profit).catch(() => {});
-      } catch {
-        /* non-critical */
+        strategyPerformanceTracker.recordOutcome(trade.userId, String(trade.strategyId), 50, 50, 1, outcome === "win", profit).catch((e: any) => console.warn(`[SettlementTracker] strategy tracker failed for trade ${trade.id}:`, e?.message || e));
+      } catch (e: any) {
+        console.warn(`[SettlementTracker] strategy tracker import failed for trade ${trade.id}:`, e?.message || e);
       }
     }
 

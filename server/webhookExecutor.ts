@@ -23,39 +23,64 @@ function isPrivateIP(ip: string): boolean {
   return false;
 }
 
-async function isSafeURL(urlStr: string): Promise<boolean> {
+interface SafeURLResult {
+  safe: boolean;
+  hostname: string;
+  resolvedIPs: string[];
+  protocol: string;
+  path: string;
+}
+
+async function checkSafeURL(urlStr: string): Promise<SafeURLResult | null> {
   let parsed: URL;
   try {
     parsed = new URL(urlStr);
   } catch {
-    return false;
+    return null;
   }
-  if (parsed.protocol !== "https:" && parsed.protocol !== "http:") return false;
+  if (parsed.protocol !== "https:" && parsed.protocol !== "http:") return null;
   const hostname = parsed.hostname.toLowerCase();
-  if (hostname === "localhost" || hostname === "localhost.localdomain" || hostname.endsWith(".local")) return false;
-  if (net.isIP(hostname)) return !isPrivateIP(hostname);
+  if (hostname === "localhost" || hostname === "localhost.localdomain" || hostname.endsWith(".local")) return null;
+  if (net.isIP(hostname)) {
+    return isPrivateIP(hostname) ? null : { safe: true, hostname, resolvedIPs: [hostname], protocol: parsed.protocol, path: parsed.pathname + parsed.search };
+  }
   try {
     const addresses = await dns.promises.resolve4(hostname);
-    if (addresses.some(addr => isPrivateIP(addr))) return false;
+    if (addresses.some(addr => isPrivateIP(addr))) return null;
     const v6addrs = await dns.promises.resolve6(hostname).catch(() => []);
-    if (v6addrs.some(addr => isPrivateIP(addr))) return false;
+    if (v6addrs.some(addr => isPrivateIP(addr))) return null;
+    const allIPs = [...addresses, ...v6addrs];
+    return { safe: true, hostname, resolvedIPs: allIPs, protocol: parsed.protocol, path: parsed.pathname + parsed.search };
   } catch {
-    return false;
+    return null;
   }
-  return true;
 }
 
-// Retry with exponential backoff
-async function fetchWithRetry(url: string, options: RequestInit, maxRetries = 3, baseDelay = 1000): Promise<Response> {
+// Retry with exponential backoff using resolved IP
+async function fetchWithRetry(urlStr: string, options: RequestInit, maxRetries = 3, baseDelay = 1000): Promise<Response> {
+  const check = await checkSafeURL(urlStr);
+  if (!check) throw new Error("URL failed safety check");
+  
+  // Use first resolved IP, set Host header to original hostname for TLS SNI
+  const targetIP = check.resolvedIPs[0];
+  const isHttps = check.protocol === "https:";
+  const targetURL = `${check.protocol}//${targetIP}${check.path}`;
+  
+  const headers = { ...options.headers, Host: check.hostname } as Record<string, string>;
+  
   let lastError: Error | null = null;
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     try {
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), 10000);
-      const response = await fetch(url, { ...options, signal: controller.signal });
+      
+      const response = await fetch(targetURL, { 
+        ...options, 
+        signal: controller.signal,
+        headers,
+      });
       clearTimeout(timeout);
       
-      // Retry on 5xx errors
       if (response.status >= 500) {
         throw new Error(`HTTP ${response.status}`);
       }
@@ -83,16 +108,17 @@ export async function fireWebhookEvent(
     const body = JSON.stringify({ event, data: payload, timestamp: Date.now() });
 
     for (const wh of webhooks) {
-      if (!(await isSafeURL(wh.url))) continue;
-      fetchWithRetry(wh.url, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body,
-      }, 3, 1000).catch(() => {
-        /* webhook fire is best-effort even after retries */
-      });
+      try {
+        await fetchWithRetry(wh.url, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body,
+        }, 3, 1000);
+      } catch (e: any) {
+        console.warn(`[webhookExecutor] Webhook delivery failed for user ${userId}, event ${event}, url ${wh.url}:`, e?.message || e);
+      }
     }
-  } catch {
-    /* webhook fire is non-critical */
+  } catch (e: any) {
+    console.warn(`[webhookExecutor] Unexpected error firing webhooks for user ${userId}, event ${event}:`, e?.message || e);
   }
 }

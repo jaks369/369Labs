@@ -55,14 +55,23 @@ async function executeBotCycle(): Promise<void> {
 
   const allBots = botRunner.listAll();
 
+  // Reset daily counters at midnight
+  const now = Date.now();
+  const midnight = new Date().setHours(0, 0, 0, 0);
+  for (const bot of allBots) {
+    if (!bot.lastDailyReset || bot.lastDailyReset < midnight) {
+      bot.totalTrades = 0;
+      bot.totalProfitLoss = 0;
+      bot.lossStreak = 0;
+      bot.lastDailyReset = now;
+    }
+  }
+
   let traded = 0;
   for (const bot of allBots) {
     if (traded >= MAX_PIPELINE_TRADES) break;
     if (bot.status !== "running" || bot.hasOpenTrade) continue;
 
-    // `bot.def.strategy` holds the bare StrategyRule (symbol/condition/action/params),
-    // NOT a wrapper with `.rule`/`.config`. Fall back defensively to the old
-    // wrapped shapes if a different caller ever stored them.
     const strategy = bot.def?.strategy;
     const rule = strategy?.condition ? strategy : strategy?.rule || strategy?.config?.rule;
     if (!rule?.condition) continue;
@@ -73,9 +82,32 @@ async function executeBotCycle(): Promise<void> {
 
     // Check safety limits
     const safety = bot.def?.safety || {};
+    
+    // maxRiskPerTrade - enforce per-trade stake limit
+    if (safety.maxRiskPerTrade && stake > safety.maxRiskPerTrade) continue;
+    
+    // allowedSymbols - restrict bot to specific symbols
+    if (safety.allowedSymbols && safety.allowedSymbols.length > 0 && !safety.allowedSymbols.includes(symbol)) continue;
+    
+    // allowedHours - check if current time is within allowed trading hours
+    if (safety.allowedHours && Array.isArray(safety.allowedHours) && safety.allowedHours.length === 2) {
+      const [startHour, endHour] = safety.allowedHours;
+      const currentHour = new Date().getHours();
+      if (currentHour < startHour || currentHour >= endHour) continue;
+    }
+    
+    // maxDailyTrades - daily trade limit (reset at midnight)
     if (safety.maxDailyTrades && bot.totalTrades >= safety.maxDailyTrades) continue;
+    
+    // maxConsecutiveLosses - consecutive loss limit
     if (safety.maxConsecutiveLosses && bot.lossStreak >= safety.maxConsecutiveLosses) continue;
+    
+    // maxDailyLoss - daily loss limit (reset at midnight)
     if (safety.maxDailyLoss && bot.totalProfitLoss <= -safety.maxDailyLoss) continue;
+    
+    // confidenceThreshold - minimum confidence to trade (placeholder for future)
+    // Would require strategy evaluation to return confidence score
+    if (safety.confidenceThreshold && safety.confidenceThreshold > 100) continue;
 
     const ticks = getRecentTicks(symbol, 100);
     if (ticks.length < 10) continue;
@@ -168,8 +200,6 @@ async function executeBotCycle(): Promise<void> {
         botRunId: parseInt(bot.def.id) || undefined,
       });
       fireWebhookEvent(bot.def.userId, "trade.executed", { botId: bot.def.id, symbol, stake, contractId: buy.buy.contract_id }).catch(() => {});
-      // Update bot stats in memory and DB
-      await botRunner.updateTradeStats(bot.def.id, bot.def.userId, 0); // PnL updated on settlement
       traded++;
     } catch {
       // bot continues running; error is isolated to this trade
