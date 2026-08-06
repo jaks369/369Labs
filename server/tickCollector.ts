@@ -16,6 +16,10 @@ let subscribedSymbolsOnServer = new Set<string>();
 const lastTickEpoch: Record<string, number> = {};
 let lastAnyTickEpoch = 0;
 let feedStale = false;
+// Hysteresis: need 10 consecutive seconds of healthy ticks to recover from stale
+let consecutiveHealthySeconds = 0;
+const STALE_THRESHOLD_SECONDS = 30;
+const RECOVERY_REQUIRED_SECONDS = 10;
 // In-memory tick buffer: symbol -> latest 500 ticks (for strategy evaluation)
 const tickBuffer = new Map<string, { price: number; epoch: number; lastDigit: number }[]>();
 const MAX_TICKS_PER_SYMBOL = 500;
@@ -27,8 +31,8 @@ export function getRecentTicks(symbol: string, count: number = 100): { price: nu
 export function isFeedStale(): boolean {
   return feedStale;
 }
-export function getFeedHealth(): { stale: boolean; lastTickEpoch: number } {
-  return { stale: feedStale, lastTickEpoch: lastAnyTickEpoch };
+export function getFeedHealth(): { stale: boolean; lastTickEpoch: number; consecutiveHealthySeconds: number } {
+  return { stale: feedStale, lastTickEpoch: lastAnyTickEpoch, consecutiveHealthySeconds };
 }
 let msgId = 1;
 let reconnectAttempts = 0;
@@ -98,10 +102,15 @@ export function startTickCollector() {
         const prev = lastTickEpoch[symbol] || 0;
         const outOfOrder = prev && epoch < prev;
         const nowSec = Math.floor(Date.now() / 1000);
-        if (nowSec - lastAnyTickEpoch > 30) {
+        const gap = nowSec - lastAnyTickEpoch;
+        if (gap > STALE_THRESHOLD_SECONDS) {
           feedStale = true;
+          consecutiveHealthySeconds = 0;
         } else {
-          feedStale = false;
+          consecutiveHealthySeconds++;
+          if (consecutiveHealthySeconds >= RECOVERY_REQUIRED_SECONDS) {
+            feedStale = false;
+          }
         }
         lastAnyTickEpoch = nowSec;
         lastTickEpoch[symbol] = epoch;
@@ -145,6 +154,7 @@ export function startTickCollector() {
       
       setTimeout(() => {
         reconnectAttempts = 0; // Reset on successful reconnect
+        consecutiveHealthySeconds = 0; // Reset hysteresis counter
         startTickCollector();
       }, delay);
     });
