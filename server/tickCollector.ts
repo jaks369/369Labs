@@ -5,6 +5,9 @@ import { getDecimalPlaces, lastDigitOf } from "@shared/lastDigit";
 
 const DERIV_WS_PUBLIC = "wss://api.derivws.com/trading/v1/options/ws/public";
 const VOLATILITY_PREFIXES = getAllVolatilitySymbols();
+const MAX_RECONNECT_ATTEMPTS = 10;
+const BASE_RECONNECT_DELAY = 1000;
+const MAX_RECONNECT_DELAY = 30000;
 
 let ws: WebSocket | null = null;
 let started = false;
@@ -28,6 +31,8 @@ export function getFeedHealth(): { stale: boolean; lastTickEpoch: number } {
   return { stale: feedStale, lastTickEpoch: lastAnyTickEpoch };
 }
 let msgId = 1;
+let reconnectAttempts = 0;
+let isIntentionallyStopped = false;
 
 async function fetchActiveSymbols(): Promise<string[]> {
   return new Promise((resolve) => {
@@ -59,6 +64,16 @@ function subscribeSymbol(symbol: string) {
   ws.send(JSON.stringify({ ticks: symbol, subscribe: 1, req_id: msgId++ }));
 }
 
+export function stopTickCollector() {
+  isIntentionallyStopped = true;
+  reconnectAttempts = 0;
+  if (ws) {
+    ws.close();
+    ws = null;
+  }
+  started = false;
+}
+
 export function startTickCollector() {
   if (started) return;
   started = true;
@@ -66,6 +81,7 @@ export function startTickCollector() {
     ws = new WebSocket(DERIV_WS_PUBLIC);
     ws.on("open", async () => {
       console.log("[tickCollector] connected");
+      reconnectAttempts = 0; // Reset on successful connection
       const symbols = await fetchActiveSymbols();
       console.log(`[tickCollector] subscribing to ${symbols.length} volatility symbols`);
       symbols.forEach(subscribeSymbol);
@@ -107,11 +123,30 @@ export function startTickCollector() {
     });
     ws.on("error", (e: any) => console.warn("[tickCollector] error:", e?.message || e));
     ws.on("close", () => {
-      console.log("[tickCollector] closed, will retry in 10s");
+      console.log("[tickCollector] closed, scheduling reconnect");
       ws = null;
       subscribedSymbolsOnServer.clear();
       started = false; // allow reconnection
-      setTimeout(() => startTickCollector(), 10000);
+      
+      if (isIntentionallyStopped) return;
+      
+      if (reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
+        console.error(`[tickCollector] Max reconnect attempts (${MAX_RECONNECT_ATTEMPTS}) reached. Stopping.`);
+        return;
+      }
+      
+      reconnectAttempts++;
+      const delay = Math.min(
+        BASE_RECONNECT_DELAY * Math.pow(2, reconnectAttempts - 1) + Math.random() * 1000,
+        MAX_RECONNECT_DELAY
+      );
+      
+      console.log(`[tickCollector] Scheduling reconnect attempt ${reconnectAttempts}/${MAX_RECONNECT_ATTEMPTS} in ${Math.round(delay)}ms`);
+      
+      setTimeout(() => {
+        reconnectAttempts = 0; // Reset on successful reconnect
+        startTickCollector();
+      }, delay);
     });
   } catch (e) {
     console.warn("[tickCollector] failed to start:", e);

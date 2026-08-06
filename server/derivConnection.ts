@@ -6,6 +6,9 @@ import { normalizeSymbol } from "./aitools";
 const DERIV_APP_ID = process.env.VITE_DERIV_APP_ID || "33V0MWtYaZLLmAZBWUycN";
 const DERIV_API_BASE = "https://api.derivws.com";
 const REQUEST_TIMEOUT = 15000;
+const MAX_RECONNECT_ATTEMPTS = 5;
+const BASE_RECONNECT_DELAY = 1000; // 1 second base
+const MAX_RECONNECT_DELAY = 30000; // 30 seconds max
 
 interface PendingRequest {
   resolve: (v: any) => void;
@@ -50,6 +53,8 @@ class DerivConnection {
   private userId: number;
   private apiToken: string;
   private connectPromise: Promise<void> | null = null;
+  private reconnectAttempts = 0;
+  private isIntentionallyDisconnected = false;
 
   constructor(userId: number, apiToken: string) {
     this.userId = userId;
@@ -105,12 +110,18 @@ class DerivConnection {
 
   private async connect(): Promise<void> {
     if (this.connectPromise) return this.connectPromise;
+    if (this.isIntentionallyDisconnected) {
+      return Promise.reject(new Error("Intentionally disconnected"));
+    }
+    
     this.connectPromise = new Promise<void>(async (resolve, reject) => {
       try {
         const { url } = await this.fetchOtpUrl();
         this.ws = new WebSocket(url);
         this.ws.onopen = () => {
+          console.log(`[DerivConnection] Connected for user ${this.userId}`);
           this._authorized = true;
+          this.reconnectAttempts = 0; // Reset on successful connection
           this.refresh();
           resolve();
         };
@@ -121,12 +132,15 @@ class DerivConnection {
         };
         const teardown = () => {
           this._authorized = false;
-          // Release the cached promise so the next ensureConnected() opens a
-          // fresh socket instead of reusing a closed one forever.
           this.connectPromise = null;
           if (this.ws) {
             try { this.ws.removeAllListeners?.(); } catch {}
             this.ws = null;
+          }
+          
+          // Auto-reconnect with exponential backoff unless intentionally disconnected
+          if (!this.isIntentionallyDisconnected) {
+            this.scheduleReconnect();
           }
         };
         this.ws.onerror = teardown;
@@ -138,6 +152,27 @@ class DerivConnection {
       }
     });
     return this.connectPromise;
+  }
+
+  private scheduleReconnect(): void {
+    if (this.reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
+      console.error(`[DerivConnection] Max reconnect attempts (${MAX_RECONNECT_ATTEMPTS}) reached for user ${this.userId}`);
+      return;
+    }
+    
+    this.reconnectAttempts++;
+    const delay = Math.min(
+      BASE_RECONNECT_DELAY * Math.pow(2, this.reconnectAttempts - 1) + Math.random() * 1000,
+      MAX_RECONNECT_DELAY
+    );
+    
+    console.log(`[DerivConnection] Scheduling reconnect attempt ${this.reconnectAttempts}/${MAX_RECONNECT_ATTEMPTS} for user ${this.userId} in ${Math.round(delay)}ms`);
+    
+    setTimeout(() => {
+      this.connect().catch((e) => {
+        console.error(`[DerivConnection] Reconnect failed for user ${this.userId}:`, e?.message || e);
+      });
+    }, delay);
   }
 
   private handleMessage(data: any): void {
@@ -270,6 +305,8 @@ class DerivConnection {
   }
 
   disconnect(): void {
+    this.isIntentionallyDisconnected = true;
+    this.reconnectAttempts = 0;
     if (this.ws) {
       try { this.ws.close(); } catch {}
       this.ws = null;
