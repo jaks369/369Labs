@@ -3,6 +3,7 @@ import { getTickHistory, normalizeSymbol } from "./aitools";
 import { notifyUser } from "./_core/notification";
 import { lastDigitOf, getDecimalPlaces } from "@shared/lastDigit";
 import { actionToContractType, simulateOutcome } from "@shared/contractSim";
+import { getStandardVolatilitySymbols } from "@shared/symbols";
 
 // Benjamini-Hochberg FDR correction for multiple comparisons
 function benjaminiHochbergFDR(pValues: number[], fdrLevel = 0.05): boolean[] {
@@ -337,4 +338,37 @@ export async function runWatch(opts: ScanOptions): Promise<any[]> {
     }
   }
   return saved;
+}
+
+let alwaysOnScannerInterval: ReturnType<typeof setInterval> | null = null;
+
+export function startAlwaysOnScanner(): void {
+  if (alwaysOnScannerInterval) return;
+  const SYMBOLS = getStandardVolatilitySymbols();
+  const INTERVAL_MS = 10 * 60 * 1000;
+  const tick = async () => {
+    try {
+      const db = await getDb();
+      if (!db) return;
+      const allUsers = await db.select().from((await import("../drizzle/schema")).users);
+      for (const u of allUsers) {
+        for (const sym of SYMBOLS) {
+          try {
+            await runWatch({ userId: u.id, symbol: sym, sampleSize: 600, minWinRate: 55, patternType: "any" });
+          } catch (e) { console.error("[alwaysOnScanner] symbol", sym, e); }
+        }
+      }
+      console.log("[alwaysOnScanner] cycle complete");
+    } catch (e) { console.error("[alwaysOnScanner]", e); }
+  };
+  setTimeout(tick, 60 * 1000); // first run 1 min after boot
+  alwaysOnScannerInterval = setInterval(tick, INTERVAL_MS);
+}
+
+export function stopAlwaysOnScanner(): void {
+  if (alwaysOnScannerInterval) {
+    clearInterval(alwaysOnScannerInterval);
+    alwaysOnScannerInterval = null;
+    console.log("[alwaysOnScanner] stopped");
+  }
 }

@@ -212,9 +212,73 @@ export async function createApp() {
     const port = parseInt(process.env.PORT || "3000");
     // Bind the port FIRST so Render's port scanner always sees an open port,
     // even if later startup work (DB hygiene, collectors) fails.
-    app.listen(port, () => {
+    const server = app.listen(port, () => {
       logger.info(`[Startup] Server listening on 0.0.0.0:${port} (NODE_ENV=${process.env.NODE_ENV})`);
     });
+
+    // Graceful shutdown handlers
+    const shutdown = async (signal: string) => {
+      logger.info(`[Shutdown] Received ${signal}, shutting down gracefully...`);
+      
+      // Stop accepting new connections
+      server.close(() => {
+        logger.info("[Shutdown] HTTP server closed");
+      });
+      
+      try {
+        const { stopExecutionEngine } = await import("../executionEngine");
+        stopExecutionEngine();
+        logger.info("[Shutdown] ExecutionEngine stopped");
+      } catch (e) { logger.error("[Shutdown] ExecutionEngine stop failed", { error: String(e) }); }
+      
+      try {
+        const { settlementTracker } = await import("../SettlementTracker");
+        settlementTracker.stop();
+        logger.info("[Shutdown] SettlementTracker stopped");
+      } catch (e) { logger.error("[Shutdown] SettlementTracker stop failed", { error: String(e) }); }
+      
+      try {
+        const { aiOrchestrator } = await import("../ai/AIOrchestrator");
+        aiOrchestrator.stop();
+        logger.info("[Shutdown] AIOrchestrator stopped");
+      } catch (e) { logger.error("[Shutdown] AIOrchestrator stop failed", { error: String(e) }); }
+      
+      try {
+        const { stopTickCollector } = await import("../tickCollector");
+        stopTickCollector();
+        logger.info("[Shutdown] TickCollector stopped");
+      } catch (e) { logger.error("[Shutdown] TickCollector stop failed", { error: String(e) }); }
+      
+      try {
+        const { stopAlwaysOnScanner } = await import("../signalScanner");
+        stopAlwaysOnScanner();
+        logger.info("[Shutdown] AlwaysOnScanner stopped");
+      } catch (e) { logger.error("[Shutdown] AlwaysOnScanner stop failed", { error: String(e) }); }
+      
+      try {
+        const { botRunner } = await import("../botRunner");
+        await botRunner.stopAll(0); // 0 means all users - will be filtered
+        logger.info("[Shutdown] BotRunner stopped all bots");
+      } catch (e) { logger.error("[Shutdown] BotRunner stopAll failed", { error: String(e) }); }
+      
+      // Close DB pool
+      try {
+        const { getRawPool } = await import("../db");
+        const pool = getRawPool();
+        if (pool) {
+          await pool.end();
+          logger.info("[Shutdown] DB pool closed");
+        }
+      } catch (e) { logger.error("[Shutdown] DB pool close failed", { error: String(e) }); }
+      
+      logger.info("[Shutdown] Graceful shutdown complete");
+      process.exit(0);
+    };
+
+    process.on("SIGTERM", () => shutdown("SIGTERM"));
+    process.on("SIGINT", () => shutdown("SIGINT"));
+    process.on("SIGUSR2", () => shutdown("SIGUSR2")); // nodemon restart
+
     // Non-critical startup work - fully isolated so a failure can never
     // take the server (and its open port) down.
     (async () => {
@@ -223,7 +287,10 @@ export async function createApp() {
           startTickCollector(); 
         }
       } catch (e) { logger.error("[startup] startTickCollector failed", { error: String(e) }); }
-      try { startAlwaysOnScanner(); } catch (e) { logger.error("[startup] startAlwaysOnScanner failed", { error: String(e) }); }
+      try { 
+        const { startAlwaysOnScanner } = await import("../signalScanner");
+        startAlwaysOnScanner(); 
+      } catch (e) { logger.error("[startup] startAlwaysOnScanner failed", { error: String(e) }); }
       try { await ensureSessionsTable(); } catch (e) { logger.error("[startup] ensureSessionsTable failed", { error: String(e) }); }
       try { await ensureSubscriptionsTable(); } catch (e) { logger.error("[startup] ensureSubscriptionsTable failed", { error: String(e) }); }
       try { await ensureUsersColumns(); } catch (e) { logger.error("[startup] ensureUsersColumns failed", { error: String(e) }); }
