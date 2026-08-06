@@ -2608,15 +2608,56 @@ watch: protectedProcedure
     }),
   }),
 
-  aiMarket: router({
+aiMarket: router({
     overview: protectedProcedure.query(async () => {
       const { aiOrchestrator } = await import("./ai/AIOrchestrator");
       const state = aiOrchestrator.getState();
+
+      const transformedPredictions = state.predictions.slice(-10).map((p: any) => {
+        const confidence = p.confidence ?? 50;
+        const direction = p.prediction ?? "SIDEWAYS";
+        return {
+          market: p.symbol,
+          contractType: direction === "RISE" ? "RISE_FALL" : direction === "FALL" ? "RISE_FALL" : "DIGIT_DIFF",
+          prediction: direction,
+          confidence,
+          risk: confidence > 70 ? "Low" : confidence > 40 ? "Medium" : "High",
+          expectedDuration: "1t",
+          reasoning: p.reasoning ?? [],
+          recommendation: direction === "SIDEWAYS" ? "No clear direction — consider waiting" :
+            direction === "RISE" ? "Consider RISE/CALL positions with tight stops" :
+            "Consider FALL/PUT positions with tight stops",
+        };
+      });
+
+      const transformedAdvisories = Array.from(state.riskAdvisories.values()).map((a: any) => {
+        const score = a.score ?? 0;
+        const riskLevel = a.riskLevel ?? "LOW";
+        return {
+          symbol: a.symbol,
+          riskScore: score,
+          riskLevel,
+          marketRisk: Math.min(100, Math.round(score * 0.7)),
+          userRisk: Math.min(100, Math.round(score * 0.5)),
+          confidence: a.confidence ?? 50,
+          factors: a.factors ?? [],
+          warnings: a.factors?.filter((f: string) => f.toLowerCase().includes("high") || f.toLowerCase().includes("critical") || f.toLowerCase().includes("risk")) ?? [],
+          recommendation: a.recommendation ?? "Monitor market conditions",
+          timestamp: a.timestamp ?? Date.now(),
+        };
+      });
+
+      const healthWithDirection = Array.from(state.health.values()).map((h: any) => ({
+        ...h,
+        direction: h.trend > 10 ? "up" : h.trend < -10 ? "down" : "neutral",
+        score: h.score ?? 50,
+      }));
+
       return {
-        health: Array.from(state.health.values()),
-        predictions: state.predictions.slice(-10),
+        health: healthWithDirection,
+        predictions: transformedPredictions,
         insights: state.insights,
-        advisories: Array.from(state.riskAdvisories.values()),
+        advisories: transformedAdvisories,
         lastUpdated: state.lastUpdated,
         active: state.active,
       };

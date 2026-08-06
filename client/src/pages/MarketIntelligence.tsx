@@ -88,13 +88,13 @@ export default function MarketIntelligencePage() {
               <div className="flex items-center justify-center py-8"><Loader2 className="w-4 h-4 animate-spin text-[var(--accent)]" /></div>
             ) : (
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2">
-                {SCREENER_SYMBOLS.map((sym) => {
-                  const healthData = (data as any)?.health?.find?.((h: any) => h?.symbol === sym || h?.name === sym);
-                  const dir = healthData?.direction || healthData?.trend || "neutral";
-                  const pct = healthData?.change || healthData?.score || 0;
-                  const isUp = dir === "up" || dir === "bullish";
-                  const isDown = dir === "down" || dir === "bearish";
-                  return (
+{SCREENER_SYMBOLS.map((sym) => {
+                    const healthData = (data as any)?.health?.find?.((h: any) => h?.symbol === sym || h?.name === sym);
+                    const dir = healthData?.direction || (healthData?.trend > 10 ? "up" : healthData?.trend < -10 ? "down" : "neutral");
+                    const pct = healthData?.score || 0;
+                    const isUp = dir === "up";
+                    const isDown = dir === "down";
+                    return (
                     <div key={sym} className="bg-black/20 rounded-lg p-3 text-center border border-[var(--border)]">
                       <p className="text-xs font-bold text-white">{getSymbolDisplayName(sym)}</p>
                       <p className={`text-caption ${isUp ? "text-[var(--green)]" : isDown ? "text-[var(--red)]" : "text-[var(--text-muted)]"} mt-1`}>
@@ -136,9 +136,10 @@ export default function MarketIntelligencePage() {
                 <div className="space-y-2">
                   {SCREENER_SYMBOLS.slice(0, 5).map((sym) => {
                     const healthData = (data as any)?.health?.find?.((h: any) => h?.symbol === sym || h?.name === sym);
-                    const vol = healthData?.volatility ?? healthData?.score;
-                    const level = vol != null ? (vol > 70 ? "Very High" : vol > 50 ? "High" : vol > 30 ? "Medium" : "Low") : "-";
-                    const cls = vol != null ? (vol > 70 ? "text-[var(--red)]" : vol > 50 ? "text-[var(--accent)]" : "text-[var(--green)]") : "text-[var(--text-muted)]";
+                    const vol = healthData?.volatility;
+                    const noise = healthData?.noise ?? 50;
+                    const level = vol === "High" ? "Very High" : vol === "Medium" ? "High" : vol === "Low" ? "Low" : (noise > 70 ? "Very High" : noise > 50 ? "High" : noise > 30 ? "Medium" : "Low");
+                    const cls = vol === "High" ? "text-[var(--red)]" : vol === "Medium" ? "text-[var(--accent)]" : vol === "Low" ? "text-[var(--green)]" : (noise > 70 ? "text-[var(--red)]" : noise > 50 ? "text-[var(--accent)]" : "text-[var(--green)]");
                     return (
                       <div key={sym} className="flex justify-between text-xs p-2 bg-black/20 rounded-lg">
                         <span className="text-[var(--text-secondary)]">{getSymbolDisplayName(sym)}</span>
