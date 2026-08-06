@@ -6,7 +6,8 @@ import { fireWebhookEvent } from "./webhookExecutor";
 import { actionToContractType, isDigitContract } from "@shared/contractSim";
 
 const POLL_INTERVAL = 500; // 500ms — near-live bot evaluation
-const MAX_PIPELINE_TRADES = 50; // max trades in one cycle
+const MAX_PIPELINE_TRADES = 50; // max trades in one cycle globally
+const MAX_CONCURRENT_BOTS_PER_USER = 10; // max concurrent running bots per user
 
 let intervalId: ReturnType<typeof setInterval> | null = null;
 
@@ -67,10 +68,21 @@ async function executeBotCycle(): Promise<void> {
     }
   }
 
+  // Count running bots per user
+  const userBotCounts: Record<number, number> = {};
+  for (const bot of allBots) {
+    if (bot.status === "running") {
+      userBotCounts[bot.def.userId] = (userBotCounts[bot.def.userId] || 0) + 1;
+    }
+  }
+
   let traded = 0;
   for (const bot of allBots) {
     if (traded >= MAX_PIPELINE_TRADES) break;
     if (bot.status !== "running" || bot.hasOpenTrade) continue;
+
+    // Per-user concurrency limit
+    if (userBotCounts[bot.def.userId] >= MAX_CONCURRENT_BOTS_PER_USER) continue;
 
     const strategy = bot.def?.strategy;
     const rule = strategy?.condition ? strategy : strategy?.rule || strategy?.config?.rule;
