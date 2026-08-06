@@ -9,7 +9,7 @@ import { toast } from "@/components/Toast";
 export default function Coding() {
   const { isAuthenticated } = useAuth();
   const [, navigate] = useLocation();
-  const filesQuery = trpc.coding.list.useQuery();
+  const filesQuery = trpc.coding.list.useQuery(undefined, { retry: false });
   const readMutation = (trpc.coding.read as any).useMutation();
   const writeMutation = (trpc.coding.write as any).useMutation();
   const askMutation = (trpc.ai.ask as any).useMutation();
@@ -145,7 +145,13 @@ export default function Coding() {
               </button>
             ))}
             {filesQuery.isLoading && <p className="text-xs text-[var(--text-muted)] p-2">Loading...</p>}
-            {!filesQuery.isLoading && (filesQuery.data?.files || []).length === 0 && <p className="text-xs text-[var(--text-muted)] p-2">No files available.</p>}
+            {filesQuery.error && (
+              <div className="p-2">
+                <p className="text-xs font-bold text-[var(--red)] mb-1">Admin access required</p>
+                <p className="text-xs text-[var(--text-muted)] leading-relaxed">AI Coding Mode edits project files on the server and is restricted to admin accounts.</p>
+              </div>
+            )}
+            {!filesQuery.isLoading && !filesQuery.error && (filesQuery.data?.files || []).length === 0 && <p className="text-xs text-[var(--text-muted)] p-2">No files available.</p>}
           </div>
 
           <div className="lg:col-span-3 space-y-3">
