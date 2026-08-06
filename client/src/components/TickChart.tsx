@@ -6,15 +6,28 @@ import PriceChart, { PriceChartPoint } from "@/components/PriceChart";
 interface TickChartProps {
   symbol: string;
   maxDataPoints?: number;
-  decimalPlaces?: number;
   compact?: boolean;
   fillHeight?: boolean;
 }
 
-export default function TickChart({ symbol, maxDataPoints = 100, decimalPlaces = 3, compact = false, fillHeight = false }: TickChartProps) {
+export default function TickChart({ symbol, maxDataPoints = 100, compact = false, fillHeight = false }: TickChartProps) {
   const [data, setData] = useState<PriceChartPoint[]>([]);
   const [timeframe, setTimeframe] = useState<number>(maxDataPoints || 100);
   const [error, setError] = useState<string | null>(null);
+  const [decimalPlaces, setDecimalPlaces] = useState<number>(3);
+
+  // Fetch symbol-specific decimal places from Deriv active_symbols
+  useEffect(() => {
+    if (!symbol) return;
+    const initial = derivWS.decimalPlacesFor(symbol);
+    setDecimalPlaces(initial);
+
+    const cleanup = derivWS.onSymbols((symbols: any[]) => {
+      const sym = symbols.find((s) => s.symbol === symbol);
+      if (sym?.decimalPlaces != null) setDecimalPlaces(sym.decimalPlaces);
+    });
+    return cleanup;
+  }, [symbol]);
 
   const historyQuery = trpc.market.getHistory.useQuery({ symbol, limit: timeframe }, { enabled: Boolean(symbol) });
   useEffect(() => {

@@ -983,9 +983,10 @@ class DerivWebSocketService {
     }
     if (this.authorized) this.fetchBalance();
   }
-  public onSymbols(cb: (symbols: DerivSymbol[]) => void): void {
+  public onSymbols(cb: (symbols: DerivSymbol[]) => void): () => void {
     this.symbolListeners.add(cb);
     if (this._activeSymbols.length > 0) cb(this._activeSymbols);
+    return () => this.symbolListeners.delete(cb);
   }
   public onTokenError(cb: (msg: string) => void): () => void {
     this.tokenListeners.add(cb);
