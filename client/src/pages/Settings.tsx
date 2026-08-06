@@ -3,9 +3,9 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Switch } from "@/components/ui/switch";
-import { Loader2, Save, Brain, AlertCircle, Sun, Moon, Camera, Database, Download, Trash2, Key, Upload, User, Shield, Bell, Bot, Mail, Lock, Smartphone, Globe, Settings2 } from "lucide-react";
-import { useLocation, useSearch } from "wouter";
+import { Switch as UISwitch } from "@/components/ui/switch";
+import { Loader2, Save, Brain, AlertCircle, Sun, Moon, Camera, Database, Download, Trash2, Key, Upload, User, Shield, Bell, Bot, Mail, Lock, Smartphone, Globe, Settings2, LogOut } from "lucide-react";
+import { useLocation, useSearch, Route, Switch as WouterSwitch } from "wouter";
 import { derivWS } from "@/services/derivWebSocket";
 import { pushTimeline } from "@/components/AITimeline";
 import { toast } from "@/components/Toast";
@@ -15,7 +15,7 @@ import SpotlightCard from "@/components/SpotlightCard";
 
 export default function Settings() {
   const { user, isAuthenticated, logout, refresh } = useAuth();
-  const [, navigate] = useLocation();
+  const [location, navigate] = useLocation();
   const [derivToken, setDerivToken] = useState("");
   const [tokenChanged, setTokenChanged] = useState(false);
   const [accountType, setAccountType] = useState<"demo" | "real">("demo");
@@ -264,13 +264,6 @@ export default function Settings() {
     }
   };
 
-  const urlSearch = useSearch();
-  const initialSection = (() => {
-    const tab = new URLSearchParams(urlSearch).get("tab");
-    return tab || "profile";
-  })();
-  const [activeSection, setActiveSection] = useState(initialSection);
-
   const sections = [
     { id: "profile", label: "Profile", icon: User },
     { id: "deriv", label: "Deriv API", icon: Globe },
@@ -288,11 +281,17 @@ export default function Settings() {
     { id: "danger", label: "Danger Zone", icon: Trash2 },
   ];
 
+  const urlSearch = useSearch();
+  const pathSection = location.split("/settings/")[1]?.split("?")[0];
+  const querySection = new URLSearchParams(useSearch()).get("tab");
+  const initialSection = pathSection || querySection || "profile";
+  const [activeSection, setActiveSection] = useState(initialSection);
+
   const sectionRef = useRef<HTMLDivElement>(null);
 
   const selectSection = (id: string) => {
     setActiveSection(id);
-    window.history.replaceState(null, "", `?tab=${id}`);
+    navigate(`/settings/${id}`);
     const el = sectionRef.current;
     if (el) {
       const target = el.querySelector(`[data-section="${id}"]`);
@@ -519,7 +518,7 @@ export default function Settings() {
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <label className="text-sm text-[var(--text-secondary)]">Trade Executed</label>
-              <Switch
+              <UISwitch
                 checked={notificationSettings.tradeExecuted}
                 onCheckedChange={(checked) =>
                   setNotificationSettings({
@@ -531,7 +530,7 @@ export default function Settings() {
             </div>
             <div className="flex items-center justify-between">
               <label className="text-sm text-[var(--text-secondary)]">Take Profit Hit</label>
-              <Switch
+              <UISwitch
                 checked={notificationSettings.takeProfitHit}
                 onCheckedChange={(checked) =>
                   setNotificationSettings({
@@ -543,7 +542,7 @@ export default function Settings() {
             </div>
             <div className="flex items-center justify-between">
               <label className="text-sm text-[var(--text-secondary)]">Stop Loss Hit</label>
-              <Switch
+              <UISwitch
                 checked={notificationSettings.stopLossHit}
                 onCheckedChange={(checked) =>
                   setNotificationSettings({
@@ -555,7 +554,7 @@ export default function Settings() {
             </div>
             <div className="flex items-center justify-between">
               <label className="text-sm text-[var(--text-secondary)]">Bot Error</label>
-              <Switch
+              <UISwitch
                 checked={notificationSettings.botError}
                 onCheckedChange={(checked) =>
                   setNotificationSettings({
@@ -628,7 +627,7 @@ export default function Settings() {
               </div>
               <div className="flex items-end">
                 <label className="flex items-center gap-2 text-sm text-[var(--text-secondary)] cursor-pointer">
-                  <Switch checked={memNoMartingale} onCheckedChange={setMemNoMartingale} />
+                  <UISwitch checked={memNoMartingale} onCheckedChange={setMemNoMartingale} />
                   No martingale / no grid averaging
                 </label>
               </div>
