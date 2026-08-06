@@ -151,6 +151,61 @@ export async function createApp() {
     })
   );
 
+  // ===== Deriv OTP Proxy (bypasses browser CORS for Options REST API) =====
+  // These endpoints proxy the Deriv Options API calls that the browser cannot
+  // make directly due to CORS restrictions. The client (derivWebSocket.ts) will
+  // call /api/deriv/accounts and /api/deriv/otp/:accountId instead of the
+  // blocked api.derivws.com endpoints.
+  const DERIV_API_BASE = process.env.DERIV_API_BASE || "https://api.derivws.com";
+  const DERIV_APP_ID = process.env.DERIV_APP_ID || process.env.VITE_DERIV_APP_ID || "33V0MWtYaZLLmAZBWUycN";
+
+  app.get("/api/deriv/accounts", async (req, res) => {
+    const authHeader = req.headers.authorization;
+    if (!authHeader?.startsWith("Bearer ")) {
+      return res.status(401).json({ error: "Missing Bearer token" });
+    }
+    const token = authHeader.slice(7);
+    try {
+      const response = await fetch(`${DERIV_API_BASE}/trading/v1/options/accounts`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Deriv-App-ID": DERIV_APP_ID,
+          Accept: "application/json",
+        },
+      });
+      const data = await response.json();
+      if (!response.ok) return res.status(response.status).json(data);
+      res.json(data);
+    } catch (e) {
+      logger.error("[deriv-proxy] accounts error", { error: String(e) });
+      res.status(502).json({ error: "Upstream request failed" });
+    }
+  });
+
+  app.get("/api/deriv/otp/:accountId", async (req, res) => {
+    const authHeader = req.headers.authorization;
+    if (!authHeader?.startsWith("Bearer ")) {
+      return res.status(401).json({ error: "Missing Bearer token" });
+    }
+    const token = authHeader.slice(7);
+    const { accountId } = req.params;
+    try {
+      const response = await fetch(`${DERIV_API_BASE}/trading/v1/options/accounts/${accountId}/otp`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Deriv-App-ID": DERIV_APP_ID,
+          Accept: "application/json",
+        },
+      });
+      const data = await response.json();
+      if (!response.ok) return res.status(response.status).json(data);
+      res.json(data);
+    } catch (e) {
+      logger.error("[deriv-proxy] otp error", { error: String(e) });
+      res.status(502).json({ error: "Upstream request failed" });
+    }
+  });
+
   if (!process.env.VERCEL) {
     serveStatic(app);
     const port = parseInt(process.env.PORT || "3000");

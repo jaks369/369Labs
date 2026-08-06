@@ -125,12 +125,11 @@ class DerivWebSocketService {
   }
 
   private async fetchAccounts(): Promise<any[]> {
-    const url = `${DERIV_API_BASE}/trading/v1/options/accounts`;
+    const url = `/api/deriv/accounts`;
     console.log("[Deriv OTP] GET", url);
     const res = await fetch(url, {
       headers: {
         Authorization: `Bearer ${this.apiToken}`,
-        "Deriv-App-ID": DERIV_APP_ID,
       },
     });
     const body = await res.text();
@@ -150,13 +149,11 @@ class DerivWebSocketService {
   }
 
   private async fetchOtpUrl(accountId: string): Promise<{ url: string; accountType: string }> {
-    const url = `${DERIV_API_BASE}/trading/v1/options/accounts/${accountId}/otp`;
-    console.log("[Deriv OTP] POST", url);
+    const url = `/api/deriv/otp/${accountId}`;
+    console.log("[Deriv OTP] GET", url);
     const res = await fetch(url, {
-      method: "POST",
       headers: {
         Authorization: `Bearer ${this.apiToken}`,
-        "Deriv-App-ID": DERIV_APP_ID,
       },
     });
     const body = await res.text();
@@ -638,7 +635,7 @@ class DerivWebSocketService {
           basis: "stake",
           contract_type: params.contractType,
           currency: "USD",
-          underlying_symbol: params.symbol,
+          symbol: params.symbol,
           ...(params.growthRate !== undefined ? { growth_rate: params.growthRate } : { duration: params.duration, duration_unit: params.durationUnit || "t" }),
           ...(params.barrier !== undefined ? { barrier: String(params.barrier) } : {}),
         };
@@ -672,8 +669,10 @@ class DerivWebSocketService {
       // Fall back to v3 WS
       try {
         return await this.v3Trade(params);
-      } catch {}
-      throw new Error("All trading methods failed");
+      } catch (e: any) {
+        console.error("[Deriv WS] v3Trade failed:", e.message);
+        throw new Error(e.message || "All trading methods failed");
+      }
     }
     if (!this.ws || this.ws.readyState !== WebSocket.OPEN) throw new Error("WebSocket not connected");
     let proposalPayload: Record<string, any> = { proposal: 1, amount: params.amount, basis: "stake", contract_type: params.contractType, currency: "USD" };
