@@ -3,10 +3,11 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import { useLocation } from "wouter";
 import { Star, Plus, X, Loader2, ArrowRight, TrendingUp, TrendingDown, Minus } from "lucide-react";
 import { derivWS } from "@/services/derivWebSocket";
-import { getValidSymbols, STANDARD_SYMBOLS, getSymbolDisplayName } from "@/lib/symbols";
+import { getAllSymbols, getSymbolDisplayName } from "@shared/symbols";
+import { STANDARD_SYMBOLS } from "@/lib/symbols";
 
 const WATCHLIST_KEY = "369labs_watchlist";
-const VALID_SYMBOLS = getValidSymbols();
+const VALID_SYMBOLS = getAllSymbols();
 
 function Sparkline({ points, up }: { points: number[]; up: boolean }) {
   if (points.length < 2) return <span className="w-20 h-6" />;

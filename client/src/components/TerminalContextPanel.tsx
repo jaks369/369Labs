@@ -1,6 +1,7 @@
 import { Loader2, Zap, TrendingUp, TrendingDown, Wallet } from "lucide-react";
 import type { ContractSelection } from "@/components/ContractTypeSelector";
-import { formatMoney } from "@/lib/format";
+import { formatMoney, formatSignedMoney } from "@/lib/format";
+import { getSymbolDisplayName } from "@/lib/symbols";
 
 interface TerminalContextPanelProps {
   selectedSymbol: string;
@@ -15,6 +16,15 @@ interface TerminalContextPanelProps {
   onContractChange: (c: ContractSelection) => void;
   onQuickTrade: (dir?: "rise" | "fall") => void;
   tradeBusy: boolean;
+  tokenError?: string | null;
+  onOpenToken?: () => void;
+  todayPnl?: number;
+  todayWinRate?: number | null;
+  todayTrades?: number;
+  balance?: number;
+  currency?: string;
+  openPositions?: any[];
+  onSelectSymbol?: (s: string) => void;
 }
 
 export default function TerminalContextPanel(props: TerminalContextPanelProps) {
@@ -29,6 +39,15 @@ export default function TerminalContextPanel(props: TerminalContextPanelProps) {
     onContractChange,
     onQuickTrade,
     tradeBusy,
+    tokenError,
+    onOpenToken,
+    todayPnl = 0,
+    todayWinRate = null,
+    todayTrades = 0,
+    balance = 0,
+    currency = "USD",
+    openPositions = [],
+    onSelectSymbol,
   } = props;
 
   const isRiseFall = contract.category === "rise_fall";
@@ -289,8 +308,8 @@ export default function TerminalContextPanel(props: TerminalContextPanelProps) {
           {isRiseFall ? (
             <button
               onClick={() => onQuickTrade(contract.direction)}
-              disabled={tradeBusy}
-              className={`w-full h-10 flex items-center justify-center gap-2 rounded-lg text-sm font-bold text-white transition-all disabled:opacity-60 hover:brightness-110 ${
+              disabled={tradeBusy || !isAuthorized}
+              className={`w-full h-10 flex items-center justify-center gap-2 rounded-lg text-sm font-bold text-white transition-all disabled:opacity-50 hover:brightness-110 ${
                 buyIsDown ? "bg-[var(--red)]" : "bg-[var(--green)]"
               }`}
             >
@@ -300,8 +319,8 @@ export default function TerminalContextPanel(props: TerminalContextPanelProps) {
           ) : (
             <button
               onClick={() => onQuickTrade()}
-              disabled={tradeBusy}
-              className={`w-full h-10 flex items-center justify-center gap-2 rounded-lg text-sm font-bold text-white transition-all disabled:opacity-60 hover:brightness-110 ${
+              disabled={tradeBusy || !isAuthorized}
+              className={`w-full h-10 flex items-center justify-center gap-2 rounded-lg text-sm font-bold text-white transition-all disabled:opacity-50 hover:brightness-110 ${
                 contract.category === "even_odd" ? (buyIsDown ? "bg-[var(--red)]" : "bg-[var(--green)]") : ""
               }`}
               style={contract.category === "even_odd" ? undefined : { background: "linear-gradient(135deg, var(--aurora-teal), var(--aurora-purple), var(--aurora-magenta))" }}
@@ -311,7 +330,74 @@ export default function TerminalContextPanel(props: TerminalContextPanelProps) {
             </button>
           )}
 
-          {!isAuthorized && <p className="text-[10px] text-[var(--text-muted)]">Connect a Deriv token to enable trading.</p>}
+          {/* Not-connected panel — explains exactly why the buy button is blocked */}
+          {!isAuthorized && (
+            <div className="rounded-lg border border-[var(--red)]/25 bg-[var(--red-soft)] p-2">
+              <p className="text-[10px] font-bold text-[var(--red)]">Not connected to Deriv</p>
+              <p className="text-[9px] text-[var(--text-muted)] leading-snug mt-0.5">
+                {tokenError || "Connect your Deriv API token (with Trade + Read permissions) to place trades."}
+              </p>
+              {onOpenToken && (
+                <button
+                  onClick={onOpenToken}
+                  className="mt-1.5 w-full py-1.5 rounded-md bg-[var(--accent)] text-black text-[10px] font-bold hover:brightness-110 transition-all"
+                >
+                  Connect Token
+                </button>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Session stats — always visible */}
+      <div className="aurora-glass-panel mt-1.5 p-2.5">
+        <div className="grid grid-cols-4 gap-1.5">
+          <div className="rounded-lg bg-white/5 border border-[var(--border)] p-1.5 text-center">
+            <span className="text-[8px] text-[var(--text-muted)] uppercase tracking-wider block">P&L</span>
+            <span className={`text-[11px] font-bold font-mono tabular-nums ${todayPnl >= 0 ? "text-[var(--green)]" : "text-[var(--red)]"}`}>
+              {formatSignedMoney(todayPnl)}
+            </span>
+          </div>
+          <div className="rounded-lg bg-white/5 border border-[var(--border)] p-1.5 text-center">
+            <span className="text-[8px] text-[var(--text-muted)] uppercase tracking-wider block">Win Rate</span>
+            <span className="text-[11px] font-bold font-mono tabular-nums text-white">{todayWinRate == null ? "—" : `${todayWinRate}%`}</span>
+          </div>
+          <div className="rounded-lg bg-white/5 border border-[var(--border)] p-1.5 text-center">
+            <span className="text-[8px] text-[var(--text-muted)] uppercase tracking-wider block">Trades</span>
+            <span className="text-[11px] font-bold font-mono tabular-nums text-white">{todayTrades}</span>
+          </div>
+          <div className="rounded-lg bg-white/5 border border-[var(--border)] p-1.5 text-center">
+            <span className="text-[8px] text-[var(--text-muted)] uppercase tracking-wider block">Balance</span>
+            <span className="text-[11px] font-bold font-mono tabular-nums text-white">{formatMoney(balance)}</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Open Positions — always visible */}
+      <div className="aurora-glass-panel mt-1.5 flex flex-col min-h-0">
+        <div className="flex items-center justify-between px-2.5 py-2">
+          <span className="text-[10px] font-bold text-white uppercase tracking-wider">Open Positions</span>
+          <span className="text-[10px] font-bold text-[var(--accent)]">{openPositions.length}</span>
+        </div>
+        <div className="border-t border-[var(--border)] max-h-[180px] overflow-y-auto">
+          {openPositions.length === 0 ? (
+            <p className="text-[9px] text-[var(--text-muted)] px-2.5 py-3 text-center">No open positions. Place a trade to see it here.</p>
+          ) : (
+            openPositions.map((t: any) => (
+              <button
+                key={t.id}
+                onClick={() => onSelectSymbol?.(t.symbol)}
+                className="w-full flex items-center justify-between gap-2 px-2.5 py-1.5 border-b border-[var(--border)] last:border-0 hover:bg-white/5 transition-colors text-left"
+              >
+                <span className="flex items-center gap-1.5 min-w-0">
+                  <span className="w-1.5 h-1.5 rounded-full bg-[var(--accent)] animate-live-pulse shrink-0" />
+                  <span className="text-[10px] font-bold text-white truncate">{getSymbolDisplayName(t.symbol)}</span>
+                </span>
+                <span className="text-[10px] font-bold font-mono tabular-nums text-[var(--accent)]">{formatMoney(Number(t.stake) || 0)}</span>
+              </button>
+            ))
+          )}
         </div>
       </div>
     </div>

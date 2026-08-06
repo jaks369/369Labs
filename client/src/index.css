@@ -41,6 +41,7 @@
 }
 
 :root {
+  color-scheme: dark;
   /* ─── Exact Aurora Morphism Color System (Part 0) ─── */
   --bg-base: #0a0e17;
   --bg-base-2: #0d1320;
