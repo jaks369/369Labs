@@ -170,7 +170,7 @@ export default function Replay() {
               <div className="flex items-end justify-between mb-4">
                 <div>
                   <p className="text-xs text-[var(--text-muted)] uppercase">Replaying</p>
-                  <p className="text-3xl font-bold text-white">{cur?.price?.toFixed(4)}</p>
+                  <p className="text-3xl font-bold text-white">{cur?.price?.toFixed(getDecimalPlaces(symbol))}</p>
                   <p className="text-xs text-[var(--text-muted)]">
                     {cur?.epoch ? new Date(cur.epoch * 1000).toLocaleString() : ""} · tick {idx + 1}/{ticks.length}
                   </p>
@@ -247,7 +247,7 @@ export default function Replay() {
                 </div>
                 {decision && (
                   <p className="text-xs text-[var(--text-secondary)] mt-3">
-                    Predicted {decision.type} at {decision.entryPrice.toFixed(4)}. Press again to score early, or wait {decision.duration} ticks.
+                    Predicted {decision.type} at {decision.entryPrice.toFixed(getDecimalPlaces(symbol))}. Press again to score early, or wait {decision.duration} ticks.
                   </p>
                 )}
 

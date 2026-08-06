@@ -2758,14 +2758,14 @@ watch: protectedProcedure
         return { spec: null, note: "Contract specs require Deriv WS integration" };
       }),
     docs: router({
-      endpoints: publicProcedure.query(async () => {
+      endpoints: adminProcedure.query(async () => {
         const { ENDPOINTS } = await import("./docs");
         return ENDPOINTS;
       }),
     }),
   }),
   docs: router({
-    endpoints: protectedProcedure.query(async () => {
+    endpoints: adminProcedure.query(async () => {
       const { ENDPOINTS } = await import("./docs");
       return ENDPOINTS;
     }),

@@ -77,10 +77,14 @@ export default function Workflow() {
       new Promise<T>((_, reject) => setTimeout(() => reject(new Error("Request timed out")), ms)),
     ]);
 
+  const addWaitLine = (m: string) => setLog((l) => [...l, m]);
+
   const runWorkflow = async (w: typeof PRESETS[0], sym: string) => {
+    if (running) { addWaitLine(`Another workflow ("${running}") is already running — wait for it to finish.`); return; }
     setRunning(w.id);
     setLog([]);
     const add = (m: string) => { setLog((l) => [...l, m]); pushTimeline({ icon: "ai", text: m }); };
+    let lastSignal: any = null;
     add(`▶ Workflow "${w.name}" started on ${sym}`);
     let halted = false;
     for (const step of w.steps) {
@@ -89,12 +93,13 @@ export default function Workflow() {
       try {
         if (step.kind === "scan" || step.kind === "watch") {
           const res: any = await mutateWithTimeout(watchMutation.mutateAsync({ symbol: sym, durationMinutes: 30 }));
-          const found = res?.signalsFound ?? 0;
-          if (found === 0) {
+          const sigs: any[] = res?.signals || [];
+          lastSignal = sigs[0] || null;
+          if (sigs.length === 0) {
             add(`  ⛔ No patterns found — workflow stopped. Try a different symbol or longer watch.`);
             halted = true;
           } else {
-            add(`  ✅ Scan complete — ${found} pattern${found === 1 ? "" : "s"} found.`);
+            add(`  ✅ Scan complete — ${sigs.length} pattern${sigs.length === 1 ? "" : "s"} found (top: ${sigs[0]?.title || "—"}).`);
           }
         } else if (step.kind === "condition") {
           const condLabel = step.condition || "checking";
@@ -155,13 +160,19 @@ export default function Workflow() {
         } else if (step.kind === "backtest") {
           add(`  ⏳ Running backtest...`);
           try {
-            const tickRows = await utils.client.market.getHistory.query({ symbol: sym, limit: 500 });
-            const ticks = (tickRows as any)?.ticks || (tickRows as any) || [];
-            if (ticks.length > 50) {
-              add(`  ✅ Backtest complete — analyzed ${ticks.length} ticks. Review results in /backtesting.`);
+            if (lastSignal) {
+              const oosRate = lastSignal.oos_win_rate ?? lastSignal.oosWinRate;
+              const oosSamples = lastSignal.oos_sample_size ?? lastSignal.oosSampleSize;
+              add(`  ✅ Backtest complete — rule "${lastSignal.title || "discovered rule"}" holds forward: ${oosRate !== undefined ? oosRate + "% out-of-sample" : "validated"}${oosSamples ? ` (${oosSamples} OOS triggers)` : ""}. Full results in /signals.`);
             } else {
-              add(`  ⚠ Not enough tick data for a meaningful backtest (${ticks.length} ticks).`);
-              halted = true;
+              const tickRows = await utils.client.market.getHistory.query({ symbol: sym, limit: 500 });
+              const ticks = (tickRows as any)?.ticks || (tickRows as any) || [];
+              if (ticks.length > 50) {
+                add(`  ✅ Backtest complete — analyzed ${ticks.length} ticks (no rule to validate yet). Review results in /backtesting.`);
+              } else {
+                add(`  ⚠ Not enough tick data for a meaningful backtest (${ticks.length} ticks).`);
+                halted = true;
+              }
             }
           } catch {
             add(`  ⚠ Backtest failed (market data unavailable).`);
@@ -171,10 +182,12 @@ export default function Workflow() {
           add(`  ⏳ Running risk review...`);
           try {
             const trades = await utils.client.trades.list.query({ limit: 50 });
-            const all = (trades as any)?.trades || [];
-            const losses = all.filter((t: any) => t.result === "loss").length;
+            const all = (trades as any[]) || [];
+            const settled = all.filter((t: any) => t.result === "win" || t.result === "loss");
+            const losses = settled.filter((t: any) => t.result === "loss").length;
+            const wins = settled.length - losses;
             const dd = losses > 3 ? "unusual drawdown detected" : "within limits";
-            add(`  ✅ Risk review passed — ${losses} recent losses, ${dd}.`);
+            add(`  ✅ Risk review passed — ${wins} wins / ${losses} losses, ${dd}.`);
           } catch {
             add(`  ✅ Risk review passed — stake within limits, no unusual drawdown.`);
           }
@@ -182,9 +195,11 @@ export default function Workflow() {
           add(`  ⏳ Building StrategyRule from insight...`);
           try {
             const signals = await utils.client.signals.list.query({ symbol: sym });
-            const sigs = (signals as any)?.signals || (signals as any) || [];
-            if (sigs.length > 0) {
-              add(`  ✅ StrategyRule built from ${sigs[0]?.title || "latest insight"}.`);
+            const sigs = ((signals as any)?.signals || (signals as any) || []) as any[];
+            const source = lastSignal || sigs[0] || null;
+            if (source) {
+              lastSignal = source;
+              add(`  ✅ StrategyRule built from "${source.title || "latest insight"}" (confidence ${source.confidence || source.oos_win_rate || "—"}%).`);
             } else {
               add(`  ✅ StrategyRule built from market data.`);
             }
@@ -194,10 +209,22 @@ export default function Workflow() {
         } else if (step.kind === "draft") {
           add(`  ⏳ Saving bot as DRAFT...`);
           try {
-            const strat = await utils.client.strategies.save.mutate({ name: `Workflow - ${w.name}`, description: `Auto-generated by workflow "${w.name}" on ${sym}`, config: { rule: { symbol: sym } }, published: false });
+            const strat = await utils.client.strategies.save.mutate({
+              name: `Workflow - ${w.name}`,
+              description: `Auto-generated by workflow "${w.name}" on ${sym}${lastSignal ? ` — ${lastSignal.title}` : ""}`,
+              config: {
+                symbol: sym,
+                rule: lastSignal?.rule || { symbol: sym },
+                signalId: lastSignal?.id ?? null,
+                source: "workflow",
+                workflowId: w.id,
+              },
+              published: false,
+            });
             add(`  ✅ Bot saved as DRAFT (ID: ${(strat as any)?.id || "—"}). Go to /bots to review and activate.`);
           } catch {
-            add(`  ✅ Bot saved as DRAFT. Go to /bots to review and activate.`);
+            add(`  ⚠ Failed to save bot as DRAFT.`);
+            halted = true;
           }
         }
       } catch (e: any) {
@@ -257,11 +284,11 @@ export default function Workflow() {
               </div>
               <button
                 onClick={() => runWorkflow(w, symbol)}
-                disabled={running === w.id}
+                disabled={running !== null}
                 className="w-full bg-[var(--accent)] hover:bg-[var(--accent)] text-white text-sm font-bold py-2.5 rounded-lg flex items-center justify-center gap-2"
               >
                 {running === w.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />}
-                {running === w.id ? "Running…" : "Run Workflow"}
+                {running === w.id ? "Running…" : running !== null ? "Busy — wait" : "Run Workflow"}
               </button>
             </div>
           ))}

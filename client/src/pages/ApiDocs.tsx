@@ -5,12 +5,26 @@ import { useState } from "react";
 import { trpc } from "@/lib/trpc";
 
 export default function ApiDocs() {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
   const [, navigate] = useLocation();
   const [filter, setFilter] = useState("");
   const endpointsQuery = trpc.docs.endpoints.useQuery();
 
   if (!isAuthenticated) { navigate("/login"); return null; }
+
+  if ((user as any)?.role !== "admin") {
+    return (
+      <div className="h-full p-6">
+        <div className="max-w-5xl mx-auto space-y-6 text-center py-16">
+          <AlertCircle className="w-12 h-12 text-[var(--red)] mx-auto mb-3" />
+          <h1 className="text-2xl font-bold text-white">Admin access required</h1>
+          <p className="text-sm text-[var(--text-muted)] max-w-md mx-auto">
+            The API reference exposes internal endpoint structure and admin routes. It is restricted to administrators.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   const allEndpoints = endpointsQuery.data || [];
   const filtered = filter.trim()

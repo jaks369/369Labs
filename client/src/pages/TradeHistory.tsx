@@ -49,7 +49,7 @@ export default function TradeHistory() {
   const goPrev = () => setPage(p => Math.max(1, p - 1));
 
   return (
-    <div className="min-h-screen" style={{ background: "var(--bg)" }}>
+    <div className="min-h-screen">
       <div className="page-container max-w-7xl mx-auto">
         {/* Header */}
         <div className="flex items-center justify-between mb-8">

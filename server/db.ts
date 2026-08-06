@@ -1748,12 +1748,22 @@ export async function ensureSignalOosColumns(): Promise<void> {
 // Gated behind RECOMPUTE_DIGITS=1 so it does not run on every boot.
 export async function recomputeLastDigits(): Promise<number> {
   // Uses FORMAT to preserve trailing zeros before reading the last digit.
-  // 1HZ* symbols have 3 decimal places, all others (R_*, BOOM*, CRASH*) have 2.
+  // Decimals per symbol come from Deriv's pip_size (see shared/lastDigit.ts):
+  //   4 decimals: R_50, R_75
+  //   2 decimals: R_100, 1HZ10V, 1HZ25V, 1HZ50V, 1HZ75V, 1HZ100V
+  //   3 decimals: everything else (R_10, R_25, 1HZ15V, 1HZ30V, 1HZ90V, BOOM*, CRASH*)
   const db = await getDb();
   if (!db) return 0;
   try {
     const res = await db.execute(
-      sql`UPDATE tickHistory SET lastDigit = CAST(RIGHT(REPLACE(FORMAT(price, CASE WHEN symbol LIKE '1HZ%' THEN 3 ELSE 2 END), ',', ''), 1) AS UNSIGNED) WHERE lastDigit <> CAST(RIGHT(REPLACE(FORMAT(price, CASE WHEN symbol LIKE '1HZ%' THEN 3 ELSE 2 END), ',', ''), 1) AS UNSIGNED)`,
+      sql`UPDATE tickHistory SET lastDigit = CAST(RIGHT(REPLACE(FORMAT(price, CASE
+            WHEN symbol IN ('R_50', 'R_75') THEN 4
+            WHEN symbol IN ('R_100', '1HZ10V', '1HZ25V', '1HZ50V', '1HZ75V', '1HZ100V') THEN 2
+            ELSE 3 END), ',', ''), 1) AS UNSIGNED)
+            WHERE lastDigit <> CAST(RIGHT(REPLACE(FORMAT(price, CASE
+            WHEN symbol IN ('R_50', 'R_75') THEN 4
+            WHEN symbol IN ('R_100', '1HZ10V', '1HZ25V', '1HZ50V', '1HZ75V', '1HZ100V') THEN 2
+            ELSE 3 END), ',', ''), 1) AS UNSIGNED)`,
     );
     console.log(`[recomputeLastDigits] updated ${(res as any)?.affectedRows ?? 0} rows`);
     return (res as any)?.affectedRows ?? 0;

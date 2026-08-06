@@ -1,8 +1,12 @@
+// Derived from Deriv's authoritative pip_size per symbol (verified Aug 2026):
+//   pip 0.01  -> 2 decimals (R_100, 1HZ10V/25V/50V/75V/100V)
+//   pip 0.001 -> 3 decimals (R_10, R_25, 1HZ15V/30V/90V, BOOM*, CRASH*)
+//   pip 0.0001-> 4 decimals (R_50, R_75)
 export const SYMBOL_DECIMALS: Record<string, number> = {
-  "R_10": 2, "R_25": 2, "R_50": 2, "R_75": 2, "R_100": 2, "R_150": 2, "R_200": 2,
-  "1HZ10V": 3, "1HZ15V": 3, "1HZ25V": 3, "1HZ30V": 3, "1HZ50V": 3, "1HZ75V": 3, "1HZ90V": 3, "1HZ100V": 3, "1HZ150V": 3, "1HZ250V": 3,
-  "BOOM300": 2, "BOOM500": 2, "BOOM1000": 2,
-  "CRASH300": 2, "CRASH500": 2, "CRASH1000": 2,
+  "R_10": 3, "R_25": 3, "R_50": 4, "R_75": 4, "R_100": 2,
+  "1HZ10V": 2, "1HZ15V": 3, "1HZ25V": 2, "1HZ30V": 3, "1HZ50V": 2, "1HZ75V": 2, "1HZ90V": 3, "1HZ100V": 2,
+  "BOOM300": 3, "BOOM500": 3, "BOOM1000": 3,
+  "CRASH300": 3, "CRASH500": 3, "CRASH1000": 3,
 };
 
 export function getDecimalPlaces(symbol: string): number {

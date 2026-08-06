@@ -6,6 +6,7 @@ import { CandlestickChart, Sparkles, TrendingUp, Clock, Bot, Loader2, ChevronDow
 import { useLocation } from "wouter";
 import { toast } from "@/components/Toast";
 import { getValidSymbols, getSymbolDisplayName } from "@/lib/symbols";
+import { getDecimalPlaces } from "@shared/lastDigit";
 
 export default function Marketplace() {
   const { isAuthenticated } = useAuth();
@@ -203,7 +204,7 @@ export default function Marketplace() {
                               <tr key={i}>
                                 <td className="p-2 text-[var(--text-muted)]">{i + 1}</td>
                                 <td className="p-2 text-[var(--text-secondary)]">{new Date((t.epoch || 0) * 1000).toLocaleTimeString()}</td>
-                                <td className="p-2 text-right text-white">{Number(t.price).toFixed(4)}</td>
+                                <td className="p-2 text-right text-white">{Number(t.price).toFixed(getDecimalPlaces(sig.symbol))}</td>
                                 <td className="p-2 text-right text-[var(--accent)]">{t.lastDigit}</td>
                               </tr>
                             ))}
