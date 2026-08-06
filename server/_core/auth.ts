@@ -1,4 +1,4 @@
-import { randomBytes, scrypt as scryptCallback, timingSafeEqual } from "crypto";
+import { randomBytes, scrypt as scryptCallback, timingSafeEqual, createHmac } from "crypto";
 import { promisify } from "util";
 import { SignJWT, jwtVerify } from "jose";
 import type { Request } from "express";
@@ -13,6 +13,17 @@ import { getSessionCookieOptions } from "./cookies";
 
 const scrypt = promisify(scryptCallback);
 const SCRYPT_KEYLEN = 64;
+
+export function generateTOTP(secretHex: string, epoch: number): string {
+  const key = Buffer.from(secretHex, "hex");
+  const timeBuffer = Buffer.alloc(8);
+  timeBuffer.writeUInt32BE(0, 0);
+  timeBuffer.writeUInt32BE(epoch, 4);
+  const hmac = createHmac("sha1", key).update(timeBuffer).digest();
+  const offset = hmac[hmac.length - 1] & 0xf;
+  const code = ((hmac[offset] & 0x7f) << 24) | (hmac[offset + 1] << 16) | (hmac[offset + 2] << 8) | hmac[offset + 3];
+  return (code % 1000000).toString().padStart(6, "0");
+}
 
 export function sanitizeUser(u: User | null | undefined): SanitizedUser | null | undefined {
   if (!u) return u;

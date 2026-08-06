@@ -1,7 +1,7 @@
 import { COOKIE_NAME, SESSION_MS } from "@shared/const";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
-import { publicProcedure, router, protectedProcedure, adminProcedure } from "./_core/trpc";
+import { publicProcedure, router, protectedProcedure, adminProcedure, adminStepUpProcedure } from "./_core/trpc";
 import { z } from "zod";
 import * as db from "./db";
 import { TRPCError } from "@trpc/server";
@@ -2726,14 +2726,14 @@ aiMarket: router({
       const all = await db.listAllUsers();
       return { users: all.map(u => ({ id: u.id, email: u.email, name: u.name, role: u.role, createdAt: Number(new Date(u.createdAt).getTime()), emailVerified: u.emailVerified })) };
     }),
-    promoteToAdmin: adminProcedure
+    promoteToAdmin: adminStepUpProcedure
       .input(z.object({ userId: z.number() }))
       .mutation(async ({ input, ctx }) => {
         await db.updateUserRole(input.userId, "admin");
         db.saveAuditLog({ userId: ctx.user.id, action: "admin.promote", target: String(input.userId) }).catch(() => {});
         return { ok: true };
       }),
-    demoteToUser: adminProcedure
+    demoteToUser: adminStepUpProcedure
       .input(z.object({ userId: z.number() }))
       .mutation(async ({ input, ctx }) => {
         if (input.userId === ctx.user.id) throw new TRPCError({ code: "BAD_REQUEST", message: "Cannot demote yourself" });
@@ -2741,7 +2741,7 @@ aiMarket: router({
         db.saveAuditLog({ userId: ctx.user.id, action: "admin.demote", target: String(input.userId) }).catch(() => {});
         return { ok: true };
       }),
-    deleteUser: adminProcedure
+    deleteUser: adminStepUpProcedure
       .input(z.object({ userId: z.number() }))
       .mutation(async ({ input, ctx }) => {
         if (input.userId === ctx.user.id) throw new TRPCError({ code: "BAD_REQUEST", message: "Cannot delete yourself" });
