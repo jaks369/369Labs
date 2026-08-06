@@ -55,6 +55,7 @@ export async function runBacktest(ticks: { price: number; timestamp: number }[],
   let totalTrades = 0,
     wins = 0,
     losses = 0,
+    draws = 0,
     totalPnl = 0;
   let equity = 0,
     peak = 0,
@@ -67,7 +68,14 @@ export async function runBacktest(ticks: { price: number; timestamp: number }[],
     const entryPrice = prices[i];
     const exitPrice = prices[i + 1];
     const outcome = simulateOutcome(entryPrice, exitPrice, contractType, barrier, decimals);
-    const result: "win" | "loss" = outcome === "draw" ? "loss" : outcome;
+    
+    if (outcome === "draw") {
+      // Draw = stake returned, no PnL, not counted as a trade for win/loss stats
+      i++; // skip the exit tick
+      continue;
+    }
+    
+    const result: "win" | "loss" = outcome;
     const pnl = calcPnl(result, stake);
 
     totalTrades++;
@@ -88,10 +96,11 @@ export async function runBacktest(ticks: { price: number; timestamp: number }[],
     totalTrades,
     wins,
     losses,
+    draws,
     winRate,
     totalPnl,
     maxDrawdown,
     profitFactor,
-    interpretation: `Win rate ${winRate.toFixed(1)}% over ${totalTrades} trades, profit factor ${profitFactor === Infinity ? "∞" : profitFactor.toFixed(2)}, max drawdown ${maxDrawdown.toFixed(2)}, net P&L ${totalPnl.toFixed(2)}.`,
+    interpretation: `Win rate ${winRate.toFixed(1)}% over ${totalTrades} trades (${draws} draws excluded), profit factor ${profitFactor === Infinity ? "∞" : profitFactor.toFixed(2)}, max drawdown ${maxDrawdown.toFixed(2)}, net P&L ${totalPnl.toFixed(2)}.`,
   };
 }
