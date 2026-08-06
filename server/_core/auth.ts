@@ -3,12 +3,13 @@ import { promisify } from "util";
 import { SignJWT, jwtVerify } from "jose";
 import type { Request } from "express";
 import { parse as parseCookieHeader } from "cookie";
-import { COOKIE_NAME, ONE_YEAR_MS } from "@shared/const";
+import { COOKIE_NAME, ONE_YEAR_MS, SESSION_MS } from "@shared/const";
 import { ForbiddenError } from "@shared/_core/errors";
 import type { User } from "../../drizzle/schema";
 import type { SanitizedUser } from "./context";
 import * as db from "../db";
 import { ENV } from "./env";
+import { getSessionCookieOptions } from "./cookies";
 
 const scrypt = promisify(scryptCallback);
 const SCRYPT_KEYLEN = 64;
@@ -145,4 +146,22 @@ export async function authenticateRequest(req: Request): Promise<{ user: Sanitiz
   }
 
   return { user: sanitizeUser(user)!, sessionId: payload.sessionId || null };
+}
+
+/** Create a new session token and revoke the old one. Used for security-sensitive changes. */
+export async function regenerateSession(
+  userId: number,
+  oldSessionId: string | null,
+  req: Request,
+  res: any
+): Promise<string> {
+  if (oldSessionId) {
+    await db.revokeSession(oldSessionId, userId);
+  }
+  const sessionId = randomBytes(16).toString("hex");
+  await db.createSession({ userId, sessionId, userAgent: req.headers["user-agent"] || null, ip: req.ip || null });
+  const sessionToken = await createSessionToken(userId, sessionId);
+  const cookieOptions = getSessionCookieOptions(req);
+  res.cookie(COOKIE_NAME, sessionToken, { ...cookieOptions, maxAge: SESSION_MS });
+  return sessionToken;
 }

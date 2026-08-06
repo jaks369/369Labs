@@ -5,7 +5,7 @@ import { publicProcedure, router, protectedProcedure, adminProcedure } from "./_
 import { z } from "zod";
 import * as db from "./db";
 import { TRPCError } from "@trpc/server";
-import { hashPassword, verifyPassword, createSessionToken, sanitizeUser } from "./_core/auth";
+import { hashPassword, verifyPassword, createSessionToken, sanitizeUser, regenerateSession } from "./_core/auth";
 import { ENV } from "./_core/env";
 import { sendEmail, buildResetEmail, buildVerificationEmail } from "./_core/email";
 import { getTickHistory, getActiveSymbols, getDigitStats, getTrend, suggestStrategy, TOOL_DEFS, buildActionIntent, normalizeSymbol, detectWatchIntent } from "./aitools";
@@ -780,6 +780,8 @@ export const appRouter = router({
             const expectedToken = generateTOTP(user.twoFASecret, epoch + i);
             if (timingSafeEqual(Buffer.from(expectedToken), Buffer.from(input.token))) {
               await db.enable2FA(ctx.user.id);
+              // Regenerate session after enabling 2FA
+              await regenerateSession(ctx.user.id, ctx.sessionId, ctx.req, ctx.res);
               return { success: true };
             }
           }
@@ -807,6 +809,8 @@ export const appRouter = router({
           const passwordHash = await hashPassword(input.newPassword);
           await db.updateUserPassword(user.id, passwordHash);
           db.saveAuditLog({ userId: ctx.user.id, action: "auth.changePassword" }).catch(() => {});
+          // Regenerate session after password change
+          await regenerateSession(ctx.user.id, ctx.sessionId, ctx.req, ctx.res);
           return { success: true };
         } catch (error) {
           if (error instanceof TRPCError) throw error;
@@ -827,6 +831,8 @@ export const appRouter = router({
           if (!valid) throw new TRPCError({ code: "UNAUTHORIZED", message: "Invalid password" });
           await db.disable2FA(ctx.user.id);
           db.saveAuditLog({ userId: ctx.user.id, action: "auth.disable2FA" }).catch(() => {});
+          // Regenerate session after disabling 2FA
+          await regenerateSession(ctx.user.id, ctx.sessionId, ctx.req, ctx.res);
           return { success: true };
         } catch (error) {
           if (error instanceof TRPCError) throw error;
@@ -857,6 +863,8 @@ export const appRouter = router({
           subject: "Verify your new 369Labs email",
           html: buildVerificationEmail(verifyUrl),
         });
+        // Regenerate session after email change
+        await regenerateSession(ctx.user.id, ctx.sessionId, ctx.req, ctx.res);
         return { success: true, emailSent: sent };
       }),
 
