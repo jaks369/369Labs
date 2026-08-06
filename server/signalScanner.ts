@@ -141,6 +141,9 @@ export async function scanTicks(opts: ScanOptions): Promise<any[]> {
 
   const evaluate = (rule: any, desc: string, pType: PatternType) => {
     const is = patternMatches(rule, prices, digits, 0, splitIdx, decimals);
+    // Ensure OOS window has at least 2 ticks (need trigger at i and settlement at i+1)
+    const oosWindowSize = ticks.length - splitIdx;
+    if (oosWindowSize < 2) return;
     const oos = patternMatches(rule, prices, digits, splitIdx, ticks.length, decimals);
     const inTotal = is.wins + is.losses;
     const oosTotal = oos.wins + oos.losses;
