@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { derivWS, Tick } from "@/services/derivWebSocket";
 import { trpc } from "@/lib/trpc";
 import PriceChart, { PriceChartPoint } from "@/components/PriceChart";
@@ -10,11 +10,18 @@ interface TickChartProps {
   fillHeight?: boolean;
 }
 
+const MAX_BUFFER = 2000;
+
 export default function TickChart({ symbol, maxDataPoints = 100, compact = false, fillHeight = false }: TickChartProps) {
-  const [data, setData] = useState<PriceChartPoint[]>([]);
   const [timeframe, setTimeframe] = useState<number>(maxDataPoints || 100);
   const [error, setError] = useState<string | null>(null);
   const [decimalPlaces, setDecimalPlaces] = useState<number>(3);
+  const [initialLoad, setInitialLoad] = useState(false);
+
+  // Persistent buffer - only grows, never replaced
+  const bufferRef = useRef<PriceChartPoint[]>([]);
+  // Visible slice passed to PriceChart
+  const [visibleData, setVisibleData] = useState<PriceChartPoint[]>([]);
 
   // Fetch symbol-specific decimal places from Deriv active_symbols
   useEffect(() => {
@@ -29,37 +36,47 @@ export default function TickChart({ symbol, maxDataPoints = 100, compact = false
     return cleanup;
   }, [symbol]);
 
-  const historyQuery = trpc.market.getHistory.useQuery({ symbol, limit: timeframe }, { enabled: Boolean(symbol) });
+  // Initial history load - prepend to buffer once
+  const historyQuery = trpc.market.getHistory.useQuery({ symbol, limit: maxDataPoints }, { enabled: Boolean(symbol) && !initialLoad });
   useEffect(() => {
     const ticks = historyQuery.data?.ticks;
-    if (!ticks || !ticks.length) return;
-    const hist = ticks.slice(-timeframe).map((t) => ({
+    if (!ticks || !ticks.length || initialLoad) return;
+    const hist = ticks.slice(-maxDataPoints).map((t) => ({
       time: new Date((t.epoch || 0) * 1000).toLocaleTimeString(),
       price: Number(t.price),
     }));
-    if (hist.length) setData(hist);
-  }, [historyQuery.data, symbol, timeframe]);
+    if (hist.length) {
+      bufferRef.current = hist;
+      setVisibleData(hist.slice(-timeframe));
+      setInitialLoad(true);
+    }
+  }, [historyQuery.data, symbol, maxDataPoints, timeframe, initialLoad]);
 
+  // Live subscription - append to buffer
   useEffect(() => {
+    if (!symbol || !initialLoad) return;
     derivWS.markBackground(symbol);
-    const buffered = derivWS.getRecentTicks(symbol, timeframe);
-    if (buffered.length) {
-      setData(buffered.slice(-timeframe).map((t) => ({
+    
+    // Prepend buffered ticks from derivWS (older ticks) if buffer is small
+    const buffered = derivWS.getRecentTicks(symbol, maxDataPoints);
+    if (buffered.length && bufferRef.current.length < maxDataPoints) {
+      const hist = buffered.slice(-maxDataPoints).map((t) => ({
         time: new Date(t.timestamp).toLocaleTimeString(),
         price: t.price,
-      })));
-    } else {
-      setData([]);
+      }));
+      bufferRef.current = [...hist, ...bufferRef.current].slice(-MAX_BUFFER);
+      setVisibleData(bufferRef.current.slice(-timeframe));
     }
     setError(null);
 
     const listener = {
       onTick: (tick: Tick) => {
         if (tick.symbol !== symbol) return;
-        setData((prev) => [
-          ...prev,
-          { time: new Date(tick.timestamp).toLocaleTimeString(), price: tick.price },
-        ].slice(-Math.max(timeframe, 200)));
+        const point = { time: new Date(tick.timestamp).toLocaleTimeString(), price: tick.price };
+        bufferRef.current = [...bufferRef.current, point].slice(-MAX_BUFFER);
+        // Only update visibleData if we're at live edge (PriceChart handles viewport)
+        // We always update so PriceChart gets fresh data for its calculations
+        setVisibleData([...bufferRef.current].slice(-timeframe));
         setError(null);
       },
       onError: (err: Error, sym?: string) => {
@@ -76,11 +93,26 @@ export default function TickChart({ symbol, maxDataPoints = 100, compact = false
       derivWS.removeListener(listener);
       derivWS.unsubscribe(id);
     };
-  }, [symbol, timeframe]);
+  }, [symbol, timeframe, initialLoad]);
+
+  // Update visible slice when timeframe changes
+  useEffect(() => {
+    if (bufferRef.current.length) {
+      setVisibleData(bufferRef.current.slice(-timeframe));
+    }
+  }, [timeframe]);
+
+  // Reset on symbol change
+  useEffect(() => {
+    bufferRef.current = [];
+    setVisibleData([]);
+    setInitialLoad(false);
+    setError(null);
+  }, [symbol]);
 
   return (
     <PriceChart
-      data={data}
+      data={visibleData}
       error={error}
       symbol={symbol}
       decimalPlaces={decimalPlaces}

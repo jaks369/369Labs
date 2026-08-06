@@ -168,6 +168,8 @@ async function executeBotCycle(): Promise<void> {
         botRunId: parseInt(bot.def.id) || undefined,
       });
       fireWebhookEvent(bot.def.userId, "trade.executed", { botId: bot.def.id, symbol, stake, contractId: buy.buy.contract_id }).catch(() => {});
+      // Update bot stats in memory and DB
+      await botRunner.updateTradeStats(bot.def.id, bot.def.userId, 0); // PnL updated on settlement
       traded++;
     } catch {
       // bot continues running; error is isolated to this trade

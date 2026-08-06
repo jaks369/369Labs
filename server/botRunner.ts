@@ -1,4 +1,6 @@
 import { notifyUser } from "./_core/notification";
+import * as db from "./db";
+import { derivManager } from "./derivConnection";
 
 interface BotSafety {
   maxRiskPerTrade?: number;
@@ -33,10 +35,11 @@ interface BotRuntime {
 class BotRunner {
   private bots = new Map<string, BotRuntime>();
 
-  start(opts: { id: string; userId: number; name: string; strategy: any; strategyId?: number; safety: BotSafety }): void {
+  async start(opts: { id: string; userId: number; name: string; strategy: any; strategyId?: number; safety: BotSafety }): Promise<void> {
     const existing = this.bots.get(opts.id);
     if (existing && existing.status === "running") return;
-    this.bots.set(opts.id, {
+    
+    const runtime: BotRuntime = {
       def: {
         id: opts.id,
         userId: opts.userId,
@@ -51,13 +54,35 @@ class BotRunner {
       totalProfitLoss: existing?.totalProfitLoss || 0,
       lossStreak: existing?.lossStreak || 0,
       hasOpenTrade: false,
-    });
+    };
+    this.bots.set(opts.id, runtime);
+    
+    // Persist to DB
+    try {
+      await db.saveBotRun({ userId: opts.userId, strategyId: opts.strategyId!, status: "running" });
+    } catch (e) {
+      console.error("[botRunner] Failed to save bot run:", e);
+    }
   }
 
-  stop(id: string, userId: number, status: BotRuntime["status"], reason?: string): void {
+  async stop(id: string, userId: number, status: BotRuntime["status"], reason?: string): Promise<void> {
     const bot = this.bots.get(id);
     if (!bot || bot.def.userId !== userId) return;
     bot.status = status;
+    
+    // Update DB
+    try {
+      await db.updateBotRun(parseInt(id), userId, { 
+        status, 
+        endTime: new Date(),
+        totalTrades: bot.totalTrades,
+        totalProfitLoss: bot.totalProfitLoss.toString(),
+        errorMessage: reason 
+      });
+    } catch (e) {
+      console.error("[botRunner] Failed to update bot run:", e);
+    }
+    
     if (status === "error") {
       notifyUser(userId, "botError", "Bot Error", `Bot "${bot.def.name}" stopped due to an error. ${reason || ""}`, bot.lastError || reason || "Unknown error");
       try {
@@ -71,11 +96,11 @@ class BotRunner {
     }
   }
 
-  stopAll(userId: number): number {
+  async stopAll(userId: number): Promise<number> {
     let count = 0;
-    for (const [, bot] of Array.from(this.bots)) {
+    for (const [id, bot] of Array.from(this.bots)) {
       if (bot.def.userId === userId && bot.status === "running") {
-        bot.status = "stopped";
+        await this.stop(id, userId, "stopped");
         count++;
       }
     }
@@ -96,13 +121,23 @@ class BotRunner {
     return Array.from(this.bots.values());
   }
 
-  updateTradeStats(id: string, userId: number, pnl: number): void {
+  async updateTradeStats(id: string, userId: number, pnl: number): Promise<void> {
     const bot = this.bots.get(id);
     if (!bot || bot.def.userId !== userId) return;
     bot.totalTrades++;
     bot.totalProfitLoss += pnl;
     if (pnl >= 0) bot.lossStreak = 0;
     else bot.lossStreak++;
+    
+    // Persist to DB
+    try {
+      await db.updateBotRun(parseInt(id), userId, { 
+        totalTrades: bot.totalTrades,
+        totalProfitLoss: bot.totalProfitLoss.toString(),
+      });
+    } catch (e) {
+      console.error("[botRunner] Failed to update trade stats:", e);
+    }
   }
 
   setOpenTrade(id: string, userId: number, hasOpen: boolean): void {
@@ -114,6 +149,58 @@ class BotRunner {
   cleanupUser(userId: number): void {
     for (const [id, bot] of Array.from(this.bots)) {
       if (bot.def.userId === userId) this.bots.delete(id);
+    }
+  }
+
+  // Restore running bots from database on server startup
+  async restoreFromDb(): Promise<void> {
+    try {
+      const dbInstance = await db.getDb();
+      if (!dbInstance) return;
+      
+      const runningRuns = await dbInstance
+        .select()
+        .from((await import("../drizzle/schema")).botRuns)
+        .where((await import("drizzle-orm")).eq((await import("../drizzle/schema")).botRuns.status, "running"));
+      
+      for (const run of runningRuns) {
+        const strategy = await db.getStrategyById(run.strategyId, run.userId);
+        if (!strategy) continue;
+        
+        const rule = (strategy.config as any)?.rule || strategy.config;
+        if (!rule?.condition) continue;
+        
+        // Restore the bot in memory
+        this.bots.set(String(run.id), {
+          def: {
+            id: String(run.id),
+            userId: run.userId,
+            name: strategy.name,
+            strategy: rule,
+            strategyId: strategy.id,
+            safety: {},
+            startedAt: new Date(run.startTime).getTime(),
+          },
+          status: "running",
+          totalTrades: run.totalTrades,
+          totalProfitLoss: parseFloat(run.totalProfitLoss?.toString() || "0"),
+          lossStreak: 0,
+          hasOpenTrade: false,
+        });
+        
+        // Reconnect Deriv for this user
+        try {
+          await derivManager.getOrCreate(run.userId);
+        } catch {}
+        
+        console.log(`[botRunner] Restored bot ${run.id} (${strategy.name}) for user ${run.userId}`);
+      }
+      
+      if (runningRuns.length > 0) {
+        console.log(`[botRunner] Restored ${runningRuns.length} running bots from database`);
+      }
+    } catch (e) {
+      console.error("[botRunner] Failed to restore bots from DB:", e);
     }
   }
 }

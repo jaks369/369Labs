@@ -176,13 +176,13 @@ async function runTool(name: string, args: any, ctxUser?: any) {
       if (name === "stopBot") {
         if (!ctxUser) return { error: "Not authenticated" };
         const { botRunner } = await import("./botRunner");
-        botRunner.stop(String(args.runId), ctxUser.id, "stopped");
+        await botRunner.stop(String(args.runId), ctxUser.id, "stopped");
         return { data: { stopped: args.runId } };
       }
       if (name === "stopAllBots") {
         if (!ctxUser) return { error: "Not authenticated" };
         const { botRunner } = await import("./botRunner");
-        const count = botRunner.stopAll(ctxUser.id);
+        const count = await botRunner.stopAll(ctxUser.id);
         return { data: { stopped: count } };
       }
       if (name === "createStrategy") {
@@ -358,7 +358,7 @@ async function runTool(name: string, args: any, ctxUser?: any) {
       if (name === "restartBot") {
         if (!ctxUser) return { error: "Not authenticated" };
         const { botRunner } = await import("./botRunner");
-        botRunner.stop(String(args.runId), ctxUser.id, "restarting");
+        await botRunner.stop(String(args.runId), ctxUser.id, "restarting");
         const strategy = await db.getStrategyById(args.strategyId, ctxUser.id);
         if (!strategy) return { error: "Strategy not found" };
         const rule = (strategy.config as any)?.rule;
@@ -1250,6 +1250,34 @@ export const appRouter = router({
           isActive: true,
         });
         return strategy;
+      }),
+
+    runBacktest: protectedProcedure
+      .input(z.object({
+        rule: z.record(z.string(), z.any()),
+        stake: z.number().default(1),
+        tickCount: z.number().default(1000),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const rule = input.rule;
+        if (!rule || !rule.symbol) {
+          throw new TRPCError({ code: "BAD_REQUEST", message: "Strategy rule must include a symbol" });
+        }
+        // Fetch live tick history
+        let ticks: { price: number; timestamp: number }[] = [];
+        try {
+          const { getTickHistory } = await import("./aitools");
+          const liveTicks = await getTickHistory(rule.symbol, Math.min(input.tickCount, 2000));
+          ticks = liveTicks.map((t) => ({ price: t.price, timestamp: t.timestamp }));
+        } catch {
+          const rows = await db.getTickHistory(rule.symbol, Math.min(input.tickCount, 2000));
+          if (rows.length < 50) throw new TRPCError({ code: "BAD_REQUEST", message: "Insufficient tick data" });
+          ticks = rows.map((r: any) => ({ price: Number(r.price), timestamp: Number(r.epoch) * 1000 }));
+        }
+        if (ticks.length < 50) throw new TRPCError({ code: "BAD_REQUEST", message: "Insufficient tick data" });
+        const { runBacktest } = await import("./backtest");
+        const result = await runBacktest(ticks, rule, input.stake, rule.symbol);
+        return { ...result, symbol: rule.symbol };
       }),
 
     backtestCompare: protectedProcedure

@@ -118,8 +118,8 @@ export class SettlementTracker {
     // true on buy but never reset on settlement).
     if (trade.botRunId) {
       try {
-        botRunner.updateTradeStats(String(trade.botRunId), trade.userId, profit);
-        botRunner.setOpenTrade(String(trade.botRunId), trade.userId, false);
+        await botRunner.updateTradeStats(String(trade.botRunId), trade.userId, profit);
+        await botRunner.setOpenTrade(String(trade.botRunId), trade.userId, false);
       } catch {
         /* non-critical */
       }

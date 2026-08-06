@@ -270,6 +270,10 @@ export async function createApp() {
         const { startExecutionEngine } = await import("../executionEngine");
         startExecutionEngine();
       } catch (e) { logger.error("[startup] ExecutionEngine failed", { error: String(e) }); }
+      try {
+        const { botRunner } = await import("../botRunner");
+        await botRunner.restoreFromDb();
+      } catch (e) { logger.error("[startup] BotRunner restore failed", { error: String(e) }); }
     })();
   }
 

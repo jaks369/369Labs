@@ -23,7 +23,8 @@ import {
   ArrowDown,
   Download,
   Upload,
-  LayoutTemplate
+  LayoutTemplate,
+  BarChart3
 } from "lucide-react";
 import { useLocation, useSearch } from "wouter";
 import RuleBuilder, { StrategyRule, DEFAULT_RULE, summarizeRule } from "@/components/RuleBuilder";
@@ -152,6 +153,12 @@ export function StrategyBuilderContent({ embedded = false, onClose, onSaved }: S
   const templatesQuery = trpc.strategies.templates.useQuery();
   const importRuleMutation = trpc.strategies.importRule.useMutation({
     onSuccess: () => { strategiesQuery.refetch(); toast("Strategy imported successfully!", "success"); },
+  });
+  const backtestMutation = trpc.strategies.runBacktest.useMutation({
+    onSuccess: (data) => {
+      toast(`Backtest: ${data.winRate}% win rate, ${data.totalTrades} trades, PF ${data.profitFactor}, DD ${data.maxDrawdown.toFixed(2)}`, "success");
+    },
+    onError: (err) => toast(err.message || "Backtest failed", "error"),
   });
 
   const search = useSearch();
@@ -477,6 +484,9 @@ export function StrategyBuilderContent({ embedded = false, onClose, onSaved }: S
                    <button onClick={() => setBuilderMode("ensemble")} className={`px-3 py-1.5 text-sm font-medium rounded-lg transition-colors ${builderMode === "ensemble" ? "bg-[var(--accent)] text-black" : "text-[var(--text-muted)] hover:bg-[var(--surface-elevated)]"}`}>ENSEMBLE</button>
                    <button onClick={() => setShowHistory((v) => !v)} className={`px-3 py-1.5 text-sm font-medium rounded-lg transition-colors ${showHistory ? "bg-[var(--accent)] text-black" : "text-[var(--text-muted)] hover:bg-[var(--surface-elevated)]"}`}><GitCompare className="w-3.5 h-3.5 inline mr-1" />HISTORY</button>
                    <button onClick={() => critiqueMutation.mutate({ rule: buildConfig().rule })} className={`px-3 py-1.5 text-sm font-medium rounded-lg transition-colors ${critiqueMutation.isPending ? "opacity-50" : "text-[var(--green)] border border-[var(--green)]/30 hover:bg-[var(--green)]/10"}`}><ShieldCheck className="w-3.5 h-3.5 inline mr-1" />AI REVIEW</button>
+                   <Button onClick={() => backtestMutation.mutate({ rule: buildConfig().rule, stake: 1, tickCount: 1000 })} disabled={backtestMutation.isPending} className="px-3 py-1.5 text-sm font-medium rounded-lg transition-colors text-[var(--accent)] border border-[var(--accent)]/30 hover:bg-[var(--accent)]/10 disabled:opacity-50" variant="ghost">
+                     <BarChart3 className="w-3.5 h-3.5 inline mr-1" />BACKTEST
+                   </Button>
                  </div>
                </div>
 
