@@ -2243,28 +2243,42 @@ watch: protectedProcedure
   }),
   market: router({
     getHistory: publicProcedure
-      .input(z.object({ symbol: z.string(), limit: z.number().default(1000) }))
+      .input(z.object({ symbols: z.array(z.string()).optional(), symbol: z.string().optional(), limit: z.number().default(1000) }))
       .query(async ({ input }) => {
+        const symbols = input.symbols || (input.symbol ? [input.symbol] : []);
+        if (symbols.length === 0) return { ticks: [] };
         // Try live Deriv tick history first (fresh data), fall back to DB
         try {
           const { getTickHistory } = await import("./aitools");
-          const liveTicks = await getTickHistory(input.symbol, Math.min(input.limit, 2000));
-          return { ticks: liveTicks.map((t) => ({
-            symbol: input.symbol,
-            price: t.price,
-            lastDigit: 0, // computed client-side from price
-            epoch: Math.floor(t.timestamp / 1000),
-          })) };
+          const allTicks: any[] = [];
+          for (const sym of symbols) {
+            const liveTicks = await getTickHistory(sym, Math.min(input.limit, 2000));
+            for (const t of liveTicks) {
+              allTicks.push({
+                symbol: sym,
+                price: t.price,
+                lastDigit: 0,
+                epoch: Math.floor(t.timestamp / 1000),
+              });
+            }
+          }
+          return { ticks: allTicks };
         } catch {
           // Fallback to DB (stale data)
           try {
-            const rows = await db.getTickHistory(input.symbol, input.limit);
-            return { ticks: rows.map((r) => ({
-              symbol: r.symbol,
-              price: r.price,
-              lastDigit: r.lastDigit,
-              epoch: Number(r.epoch),
-            })) };
+            const allTicks: any[] = [];
+            for (const sym of symbols) {
+              const rows = await db.getTickHistory(sym, input.limit);
+              for (const r of rows) {
+                allTicks.push({
+                  symbol: r.symbol,
+                  price: r.price,
+                  lastDigit: r.lastDigit,
+                  epoch: Number(r.epoch),
+                });
+              }
+            }
+            return { ticks: allTicks };
           } catch {
             return { ticks: [] };
           }

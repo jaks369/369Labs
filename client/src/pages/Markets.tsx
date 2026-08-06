@@ -44,13 +44,29 @@ export default function Markets() {
   const prevRef = useRef<Record<string, number>>({});
   const tickBufferRef = useRef<Record<string, any>>({});
   const rafIdRef = useRef<number | null>(null);
+  const [initialLoading, setInitialLoading] = useState(true);
 
   const healthQuery = trpc.aiMarket.overview.useQuery(void 0, { refetchInterval: 60000 });
   const signalsQuery = trpc.signals.list.useQuery(void 0, { refetchInterval: 60000 });
+  const historyQuery = trpc.market.getHistory.useQuery({ symbols: SYMBOLS, limit: 1 }, { staleTime: 30000 });
 
   useEffect(() => {
     if (!isAuthenticated) navigate("/");
   }, [isAuthenticated, navigate]);
+
+  // Fetch initial prices for all symbols so the table isn't all dashes while live ticks connect
+  useEffect(() => {
+    if (!historyQuery.data?.ticks) return;
+    const initial: typeof live = {};
+    for (const tick of historyQuery.data.ticks) {
+      if (!initial[tick.symbol]) {
+        initial[tick.symbol] = { price: tick.price, change: 0, spark: [tick.price] };
+        prevRef.current[tick.symbol] = tick.price;
+      }
+    }
+    setLive(initial);
+    setInitialLoading(false);
+  }, [historyQuery.data]);
 
   useEffect(() => {
     const subs = SYMBOLS.map((sym) => derivWS.subscribe(sym));
@@ -79,6 +95,20 @@ export default function Markets() {
     derivWS.addListener(listener);
     return () => { derivWS.removeListener(listener); subs.forEach((id) => derivWS.unsubscribe(id)); if (rafIdRef.current) cancelAnimationFrame(rafIdRef.current); };
   }, []);
+
+  // Loading overlay while initial prices load
+  if (initialLoading) {
+    return (
+      <PageContainer className="page-container">
+        <div className="flex items-center justify-center h-[60vh]">
+          <div className="text-center">
+            <div className="w-10 h-10 border-4 border-[var(--accent)] border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+            <p className="text-[var(--text-muted)]">Loading market data...</p>
+          </div>
+        </div>
+      </PageContainer>
+    );
+  }
 
   const healthMap = useMemo(() => {
     const m: Record<string, any> = {};
