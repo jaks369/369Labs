@@ -110,6 +110,15 @@ export async function createApp() {
 const rateBuckets: Record<string, { count: number; reset: number }> = {};
 let redisClient: any = null;
 
+// Periodically prune expired in-memory buckets so the map cannot grow without
+// bound (attackers rotating spoofable keys previously grew it indefinitely).
+setInterval(() => {
+  const now = Date.now();
+  for (const [key, b] of Object.entries(rateBuckets)) {
+    if (now > b.reset) delete rateBuckets[key];
+  }
+}, 60_000).unref?.();
+
 async function initRedis(): Promise<void> {
   try {
     // Use require to allow optional Redis dependency at compile time
@@ -172,21 +181,24 @@ async function rateLimitRedis(key: string, limit: number, windowMs: number): Pro
 }
 
 const RATE = (limit: number, windowMs: number) => async (req: any, res: any, next: any) => {
-  const ip = req.headers["x-forwarded-for"]?.toString().split(",")[0]?.trim() || req.socket?.remoteAddress || "unknown";
-  const apiKey = req.headers.authorization?.startsWith("Bearer ") ? req.headers.authorization.slice(7).slice(0, 16) : "";
-  const key = apiKey ? `key:${apiKey}` : `ip:${ip}`;
-  
+  // Use req.ip (resolved from the trusted proxy). Reading the raw X-Forwarded-For
+  // header here allowed clients to spoof it and rotate the header to bypass the
+  // limiter. Also drop the JWT-header-prefix bucket: every HS256 token shares the
+  // same header prefix, so all authenticated clients collided into ONE bucket.
+  const ip = req.ip || req.socket?.remoteAddress || "unknown";
+  const key = `ip:${ip}`;
+
   const { allowed, remaining, reset } = await rateLimitRedis(key, limit, windowMs);
-  
+
   res.setHeader("X-RateLimit-Limit", limit);
   res.setHeader("X-RateLimit-Remaining", remaining);
   res.setHeader("X-RateLimit-Reset", Math.ceil(reset / 1000));
-  
-  if (!allowed) { 
+
+  if (!allowed) {
     req.log?.warn("Rate limit exceeded", { limit, windowMs, ip });
     res.setHeader("Retry-After", Math.ceil((reset - Date.now()) / 1000));
-    res.status(429).json({ error: "Too many requests, slow down." }); 
-    return; 
+    res.status(429).json({ error: "Too many requests, slow down." });
+    return;
   }
   next();
 };
@@ -337,6 +349,14 @@ const RATE = (limit: number, windowMs: number) => async (req: any, res: any, nex
         }
       } catch (e) { logger.error("[Shutdown] DB pool close failed", { error: String(e) }); }
       
+      // Close Redis connection
+      try {
+        if (redisClient) {
+          await redisClient.disconnect().catch(() => {});
+          logger.info("[Shutdown] Redis disconnected");
+        }
+      } catch (e) { logger.error("[Shutdown] Redis disconnect failed", { error: String(e) }); }
+
       logger.info("[Shutdown] Graceful shutdown complete");
       process.exit(0);
     };

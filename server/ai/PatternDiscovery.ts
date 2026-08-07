@@ -120,6 +120,12 @@ export class PatternDiscovery {
         continue;
       }
     }
+    // Keep only the latest pattern insights per user to prevent unbounded growth
+    try {
+      await db.pruneAiKnowledge(userId, AIKnowledgeType.PATTERN_INSIGHT, 500);
+    } catch {
+      /* non-critical */
+    }
   }
 
   async getLatestPatterns(userId: number): Promise<PatternFinding[]> {

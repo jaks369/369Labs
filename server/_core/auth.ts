@@ -148,7 +148,9 @@ export async function authenticateRequest(req: Request): Promise<{ user: Sanitiz
     // table may not exist
   }
   if (whitelist.length > 0) {
-    const clientIp = req.headers["x-forwarded-for"]?.toString().split(",")[0]?.trim() || req.socket?.remoteAddress || "";
+    // Use req.ip (Express resolves it from the trusted proxy) instead of the
+    // raw X-Forwarded-For header, which clients can spoof to bypass the check.
+    const clientIp = req.ip || req.socket?.remoteAddress || "";
     const matched = whitelist.some(e => clientIp === e.ip);
     if (!matched) {
       console.log(`[auth] FAIL ip not whitelisted: ${clientIp}`);

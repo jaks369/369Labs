@@ -67,6 +67,15 @@ export class SettlementTracker {
             console.error("[SettlementTracker] Failed to mark trade as stuck:", e?.message || e);
           }
           console.warn(`[SettlementTracker] Trade #${tradeId} marked stuck after ${MAX_RETRIES} retries`);
+          // Release the bot's open-trade lock so it is not left inert forever.
+          if (trade.botRunId) {
+            try {
+              await botRunner.setOpenTrade(String(trade.botRunId), trade.userId, false);
+            } catch (e: any) {
+              console.error("[SettlementTracker] Failed to release bot open-trade lock:", e?.message || e);
+            }
+          }
+          this.retryCount.delete(tradeId);
           continue;
         }
         stats.processed++;
@@ -91,7 +100,7 @@ export class SettlementTracker {
     if (!trade.contractId) return;
 
     const conn = await derivManager.ensureConnected(trade.userId);
-    if (!conn) return;
+    if (!conn) throw new Error("no_deriv_connection");
 
     const c = await conn.getContractStatus(parseInt(trade.contractId));
     if (!c) throw new Error("contract_status_unavailable");
@@ -111,7 +120,7 @@ export class SettlementTracker {
       exitTime: exitTick ? new Date(exitTick * 1000) : new Date(),
     });
 
-    if (!updated) return;
+    if (!updated) throw new Error("settle_trade_failed");
 
     this.retryCount.delete(trade.id);
 

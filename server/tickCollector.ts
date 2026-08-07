@@ -37,6 +37,7 @@ export function getFeedHealth(): { stale: boolean; lastTickEpoch: number; consec
 let msgId = 1;
 let reconnectAttempts = 0;
 let isIntentionallyStopped = false;
+let watchdog: ReturnType<typeof setInterval> | null = null;
 
 async function fetchActiveSymbols(): Promise<string[]> {
   return new Promise((resolve) => {
@@ -71,6 +72,10 @@ function subscribeSymbol(symbol: string) {
 export function stopTickCollector() {
   isIntentionallyStopped = true;
   reconnectAttempts = 0;
+  if (watchdog) {
+    clearInterval(watchdog);
+    watchdog = null;
+  }
   if (ws) {
     ws.close();
     ws = null;
@@ -81,6 +86,21 @@ export function stopTickCollector() {
 export function startTickCollector() {
   if (started) return;
   started = true;
+  // Watchdog: feedStale is only updated inside the message handler. If the WS
+  // dies silently (or reconnect gives up) no message ever arrives, so without
+  // this timer feedStale would stay false and bots would trade on hours-old data.
+  if (!watchdog) {
+    watchdog = setInterval(() => {
+      const nowSec = Math.floor(Date.now() / 1000);
+      if (lastAnyTickEpoch > 0 && nowSec - lastAnyTickEpoch > STALE_THRESHOLD_SECONDS) {
+        if (!feedStale) {
+          console.warn(`[tickCollector] No ticks for ${nowSec - lastAnyTickEpoch}s — marking feed STALE`);
+        }
+        feedStale = true;
+        consecutiveHealthySeconds = 0;
+      }
+    }, 5000);
+  }
   try {
     ws = new WebSocket(DERIV_WS_PUBLIC);
     ws.on("open", async () => {
@@ -141,6 +161,8 @@ export function startTickCollector() {
       
       if (reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
         console.error(`[tickCollector] Max reconnect attempts (${MAX_RECONNECT_ATTEMPTS}) reached. Stopping.`);
+        feedStale = true;
+        consecutiveHealthySeconds = 0;
         return;
       }
       
@@ -153,7 +175,9 @@ export function startTickCollector() {
       console.log(`[tickCollector] Scheduling reconnect attempt ${reconnectAttempts}/${MAX_RECONNECT_ATTEMPTS} in ${Math.round(delay)}ms`);
       
       setTimeout(() => {
-        reconnectAttempts = 0; // Reset on successful reconnect
+        // Do NOT reset reconnectAttempts here — reset happens in the on("open")
+        // handler only after a real connection succeeds, so a flapping feed
+        // actually reaches MAX_RECONNECT_ATTEMPTS and stops hammering the API.
         consecutiveHealthySeconds = 0; // Reset hysteresis counter
         startTickCollector();
       }, delay);

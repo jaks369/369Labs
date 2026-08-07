@@ -90,21 +90,11 @@ class BotRunner {
         lastDailyReset: now,
       };
       this.bots.set(opts.id, runtime);
-      
-      // Persist to DB with safety config
-      try {
-        await db.saveBotRun({ 
-          userId: opts.userId, 
-          strategyId: opts.strategyId!, 
-          status: "running",
-          safety: opts.safety || {},
-          lossStreak: 0,
-          hasOpenTrade: false,
-          lastDailyReset: new Date(now),
-        });
-      } catch (e) {
-        console.error("[botRunner] Failed to save bot run:", e);
-      }
+
+      // NOTE: the botRuns row is created by the caller (routers.ts) and its id is
+      // passed in opts.id. We must NOT insert another row here — doing so created
+      // an orphaned duplicate that stayed "running" forever, so restoreFromDb
+      // revived each bot as two live bots with safety limits disabled.
     } finally {
       release();
     }

@@ -182,9 +182,9 @@ describe("SettlementTracker — reconcile", () => {
     expect(mockEnsureConnected).not.toHaveBeenCalled();
   });
 
-  it("returns early if no Deriv connection", async () => {
+  it("throws if no Deriv connection (so retry count increments and trade is reaped as stuck)", async () => {
     mockEnsureConnected.mockResolvedValue(null);
-    await (tracker as any).reconcile(makeTrade());
+    await expect((tracker as any).reconcile(makeTrade())).rejects.toThrow("no_deriv_connection");
     expect(mockGetContractStatus).not.toHaveBeenCalled();
   });
 
@@ -265,10 +265,10 @@ describe("SettlementTracker — reconcile", () => {
     vi.useRealTimers();
   });
 
-  it("does not call AI hub if settleTrade returns null", async () => {
+  it("throws if settleTrade returns null (so retry count increments and trade is reaped as stuck)", async () => {
     mockGetContractStatus.mockResolvedValue(makeContractResponse());
     mockSettleTrade.mockResolvedValue(null);
-    await (tracker as any).reconcile(makeTrade());
+    await expect((tracker as any).reconcile(makeTrade())).rejects.toThrow("settle_trade_failed");
     expect(mockSettleTrade).toHaveBeenCalled();
   });
 });

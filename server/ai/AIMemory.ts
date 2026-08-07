@@ -77,6 +77,8 @@ export class AIMemory {
         confidence: String(prediction?.confidence ?? 0),
         source: "AIMemory",
       });
+      // Keep only the latest accuracy entries to prevent unbounded growth
+      await db.pruneAiKnowledge(userId, AIKnowledgeType.ACCURACY_LOG, 1000);
     } catch {
       /* accuracy logging is non-critical */
     }
@@ -118,6 +120,8 @@ export class AIMemory {
         relatedStrategyId: context.strategyId,
         source: "AIMemory",
       });
+      // Keep only the latest trade contexts to prevent unbounded growth
+      await db.pruneAiKnowledge(userId, AIKnowledgeType.TRADE_CONTEXT, 1000);
     } catch {
       /* non-critical */
     }

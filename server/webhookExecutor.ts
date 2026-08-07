@@ -56,31 +56,50 @@ async function checkSafeURL(urlStr: string): Promise<SafeURLResult | null> {
   }
 }
 
+// Fetch that refuses redirects to internal/private targets. undici's fetch
+// follows redirects by default, so a malicious webhook endpoint could 302 the
+// server to 169.254.169.254 (cloud metadata) or internal hosts. We follow up to
+// MAX_REDIRECTS hops manually and re-run the private-IP check on every Location.
+const MAX_REDIRECTS = 3;
+
+async function safeFetch(urlStr: string, options: RequestInit): Promise<Response> {
+  let current = urlStr;
+  for (let hop = 0; hop <= MAX_REDIRECTS; hop++) {
+    const check = await checkSafeURL(current);
+    if (!check) throw new Error("URL failed safety check");
+
+    const targetIP = check.resolvedIPs[0];
+    const targetURL = `${check.protocol}//${targetIP}${check.path}`;
+    const headers = { ...options.headers, Host: check.hostname } as Record<string, string>;
+
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 10000);
+    let response: Response;
+    try {
+      response = await fetch(targetURL, { ...options, signal: controller.signal, headers, redirect: "manual" });
+    } finally {
+      clearTimeout(timeout);
+    }
+
+    const status = response.status;
+    if (status >= 300 && status < 400) {
+      const location = response.headers.get("location");
+      await response.body?.cancel().catch(() => {});
+      if (!location) throw new Error(`Redirect without Location (HTTP ${status})`);
+      current = new URL(location, current).toString();
+      continue;
+    }
+    return response;
+  }
+  throw new Error("Too many redirects");
+}
+
 // Retry with exponential backoff using resolved IP
 async function fetchWithRetry(urlStr: string, options: RequestInit, maxRetries = 3, baseDelay = 1000): Promise<Response> {
-  const check = await checkSafeURL(urlStr);
-  if (!check) throw new Error("URL failed safety check");
-  
-  // Use first resolved IP, set Host header to original hostname for TLS SNI
-  const targetIP = check.resolvedIPs[0];
-  const isHttps = check.protocol === "https:";
-  const targetURL = `${check.protocol}//${targetIP}${check.path}`;
-  
-  const headers = { ...options.headers, Host: check.hostname } as Record<string, string>;
-  
   let lastError: Error | null = null;
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     try {
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 10000);
-      
-      const response = await fetch(targetURL, { 
-        ...options, 
-        signal: controller.signal,
-        headers,
-      });
-      clearTimeout(timeout);
-      
+      const response = await safeFetch(urlStr, options);
       if (response.status >= 500) {
         throw new Error(`HTTP ${response.status}`);
       }
@@ -134,58 +153,38 @@ async function attemptDelivery(deliveryId: number, url: string, body: string): P
     try {
       // Update attempt count
       await db.updateWebhookDelivery(deliveryId, { attempts: attempt });
-      
-      // Check URL safety
-      const check = await checkSafeURL(url);
-      if (!check) {
-        await db.updateWebhookDelivery(deliveryId, { 
-          status: "dead", 
-          lastError: "URL failed safety check",
-        });
-        return;
-      }
-      
-      // Use first resolved IP, set Host header to original hostname for TLS SNI
-      const targetIP = check.resolvedIPs[0];
-      const isHttps = check.protocol === "https:";
-      const targetURL = `${check.protocol}//${targetIP}${check.path}`;
-      
-      const headers = { "Content-Type": "application/json", Host: check.hostname } as Record<string, string>;
-      
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 10000);
-      
-      const response = await fetch(targetURL, { 
+
+      const headers = { "Content-Type": "application/json" } as Record<string, string>;
+
+      const response = await safeFetch(url, {
         method: "POST",
         headers,
         body,
-        signal: controller.signal,
       });
-      clearTimeout(timeout);
-      
+
       if (response.status >= 500) {
         throw new Error(`HTTP ${response.status}`);
       }
-      
+
       // Success!
-      await db.updateWebhookDelivery(deliveryId, { 
-        status: "delivered", 
+      await db.updateWebhookDelivery(deliveryId, {
+        status: "delivered",
         deliveredAt: new Date(),
       });
       return;
-      
+
     } catch (e: any) {
       console.warn(`[webhookExecutor] Delivery attempt ${attempt} failed for ${url}:`, e?.message || e);
-      
+
       if (attempt < 5) {
         const delay = 1000 * Math.pow(2, attempt - 1) + Math.random() * 1000;
         await new Promise(r => setTimeout(r, delay));
         continue;
       }
-      
+
       // Max attempts reached - mark as dead
-      await db.updateWebhookDelivery(deliveryId, { 
-        status: "dead", 
+      await db.updateWebhookDelivery(deliveryId, {
+        status: "dead",
         lastError: e?.message || String(e),
       });
     }

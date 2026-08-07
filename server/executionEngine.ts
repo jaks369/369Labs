@@ -10,6 +10,7 @@ const MAX_PIPELINE_TRADES = 50; // max trades in one cycle globally
 const MAX_CONCURRENT_BOTS_PER_USER = 10; // max concurrent running bots per user
 
 let intervalId: ReturnType<typeof setInterval> | null = null;
+let cycleRunning = false;
 
 function evaluateCondition(rule: any, prices: number[], digits: number[], idx: number): boolean {
   const cond = rule?.condition;
@@ -52,6 +53,18 @@ function evaluateCondition(rule: any, prices: number[], digits: number[], idx: n
 }
 
 async function executeBotCycle(): Promise<void> {
+  // Re-entrancy guard: prevent overlapping cycles (a slow cycle must never
+  // run concurrently with the next one, or the same bot could place two buys).
+  if (cycleRunning) return;
+  cycleRunning = true;
+  try {
+    await executeBotCycleInner();
+  } finally {
+    cycleRunning = false;
+  }
+}
+
+async function executeBotCycleInner(): Promise<void> {
   if (isFeedStale()) return;
 
   const allBots = botRunner.listAll();
@@ -127,15 +140,15 @@ async function executeBotCycle(): Promise<void> {
     const prices = ticks.map((t) => t.price);
     const digits = ticks.map((t) => t.lastDigit);
 
-    // Evaluate the last N ticks
+    // Evaluate the most recent tick only. A strategy condition is a windowed
+    // predicate (evaluateCondition already looks back over consecutive/appears
+    // windows internally), so we evaluate against the newest price — never a
+    // stale tick from many seconds ago, which would trigger buys on an expired
+    // signal with a wrong recorded entry price.
     let triggered = false;
-    let triggerIdx = -1;
-    for (let i = Math.max(0, prices.length - 10); i < prices.length; i++) {
-      if (evaluateCondition(rule, prices, digits, i)) {
-        triggered = true;
-        triggerIdx = i;
-        break;
-      }
+    let triggerIdx = prices.length - 1;
+    if (evaluateCondition(rule, prices, digits, triggerIdx)) {
+      triggered = true;
     }
     if (!triggered) continue;
 
@@ -197,27 +210,36 @@ async function executeBotCycle(): Promise<void> {
         continue;
       }
 
-      // Track open contract
+      // Record the trade as pending FIRST (settlement happens in SettlementTracker).
+      // If this save fails we must NOT set hasOpenTrade=true, otherwise the bot is
+      // locked forever with a live contract that has no DB row to settle.
+      try {
+        await db.saveTrade({
+          userId: bot.def.userId,
+          symbol,
+          contractType,
+          stake: String(stake),
+          entryPrice: String(entryPrice),
+          result: "pending",
+          contractId: String(buy.buy.contract_id),
+          entryTime: new Date(),
+          botRunId: (() => {
+            const parsed = parseInt(bot.def.id, 10);
+            if (isNaN(parsed)) {
+              console.error(`[ExecutionEngine] Invalid bot run ID: ${bot.def.id} (must be numeric)`);
+              return undefined;
+            }
+            return parsed;
+          })(),
+        });
+      } catch (e: any) {
+        console.error(`[ExecutionEngine] CRITICAL: contract ${buy.buy.contract_id} was bought on Deriv but the DB save failed for bot ${bot.def.id}. Not locking the bot.`, e?.message || e);
+        fireWebhookEvent(bot.def.userId, "trade.error", { botId: bot.def.id, symbol, stake, contractId: buy.buy.contract_id, reason: "db_save_failed" }).catch(() => {});
+        continue;
+      }
+
+      // Track open contract only after the pending row is safely recorded
       botRunner.setOpenTrade(bot.def.id, bot.def.userId, true);
-      // Record the trade as pending (settlement happens in SettlementTracker)
-      await db.saveTrade({
-        userId: bot.def.userId,
-        symbol,
-        contractType,
-        stake: String(stake),
-        entryPrice: String(entryPrice),
-        result: "pending",
-        contractId: String(buy.buy.contract_id),
-        entryTime: new Date(),
-        botRunId: (() => {
-          const parsed = parseInt(bot.def.id, 10);
-          if (isNaN(parsed)) {
-            console.error(`[ExecutionEngine] Invalid bot run ID: ${bot.def.id} (must be numeric)`);
-            return undefined;
-          }
-          return parsed;
-        })(),
-      });
       fireWebhookEvent(bot.def.userId, "trade.executed", { botId: bot.def.id, symbol, stake, contractId: buy.buy.contract_id }).catch(() => {});
       traded++;
     } catch (e: any) {

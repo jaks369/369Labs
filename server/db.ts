@@ -237,9 +237,9 @@ export async function createUser(user: { email: string; passwordHash: string; na
     lastSignedIn: new Date(),
   };
 
-  if (user.email === ENV.ownerEmail) {
-    values.role = "admin";
-  }
+  // SECURITY: do NOT auto-promote signups whose email matches ENV.ownerEmail.
+  // An attacker who registers the owner email first would instantly become admin.
+  // Admin is granted only after the email address is verified (see updateUserEmailVerified).
 
   const result = await db.insert(users).values(values);
   const id = result[0].insertId;
@@ -355,6 +355,21 @@ export async function updateUserEmailVerified(userId: number, verified?: boolean
     .update(users)
     .set({ emailVerified: verified ?? true })
     .where(eq(users.id, userId));
+  // Once the email is verified, promote the owner address to admin. This is safe
+  // because it now requires owning the inbox (email verification), unlike the old
+  // behavior which granted admin at signup before any verification.
+  if (verified !== false && ENV.ownerEmail) {
+    try {
+      const user = (
+        await db.select().from(users).where(eq(users.id, userId)).limit(1)
+      )[0];
+      if (user && user.email === ENV.ownerEmail && user.role !== "admin") {
+        await db.update(users).set({ role: "admin" }).where(eq(users.id, userId));
+      }
+    } catch (e) {
+      console.error("[db] Failed to promote owner to admin on email verification:", e);
+    }
+  }
 }
 
 export async function updateUserEmail(userId: number, email: string): Promise<void> {

@@ -58,7 +58,7 @@ export const logger = {
 export function createRequestLogger(req: any): typeof logger {
   const correlationId = req.headers["x-correlation-id"] || req.headers["x-request-id"] || generateCorrelationId();
   const userId = req.user?.id;
-  const ip = req.headers["x-forwarded-for"]?.toString().split(",")[0]?.trim() || req.socket?.remoteAddress || "unknown";
+  const ip = req.ip || req.socket?.remoteAddress || "unknown";
   const path = req.url;
   const method = req.method;
 

@@ -34,11 +34,21 @@ export function listFiles(dir: string = "."): string[] {
 }
 
 export function readFile(p: string): string {
-  if (!ALLOWED.test(p)) throw new Error("File not allowed");
-  return fs.readFileSync(safeResolve(p), "utf8");
+  return fs.readFileSync(assertAllowedPath(p), "utf8");
 }
 
 export function writeFile(p: string, content: string): void {
-  if (!ALLOWED.test(p)) throw new Error("File not allowed");
-  fs.writeFileSync(safeResolve(p), content, "utf8");
+  fs.writeFileSync(assertAllowedPath(p), content, "utf8");
+}
+
+// Validate an allowlisted path AFTER resolving it. The regex allowlist alone was
+// bypassable: "client/../.env" passes ^(client/) but resolves to ROOT/.env. So we
+// resolve the path first and check the resolved relative path against the allowlist.
+export function assertAllowedPath(p: string): string {
+  const resolved = safeResolve(p);
+  const rel = path.relative(ROOT, resolved).split(path.sep).join("/");
+  if (!ALLOWED.test(rel)) {
+    throw new Error("File not allowed");
+  }
+  return resolved;
 }
