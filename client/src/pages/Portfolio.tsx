@@ -210,13 +210,13 @@ export default function Portfolio() {
                     </thead>
                     <tbody>
                       {openPositions.map((p: any) => {
-                        const pnl = parseFloat(p.profitLoss?.toString() || "0");
+                        const pnl = parseFloat(p.profit?.toString() || "0");
                         return (
                           <tr key={p.contractId || p.id} className="border-b border-[var(--border)]/50 hover:bg-white/5 transition-colors">
                             <td className="py-3 px-4 font-bold text-white">{p.symbol || p.display_name ? getSymbolDisplayName(p.symbol || p.display_name) : "-"}</td>
                             <td className="py-3 px-4 text-right text-xs">{p.contractType || p.contract_type || "CALL"}</td>
-                            <td className="py-3 px-4 text-right font-mono tabular-nums">{formatMoney(p.stake || 0, balanceInfo?.currency)}</td>
-                            <td className="py-3 px-4 text-right font-mono tabular-nums">{p.buyPrice != null ? formatNumber(Number(p.buyPrice), 2) : "-"}</td>
+                            <td className="py-3 px-4 text-right font-mono tabular-nums">{formatMoney(p.buyPrice ?? p.stake ?? 0, balanceInfo?.currency)}</td>
+                            <td className="py-3 px-4 text-right font-mono tabular-nums">{p.entryPrice != null ? formatNumber(Number(p.entryPrice), 2) : "-"}</td>
                             <td className="py-3 px-4 text-right font-mono tabular-nums">{p.currentPrice != null ? formatNumber(Number(p.currentPrice), 2) : "-"}</td>
                             <td className={`py-3 px-4 text-right font-bold ${pnl >= 0 ? "text-[var(--green)]" : "text-[var(--red)]"}`}>
                               <SignedCurrencyStat value={pnl} currency={balanceInfo?.currency || "USD"} />

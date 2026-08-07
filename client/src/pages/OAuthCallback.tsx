@@ -16,8 +16,15 @@ export default function OAuthCallback() {
     } else if (error === "callback_failed") {
       navigate("/login?oauth_error=callback_failed");
     } else if (provider) {
-      // If there's a provider param, the server is about to redirect us
-      // Wait a moment then redirect to login in case of failure
+      // If a code is present, exchange it server-side. This covers providers
+      // still configured with the old redirect_uri pointing at this SPA page.
+      const code = searchParams.get("code");
+      if (code) {
+        window.location.assign(`/api/auth/callback?${searchParams.toString()}`);
+        return;
+      }
+      // Otherwise the server is about to redirect us. Wait a moment then
+      // redirect to login in case of failure.
       const timer = setTimeout(() => navigate("/login?oauth_error=no_code"), 5000);
       return () => clearTimeout(timer);
     }

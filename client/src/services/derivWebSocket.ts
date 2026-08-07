@@ -215,8 +215,9 @@ class DerivWebSocketService {
       this.ws.onclose = () => {
         console.log("[Deriv WS] Disconnected");
         this.authorized = false;
-        this.subscribedSymbols.clear();
-        this.pendingSubscriptionSymbols = [];
+        // Keep subscribedSymbols/pendingSubscriptionSymbols intact so the
+        // reconnect's onopen can restore live tick feeds (charts/bots would
+        // otherwise go permanently dark after a drop).
         this.retryTimers.forEach((t) => clearTimeout(t));
         this.retryTimers.clear();
         this.notifyDisconnect();
@@ -807,7 +808,12 @@ class DerivWebSocketService {
       this.reconnectAttempts++;
       console.log(`[Deriv WS] Reconnect attempt ${this.reconnectAttempts}/${this.maxReconnectAttempts}`);
       const delay = Math.min(this.baseReconnectDelay * 2 ** (this.reconnectAttempts - 1), 10000);
-      setTimeout(() => {
+      const timer = setTimeout(() => {
+        this.retryTimers.delete("main");
+        // Bail out if the user (or a newer connection) disconnected while the
+        // backoff timer was pending — otherwise we'd silently reconnect after
+        // an explicit disconnect().
+        if (this.intentionallyDisconnected) return;
         // Cheap fast path: the OTP URL is still valid for a while, so reopen
         // the authenticated socket directly instead of re-running the two REST
         // calls (fetchAccounts + fetchOtpUrl) that make recovery slow.
@@ -822,6 +828,7 @@ class DerivWebSocketService {
           this.connectPublic();
         }
       }, delay);
+      this.retryTimers.set("main", timer);
     }
   }
 
@@ -1021,6 +1028,8 @@ class DerivWebSocketService {
   }
   public disconnect(): void {
     this.intentionallyDisconnected = true;
+    this.retryTimers.forEach((t) => clearTimeout(t));
+    this.retryTimers.clear();
     this.keepAliveTimers.forEach((t) => clearInterval(t));
     this.keepAliveTimers = [];
     if (this.ws) {

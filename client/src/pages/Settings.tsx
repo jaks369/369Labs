@@ -182,6 +182,14 @@ export default function Settings() {
       setMemStyle(m.style || "");
       setMemNotes(m.notes || "");
       setMemDailyLoss(m.dailyLossLimit != null ? String(m.dailyLossLimit) : "");
+      const savedKeys = m.apiKeys && typeof m.apiKeys === "object" ? m.apiKeys : {};
+      setExternalKeys((prev) => {
+        const next = { ...prev };
+        for (const [k, v] of Object.entries(savedKeys)) {
+          if (v && !next[k]) next[k] = String(v);
+        }
+        return next;
+      });
     }
   }, [memoryQuery.data]);
 

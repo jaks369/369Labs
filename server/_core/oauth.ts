@@ -7,7 +7,9 @@ import { createSessionToken, hashPassword } from "./auth";
 import { COOKIE_NAME, SESSION_MS } from "@shared/const";
 import * as db from "../db";
 
-const OAUTH_REDIRECT = `${ENV.appUrl}/oauth/callback`;
+// The OAuth provider must redirect back to the server endpoint that exchanges
+// the authorization code and sets the session cookie (mounted at /api/auth).
+const OAUTH_REDIRECT = `${ENV.appUrl}/api/auth/callback`;
 
 export const oauthRouter = Router();
 

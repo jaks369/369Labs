@@ -22,6 +22,7 @@ interface Position {
   contractType: string;
   entryPrice: number;
   currentPrice: number;
+  buyPrice: number;
   profit: number;
   isOpen: boolean;
   duration: string;
@@ -209,6 +210,7 @@ class DerivConnection {
       contractType: c.contract_type || "",
       entryPrice: parseFloat(c.entry_tick) || 0,
       currentPrice: parseFloat(c.current_tick) || parseFloat(c.entry_tick) || 0,
+      buyPrice: parseFloat(c.buy_price) || 0,
       profit: parseFloat(c.profit) || 0,
       isOpen: c.is_sold === 0,
       duration: c.duration || "",

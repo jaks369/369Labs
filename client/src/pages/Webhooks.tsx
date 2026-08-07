@@ -15,6 +15,7 @@ export default function WebhooksPage() {
   const { isAuthenticated } = useAuth();
   const [, navigate] = useLocation();
   const [showCreate, setShowCreate] = useState(false);
+  const [createdWebhook, setCreatedWebhook] = useState<any>(null);
   const [url, setUrl] = useState("");
   const [label, setLabel] = useState("");
   const [events, setEvents] = useState<string[]>(["trade.settled"]);
@@ -30,7 +31,10 @@ export default function WebhooksPage() {
 
   const createWebhook = async () => {
     if (!url.trim()) { toast("URL is required", "error"); return; }
-    await createMutation.mutateAsync({ url: url.trim(), events, label: label.trim() || undefined });
+    const created = await createMutation.mutateAsync({ url: url.trim(), events, label: label.trim() || undefined });
+    // The signing secret is returned exactly once — surface it so the recipient
+    // can verify X-Webhook-Signature on deliveries.
+    if (created?.secret) setCreatedWebhook(created);
     toast("Webhook created", "success");
   };
 
@@ -46,6 +50,27 @@ export default function WebhooksPage() {
           </div>
           <button onClick={() => setShowCreate(true)} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[var(--accent)] text-[var(--bg)] text-xs font-bold hover:bg-[var(--accent)]"><Plus className="w-3.5 h-3.5" /> New Webhook</button>
         </div>
+
+        {createdWebhook?.secret && (
+          <div className="bg-[var(--card)] border border-[var(--accent-border)] rounded-xl p-4">
+            <div className="flex items-center justify-between mb-1">
+              <p className="text-xs font-bold text-white">Webhook signing secret (shown once)</p>
+              <button onClick={() => setCreatedWebhook(null)} className="text-[var(--text-muted)] hover:text-white">✕</button>
+            </div>
+            <p className="text-caption text-[var(--text-muted)] mb-2">
+              Use this secret to verify the <code className="text-[var(--accent)]">X-Webhook-Signature</code> header on deliveries to this webhook. It won't be shown again.
+            </p>
+            <div className="flex items-center gap-2">
+              <code className="flex-1 font-mono text-xs text-[var(--accent)] break-all bg-[var(--bg)] border border-[var(--border)] rounded-lg px-3 py-2">{createdWebhook.secret}</code>
+              <button
+                onClick={async () => { try { await navigator.clipboard.writeText(createdWebhook.secret); toast("Secret copied", "success"); } catch { toast("Copy failed", "error"); } }}
+                className="px-3 py-2 rounded-lg bg-[var(--accent)] text-[var(--bg)] text-xs font-bold hover:bg-[var(--accent)]"
+              >
+                Copy
+              </button>
+            </div>
+          </div>
+        )}
 
         {listQuery.isLoading ? (
           <div className="flex justify-center py-8"><Loader2 className="w-5 h-5 animate-spin text-[var(--accent)]" /></div>

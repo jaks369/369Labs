@@ -2372,7 +2372,10 @@ watch: protectedProcedure
     set: protectedProcedure
       .input(z.object({ memory: z.record(z.string(), z.any()) }))
       .mutation(async ({ ctx, input }) => {
-        await db.setUserMemory(ctx.user.id, input.memory);
+        // Merge instead of replacing so partial writes (e.g. saving only the
+        // trader profile or only API keys) don't wipe unrelated memory fields.
+        const current = (await db.getUserMemory(ctx.user.id)) || {};
+        await db.setUserMemory(ctx.user.id, { ...current, ...input.memory });
         await db.saveAuditLog({ userId: ctx.user.id, action: "memory.update", detail: input.memory });
         return { ok: true };
       }),

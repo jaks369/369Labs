@@ -96,19 +96,9 @@ export default function Markets() {
     return () => { derivWS.removeListener(listener); subs.forEach((id) => derivWS.unsubscribe(id)); if (rafIdRef.current) cancelAnimationFrame(rafIdRef.current); };
   }, []);
 
-  // Loading overlay while initial prices load
-  if (initialLoading) {
-    return (
-      <PageContainer className="page-container">
-        <div className="flex items-center justify-center h-[60vh]">
-          <div className="text-center">
-            <div className="w-10 h-10 border-4 border-[var(--accent)] border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-            <p className="text-[var(--text-muted)]">Loading market data...</p>
-          </div>
-        </div>
-      </PageContainer>
-    );
-  }
+  useEffect(() => {
+    if (historyQuery.isError) setInitialLoading(false);
+  }, [historyQuery.isError]);
 
   const healthMap = useMemo(() => {
     const m: Record<string, any> = {};
@@ -167,6 +157,15 @@ export default function Markets() {
 
   return (
     <PageContainer className="page-container">
+      {initialLoading ? (
+        <div className="flex items-center justify-center h-[60vh]">
+          <div className="text-center">
+            <div className="w-10 h-10 border-4 border-[var(--accent)] border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+            <p className="text-[var(--text-muted)]">Loading market data...</p>
+          </div>
+        </div>
+      ) : (
+        <>
       <PageSection>
         <div className="flex flex-col md:flex-row md:items-center gap-3 mb-6">
           <div className="flex items-center gap-2.5">
@@ -307,6 +306,8 @@ export default function Markets() {
           </div>
         </div>
       </PageSection>
+        </>
+      )}
     </PageContainer>
   );
 }
