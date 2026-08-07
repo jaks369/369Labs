@@ -37,7 +37,6 @@ interface ServerBot {
   lossStreak: number;
   hasOpenTrade: boolean;
   symbol: string;
-  backtestWinRate: number | null;
   lastLog?: string;
 }
 
@@ -51,7 +50,6 @@ interface RunningBot {
   trades: number;
   wins: number;
   losses: number;
-  backtestWinRate: number | null;
   lastLog?: string;
 }
 
@@ -112,7 +110,6 @@ export default function Bots() {
           trades: sb.totalTrades,
           wins: 0, // not in listActive response
           losses: 0,
-          backtestWinRate: null,
           lastLog: undefined,
         };
         if (existingIndex >= 0) {
@@ -173,21 +170,6 @@ export default function Bots() {
 
       pushTimeline({ icon: "bot", text: `Bot started: ${strategy.name} on ${rule.symbol || DEFAULT_SYMBOL}` });
       alertTg(`🚀 Bot deployed: ${strategy.name} on ${rule.symbol || DEFAULT_SYMBOL}`);
-
-      // Capture the expected win rate via backtest so we can flag regime drift live.
-      const stake = Number(rule.params?.stake ?? 1);
-      derivWS
-        .fetchTickHistory(rule.symbol || DEFAULT_SYMBOL, Math.floor(Date.now() / 1000) - 7 * 24 * 3600, Math.floor(Date.now() / 1000))
-        .then(async (ticks) => {
-          if (!ticks || ticks.length < 20) return;
-          const { runBacktest } = await import("@/services/BacktestEngine");
-          const res = await runBacktest(ticks, rule, stake, rule.symbol);
-          // Update local state with backtest win rate
-          setRunningBots((prev) => prev.map((b) => (b.runId === botRun.id ? { ...b, backtestWinRate: res.winRate } : b)));
-        })
-        .catch((error) => {
-          // Backtest unavailable (e.g. invalid token) — badge stays hidden
-        });
     } catch (error) {
       toast(error instanceof Error ? error.message : "Failed to deploy bot", "error");
     } finally {

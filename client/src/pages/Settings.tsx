@@ -307,16 +307,6 @@ export default function Settings() {
     }
   };
 
-  const settingsLoading = derivTokenQuery.isLoading || telegramQuery.isLoading || notificationsQuery.isLoading || memoryQuery.isLoading;
-
-  if (settingsLoading) {
-    return (
-      <div className="h-full flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-[var(--accent)]" />
-      </div>
-    );
-  }
-
   const settingsError = derivTokenQuery.isError || telegramQuery.isError || notificationsQuery.isError || memoryQuery.isError;
 
   return (
