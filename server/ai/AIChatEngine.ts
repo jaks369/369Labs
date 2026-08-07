@@ -631,7 +631,10 @@ function buildIntentResponse(intent: string, userId: number, message: string): P
 
 /* = LLM integration = */
 
-let _aiClient: any = null;
+// Cache one LLM client per API key. A single global client cached the first
+// caller's key and served every later user, so per-user OpenAI keys were ignored
+// and all calls billed/authenticated as the first user.
+const _aiClients = new Map<string, any>();
 
 // Resolve an API key: env first (AI_API_KEY / OPENAI_API_KEY), then the user's
 // saved OpenAI key from Settings -> API Keys (stored in AI memory).
@@ -647,14 +650,15 @@ async function resolveAIKey(userId: number): Promise<string> {
 }
 
 async function getAIClient(apiKey: string) {
-  if (!_aiClient) {
-    const mod = await import("groq-sdk");
-    _aiClient = new mod.default({
-      apiKey,
-      ...(process.env.AI_API_BASE_URL ? { baseURL: process.env.AI_API_BASE_URL } : {}),
-    });
-  }
-  return _aiClient;
+  const existing = _aiClients.get(apiKey);
+  if (existing) return existing;
+  const mod = await import("groq-sdk");
+  const client = new mod.default({
+    apiKey,
+    ...(process.env.AI_API_BASE_URL ? { baseURL: process.env.AI_API_BASE_URL } : {}),
+  });
+  _aiClients.set(apiKey, client);
+  return client;
 }
 
 async function llmChatCompletion(client: any, params: any): Promise<string> {

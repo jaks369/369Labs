@@ -42,7 +42,10 @@ export class InsightEngine {
           // Only surface as a candidate when the hot digit clearly dominates the cold one.
           if (spread >= 8) {
             insights.push({
-              id: `digit_bias_${symbol}_${now}`,
+              // Stable content-derived ID (no Date.now): AIOrchestrator dedupes
+              // the live feed by insight.id, so a time-based ID meant the same
+              // bias was re-emitted every poll.
+              id: `digit_bias_${symbol}_${hottest[0]}`,
               market: symbol,
               displayName,
               type: "digit_bias",
@@ -69,7 +72,7 @@ export class InsightEngine {
 
         if (recentStd > std * 1.5 && std > 0) {
           insights.push({
-            id: `vol_spike_${symbol}_${now}`,
+            id: `vol_spike_${symbol}`,
             market: symbol,
             displayName,
             type: "volatility_change",
@@ -80,7 +83,7 @@ export class InsightEngine {
           });
         } else if (recentStd < std * 0.5 && std > 0) {
           insights.push({
-            id: `vol_compress_${symbol}_${now}`,
+            id: `vol_compress_${symbol}`,
             market: symbol,
             displayName,
             type: "volatility_change",
@@ -100,7 +103,7 @@ export class InsightEngine {
 
         if (Math.abs(changePct) > 0.05) {
           insights.push({
-            id: `trend_${symbol}_${now}`,
+            id: `trend_${symbol}`,
             market: symbol,
             displayName,
             type: "momentum_change",

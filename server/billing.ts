@@ -18,8 +18,11 @@ export function stripeConfigured(): boolean {
 }
 
 export function planFromPriceId(priceId: string): string {
+  // Match explicit price IDs only. Previously ANY unknown/empty price ID silently
+  // mapped to "pro", mislabeling unmapped/future plans as a paid tier.
   if (priceId && priceId === ENV.stripePriceEnterprise) return "enterprise";
-  return "pro";
+  if (priceId && priceId === ENV.stripePricePro) return "pro";
+  return "starter";
 }
 
 export async function createCheckoutSession(userId: number, email: string, plan: string) {

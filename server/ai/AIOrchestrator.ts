@@ -205,10 +205,7 @@ export class AIOrchestrator {
   }
 
   addFeedEntry(entry: LiveFeedEntry): void {
-    this.state.feed.push(entry);
-    if (this.state.feed.length > 300) {
-      this.state.feed = this.state.feed.slice(-200);
-    }
+    this.pushFeed(entry);
   }
 
   private pushFeed(entry: LiveFeedEntry): void {

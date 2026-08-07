@@ -10,6 +10,7 @@ import { ENV } from "./_core/env";
 import { sendEmail, buildResetEmail, buildVerificationEmail } from "./_core/email";
 import { getTickHistory, getActiveSymbols, getDigitStats, getTrend, suggestStrategy, TOOL_DEFS, buildActionIntent, normalizeSymbol, detectWatchIntent } from "./aitools";
 import type { PatternType } from "./signalScanner";
+import { lastDigitOf, getDecimalPlaces } from "@shared/lastDigit";
 import { createHmac, timingSafeEqual, randomBytes } from "crypto";
 
 function hexToBase32(hex: string): string {
@@ -297,7 +298,7 @@ async function runTool(name: string, args: any, ctxUser?: any) {
         ]);
         return {
           data: {
-            deriv: { connected: pf.connected, authorized: pf.authorized, account: { loginid: pf.accountType ? undefined : undefined, balance: String(pf.balance), equity: String(pf.equity), currency: pf.currency }, openPositions: (snap?.positions || []).filter((p: any) => p.isOpen), unrealizedPnl: pf.unrealizedPnl },
+            deriv: { connected: pf.connected, authorized: pf.authorized, account: { balance: String(pf.balance), equity: String(pf.equity), currency: pf.currency }, openPositions: (snap?.positions || []).filter((p: any) => p.isOpen), unrealizedPnl: pf.unrealizedPnl },
             portfolio: pf,
             activeStrategies: strategies.map((s: any) => ({ id: s.id, name: s.name, symbol: (s.config as any)?.rule?.symbol })),
             runningBots: bots,
@@ -1082,9 +1083,6 @@ export const appRouter = router({
           published: input.published ?? false,
         });
         db.saveAuditLog({ userId: ctx.user.id, action: "strategy.create", target: String(strategy.id), detail: { name: input.name } }).catch(() => {});
-        import("./ai/StrategyIntelligence").then(async ({ strategyIntelligence }) => {
-          await strategyIntelligence.review(strategy, ctx.user.id).catch(() => {});
-        }).catch(() => {});
         return strategy;
         } catch (error) {
           console.error("[strategies.save] FAILED", error instanceof Error ? error.message : error, "input:", JSON.stringify({ name: input.name, description: input.description, config: input.config, published: input.published }));
@@ -1226,11 +1224,6 @@ export const appRouter = router({
             ...(input.isActive !== undefined ? { isActive: input.isActive } : {}),
           });
           await db.saveAuditLog({ userId: ctx.user.id, action: "strategy.update", target: String(input.id) });
-          if (updated) {
-            import("./ai/StrategyIntelligence").then(async ({ strategyIntelligence }) => {
-              await strategyIntelligence.review(updated, ctx.user.id).catch(() => {});
-            }).catch(() => {});
-          }
           return updated;
         } catch (error) {
           if (error instanceof TRPCError) throw error;
@@ -2328,11 +2321,14 @@ watch: protectedProcedure
           const allTicks: any[] = [];
           for (const sym of symbols) {
             const liveTicks = await getTickHistory(sym, Math.min(input.limit, 2000));
+            const decimals = getDecimalPlaces(sym);
             for (const t of liveTicks) {
               allTicks.push({
                 symbol: sym,
                 price: t.price,
-                lastDigit: 0,
+                // Compute the real last digit for live ticks so results match
+                // the DB fallback path (previously always 0 for live data).
+                lastDigit: lastDigitOf(Number(t.price), decimals),
                 epoch: Math.floor(t.timestamp / 1000),
               });
             }
@@ -2867,86 +2863,11 @@ aiMarket: router({
       const retries = settlementTracker.getRetryCount();
       return { retries: Object.fromEntries(retries) };
     }),
-    aiJournalEntry: protectedProcedure
-      .input(z.object({ title: z.string(), content: z.string(), strategy: z.string().optional() }))
-      .mutation(async ({ input, ctx }) => {
-        const mem = await db.getUserMemory(ctx.user.id);
-        await db.saveAiKnowledge({ userId: ctx.user.id, knowledgeType: "journal", data: { title: input.title, content: input.content, strategy: input.strategy || null } });
-        db.saveAuditLog({ userId: ctx.user.id, action: "ai.journalEntry", detail: { title: input.title } }).catch(() => {});
-        return { ok: true };
-      }),
-    aiAlert: protectedProcedure
-      .input(z.object({ title: z.string(), message: z.string(), severity: z.enum(["info", "warning", "critical"]).default("info") }))
-      .mutation(async ({ input, ctx }) => {
-        const { nanoid } = await import("nanoid");
-        const notification = { id: nanoid(), userId: ctx.user.id, title: input.title, message: input.message, type: "ai_alert", severity: input.severity, read: false, createdAt: new Date().toISOString() };
-        await db.saveAiKnowledge({ userId: ctx.user.id, knowledgeType: "alert", data: { title: input.title, content: input.message, severity: input.severity } });
-        db.saveAuditLog({ userId: ctx.user.id, action: "ai.alert", detail: { title: input.title, severity: input.severity } }).catch(() => {});
-        return { ok: true, notification };
-      }),
-    aiJournalList: protectedProcedure
-      .input(z.object({ limit: z.number().default(50) }))
-      .query(async ({ input, ctx }) => {
-        const all = await db.searchAiKnowledge(ctx.user.id, "", "journal");
-        return { entries: (all || []).slice(0, input.limit) };
-      }),
-    aiAlertList: protectedProcedure
-      .query(async ({ ctx }) => {
-        const all = await db.searchAiKnowledge(ctx.user.id, "", "alert");
-        return { alerts: all || [] };
-      }),
-    aiScheduleList: protectedProcedure
-      .query(async ({ ctx }) => {
-        const all = await db.searchAiKnowledge(ctx.user.id, "", "schedule");
-        return { schedules: all || [] };
-      }),
-    journalUploadImage: protectedProcedure
-      .input(z.object({ noteId: z.number().optional(), imageData: z.string() }))
-      .mutation(async ({ input, ctx }) => {
-        const imgId = Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
-        await db.saveAiKnowledge({ userId: ctx.user.id, knowledgeType: "journal_image", data: { imageData: input.imageData.slice(0, 5000), noteId: input.noteId || null } });
-        return { ok: true, imageId: imgId };
-      }),
-    backtestCompare: protectedProcedure
-      .input(z.object({ strategyIds: z.array(z.number()).min(2).max(4) }))
-      .mutation(async ({ input, ctx }) => {
-        const results = [];
-        for (const id of input.strategyIds) {
-          const strat = await db.getStrategyById(id, ctx.user.id);
-          if (!strat) continue;
-          const config = strat.config as { rule?: { symbol?: string; params?: { stake?: number } } };
-          const rule = config.rule;
-          if (!rule || !rule.symbol) continue;
-          // Use live Deriv tick history via aitools (fresh data)
-          let ticks: { price: number; timestamp: number }[] = [];
-          try {
-            const { getTickHistory } = await import("./aitools");
-            const liveTicks = await getTickHistory(rule.symbol, 1000);
-            ticks = liveTicks.map((t) => ({ price: t.price, timestamp: t.timestamp }));
-          } catch {
-            // Fallback to DB (stale)
-            const rows = await db.getTickHistory(rule.symbol, 1000);
-            if (rows.length < 50) continue;
-            ticks = rows.map((r: any) => ({ price: Number(r.price), timestamp: Number(r.epoch) * 1000 }));
-          }
-          if (ticks.length < 50) continue;
-          const { runBacktest } = await import("./backtest");
-          const res = await runBacktest(ticks, rule, Number(rule.params?.stake) || 1, rule.symbol);
-          results.push({ strategyId: id, name: strat.name, ...res });
-        }
-        return { comparisons: results };
-      }),
     getContractSpecs: publicProcedure
       .input(z.object({ symbol: z.string() }))
       .query(async () => {
         return { spec: null, note: "Contract specs require Deriv WS integration" };
       }),
-    docs: router({
-      endpoints: adminProcedure.query(async () => {
-        const { ENDPOINTS } = await import("./docs");
-        return ENDPOINTS;
-      }),
-    }),
   }),
   docs: router({
     endpoints: adminProcedure.query(async () => {
@@ -3025,7 +2946,7 @@ aiMarket: router({
       .query(async ({ ctx, input }) => {
         const entries = await db.getAiKnowledge(ctx.user.id, "report", 100);
         const entry = entries.find(e => e.id === input.id);
-        if (!entry) throw new Error("Report not found");
+        if (!entry) throw new TRPCError({ code: "NOT_FOUND", message: "Report not found" });
         return { id: entry.id, ...(entry.data as any) };
       }),
   },
@@ -3037,7 +2958,10 @@ aiMarket: router({
         await db.saveAuditLog({ userId: ctx.user.id, action: "team.invite", target: input.email }).catch(() => {});
         try {
           const { sendEmail, buildNotificationEmail } = await import("./_core/email");
-          await sendEmail({ to: input.email, subject: "You've been invited to 369Labs", html: buildNotificationEmail("Team Invitation", `You've been invited to join 369Labs by user #${ctx.user.id}. Register at ${process.env.BASE_URL || window?.location?.origin || "https://369labs.com"}/register to accept.`) });
+          // `window` is undefined in Node — never reference it server-side. Use
+          // APP_URL / BASE_URL (with a sane default) for the invite link.
+          const appUrl = process.env.APP_URL || process.env.BASE_URL || "https://369labs.com";
+          await sendEmail({ to: input.email, subject: "You've been invited to 369Labs", html: buildNotificationEmail("Team Invitation", `You've been invited to join 369Labs by user #${ctx.user.id}. Register at ${appUrl}/register to accept.`) });
         } catch {}
         return { ok: true };
       }),

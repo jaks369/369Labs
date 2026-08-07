@@ -102,7 +102,7 @@ export class AIIntelligenceHub {
     await aiMemory.logAccuracy(trade.userId, reviewData as any);
     await aiMemory.storeTradeContext(trade.userId, tradeContext);
 
-    await this.emit({
+    this.emit({
       type: "trade_reviewed",
       tradeId: trade.id,
       symbol: trade.symbol,
@@ -116,7 +116,7 @@ export class AIIntelligenceHub {
       if (findings.length > 0) {
         await patternDiscovery.storeFindings(trade.userId, findings);
         const topFinding = findings[0];
-        await this.emit({
+        this.emit({
           type: "pattern_discovered",
           symbol: trade.symbol,
           userId: trade.userId,
@@ -157,7 +157,7 @@ export class AIIntelligenceHub {
           });
 
           if (strategyReview.score < 50) {
-            await this.emit({
+            this.emit({
               type: "strategy_warning",
               symbol: trade.symbol,
               userId: trade.userId,

@@ -95,28 +95,7 @@ async function safeFetch(urlStr: string, options: RequestInit): Promise<Response
   throw new Error("Too many redirects");
 }
 
-// Retry with exponential backoff using resolved IP
-async function fetchWithRetry(urlStr: string, options: RequestInit, maxRetries = 3, baseDelay = 1000): Promise<Response> {
-  let lastError: Error | null = null;
-  for (let attempt = 0; attempt <= maxRetries; attempt++) {
-    try {
-      const response = await safeFetch(urlStr, options);
-      if (response.status >= 500) {
-        throw new Error(`HTTP ${response.status}`);
-      }
-      return response;
-    } catch (e: any) {
-      lastError = e;
-      if (attempt < maxRetries) {
-        const delay = baseDelay * Math.pow(2, attempt) + Math.random() * 1000;
-        await new Promise(r => setTimeout(r, delay));
-      }
-    }
-  }
-  throw lastError || new Error("Max retries exceeded");
-}
-
-const MAX_DELIVERY_ATTEMPTS = 5;
+// Retry loop is implemented inline in attemptDelivery below.
 
 export async function fireWebhookEvent(
   userId: number,
@@ -150,7 +129,7 @@ export async function fireWebhookEvent(
 async function attemptDelivery(deliveryId: number, url: string, body: string, secret?: string | null): Promise<void> {
   const maxAttempts = 5;
   
-  for (let attempt = 1; attempt <= 5; attempt++) {
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     try {
       // Update attempt count
       await db.updateWebhookDelivery(deliveryId, { attempts: attempt });
@@ -185,7 +164,7 @@ async function attemptDelivery(deliveryId: number, url: string, body: string, se
     } catch (e: any) {
       console.warn(`[webhookExecutor] Delivery attempt ${attempt} failed for ${url}:`, e?.message || e);
 
-      if (attempt < 5) {
+      if (attempt < maxAttempts) {
         const delay = 1000 * Math.pow(2, attempt - 1) + Math.random() * 1000;
         await new Promise(r => setTimeout(r, delay));
         continue;

@@ -276,7 +276,10 @@ export class AIMemory {
     const p = prediction.toUpperCase();
     const o = outcome.toLowerCase();
     if ((p === "RISE" || p === "CALL") && o === "win") return true;
-    if ((p === "FALL" || p === "PUT") && o === "loss") return true;
+    // A FALL/PUT prediction is correct when the price fell and the trade WON —
+    // previously this compared against "loss", so every fall-direction prediction
+    // was recorded as incorrect and accuracy was systematically understated.
+    if ((p === "FALL" || p === "PUT") && o === "win") return true;
     if (p === "UNCLEAR DIRECTION") return false;
     return false;
   }
