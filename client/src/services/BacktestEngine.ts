@@ -91,10 +91,6 @@ export async function runBacktest(ticks: Tick[], strategy: any, stake: number, s
   const takeProfit = strategy.params?.takeProfit || 0;
 
   for (let i = 0; i < ticks.length; i++) {
-    // Append the current tick BEFORE evaluating so this matches the live
-    // engine, which pushes the tick then evaluates (including it in the
-    // condition window). Evaluating against history-minus-current skewed
-    // backtest signals one tick behind live behavior.
     history.push(ticks[i]);
     if (evaluateCondition(strategy, ticks[i], history, decimals)) {
       const entryTime = ticks[i].timestamp;
@@ -103,12 +99,16 @@ export async function runBacktest(ticks: Tick[], strategy: any, stake: number, s
       if (exitIdx >= ticks.length) break;
       const exitPrice = ticks[exitIdx].price;
       const outcome = simulateOutcome(entryPrice, exitPrice, contractType, barrier, decimals);
-      const result: "win" | "loss" = outcome === "draw" ? "loss" : outcome;
+      // Draws (flat rise/fall) are refunds on Deriv — exclude from win/loss, P&L = 0
+      if (outcome === "draw") {
+        i = exitIdx;
+        for (let j = history.length; j <= exitIdx; j++) history.push(ticks[j]);
+        continue;
+      }
+      const result: "win" | "loss" = outcome;
       const pnl = calcPnl(result, stake);
       balance += pnl;
       trades.push({ entryTime, entryPrice, exitTime: ticks[exitIdx].timestamp, exitPrice, contractType, result, pnl });
-      // Jump past the contract's duration ticks and advance history to match,
-      // as the live engine keeps accumulating ticks while a contract is open.
       i = exitIdx;
       for (let j = history.length; j <= exitIdx; j++) history.push(ticks[j]);
     }

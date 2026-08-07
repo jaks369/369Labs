@@ -49,6 +49,30 @@ export default function Portfolio() {
   const trades = (tradesQuery.data || []) as any[];
   // Filter only settled trades (exclude pending) for accurate P&L and stats
   const settledTrades = trades.filter(t => t.result !== "pending" && t.profitLoss != null);
+
+  const handleExportTax = () => {
+    if (settledTrades.length === 0) { toast("No settled trades to export", "error"); return; }
+    const headers = ["symbol", "entryTime", "exitTime", "entryPrice", "exitPrice", "stake", "profitLoss", "contractType", "result", "contractId"];
+    const rows = settledTrades.map(t => [
+      t.symbol || "",
+      t.entryTime ? new Date(t.entryTime).toISOString() : "",
+      t.exitTime ? new Date(t.exitTime).toISOString() : "",
+      t.entryPrice || "",
+      t.exitPrice || "",
+      t.stake || "",
+      t.profitLoss || "",
+      t.contractType || "",
+      t.result || "",
+      t.contractId || ""
+    ]);
+    const csv = [headers.join(","), ...rows.map(r => r.map(v => `"${v}"`).join(","))].join("\n");
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a"); a.href = url; a.download = `tax-report-${new Date().toISOString().split("T")[0]}.csv`; a.click();
+    URL.revokeObjectURL(url);
+    toast("Tax report exported", "success");
+  };
+
   const totalTrades = settledTrades.length;
   const wins = settledTrades.filter(t => t.result === "win").length;
   const losses = settledTrades.filter(t => t.result === "loss").length;
@@ -322,7 +346,7 @@ export default function Portfolio() {
                     <p className="text-lg font-bold text-white"><IntegerStat value={totalTrades} /></p>
                   </div>
                 </div>
-                <button className="flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold bg-[var(--accent)]/20 text-[var(--accent)] border border-[var(--accent)]/30 hover:bg-[var(--accent)]/30">
+                <button onClick={handleExportTax} className="flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold bg-[var(--accent)]/20 text-[var(--accent)] border border-[var(--accent)]/30 hover:bg-[var(--accent)]/30">
                   <Download className="w-3.5 h-3.5" /> Export Tax Report (CSV)
                 </button>
               </div>

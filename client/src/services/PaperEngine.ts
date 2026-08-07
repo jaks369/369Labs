@@ -83,11 +83,16 @@ export class PaperEngine {
           result.exitPrice = exitPrice;
           result.exitTime = Date.now();
           const outcome = simulateOutcome(entryPrice, exitPrice, contractType, barrier, decimals);
-          result.result = outcome === "draw" ? "loss" : outcome;
-          result.pnl = calcPnl(result.result, stake);
-
-          this.balance += result.pnl;
-          localStorage.setItem(PAPER_BALANCE_KEY, String(this.balance));
+          // Draws are refunds on Deriv — no P&L, count as loss for win-rate math
+          if (outcome === "draw") {
+            result.result = "loss";
+            result.pnl = 0;
+          } else {
+            result.result = outcome;
+            result.pnl = calcPnl(outcome, stake);
+            this.balance += result.pnl;
+            localStorage.setItem(PAPER_BALANCE_KEY, String(this.balance));
+          }
           this.trades.push(result);
           this.notify();
           this.tradeListeners.forEach((cb) => {

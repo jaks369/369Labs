@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { trpc } from "@/lib/trpc";
 import { Search, Loader2, CandlestickChart, Zap, Bot, Brain, X } from "lucide-react";
 import { useLocation } from "wouter";
@@ -8,8 +8,18 @@ import { formatSignedMoney } from "@/lib/format";
 export default function GlobalSearch({ open, onClose }: { open: boolean; onClose: () => void }) {
   const [, setLocation] = useLocation();
   const [query, setQuery] = useState("");
+  const debouncedQueryRef = useRef(query);
   const inputRef = useRef<HTMLInputElement>(null);
-  const searchQuery = trpc.globalSearch.useQuery({ query, limit: 8 }, { enabled: query.length >= 2 });
+
+  // Debounce the search query to avoid hammering the API on every keystroke
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      debouncedQueryRef.current = query;
+    }, 150);
+    return () => clearTimeout(timer);
+  }, [query]);
+
+  const searchQuery = trpc.globalSearch.useQuery({ query: debouncedQueryRef.current, limit: 8 }, { enabled: debouncedQueryRef.current.length >= 2 });
 
   useEffect(() => {
     if (open && inputRef.current) { inputRef.current.focus(); setQuery(""); }
@@ -25,6 +35,7 @@ export default function GlobalSearch({ open, onClose }: { open: boolean; onClose
 
   if (!open) return null;
 
+  const debouncedQuery = debouncedQueryRef.current;
   const data = searchQuery.data;
   const hasResults = data && (data.trades?.length > 0 || data.strategies?.length > 0 || data.botRuns?.length > 0 || data.aiKnowledge?.length > 0);
 
@@ -36,7 +47,7 @@ export default function GlobalSearch({ open, onClose }: { open: boolean; onClose
           <input ref={inputRef} value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search trades, strategies, bots, symbols..." className="flex-1 bg-transparent text-sm text-white outline-none placeholder-[var(--text-muted)]" />
           {searchQuery.isFetching && <Loader2 className="w-4 h-4 text-[var(--accent)] animate-spin shrink-0" />}
           <button onClick={onClose} className="text-[var(--text-muted)] hover:text-white p-1 rounded hover:bg-white/5"><X className="w-4 h-4" /></button>
-        </div>        {query.length >= 2 && (
+        </div>        {debouncedQuery.length >= 2 && (
           <div className="max-h-[50vh] overflow-y-auto p-2 space-y-1">
             {searchQuery.isLoading ? (
               <div className="flex items-center justify-center py-6"><Loader2 className="w-5 h-5 text-[var(--accent)] animate-spin" /></div>
@@ -52,7 +63,7 @@ export default function GlobalSearch({ open, onClose }: { open: boolean; onClose
             )}
           </div>
         )}
-        {query.length < 2 && (
+        {debouncedQuery.length < 2 && (
           <div className="p-4 text-center text-micro text-[var(--text-muted)]">Type at least 2 characters to search across all your data</div>
         )}
       </div>

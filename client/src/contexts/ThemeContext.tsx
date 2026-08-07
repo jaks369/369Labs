@@ -21,23 +21,26 @@ export function ThemeProvider({
   defaultTheme = "light",
   switchable = false,
 }: ThemeProviderProps) {
-  const [theme, setTheme] = useState<Theme>(() => {
+  const [theme, setTheme] = useState<Theme>(defaultTheme);
+
+  // Read from localStorage once on mount (not in render)
+  useEffect(() => {
     if (switchable) {
-      const stored = localStorage.getItem("theme");
-      return (stored as Theme) || defaultTheme;
+      try {
+        const stored = localStorage.getItem("theme");
+        if (stored) setTheme(stored as Theme);
+      } catch {}
     }
-    return defaultTheme;
-  });
+  }, [switchable]);
 
   useEffect(() => {
     const root = document.documentElement;
-    // index.css defines the dark palette on :root and the light override under
-    // .light. Toggle the .light class so switching themes actually changes the
-    // palette instead of only flipping a class that has no CSS.
     root.classList.toggle("light", theme === "light");
 
     if (switchable) {
-      localStorage.setItem("theme", theme);
+      try {
+        localStorage.setItem("theme", theme);
+      } catch {}
     }
   }, [theme, switchable]);
 
