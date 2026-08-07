@@ -235,7 +235,7 @@ const RATE = (limit: number, windowMs: number) => async (req: any, res: any, nex
   // make directly due to CORS restrictions. The client (derivWebSocket.ts) will
   // call /api/deriv/accounts and /api/deriv/otp/:accountId instead of the
   // blocked api.derivws.com endpoints.
-  const DERIV_API_BASE = process.env.DERIV_API_BASE || "https://api.deriv.com";
+  const DERIV_API_BASE = process.env.DERIV_API_BASE || "https://api.derivws.com";
   const DERIV_APP_ID = process.env.DERIV_APP_ID || process.env.VITE_DERIV_APP_ID || "33V0MWtYaZLLmAZBWUycN";
 
   app.get("/api/deriv/accounts", async (req, res) => {
