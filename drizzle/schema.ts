@@ -383,6 +383,7 @@ export const webhooks = mysqlTable("webhooks", {
   url: varchar("url", { length: 512 }).notNull(),
   events: json("events").notNull(),
   label: varchar("label", { length: 64 }),
+  secret: varchar("secret", { length: 64 }),
   active: boolean("active").default(true).notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });

@@ -70,7 +70,9 @@ export async function runBacktest(ticks: { price: number; timestamp: number }[],
     const outcome = simulateOutcome(entryPrice, exitPrice, contractType, barrier, decimals);
     
     if (outcome === "draw") {
-      // Draw = stake returned, no PnL, not counted as a trade for win/loss stats
+      // Draw = stake returned, no PnL, not counted as a trade for win/loss stats.
+      // Still count it so the draws figure is accurate (previously stuck at 0).
+      draws++;
       i++; // skip the exit tick
       continue;
     }

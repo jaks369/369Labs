@@ -2,6 +2,7 @@ import * as db from "./db";
 import dns from "dns";
 import { URL } from "url";
 import net from "net";
+import { createHmac } from "crypto";
 
 function isPrivateIP(ip: string): boolean {
   if (net.isIPv6(ip)) {
@@ -139,14 +140,14 @@ export async function fireWebhookEvent(
         attempts: 0,
       });
 
-      await attemptDelivery(delivery.id, wh.url, body);
+      await attemptDelivery(delivery.id, wh.url, body, wh.secret);
     }
   } catch (e: any) {
     console.warn(`[webhookExecutor] Unexpected error firing webhooks for user ${userId}, event ${event}:`, e?.message || e);
   }
 }
 
-async function attemptDelivery(deliveryId: number, url: string, body: string): Promise<void> {
+async function attemptDelivery(deliveryId: number, url: string, body: string, secret?: string | null): Promise<void> {
   const maxAttempts = 5;
   
   for (let attempt = 1; attempt <= 5; attempt++) {
@@ -155,6 +156,14 @@ async function attemptDelivery(deliveryId: number, url: string, body: string): P
       await db.updateWebhookDelivery(deliveryId, { attempts: attempt });
 
       const headers = { "Content-Type": "application/json" } as Record<string, string>;
+
+      // HMAC-SHA256 signature over the exact body bytes. Recipients verify with
+      // the per-webhook secret shown once at creation; unsigned (legacy) hooks
+      // without a secret are sent without a signature header.
+      if (secret) {
+        const signature = createHmac("sha256", secret).update(body).digest("hex");
+        headers["X-Webhook-Signature"] = `sha256=${signature}`;
+      }
 
       const response = await safeFetch(url, {
         method: "POST",
@@ -207,7 +216,7 @@ export async function processPendingWebhooks(): Promise<number> {
   for (const d of pending) {
     const webhook = await db.getWebhookById(d.webhookId);
     if (!webhook) continue;
-    await attemptDelivery(d.id, webhook.url, JSON.stringify(d.payload));
+    await attemptDelivery(d.id, webhook.url, JSON.stringify(d.payload), webhook.secret);
     processed++;
   }
   return processed;

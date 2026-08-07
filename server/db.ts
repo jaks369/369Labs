@@ -1,6 +1,7 @@
 import { eq, and, asc, desc, gt, inArray, lte, sql } from "drizzle-orm";
 import * as mysql from "mysql2/promise";
 import { drizzle } from "drizzle-orm/mysql2";
+import { randomBytes } from "crypto";
 import {
   users,
   User,
@@ -98,6 +99,36 @@ let _db: ReturnType<typeof drizzle> | null = null;
 let _dbError: string | null = null;
 let _pool: mysql.Pool | null = null;
 
+// Simple per-key async mutex. Used to serialize saveTrade dedup check+insert so
+// two concurrent requests for the same (userId, contractId) cannot both see "no
+// existing row" and insert duplicate trade rows (the saveTrade dedup race).
+class AsyncMutex {
+  private locks = new Map<string, Promise<void>>();
+  private resolvers = new Map<string, () => void>();
+
+  async lock(key: string): Promise<() => void> {
+    while (this.locks.has(key)) {
+      await this.locks.get(key);
+    }
+    let release: () => void;
+    const promise = new Promise<void>((resolve) => { release = resolve; });
+    this.locks.set(key, promise);
+    this.resolvers.set(key, release!);
+    return release!;
+  }
+
+  unlock(key: string): void {
+    const release = this.resolvers.get(key);
+    if (release) {
+      release();
+      this.locks.delete(key);
+      this.resolvers.delete(key);
+    }
+  }
+}
+
+const tradeMutex = new AsyncMutex();
+
 export async function getDb() {
   if (!_db && !_dbError) {
     if (!process.env.DATABASE_URL) {
@@ -134,33 +165,61 @@ export async function updateUserRole(userId: number, role: "user" | "admin"): Pr
   await db.update(users).set({ role }).where(eq(users.id, userId));
 }
 
+// Tables carrying a userId column, deleted in child→parent order. Kept in one
+// place so deleteUser and the raw-pool transaction below stay in sync.
+const USER_SCOPED_TABLES = [
+  "chatMessages",
+  "auditLogs",
+  "aiKnowledge",
+  "botRuns",
+  "trades",
+  "signals",
+  "strategies",
+  "jobs",
+  "userMemory",
+  "notificationSettings",
+  "telegramSettings",
+  "derivTokens",
+  "oauthAccounts",
+  "passwordResetTokens",
+  "verificationTokens",
+  "pluginInstalls",
+  "priceAlerts",
+  "sessions",
+  "ipWhitelist",
+  "botLogs",
+  "subscriptions",
+  "webhooks",
+] as const;
+
 export async function deleteUser(userId: number): Promise<void> {
+  const pool = getRawPool();
+  if (pool) {
+    // Single transaction so a mid-way failure rolls back instead of leaving a
+    // half-deleted user with orphaned rows (previously each delete ran alone).
+    const conn = await pool.getConnection();
+    try {
+      await conn.beginTransaction();
+      for (const table of USER_SCOPED_TABLES) {
+        await conn.execute(`DELETE FROM ${table} WHERE userId = ?`, [userId]);
+      }
+      await conn.execute("DELETE FROM users WHERE id = ?", [userId]);
+      await conn.commit();
+    } catch (e) {
+      await conn.rollback();
+      throw e;
+    } finally {
+      conn.release();
+    }
+    return;
+  }
+
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  // Cascade delete all user-related records
-  await db.delete(chatMessages).where(eq(chatMessages.userId, userId));
-  await db.delete(auditLogs).where(eq(auditLogs.userId, userId));
-  await db.delete(aiKnowledge).where(eq(aiKnowledge.userId, userId));
-  await db.delete(botRuns).where(eq(botRuns.userId, userId));
-  await db.delete(trades).where(eq(trades.userId, userId));
-  await db.delete(signals).where(eq(signals.userId, userId));
-  await db.delete(strategies).where(eq(strategies.userId, userId));
-  await db.delete(jobs).where(eq(jobs.userId, userId));
-  await db.delete(userMemory).where(eq(userMemory.userId, userId));
-  await db.delete(notificationSettings).where(eq(notificationSettings.userId, userId));
-  await db.delete(telegramSettings).where(eq(telegramSettings.userId, userId));
-  await db.delete(derivTokens).where(eq(derivTokens.userId, userId));
-  await db.delete(oauthAccounts).where(eq(oauthAccounts.userId, userId));
-  await db.delete(passwordResetTokens).where(eq(passwordResetTokens.userId, userId));
-  await db.delete(verificationTokens).where(eq(verificationTokens.userId, userId));
-  await db.delete(pluginInstalls).where(eq(pluginInstalls.userId, userId));
-  await db.delete(priceAlerts).where(eq(priceAlerts.userId, userId));
-  await db.delete(sessions).where(eq(sessions.userId, userId));
-  await db.delete(ipWhitelist).where(eq(ipWhitelist.userId, userId));
-  await db.delete(botLogs).where(eq(botLogs.userId, userId));
-  await db.delete(subscriptions).where(eq(subscriptions.userId, userId));
-  // webhooks table uses raw SQL (no drizzle schema entry)
-  if (db) await db.execute(sql`DELETE FROM webhooks WHERE userId = ${userId}`);
+  // Fallback path (no raw pool): sequential deletes, best-effort.
+  for (const table of USER_SCOPED_TABLES) {
+    await db.execute(sql`DELETE FROM ${sql.raw(table)} WHERE userId = ${userId}`).catch(() => {});
+  }
   await db.delete(users).where(eq(users.id, userId));
 }
 
@@ -612,33 +671,42 @@ export async function saveTrade(trade: InsertTrade): Promise<Trade> {
   // contract. Without dedup, the client-side settle would insert a second row
   // next to the server-settled one, double-counting P&L. Updating the existing
   // row keeps a single source of truth.
+  //
+  // The check-then-insert below is serialized with an in-process mutex keyed on
+  // (userId, contractId): without it, two concurrent saves for the same contract
+  // could both see "no existing row" and insert duplicates.
   if (trade.contractId) {
+    const release = await tradeMutex.lock(`${trade.userId}:${trade.contractId}`);
     try {
-      const existing = await db
-        .select()
-        .from(trades)
-        .where(and(eq(trades.userId, trade.userId), eq(trades.contractId, trade.contractId)))
-        .limit(1);
-      if (existing.length > 0) {
-        const row = existing[0];
-        await db
-          .update(trades)
-          .set({
-            result: trade.result ?? row.result,
-            profitLoss: trade.profitLoss ?? row.profitLoss,
-            exitTime: trade.exitTime ?? row.exitTime,
-            exitPrice: trade.exitPrice ?? row.exitPrice,
-            entryPrice: trade.entryPrice ?? row.entryPrice,
-            stake: trade.stake ?? row.stake,
-            contractType: trade.contractType ?? row.contractType,
-            symbol: trade.symbol ?? row.symbol,
-            updatedAt: new Date(),
-          })
-          .where(eq(trades.id, row.id));
-        return (await db.select().from(trades).where(eq(trades.id, row.id)).limit(1))[0];
+      try {
+        const existing = await db
+          .select()
+          .from(trades)
+          .where(and(eq(trades.userId, trade.userId), eq(trades.contractId, trade.contractId)))
+          .limit(1);
+        if (existing.length > 0) {
+          const row = existing[0];
+          await db
+            .update(trades)
+            .set({
+              result: trade.result ?? row.result,
+              profitLoss: trade.profitLoss ?? row.profitLoss,
+              exitTime: trade.exitTime ?? row.exitTime,
+              exitPrice: trade.exitPrice ?? row.exitPrice,
+              entryPrice: trade.entryPrice ?? row.entryPrice,
+              stake: trade.stake ?? row.stake,
+              contractType: trade.contractType ?? row.contractType,
+              symbol: trade.symbol ?? row.symbol,
+              updatedAt: new Date(),
+            })
+            .where(eq(trades.id, row.id));
+          return (await db.select().from(trades).where(eq(trades.id, row.id)).limit(1))[0];
+        }
+      } catch {
+        // drizzle unavailable (production fallback) — fall through to insert below
       }
-    } catch {
-      // drizzle unavailable (production fallback) — fall through to insert below
+    } finally {
+      release();
     }
   }
 
@@ -1995,11 +2063,19 @@ export async function ensureWebhooksTable(): Promise<void> {
         url varchar(512) NOT NULL,
         events json NOT NULL,
         label varchar(64),
+        secret varchar(64),
         active tinyint(1) NOT NULL DEFAULT 1,
         createdAt timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
         PRIMARY KEY (id)
       )
     `);
+    // Add the signing-secret column to databases created before it existed.
+    // MySQL < 8.0 has no ADD COLUMN IF NOT EXISTS, so ignore duplicate-column.
+    try {
+      await db.execute(sql`ALTER TABLE webhooks ADD COLUMN secret varchar(64) NULL`);
+    } catch (e: any) {
+      if (e?.errno !== 1060 && e?.code !== "ER_DUP_FIELDNAME") console.warn("[ensureWebhooksTable] add secret column failed", e?.message || e);
+    }
   } catch (e: any) {
     console.error("[ensureWebhooksTable] failed", e?.message || e);
   }
@@ -2052,7 +2128,13 @@ export async function getWebhooksByUserId(userId: number): Promise<any[]> {
   if (!db) return [];
   try {
     const rows = await db.execute(sql`SELECT * FROM webhooks WHERE userId = ${userId} ORDER BY createdAt DESC`);
-    return (rows as any)[0] ?? [];
+    const all = (rows as any)[0] ?? [];
+    // Never leak the signing secret back to the client list view — it is shown
+    // once at creation time only.
+    return all.map((w: any) => {
+      const { secret, ...rest } = w;
+      return rest;
+    });
   } catch (e: any) {
     console.error("[getWebhooksByUserId] failed", e?.message || e);
     return [];
@@ -2076,12 +2158,15 @@ export async function createWebhook(data: { userId: number; url: string; events:
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   const eventsStr = JSON.stringify(data.events);
+  // Per-webhook signing secret: returned to the caller exactly once so the
+  // recipient can verify X-Webhook-Signature on deliveries. Never returned again.
+  const secret = randomBytes(24).toString("hex");
   try {
     const result = await db.execute(sql`
-      INSERT INTO webhooks (userId, url, events, label) VALUES (${data.userId}, ${data.url}, ${eventsStr}, ${data.label || null})
+      INSERT INTO webhooks (userId, url, events, label, secret) VALUES (${data.userId}, ${data.url}, ${eventsStr}, ${data.label || null}, ${secret})
     `);
     const insertId = (result as any)[0]?.insertId;
-    if (insertId) return { id: insertId, ...data };
+    if (insertId) return { id: insertId, ...data, secret };
     return { ok: true };
   } catch (e: any) {
     console.error("[createWebhook] failed", e?.message || e);
@@ -2169,10 +2254,14 @@ export async function importUserData(userId: number, data: Record<string, any>):
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   let imported = 0;
+  // Bound the import: a hostile/oversized payload must not let a single request
+  // write unbounded rows (memory + DB DoS). 10k rows cap across all tables.
+  const MAX_RESTORE_ROWS = 10_000;
   for (const table of ["strategies", "trades", "journals", "workflows", "bots"] as const) {
     const rows = data[table];
     if (!Array.isArray(rows)) continue;
     for (const row of rows) {
+      if (imported >= MAX_RESTORE_ROWS) return { imported };
       const { id, createdAt, updatedAt, ...rest } = row;
       try {
         const cols = Object.keys(rest).filter((c) => SAFE_COL_RE.test(c));

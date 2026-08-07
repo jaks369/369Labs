@@ -261,7 +261,10 @@ export async function scanTicks(opts: ScanOptions): Promise<any[]> {
       patternType: c.pType,
       sampleSize: c.inTotal,
       winRate: inRate.toFixed(2),
-      confidence: Math.min(99, Math.round(oosRate * 100)).toFixed(2),
+      // oosRate is already a percentage (0-100). Previously this was multiplied
+      // by 100 again and clamped, so confidence was always 99 — meaningless.
+      // Use the out-of-sample win rate as the confidence, capped at 99.
+      confidence: Math.min(99, oosRate).toFixed(2),
       oos_sample_size: c.oosTotal,
       oos_win_rate: oosRate.toFixed(2),
       oosValidated: true,

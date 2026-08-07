@@ -81,21 +81,14 @@ async function executeBotCycleInner(): Promise<void> {
     }
   }
 
-  // Count running bots per user
-  const userBotCounts: Record<number, number> = {};
-  for (const bot of allBots) {
-    if (bot.status === "running") {
-      userBotCounts[bot.def.userId] = (userBotCounts[bot.def.userId] || 0) + 1;
-    }
-  }
-
   let traded = 0;
+  // Per-user trades *attempted this cycle*. Incremented just before a bot tries
+  // to place a trade so at most MAX_CONCURRENT_BOTS_PER_USER bots per user trade
+  // per cycle — and the limit is exactly MAX, not MAX-1 or all-or-nothing.
+  const tradedPerUser: Record<number, number> = {};
   for (const bot of allBots) {
     if (traded >= MAX_PIPELINE_TRADES) break;
     if (bot.status !== "running" || bot.hasOpenTrade) continue;
-
-    // Per-user concurrency limit
-    if (userBotCounts[bot.def.userId] >= MAX_CONCURRENT_BOTS_PER_USER) continue;
 
     const strategy = bot.def?.strategy;
     const rule = strategy?.condition ? strategy : strategy?.rule || strategy?.config?.rule;
@@ -152,6 +145,14 @@ async function executeBotCycleInner(): Promise<void> {
     }
     if (!triggered) continue;
 
+    // Per-user concurrency cap: reserve a slot for this bot before attempting.
+    // The count is incremented here (not in a pre-loop snapshot) so a user with
+    // exactly MAX bots gets all MAX trading and an over-cap user gets the first
+    // MAX — no all-at-limit starvation and no off-by-one.
+    const userTraded = tradedPerUser[bot.def.userId] || 0;
+    if (userTraded >= MAX_CONCURRENT_BOTS_PER_USER) continue;
+    tradedPerUser[bot.def.userId] = userTraded + 1;
+
     // Place trade via Deriv API
     try {
       const conn = await derivManager.ensureConnected(bot.def.userId);
@@ -164,13 +165,18 @@ async function executeBotCycleInner(): Promise<void> {
       const barrier = rule.condition?.barrier !== undefined ? Number(rule.condition.barrier) : actionBarrier;
       const entryPrice = prices[triggerIdx];
       const isDigit = isDigitContract(contractType);
+      // Use the account's actual currency (e.g. USD, EUR, GBP, AUD) instead of
+      // hardcoding USD — sending a proposal in the wrong currency is rejected by
+      // Deriv or prices the contract incorrectly for non-USD accounts.
+      const account = (conn as any)?.getSnapshot?.()?.account;
+      const currency = account?.currency || "USD";
       // Use Deriv proposal/buy flow to place the actual trade
       const proposalPayload: Record<string, any> = {
         proposal: 1,
         amount: stake,
         basis: "stake",
         contract_type: contractType,
-        currency: "USD",
+        currency,
         duration: 1,
         duration_unit: "t",
         symbol,

@@ -927,6 +927,19 @@ export const appRouter = router({
     restoreData: protectedProcedure
       .input(z.object({ data: z.record(z.string(), z.any()) }))
       .mutation(async ({ ctx, input }) => {
+        // Bound payload size + row count before hitting the DB (unbounded
+        // restore previously accepted arbitrarily large payloads).
+        const size = Buffer.byteLength(JSON.stringify(input.data), "utf8");
+        if (size > 5 * 1024 * 1024) {
+          throw new TRPCError({ code: "BAD_REQUEST", message: "Backup payload too large (max 5 MB)" });
+        }
+        const totalRows = ["strategies", "trades", "journals", "workflows", "bots"].reduce(
+          (n, t) => n + (Array.isArray(input.data[t]) ? input.data[t].length : 0),
+          0,
+        );
+        if (totalRows > 10_000) {
+          throw new TRPCError({ code: "BAD_REQUEST", message: "Backup contains too many records (max 10,000)" });
+        }
         return await db.importUserData(ctx.user.id, input.data);
       }),
       }),
@@ -1264,7 +1277,13 @@ export const appRouter = router({
       }),
 
     importRule: protectedProcedure
-      .input(z.object({ name: z.string(), config: z.record(z.string(), z.any()) }))
+      .input(z.object({
+        name: z.string(),
+        config: z.record(z.string(), z.any()).refine(
+          (c) => Buffer.byteLength(JSON.stringify(c), "utf8") <= 100_000,
+          "Rule config is too large (max 100 KB)",
+        ),
+      }))
       .mutation(async ({ ctx, input }) => {
         const strategy = await db.saveStrategy({
           userId: ctx.user.id,
@@ -1435,10 +1454,12 @@ save: protectedProcedure
       }),
 
     importCsv: protectedProcedure
-      .input(z.object({ csv: z.string().min(1) }))
+      .input(z.object({ csv: z.string().min(1).max(5_000_000) }))
       .mutation(async ({ ctx, input }) => {
         const lines = input.csv.split("\n").map(l => l.trim()).filter(l => l.length > 0);
         if (lines.length < 2) throw new TRPCError({ code: "BAD_REQUEST", message: "CSV must have a header row and at least one data row" });
+        // Cap the number of importable rows to avoid unbounded DB writes.
+        if (lines.length - 1 > 5000) throw new TRPCError({ code: "BAD_REQUEST", message: "CSV has too many data rows (max 5000)" });
         const parseCsvLine = (line: string): string[] => {
           const result: string[] = [];
           let current = "";

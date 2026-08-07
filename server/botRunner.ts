@@ -173,8 +173,11 @@ class BotRunner {
     if (!bot || bot.def.userId !== userId) return;
     bot.totalTrades++;
     bot.totalProfitLoss += pnl;
-    if (pnl >= 0) bot.lossStreak = 0;
-    else bot.lossStreak++;
+    // A draw (pnl === 0) is neutral: it must NOT reset the loss streak as if it
+    // were a win (that let bots dodge maxConsecutiveLosses by drawing) nor count
+    // as a loss. Only strictly positive PnL resets the streak.
+    if (pnl > 0) bot.lossStreak = 0;
+    else if (pnl < 0) bot.lossStreak++;
     
     // Persist to DB with safety config
     try {
