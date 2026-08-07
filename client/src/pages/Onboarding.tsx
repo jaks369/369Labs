@@ -12,10 +12,13 @@ const STEPS = [
 ];
 
 export default function Onboarding() {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, loading } = useAuth();
   const [, navigate] = useLocation();
   const [step, setStep] = useState(0);
 
+  // Wait for auth to finish loading before redirecting; otherwise authenticated
+  // users are briefly bounced to /login while the me query is in-flight.
+  if (loading) return null;
   if (!isAuthenticated) { navigate("/login"); return null; }
 
   const complete = () => {

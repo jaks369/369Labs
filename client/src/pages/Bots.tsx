@@ -305,46 +305,30 @@ export default function Bots() {
                         </div>
                       </div>
                       <div className="flex items-center gap-8">
-                        <div className="text-right">
-                          <p className="text-micro mb-1">Profit/Loss</p>
-                          <p className={`text-sm font-bold ${bot.pnl >= 0 ? "text-[var(--green)]" : "text-[var(--red)]"}`}>
-                            {formatSignedMoney(bot.pnl)}
-                          </p>
-                        </div>
-                        {(() => {
-                          const settled = bot.wins + bot.losses;
-                          const liveWinRate = settled > 0 ? (bot.wins / settled) * 100 : null;
-                          if (bot.backtestWinRate == null || liveWinRate == null || settled < 5) return null;
-                          const drift = liveWinRate - bot.backtestWinRate;
-                          const mismatch = drift <= -15 || liveWinRate < bot.backtestWinRate * 0.7;
-                          if (!mismatch) return null;
-                          return (
-                            <div className="text-right">
-                              <p className="text-micro mb-1">Regime Drift</p>
-                              <p className={`text-sm font-bold ${mismatch ? "text-[var(--red)]" : "text-[var(--green)]"}`}>
-                                {drift.toFixed(1)}%
-                              </p>
-                            </div>
-                          );
-                        })()}
-                        <div className="flex gap-2">
-                          <button
-                            onClick={() => setViewLogsFor(bot.runId)}
-                            className="px-3 py-1.5 text-xs font-bold rounded-lg border border-[var(--border)] text-[var(--text-secondary)] hover:text-white hover:border-[var(--accent)] transition-colors cursor-pointer"
-                          >
-                            Logs
-                          </button>
-                          <button
-                            onClick={() => handleStop(bot)}
-                            disabled={bot.status !== "running"}
-                            className="px-3 py-1.5 text-xs font-bold rounded-lg bg-[var(--red-soft)] text-[var(--red)] border border-[var(--red)]/30 hover:bg-[var(--red)]/20 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
-                          >
-                            Stop
-                          </button>
+                          <div className="text-right">
+                            <p className="text-micro mb-1">Profit/Loss</p>
+                            <p className={`text-sm font-bold ${bot.pnl >= 0 ? "text-[var(--green)]" : "text-[var(--red)]"}`}>
+                              {formatSignedMoney(bot.pnl)}
+                            </p>
+                          </div>
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => setViewLogsFor(bot.runId)}
+                              className="px-3 py-1.5 text-xs font-bold rounded-lg border border-[var(--border)] text-[var(--text-secondary)] hover:text-white hover:border-[var(--accent)] transition-colors cursor-pointer"
+                            >
+                              Logs
+                            </button>
+                            <button
+                              onClick={() => handleStop(bot)}
+                              disabled={bot.status !== "running"}
+                              className="px-3 py-1.5 text-xs font-bold rounded-lg bg-[var(--red-soft)] text-[var(--red)] border border-[var(--red)]/30 hover:bg-[var(--red)]/20 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+                            >
+                              Stop
+</button>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    ))}
                 </div>
               )}
             </div>

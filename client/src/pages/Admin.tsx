@@ -2,7 +2,7 @@ import { useState } from "react";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { toast } from "@/components/Toast";
-import { Shield, Activity, Clock, HardDrive, Database, Cpu, Loader2, ScrollText, BarChart3, Settings2, Users, Flag } from "lucide-react";
+import { Shield, Activity, Clock, HardDrive, Database, Cpu, Loader2, ScrollText, BarChart3, Users } from "lucide-react";
 
 export default function Admin() {
   const { user } = useAuth();
@@ -39,9 +39,9 @@ export default function Admin() {
       </div>
 
       <div className="flex gap-2 border-b border-[var(--border)] pb-3">
-          {(["users", "audit", "health", "perf", "config", "stats", "features"] as const).map(t => (
+          {(["users", "audit", "health", "perf", "stats"] as const).map(t => (
           <button key={t} onClick={() => setTab(t)} className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${tab === t ? "bg-[var(--accent)] text-black" : "text-[var(--text-secondary)] hover:text-white"}`}>
-            {t === "users" ? "Users" : t === "audit" ? "Audit Logs" : t === "health" ? "System Health" : t === "perf" ? "Performance" : t === "config" ? "Config" : t === "stats" ? "Usage Stats" : "Feature Flags"}
+            {t === "users" ? "Users" : t === "audit" ? "Audit Logs" : t === "health" ? "System Health" : t === "perf" ? "Performance" : "Usage Stats"}
           </button>
         ))}
       </div>
@@ -166,37 +166,6 @@ export default function Admin() {
         </div>
       )}
 
-      {tab === "config" && (
-        <div className="space-y-4">
-          <div className="flex items-center gap-2 mb-4">
-            <Settings2 className="w-4 h-4 text-[var(--accent)]" />
-            <span className="text-xs font-bold text-[var(--text-muted)] uppercase tracking-wider">Platform Configuration</span>
-          </div>
-          <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5 space-y-4">
-            <div>
-              <label className="text-xs text-[var(--text-muted)] font-bold block mb-1">Default Max Stake ($)</label>
-              <input type="number" defaultValue={100} className="w-full bg-[var(--card)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-white" />
-            </div>
-            <div>
-              <label className="text-xs text-[var(--text-muted)] font-bold block mb-1">Max Active Bots per User</label>
-              <input type="number" defaultValue={10} className="w-full bg-[var(--card)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-white" />
-            </div>
-            <div>
-              <label className="text-xs text-[var(--text-muted)] font-bold block mb-1">Maintenance Mode</label>
-              <div className="flex gap-2 mt-1">
-                <button className="px-3 py-1.5 rounded text-xs font-bold bg-[var(--card)] text-[var(--text-muted)] border border-[var(--border)]">Disabled</button>
-                <button className="px-3 py-1.5 rounded text-xs font-bold bg-[var(--red-soft)] text-[var(--red)] border border-[var(--red)]/30">Enabled</button>
-              </div>
-            </div>
-            <div>
-              <label className="text-xs text-[var(--text-muted)] font-bold block mb-1">Allowed Origins (CORS)</label>
-              <input defaultValue="https://369labs.com" className="w-full bg-[var(--card)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-white" />
-            </div>
-            <button onClick={() => { toast("Config saved.", "success"); }} className="px-4 py-2 rounded-lg bg-[var(--accent)] text-black text-xs font-bold">Save Config</button>
-          </div>
-        </div>
-      )}
-
       {tab === "stats" && (
         <div className="space-y-4">
           <div className="flex items-center gap-2 mb-4">
@@ -216,41 +185,6 @@ export default function Admin() {
               <p className="text-micro">Verified Users</p>
               <p className="text-3xl font-bold text-white mt-1">{listQuery.data?.users.filter(u => u.emailVerified).length || 0}</p>
             </div>
-          </div>
-        </div>
-      )}
-
-      {tab === "features" && (
-        <div className="space-y-4">
-          <div className="flex items-center gap-2 mb-4">
-            <Flag className="w-4 h-4 text-[var(--accent)]" />
-            <span className="text-xs font-bold text-[var(--text-muted)] uppercase tracking-wider">Feature Flags</span>
-          </div>
-          <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl divide-y divide-[var(--border)]/50">
-            {[
-              { key: "aiAssistant", label: "AI Assistant", enabled: true },
-              { key: "cloudBots", label: "Cloud Bots", enabled: true },
-              { key: "backtesting", label: "Backtesting", enabled: true },
-              { key: "paperTrading", label: "Paper Trading", enabled: true },
-              { key: "watchlist", label: "Watchlist", enabled: true },
-              { key: "autoReports", label: "Auto Reports", enabled: true },
-              { key: "strategyComparison", label: "Strategy Comparison", enabled: true },
-              { key: "telegram", label: "Telegram Integration", enabled: true },
-              { key: "webhooks", label: "Webhooks", enabled: true },
-              { key: "team", label: "Team Management", enabled: false },
-              { key: "maintenanceMode", label: "Maintenance Mode", enabled: false },
-            ].map(f => (
-              <div key={f.key} className="flex items-center justify-between p-4">
-                <div>
-                  <span className="text-sm text-white font-bold">{f.label}</span>
-                  <p className="text-caption">/{f.key}</p>
-                </div>
-                <label className="relative inline-flex items-center cursor-pointer">
-                  <input type="checkbox" defaultChecked={f.enabled} className="sr-only peer" />
-                  <div className="w-9 h-5 bg-[var(--border)] rounded-full peer peer-checked:bg-[var(--accent)] peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-black after:rounded-full after:h-4 after:w-4 after:transition-all" />
-                </label>
-              </div>
-            ))}
           </div>
         </div>
       )}

@@ -36,14 +36,23 @@ export default function BackupRestore() {
   const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    // Client-side pre-checks mirror server caps (5MB, 10k rows)
+    if (file.size > 5 * 1024 * 1024) { toast("Backup file too large (max 5 MB)", "error"); return; }
     setImporting(true);
     try {
       const text = await file.text();
       const data = JSON.parse(text);
-      if (!data.strategies && !data.trades && !data.journals) { toast("Invalid backup file format", "error"); setImporting(false); return; }
+      if (!data.strategies && !data.trades && !data.journals && !data.workflows && !data.bots) { toast("Invalid backup file format", "error"); setImporting(false); return; }
+      const totalRows = ["strategies", "trades", "journals", "workflows", "bots"].reduce(
+        (n, t) => n + (Array.isArray(data[t]) ? data[t].length : 0), 0
+      );
+      if (totalRows > 10_000) { toast("Backup contains too many records (max 10,000)", "error"); setImporting(false); return; }
       const result = await restoreMutation.mutateAsync({ data });
       toast(`Imported ${result.imported} records`, "success");
-    } catch { toast("Failed to import data", "error"); }
+    } catch (err: any) {
+      // Surface server error message (e.g. "Backup payload too large")
+      toast(err?.message || "Failed to import data", "error");
+    }
     setImporting(false);
     if (fileRef.current) fileRef.current.value = "";
   };
@@ -73,7 +82,7 @@ export default function BackupRestore() {
               {importing ? <Loader2 className="w-5 h-5 animate-spin text-[var(--accent)]" /> : <Upload className="w-5 h-5 text-[var(--accent)]" />}
             </div>
             <span className="text-sm font-bold text-white">Restore Backup</span>
-            <p className="text-xs text-[var(--text-muted)] mt-1">Import data from a previously exported backup file</p>
+            <p className="text-xs text-[var(--text-muted)] mt-1">Import data from a previously exported backup file (max 5 MB, 10,000 records)</p>
           </button>
           <input ref={fileRef} type="file" accept=".json" onChange={handleImport} className="hidden" />
         </div>

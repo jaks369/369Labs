@@ -80,6 +80,7 @@ class DerivWebSocketService {
   private contractListeners: Map<number, (c: ContractUpdate) => void> = new Map();
   private contractSettledListeners: Set<(contractId: number, update: ContractUpdate, meta: any) => void> = new Set();
   private subSymbolById: Map<number, string> = new Map();
+  private subRefCount: Map<string, number> = new Map();
   private subErrors: Map<string, string> = new Map();
   private retryTimers: Map<string, ReturnType<typeof setTimeout>> = new Map();
   private intentionallyDisconnected = false;
@@ -359,7 +360,11 @@ class DerivWebSocketService {
       const msg = data.error.message || JSON.stringify(data.error);
       if (!msg.includes("subscribe")) console.error("[Deriv WS] API Error:", msg);
       const isTokenError = /token|authoriz|session/i.test(msg);
-      if (isTokenError) return;
+      if (isTokenError) {
+        // Notify listeners so the app can redirect/re-auth instead of silently failing
+        this.notifyError(new Error(msg));
+        return;
+      }
       const reqId = data.req_id;
       const sym = reqId ? this.subSymbolById.get(reqId) : null;
       if (sym) {
@@ -837,40 +842,51 @@ class DerivWebSocketService {
   }
 
   public subscribe(symbol: string): number {
-    const subId = this.msgId++;
-    if (this.subscribedSymbols.has(symbol)) return subId;
+    if (this.subscribedSymbols.has(symbol)) {
+      this.subRefCount.set(symbol, (this.subRefCount.get(symbol) || 0) + 1);
+      // Return a dummy subId since we're not sending a new request
+      return this.msgId++;
+    }
     if (this.authorized) this.ensureTickWs();
-    this.subSymbolById.set(subId, symbol);
+    const reqId = this.msgId++;
+    this.subSymbolById.set(reqId, symbol);
     this.subscribedSymbols.add(symbol);
+    this.subRefCount.set(symbol, 1);
     this.subErrors.delete(symbol);
     const target = this.wsForTicks();
     if (!target || target.readyState !== WebSocket.OPEN) {
       this.pendingSubscriptionSymbols.push(symbol);
-      return subId;
+      return reqId;
     }
     try {
-      target.send(JSON.stringify({ ticks: symbol, subscribe: 1, req_id: this.msgId++ }));
+      target.send(JSON.stringify({ ticks: symbol, subscribe: 1, req_id: reqId }));
     } catch (error) {
       console.error("[Deriv WS] Failed to subscribe:", error);
       this.subscribedSymbols.delete(symbol);
+      this.subRefCount.delete(symbol);
     }
-    return subId;
+    return reqId;
   }
 
   private doSubscribe(symbol: string) {
     if (!symbol) return;
-    if (this.subscribedSymbols.has(symbol)) return;
+    if (this.subscribedSymbols.has(symbol)) {
+      this.subRefCount.set(symbol, (this.subRefCount.get(symbol) || 0) + 1);
+      return;
+    }
     if (this.authorized) this.ensureTickWs();
-    this.subscribedSymbols.add(symbol);
-    this.subErrors.delete(symbol);
     const reqId = this.msgId++;
     this.subSymbolById.set(reqId, symbol);
+    this.subscribedSymbols.add(symbol);
+    this.subRefCount.set(symbol, 1);
+    this.subErrors.delete(symbol);
     const target = this.wsForTicks();
     try {
       target?.send(JSON.stringify({ ticks: symbol, subscribe: 1, req_id: reqId }));
     } catch (error) {
       console.error("[Deriv WS] Failed to subscribe:", error);
       this.subscribedSymbols.delete(symbol);
+      this.subRefCount.delete(symbol);
       this.subSymbolById.delete(reqId);
     }
   }
@@ -879,6 +895,13 @@ class DerivWebSocketService {
     const symbol = this.subSymbolById.get(subscriptionId);
     this.subSymbolById.delete(subscriptionId);
     if (!symbol) return;
+    // Ref-count: decrement, only fully unsubscribe when count reaches 0
+    const count = (this.subRefCount.get(symbol) || 1) - 1;
+    if (count > 0) {
+      this.subRefCount.set(symbol, count);
+      return;
+    }
+    this.subRefCount.delete(symbol);
     // Keep the subscription alive if the symbol is marked as background-watched,
     // so the rolling tick buffer keeps accumulating across page navigation.
     if (this.backgroundSymbols.has(symbol)) return;

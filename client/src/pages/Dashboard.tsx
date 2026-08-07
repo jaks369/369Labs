@@ -18,6 +18,7 @@ import { ContractSelection } from "@/components/ContractTypeSelector";
 import { VOLATILITY_SYMBOLS, getSymbolDisplayName } from "@/lib/symbols";
 import { getDecimalPlaces, lastDigitOf } from "@shared/lastDigit";
 import TerminalContextPanel from "@/components/TerminalContextPanel";
+import { toast } from "@/components/Toast";
 import InsightsPopup from "@/components/InsightsPopup";
 import PopupPanel from "@/components/PopupPanel";
 import WatchlistPanel from "@/components/WatchlistPanel";
@@ -707,7 +708,7 @@ export default function Dashboard() {
                         </div>
                         <div className="text-right shrink-0">
                           <p className={`text-[11px] font-bold font-mono tabular-nums ${pl >= 0 ? "text-[var(--green)]" : "text-[var(--red)]"}`}>
-                            {pl >= 0 ? "+" : ""}{formatSignedMoney(pl)}
+                            {formatSignedMoney(pl)}
                           </p>
                           <p className="text-[9px] text-[var(--text-muted)]">{formatMoney(trade.stake)}</p>
                         </div>
@@ -815,8 +816,11 @@ export default function Dashboard() {
         onNewAlertDir={setNewAlertDir}
         onNewAlertPrice={setNewAlertPrice}
         onCreateAlert={() => {
-          if (!newAlertPrice) return;
-          createAlertMutation.mutate({ symbol: newAlertSym || selectedSymbol, direction: newAlertDir, targetPrice: Number(newAlertPrice) });
+          if (!newAlertPrice || Number(newAlertPrice) <= 0) { toast("Enter a valid price", "error"); return; }
+          createAlertMutation.mutate(
+            { symbol: newAlertSym || selectedSymbol, direction: newAlertDir, targetPrice: Number(newAlertPrice) },
+            { onError: () => toast("Failed to create alert", "error") }
+          );
         }}
         createAlertPending={createAlertMutation.isPending}
         onDisableAlert={(id) => disableAlertMutation.mutate({ id })}

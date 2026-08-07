@@ -128,7 +128,7 @@ export default function Markets() {
     : 0;
   const momentumLabel = avgMomentum > 20 ? "Strong" : avgMomentum > 5 ? "Moderate" : "Choppy";
   const highVolCount = healthValues.filter((h: any) => h.volatility === "High").length;
-  const activeSignals = signals.filter((s: any) => s.status === "active").length || signals.length;
+  const activeSignals = signals.filter((s: any) => s.status === "active").length;
 
   const volMemo = useMemo(() => {
     const map: Record<string, string | null> = {};

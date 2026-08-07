@@ -12,6 +12,7 @@ import TickChart from "@/components/TickChart";
 import { VOLATILITY_SYMBOLS, getSymbolDisplayName } from "@/lib/symbols";
 import { getDecimalPlaces, lastDigitOf } from "@shared/lastDigit";
 import { formatMoney, formatNumber } from "@/lib/format";
+import { toast } from "@/components/Toast";
 
 const ALL_FALLBACK: DerivSymbol[] = VOLATILITY_SYMBOLS.map((s) => ({ ...s, decimalPlaces: 2 }));
 const TIMEFRAMES: { label: string; points: number }[] = [
@@ -138,7 +139,7 @@ export default function MobileTerminal() {
       dir: bias > 8 ? "Bullish" : bias < -8 ? "Bearish" : "Neutral",
       bias,
       hottest: hottest ? hottest[0] : null,
-      hotPct: hottest && digits.length ? Math.round((Number(hottest[1]) / digits.length) * 100) : 0,
+      hotPct: hottest && windowTicks.length ? Math.round((Number(hottest[1]) / windowTicks.length) * 100) : 0,
     };
   }, [windowTicks]);
 
@@ -217,7 +218,7 @@ export default function MobileTerminal() {
       });
       setShowPositions(true);
     } catch (e: any) {
-      // non-fatal: surfaced via trade activity
+      toast(e?.message || "Trade failed", "error");
     } finally {
       setTradeBusy(false);
     }
