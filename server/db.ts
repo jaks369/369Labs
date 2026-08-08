@@ -1766,6 +1766,27 @@ export async function ensureTradesTable(): Promise<void> {
   }
 }
 
+export async function ensureTradesStuckResult(): Promise<void> {
+  const pool = getRawPool();
+  if (!pool) return;
+  try {
+    // The result column is a strict enum without 'stuck', so the SettlementTracker's
+    // stuck UPDATE throws "Data truncated ..." and pending trades rot forever
+    // (#390001/#390002 were stuck-eligible for 8h and never flipped). Re-create the
+    // enum including 'stuck' idempotently; MySQL accepts the existing values in the
+    // new definition so this is safe to run on every boot.
+    await pool.execute(
+      "ALTER TABLE trades MODIFY COLUMN result ENUM('win','loss','pending','stuck') NOT NULL DEFAULT 'pending'",
+    );
+    console.log("[ensureTradesStuckResult] result column now accepts 'stuck'");
+  } catch (e: any) {
+    if (e?.code === "ER_DUP_FIELDNAME" || /Duplicate/i.test(e?.message || "")) {
+      return;
+    }
+    console.error("[ensureTradesStuckResult] migration note (non-fatal):", e?.message || e);
+  }
+}
+
 export async function ensureStrategiesTable(): Promise<void> {
   const pool = getRawPool();
   if (!pool) return;
