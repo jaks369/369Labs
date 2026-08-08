@@ -66,10 +66,12 @@ export default function TerminalContextPanel(props: TerminalContextPanelProps) {
   // Live payout quote from Deriv. Payout is not a flat stake*1.95 — it changes
   // with the symbol, direction (Over vs Under) and the selected barrier digit.
   const [payoutEst, setPayoutEst] = useState<number | null>(null);
+  const [payoutError, setPayoutError] = useState<string | null>(null);
   useEffect(() => {
     let cancelled = false;
     if (!isAuthorized) {
       setPayoutEst(null);
+      setPayoutError(null);
       return;
     }
     const map: Record<ContractCategory, string> = {
@@ -97,8 +99,13 @@ export default function TerminalContextPanel(props: TerminalContextPanelProps) {
       .then((q) => {
         if (cancelled) return;
         setPayoutEst(q && q.payout > 0 ? q.payout : null);
+        setPayoutError(null);
       })
-      .catch(() => { if (!cancelled) setPayoutEst(null); });
+      .catch((e: any) => {
+        if (cancelled) return;
+        setPayoutEst(null);
+        setPayoutError((e?.message || String(e || "")).slice(0, 120) || null);
+      });
     return () => { cancelled = true; };
   }, [selectedSymbol, contract, stake, isAuthorized]);
 
@@ -335,6 +342,11 @@ export default function TerminalContextPanel(props: TerminalContextPanelProps) {
             <span className="text-[10px] text-[var(--text-muted)]">Payout (est.)</span>
             <span className="text-[11px] font-bold font-mono tabular-nums text-[var(--green)]">{finalPayoutEst}</span>
           </div>
+          {payoutError && (
+            <div className="px-2 py-1 rounded bg-[var(--red-soft)] border border-[var(--red)]/30 text-[9px] font-mono text-[var(--red)] break-words">
+              {payoutError}
+            </div>
+          )}
 
           {/* Buy button */}
           {isRiseFall ? (
