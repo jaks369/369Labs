@@ -434,6 +434,28 @@ try { await ensureBotRunsTable(); } catch (e) { logger.error("[startup] ensureBo
       try {
         const { settlementTracker } = await import("../SettlementTracker");
         settlementTracker.start();
+        // Self-check: the tracker writes a heartbeat every tick. Verify a few
+        // seconds after startup that the row is actually being updated so a
+        // deploy that broke the loop (or the heartbeat path) is obvious in the
+        // logs instead of surfacing as "trades never settle" hours later.
+        setTimeout(async () => {
+          try {
+            const { getSettlementHeartbeat } = await import("../db");
+            const before = await getSettlementHeartbeat();
+            const beforeTs = before?.lastTickAt || 0;
+            await new Promise((r) => setTimeout(r, 5000));
+            const after = await getSettlementHeartbeat();
+            const afterTs = after?.lastTickAt || 0;
+            const ticking = afterTs > beforeTs;
+            logger.info(
+              ticking
+                ? `[startup] SettlementTracker heartbeat OK (${new Date(afterTs * 1000).toISOString()})`
+                : "[startup] WARNING: SettlementTracker heartbeat not advancing — settlement loop may be stuck",
+            );
+          } catch (e: any) {
+            logger.error("[startup] heartbeat self-check failed", { error: String(e?.message || e) });
+          }
+        }, 8000);
       } catch (e) { logger.error("[startup] SettlementTracker failed", { error: String(e) }); }
       try {
         const { startExecutionEngine } = await import("../executionEngine");
