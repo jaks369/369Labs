@@ -91,15 +91,19 @@ export class SettlementTracker {
         const attempts = this.retryCount.get(tradeId) || 0;
         if (elapsedMs >= STUCK_AFTER_MS) {
           const reason = "settlement_timeout";
-          try {
-            const { trades } = await import("../drizzle/schema");
-            const { eq } = await import("drizzle-orm");
-            const dbConn = await db.getDb();
-            if (dbConn) await dbConn.update(trades).set({ result: "stuck", profitLoss: trade.profitLoss || "0", exitTime: new Date() }).where(eq(trades.id, tradeId));
-          } catch (e: any) {
-            console.error("[SettlementTracker] Failed to mark trade as stuck:", e?.message || e);
+          // Use markTradeStuck (raw-pool UPDATE, same path as settle writes) so a
+          // stuck write can never silently fail the way the old dynamic-import
+          // drizzle path did — that swallowed the error and left #390001/#390002
+          // pending forever with the tracker "alive" every 2s.
+          const marked = await db.markTradeStuck(tradeId, reason);
+          if (marked) {
+            console.warn(`[SettlementTracker] Trade #${tradeId} (contract ${trade.contractId}) marked stuck (${reason}, attempts=${attempts}, elapsedMs=${elapsedMs})`);
+          } else {
+            heart.errors++;
+            stats.errors++;
+            heart.lastError = heart.lastError || `markTradeStuck failed for #${tradeId}`;
+            console.error(`[SettlementTracker] markTradeStuck failed for #${tradeId} (${reason}, elapsedMs=${elapsedMs})`);
           }
-          console.warn(`[SettlementTracker] Trade #${tradeId} (contract ${trade.contractId}) marked stuck (${reason}, attempts=${attempts}, elapsedMs=${elapsedMs})`);
           // Release the bot's open-trade lock so it is not left inert forever.
           if (trade.botRunId) {
             try {

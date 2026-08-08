@@ -829,7 +829,15 @@ class DerivWebSocketService {
         }
       }, delay);
       this.retryTimers.set("main", timer);
+      return;
     }
+    // The main socket has exhausted its reconnects. Do NOT leave the feed dead:
+    // a public socket still delivers ticks without auth, and wsForTicks() will
+    // only route through this.ws. Without this fallback every chart/frequency
+    // widget silently goes dark after a transient network drop until the user
+    // reloads the whole page (ticks just pile up in pendingSubscriptionSymbols).
+    console.warn("[Deriv WS] Reconnect attempts exhausted — falling back to public tick feed");
+    this.connectPublic();
   }
 
   private wsForTicks(): WebSocket | null {

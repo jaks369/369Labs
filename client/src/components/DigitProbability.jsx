@@ -71,12 +71,19 @@ export default function DigitProbability({ symbol, decimalPlaces, maxTicks = 100
 
   const historyQuery = trpc.market.getHistory.useQuery({ symbol, limit: 500 }, { enabled: Boolean(symbol) });
 
+  // Seed from the live tick buffer first (derivWS keeps up to 2000 rolling
+  // ticks per subscribed symbol), so the window is never a tiny handful of
+  // digits. Only fall back to the history query when the buffer is empty.
   useEffect(() => {
-    const ticks = historyQuery.data?.ticks;
-    if (!ticks?.length) return;
-    const hist = ticks.map((t) => t.lastDigit).filter((d) => d >= 0 && d <= 9);
+    const buffered = derivWS.getRecentTicks(symbol, maxTicks);
+    const bufDigits = buffered.map((t) => lastDigitOf(Number(t.price), decPlaces)).filter((d) => d >= 0 && d <= 9);
+    if (bufDigits.length) {
+      setDigits((prev) => (prev.length ? prev : bufDigits));
+      return;
+    }
+    const hist = (historyQuery.data?.ticks || []).map((t) => t.lastDigit).filter((d) => d >= 0 && d <= 9);
     if (hist.length) setDigits(hist.slice(-maxTicks));
-  }, [historyQuery.data, symbol, maxTicks]);
+  }, [historyQuery.data, symbol, maxTicks, decPlaces]);
 
   useEffect(() => {
     const listener = {

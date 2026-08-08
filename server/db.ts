@@ -516,10 +516,15 @@ export async function getDerivTokenByUserId(userId: number): Promise<DerivToken 
   const db = await getDb();
   if (!db) return undefined;
 
+  // Prefer the most recently updated active token. The previous query had no
+  // ORDER BY, so with multiple isActive tokens the DB picked an arbitrary row —
+  // which could be an old/revoked token while a fresh valid one exists, leaving
+  // DerivManager "connected" to a dead token and every trade silently failing.
   const result = await db
     .select()
     .from(derivTokens)
     .where(and(eq(derivTokens.userId, userId), eq(derivTokens.isActive, true)))
+    .orderBy(desc(derivTokens.updatedAt), desc(derivTokens.id))
     .limit(1);
   if (result.length > 0) {
     const decryptedToken = decrypt(result[0].token);
@@ -837,6 +842,31 @@ export async function getPendingTrades(): Promise<Trade[]> {
       // and keeps the loop honest.
       throw new Error(`getPendingTrades failed (drizzle + raw): ${rawErr?.message || String(rawErr)}`);
     }
+  }
+}
+
+// Mark an unrecoverable trade as stuck (settlement timeout) using the same raw
+// path as settleTrade. Uses a direct UPDATE (not the drizzle import dance) so a
+// stuck write can never silently fail the way it did for #390001/390002, where
+// the locked branch ran every 2s but the drizzle update threw and was swallowed.
+export async function markTradeStuck(tradeId: number, reason: string): Promise<boolean> {
+  const pool = getRawPool();
+  if (!pool) {
+    const db = await getDb();
+    if (!db) return false;
+    try {
+      const { trades } = await import("../drizzle/schema");
+      const { eq } = await import("drizzle-orm");
+      await db.update(trades).set({ result: "stuck", profitLoss: "0", exitTime: new Date() }).where(eq(trades.id, tradeId));
+      return true;
+    } catch { return false; }
+  }
+  try {
+    await pool.execute("UPDATE trades SET result='stuck', profitLoss=IFNULL(profitLoss, '0'), exitTime=NOW() WHERE id=? AND result='pending'", [tradeId]);
+    return true;
+  } catch (e: any) {
+    console.error(`[markTradeStuck] trade #${tradeId} failed:`, e?.message || e);
+    return false;
   }
 }
 
