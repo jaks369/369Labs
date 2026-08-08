@@ -531,7 +531,9 @@ class DerivWebSocketService {
     stopLoss?: number;
     takeProfit?: number;
   }): Promise<{ payout: number; askPrice: number; spot: number } | null> {
-    if (!this.authorized || this.apiMode !== "v1" || !this.ws || this.ws.readyState !== WebSocket.OPEN) return null;
+    if (!this.authorized || this.apiMode !== "v1" || !this.ws || this.ws.readyState !== WebSocket.OPEN) {
+      throw new Error("Not connected or authorized yet");
+    }
     const contractParams: Record<string, any> = {
       amount: params.amount,
       basis: "stake",
@@ -546,9 +548,15 @@ class DerivWebSocketService {
     try {
       const res = await this.sendRequest({ proposal: 1, ...contractParams }, 8000);
       const p = res?.proposal;
+      const err = res?.error;
+      if (err && err.message) {
+        console.warn("[Deriv WS] payout proposal error ->", err.message);
+        throw new Error(err.message);
+      }
       if (!p?.id) {
-        console.warn("[Deriv WS] payout proposal ->", JSON.stringify(res).slice(0, 300));
-        return null;
+        const raw = JSON.stringify(res).slice(0, 300);
+        console.warn("[Deriv WS] payout proposal ->", raw);
+        throw new Error("Proposal rejected: " + raw);
       }
       return {
         payout: Number(p.payout ?? 0),
@@ -557,7 +565,7 @@ class DerivWebSocketService {
       };
     } catch (e: any) {
       console.warn("[Deriv WS] payout quote error:", e?.message || e);
-      return null;
+      throw e;
     }
   }
 
