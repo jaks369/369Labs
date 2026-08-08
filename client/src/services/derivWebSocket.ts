@@ -54,7 +54,7 @@ export interface DerivSymbol {
 const DERIV_APP_ID = (import.meta as any).env?.VITE_DERIV_APP_ID || "33V0MWtYaZLLmAZBWUycN";
 const DERIV_API_BASE = "https://api.derivws.com";
 const DERIV_WS_PUBLIC = "wss://api.derivws.com/trading/v1/options/ws/public";
-const DERIV_WS_V3 = `wss://ws.derivws.com/websockets/v3?app_id=${DERIV_APP_ID}`;
+const DERIV_WS_V3 = "wss://ws.derivws.com/websockets/v3?app_id=1089";
 // If no tick has arrived for this long while symbols are subscribed, the live
 // feed is considered stale/frozen even if the socket itself is still open.
 const FEED_STALE_MS = 15000;
@@ -70,6 +70,7 @@ class DerivWebSocketService {
   private msgId = 1;
   private apiToken: string | null = null;
   private authorized = false;
+  private cachedOtpUrl: string | null = null;
   private subscribedSymbols: Set<string> = new Set();
   private backgroundSymbols: Set<string> = new Set();
   private tickBuffer: Map<string, Tick[]> = new Map();
@@ -98,7 +99,7 @@ class DerivWebSocketService {
       this.apiToken = localStorage.getItem("deriv_token");
     } catch {}
     if (this.apiToken) {
-      this.connectAuthorized(this.apiToken).catch(() => this.connectPublic());
+      this.connectWithOtp(this.apiToken).catch(() => this.connectPublic());
     } else {
       this.connectPublic();
     }
@@ -124,6 +125,56 @@ class DerivWebSocketService {
     return msg;
   }
 
+  private async fetchAccounts(): Promise<any[]> {
+    const url = `/api/deriv/accounts`;
+    console.log("[Deriv OTP] GET", url);
+    const res = await fetch(url, {
+      headers: {
+        Authorization: `Bearer ${this.apiToken}`,
+      },
+    });
+    const body = await res.text();
+    console.log("[Deriv OTP] response", res.status, body);
+    if (!res.ok) {
+      throw new Error(this.friendlyError(body, res.status));
+    }
+    let json: any;
+    try {
+      json = JSON.parse(body);
+    } catch {
+      throw new Error(this.friendlyError(`Accounts: invalid JSON: ${body}`));
+    }
+    const accounts = json.data || json.accounts || [];
+    if (!accounts.length) console.warn("[Deriv OTP] No accounts found in:", json);
+    return accounts;
+  }
+
+  private async fetchOtpUrl(accountId: string): Promise<{ url: string; accountType: string }> {
+    const url = `/api/deriv/otp/${accountId}`;
+    console.log("[Deriv OTP] POST", url);
+    const res = await fetch(url, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${this.apiToken}`,
+      },
+    });
+    const body = await res.text();
+    console.log("[Deriv OTP] response", res.status, body);
+    if (!res.ok) {
+      throw new Error(this.friendlyError(body, res.status));
+    }
+    let json: any;
+    try {
+      json = JSON.parse(body);
+    } catch {
+      throw new Error(this.friendlyError(`OTP: invalid JSON: ${body}`));
+    }
+    const wsUrl: string = json.data?.url || json.url;
+    if (!wsUrl) throw new Error(this.friendlyError(`OTP response missing url: ${body}`));
+    const accountType = wsUrl.includes("/real") ? "real" : "demo";
+    return { url: wsUrl, accountType };
+  }
+
   private connectPublic() {
     this.disconnect();
     this.authorized = false;
@@ -144,12 +195,11 @@ class DerivWebSocketService {
         this.resubscribeAllTicks();
         this.startKeepAlive(this.ws!, "main");
         if (authenticated) {
-          // Request authorization immediately; account state is applied when
-          // the authorize response arrives.
-          try {
-            this.ws!.send(JSON.stringify({ authorize: this.apiToken, req_id: this.msgId++ }));
-          } catch {}
+          this.authorized = true;
+          this.notifyConnect();
+          this.fetchBalance();
           this.fetchActiveSymbols();
+          setTimeout(() => this.resubscribeToContracts(), 500);
         } else {
           this.authorized = false;
           this.notifyConnect();
@@ -221,18 +271,6 @@ class DerivWebSocketService {
       const at = arr[0]?.account_type || data.account_type || "";
       this.lastAccountType = typeof at === "string" ? at.toLowerCase() : "";
       this.notifyBalance(data.balance);
-      return;
-    }
-    if (data.msg_type === "authorize") {
-      const a = data.authorize || {};
-      this.accountId = String(a.loginid || a.login || "");
-      const at = a.account_type || (a.login?.startsWith?.("CR") ? "real" : "demo") || "demo";
-      this.lastAccountType = String(at).toLowerCase();
-      this.authorized = true;
-      this.notifyConnect();
-      this.fetchBalance();
-      this.fetchActiveSymbols();
-      setTimeout(() => this.resubscribeToContracts(), 500);
       return;
     }
     if (data.msg_type === "active_symbols") {
@@ -782,9 +820,16 @@ class DerivWebSocketService {
         // backoff timer was pending — otherwise we'd silently reconnect after
         // an explicit disconnect().
         if (this.intentionallyDisconnected) return;
+        // Cheap fast path: the OTP URL is still valid for a while, so reopen
+        // the authenticated socket directly instead of re-running the two REST
+        // calls (fetchAccounts + fetchOtpUrl) that make recovery slow.
         if (this.apiToken) {
-          this.authorized = false;
-          this.connectWs(DERIV_WS_V3, true);
+          if (this.cachedOtpUrl) {
+            this.authorized = false;
+            this.connectWs(this.cachedOtpUrl, true);
+          } else {
+            this.connectWithOtp(this.apiToken).catch(() => this.connectPublic());
+          }
         } else {
           this.connectPublic();
         }
@@ -1039,29 +1084,32 @@ class DerivWebSocketService {
       this.connectPublic();
       return;
     }
-    await this.connectAuthorized(token);
+    await this.connectWithOtp(token);
   }
 
-  // New supported flow: open the v3 WebSocket and send the `authorize`
-  // message. The legacy OTP REST handshake (/trading/v1/options/accounts
-  // + /otp) was retired by Deriv (returns 405), so account identity is now
-  // taken straight from the authorize response.
-  private async connectAuthorized(token: string): Promise<void> {
+  private async connectWithOtp(token: string): Promise<void> {
     if (this.otpInProgress) return;
     this.otpInProgress = true;
     const timeoutMs = 15000;
-    const timeoutPromise = new Promise<never>((_, reject) => setTimeout(() => reject(new Error("Authorization timeout")), timeoutMs));
+    const timeoutPromise = new Promise<never>((_, reject) => setTimeout(() => reject(new Error("OTP connection timeout")), timeoutMs));
     try {
       await Promise.race([
         (async () => {
+          const accounts = await this.fetchAccounts();
+          if (!accounts.length) throw new Error(this.friendlyError("No trading accounts found"));
+          const account = accounts[0];
+          this.accountId = account.account_id;
+          this.apiMode = "v1";
+          const { url, accountType } = await this.fetchOtpUrl(account.account_id);
+          this.lastAccountType = accountType;
+          this.cachedOtpUrl = url;
           this.disconnect();
-          this.authorized = false;
-          this.connectWs(DERIV_WS_V3, true);
+          this.connectWs(url, true);
         })(),
         timeoutPromise,
       ]);
     } catch (error: any) {
-      console.error("[Deriv WS] Authorization failed:", error.message);
+      console.error("[Deriv WS] OTP connection failed:", error.message);
       const msg = error.message || "";
       const friendly = msg.includes(".") ? msg : this.friendlyError(msg);
       this.notifyTokenError(friendly);

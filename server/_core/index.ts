@@ -263,7 +263,9 @@ const RATE = (limit: number, windowMs: number) => async (req: any, res: any, nex
     }
   });
 
-  app.get("/api/deriv/otp/:accountId", async (req, res) => {
+  // OTP generation is a POST per Deriv's Options REST API:
+  //   POST /trading/v1/options/accounts/{accountId}/otp
+  app.post("/api/deriv/otp/:accountId", async (req, res) => {
     const authHeader = req.headers.authorization;
     if (!authHeader?.startsWith("Bearer ")) {
       return res.status(401).json({ error: "Missing Bearer token" });
@@ -272,11 +274,14 @@ const RATE = (limit: number, windowMs: number) => async (req: any, res: any, nex
     const { accountId } = req.params;
     try {
       const response = await fetch(`${DERIV_API_BASE}/trading/v1/options/accounts/${accountId}/otp`, {
+        method: "POST",
         headers: {
           Authorization: `Bearer ${token}`,
           "Deriv-App-ID": DERIV_APP_ID,
           Accept: "application/json",
+          "Content-Type": "application/json",
         },
+        body: "{}",
       });
       const text = await response.text();
       let data: any;
@@ -284,7 +289,7 @@ const RATE = (limit: number, windowMs: number) => async (req: any, res: any, nex
       if (!response.ok) return res.status(response.status).json(data);
       res.json(data);
     } catch (e) {
-      logger.error("[deriv] otp", { error: String(e) });
+      logger.error("[deriv-proxy] otp error", { error: String(e) });
       res.status(502).json({ error: "Upstream request failed", detail: String(e) });
     }
   });
