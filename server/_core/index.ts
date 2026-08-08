@@ -252,12 +252,14 @@ const RATE = (limit: number, windowMs: number) => async (req: any, res: any, nex
           Accept: "application/json",
         },
       });
-      const data = await response.json();
+      const text = await response.text();
+      let data: any;
+      try { data = JSON.parse(text); } catch { data = { raw: text }; }
       if (!response.ok) return res.status(response.status).json(data);
       res.json(data);
     } catch (e) {
       logger.error("[deriv-proxy] accounts error", { error: String(e) });
-      res.status(502).json({ error: "Upstream request failed" });
+      res.status(502).json({ error: "Upstream request failed", detail: String(e) });
     }
   });
 
@@ -276,12 +278,14 @@ const RATE = (limit: number, windowMs: number) => async (req: any, res: any, nex
           Accept: "application/json",
         },
       });
-      const data = await response.json();
+      const text = await response.text();
+      let data: any;
+      try { data = JSON.parse(text); } catch { data = { raw: text }; }
       if (!response.ok) return res.status(response.status).json(data);
       res.json(data);
     } catch (e) {
-      logger.error("[deriv-proxy] otp error", { error: String(e) });
-      res.status(502).json({ error: "Upstream request failed" });
+      logger.error("[deriv] otp", { error: String(e) });
+      res.status(502).json({ error: "Upstream request failed", detail: String(e) });
     }
   });
 

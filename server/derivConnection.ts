@@ -4,7 +4,6 @@ import * as db from "./db";
 import { normalizeSymbol } from "./aitools";
 
 const DERIV_APP_ID = process.env.VITE_DERIV_APP_ID || "33V0MWtYaZLLmAZBWUycN";
-const DERIV_API_BASE = "https://api.derivws.com";
 const REQUEST_TIMEOUT = 15000;
 const MAX_RECONNECT_ATTEMPTS = 5;
 const BASE_RECONNECT_DELAY = 1000; // 1 second base
@@ -76,39 +75,6 @@ class DerivConnection {
     return msg;
   }
 
-  private async fetchOtpUrl(): Promise<{ url: string; accountType: string }> {
-    const accountsRes = await fetch(`${DERIV_API_BASE}/trading/v1/options/accounts`, {
-      headers: {
-        "Authorization": `Bearer ${this.apiToken}`,
-        "Deriv-App-ID": DERIV_APP_ID,
-      },
-    });
-    if (!accountsRes.ok) {
-      const body = await accountsRes.text().catch(() => "");
-      throw new Error(this.friendlyError(body || `Status ${accountsRes.status}`));
-    }
-    const accountsJson = await accountsRes.json();
-    const accounts: any[] = accountsJson.data || [];
-    if (!accounts.length) throw new Error(this.friendlyError("No trading accounts found"));
-    const accountId = accounts[0].account_id;
-    const otpRes = await fetch(`${DERIV_API_BASE}/trading/v1/options/accounts/${accountId}/otp`, {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${this.apiToken}`,
-        "Deriv-App-ID": DERIV_APP_ID,
-      },
-    });
-    if (!otpRes.ok) {
-      const body = await otpRes.text().catch(() => "");
-      throw new Error(this.friendlyError(body || `Status ${otpRes.status}`));
-    }
-    const otpJson = await otpRes.json();
-    const url: string = otpJson.data?.url;
-    if (!url) throw new Error("Deriv OTP response missing WebSocket URL. Contact support.");
-    const accountType = url.includes("/real") ? "real" : "demo";
-    return { url, accountType };
-  }
-
   private async connect(): Promise<void> {
     if (this.connectPromise) return this.connectPromise;
     if (this.isIntentionallyDisconnected) {
@@ -117,18 +83,27 @@ class DerivConnection {
     
     this.connectPromise = new Promise<void>(async (resolve, reject) => {
       try {
-        const { url } = await this.fetchOtpUrl();
-        this.ws = new WebSocket(url);
+        this.ws = new WebSocket(`wss://ws.derivws.com/websockets/v3?app_id=${DERIV_APP_ID}`);
         this.ws.onopen = () => {
-          console.log(`[DerivConnection] Connected for user ${this.userId}`);
-          this._authorized = true;
-          this.reconnectAttempts = 0; // Reset on successful connection
-          this.refresh();
-          resolve();
+          try {
+            this.ws!.send(JSON.stringify({ authorize: this.apiToken, req_id: this.msgId++ }));
+          } catch {}
         };
         this.ws.onmessage = (event: WebSocket.MessageEvent) => {
           let data: any;
           try { data = JSON.parse(event.data as string); } catch { return; }
+          if (data.msg_type === "authorize") {
+            if (data.error) {
+              this._authorized = false;
+              reject(new Error(data.error.message || "Deriv authorize failed"));
+              this.ws?.close();
+              return;
+            }
+            this._authorized = true;
+            this.reconnectAttempts = 0; // Reset on successful connection
+            this.refresh();
+            resolve();
+          }
           this.handleMessage(data);
         };
         const teardown = () => {
