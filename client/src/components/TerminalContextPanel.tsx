@@ -68,6 +68,10 @@ export default function TerminalContextPanel(props: TerminalContextPanelProps) {
   const [payoutEst, setPayoutEst] = useState<number | null>(null);
   useEffect(() => {
     let cancelled = false;
+    if (!isAuthorized) {
+      setPayoutEst(null);
+      return;
+    }
     const map: Record<ContractCategory, string> = {
       rise_fall: contract.direction === "fall" ? "PUT" : "CALL",
       over_under: contract.overUnder === "under" ? "DIGITUNDER" : "DIGITOVER",
@@ -96,9 +100,9 @@ export default function TerminalContextPanel(props: TerminalContextPanelProps) {
       })
       .catch(() => { if (!cancelled) setPayoutEst(null); });
     return () => { cancelled = true; };
-  }, [selectedSymbol, contract, stake]);
+  }, [selectedSymbol, contract, stake, isAuthorized]);
 
-  const finalPayoutEst = payoutEst !== null && payoutEst > 0 ? formatMoney(payoutEst) : (stake > 0 ? formatMoney(stake * 1.95) : "—");
+  const finalPayoutEst = payoutEst !== null && payoutEst > 0 ? formatMoney(payoutEst) : "—";
   const accountBadge =
     accountType === "real" ? "REAL"
     : accountType === "demo" ? "DEMO"
