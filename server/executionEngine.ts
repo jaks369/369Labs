@@ -179,7 +179,7 @@ async function executeBotCycleInner(): Promise<void> {
         currency,
         duration: 1,
         duration_unit: "t",
-        symbol,
+        underlying_symbol: symbol,
       };
       if (isDigit && barrier !== undefined) proposalPayload.barrier = String(barrier);
       // Enforce the strategy's stop-loss / take-profit on the live contract,
