@@ -546,13 +546,17 @@ class DerivWebSocketService {
     try {
       const res = await this.sendRequest({ proposal: 1, ...contractParams }, 8000);
       const p = res?.proposal;
-      if (!p?.id) return null;
+      if (!p?.id) {
+        console.warn("[Deriv WS] payout proposal ->", JSON.stringify(res).slice(0, 300));
+        return null;
+      }
       return {
         payout: Number(p.payout ?? 0),
         askPrice: Number(p.ask_price ?? 0),
         spot: Number(p.spot ?? 0),
       };
-    } catch {
+    } catch (e: any) {
+      console.warn("[Deriv WS] payout quote error:", e?.message || e);
       return null;
     }
   }
