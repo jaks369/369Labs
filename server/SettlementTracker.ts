@@ -3,7 +3,14 @@ import { derivManager } from "./derivConnection";
 import { botRunner } from "./botRunner";
 
 const POLL_INTERVAL = 2_000;
-const MAX_RETRIES = 100;
+// A live trade is reconciled every 2s from the moment it is created. A 5-tick
+// R_10/Vol contract sells ~10-15s after entry. If a contract has not resolved
+// to win/loss within this wall-clock window, it is treated as unrecoverable and
+// marked "stuck" (released from Open Positions / for the bot) instead of being
+// retried forever. Using elapsed time (not an in-memory retry counter) makes
+// the tracker resilient to server restarts, which would otherwise silently keep
+// a broken contract in "pending" indefinitely.
+const STUCK_AFTER_MS = 30 * 60_000; // 30 min grace (5-tick + guard latch)
 
 export class SettlementTracker {
   private intervalId: ReturnType<typeof setInterval> | null = null;
@@ -57,7 +64,13 @@ export class SettlementTracker {
       const pending = await db.getPendingTrades();
       for (const trade of pending) {
         const tradeId = trade.id;
-        if ((this.retryCount.get(tradeId) || 0) >= MAX_RETRIES) {
+        // Wall-clock, restart-proof stuck detection. The old MAX_RETRIES loop
+        // only counted in-process attempts, so a deploy/restart reset the count
+        // and a contract that never sold would stay "pending" forever.
+        const elapsedMs = Date.now() - new Date(trade.entryTime).getTime();
+        const attempts = this.retryCount.get(tradeId) || 0;
+        if (elapsedMs >= STUCK_AFTER_MS) {
+          const reason = "settlement_timeout";
           try {
             const { trades } = await import("../drizzle/schema");
             const { eq } = await import("drizzle-orm");
@@ -66,7 +79,7 @@ export class SettlementTracker {
           } catch (e: any) {
             console.error("[SettlementTracker] Failed to mark trade as stuck:", e?.message || e);
           }
-          console.warn(`[SettlementTracker] Trade #${tradeId} marked stuck after ${MAX_RETRIES} retries`);
+          console.warn(`[SettlementTracker] Trade #${tradeId} (contract ${trade.contractId}) marked stuck (${reason}, attempts=${attempts}, elapsedMs=${elapsedMs})`);
           // Release the bot's open-trade lock so it is not left inert forever.
           if (trade.botRunId) {
             try {
@@ -85,7 +98,8 @@ export class SettlementTracker {
         } catch (e: any) {
           stats.errors++;
           this.retryCount.set(tradeId, (this.retryCount.get(tradeId) || 0) + 1);
-          console.error(`[SettlementTracker] Reconcile failed for trade ${tradeId}:`, e?.message || e);
+          const reason = e?.message || String(e);
+          console.error(`[SettlementTracker] Reconcile failed for trade #${trade.id} (contract ${trade.contractId}, ${trade.symbol} ${trade.contractType}): ${reason}`);
         }
       }
     } catch (e) {
@@ -100,10 +114,10 @@ export class SettlementTracker {
     if (!trade.contractId) return;
 
     const conn = await derivManager.ensureConnected(trade.userId);
-    if (!conn) throw new Error("no_deriv_connection");
+    if (!conn) throw new Error(`no_deriv_connection (user ${trade.userId} has no usable token)`);
 
     const c = await conn.getContractStatus(parseInt(trade.contractId));
-    if (!c) throw new Error("contract_status_unavailable");
+    if (!c) throw new Error(`contract_status_unavailable (${trade.contractId}); conn authorized=${conn.isAuthorized()}`);
 
     const isSold = c.is_sold === 1 || c.status === "sold" || c.status === "won" || c.status === "lost";
     if (!isSold) return;
