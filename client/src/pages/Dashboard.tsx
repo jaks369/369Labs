@@ -545,19 +545,6 @@ export default function Dashboard() {
                 })()}
               </div>
               <div className="flex items-center gap-2 flex-shrink-0">
-                {/* Session Stats (compact inline) */}
-                <div className="hidden lg:flex items-center gap-2 text-[11px] shrink-0">
-                  <span className="text-[var(--text-muted)]">P&L <span className={`font-mono font-bold ${todayPnl >= 0 ? "text-[var(--green)]" : "text-[var(--red)]"}`}>{formatSignedMoney(todayPnl)}</span></span>
-                  <span className="text-[var(--text-muted)]">WR <span className="font-mono font-bold text-white">{todaySettled.length ? `${todayWinRate}%` : "—"}</span></span>
-                  <span className="text-[var(--text-muted)]">N <span className="font-mono font-bold text-white">{todayTrades.length}</span></span>
-                </div>
-                {/* Balance */}
-                <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-white/5 border border-[var(--border)] shrink-0">
-                  <Wallet className="w-3.5 h-3.5 text-[var(--green)]" />
-                  <span className="text-sm font-bold font-mono tabular-nums text-white">
-                    <CurrencyStat value={balance} currency={balanceInfo?.currency || "USD"} />
-                  </span>
-                </div>
                 {/* Connection Status */}
                 <div className={`hidden sm:flex items-center gap-1 px-2 py-0.5 rounded shrink-0 ${derivStatus === "connected" ? "bg-[var(--green-soft)]" : "bg-white/5 border border-[var(--border)]"}`}>
                   <span className={`w-1.5 h-1.5 rounded-full ${derivStatus === "connected" ? "bg-[var(--green)] animate-live-pulse" : "bg-[var(--text-disabled)]"}`} />

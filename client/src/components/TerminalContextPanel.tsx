@@ -1,7 +1,9 @@
+import { useEffect, useState } from "react";
 import { Loader2, Zap, TrendingUp, TrendingDown, Wallet } from "lucide-react";
-import type { ContractSelection } from "@/components/ContractTypeSelector";
+import type { ContractSelection, ContractCategory } from "@/components/ContractTypeSelector";
 import { formatMoney } from "@/lib/format";
 import { getSymbolDisplayName } from "@/lib/symbols";
+import { derivWS } from "@/services/derivWebSocket";
 
 interface TerminalContextPanelProps {
   selectedSymbol: string;
@@ -24,6 +26,7 @@ interface TerminalContextPanelProps {
 
 export default function TerminalContextPanel(props: TerminalContextPanelProps) {
   const {
+    selectedSymbol,
     selectedDisplay,
     accountType,
     tokenStatus,
@@ -59,6 +62,43 @@ export default function TerminalContextPanel(props: TerminalContextPanelProps) {
   })();
 
   const buyIsDown = isFall || (contract.category === "even_odd" && contract.digitMatch === "differ");
+
+  // Live payout quote from Deriv. Payout is not a flat stake*1.95 — it changes
+  // with the symbol, direction (Over vs Under) and the selected barrier digit.
+  const [payoutEst, setPayoutEst] = useState<number | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    const map: Record<ContractCategory, string> = {
+      rise_fall: contract.direction === "fall" ? "PUT" : "CALL",
+      over_under: contract.overUnder === "under" ? "DIGITUNDER" : "DIGITOVER",
+      even_odd: contract.digitMatch === "differ" ? "DIGITODD" : "DIGITEVEN",
+      digits: contract.digitMatch === "differ" ? "DIGITDIFF" : "DIGITMATCH",
+      accumulator: "ACCU",
+    };
+    const contractType = map[contract.category];
+    if (!contractType || !selectedSymbol) return;
+    const barrier = contract.category === "over_under"
+      ? contract.barrier
+      : contract.category === "digits"
+        ? contract.digit
+        : undefined;
+    derivWS
+      .getPayoutQuote({
+        symbol: selectedSymbol,
+        contractType: contractType as any,
+        amount: stake,
+        ...(contract.category === "accumulator" ? { growthRate: contract.growthRate ?? 1 } : { duration: 5, durationUnit: "t" }),
+        ...(barrier !== undefined ? { barrier } : {}),
+      })
+      .then((q) => {
+        if (cancelled) return;
+        setPayoutEst(q && q.payout > 0 ? q.payout : null);
+      })
+      .catch(() => { if (!cancelled) setPayoutEst(null); });
+    return () => { cancelled = true; };
+  }, [selectedSymbol, contract, stake]);
+
+  const finalPayoutEst = payoutEst !== null && payoutEst > 0 ? formatMoney(payoutEst) : (stake > 0 ? formatMoney(stake * 1.95) : "—");
   const accountBadge =
     accountType === "real" ? "REAL"
     : accountType === "demo" ? "DEMO"
@@ -67,8 +107,6 @@ export default function TerminalContextPanel(props: TerminalContextPanelProps) {
     : "NO TOKEN";
   const accountBadgeCls =
     accountType === "real" ? "badge-gray" : accountType === "demo" ? "badge-accent" : tokenStatus === "connected" ? "badge-green" : tokenStatus === "invalid" ? "badge-red" : "badge-gray";
-
-  const payoutEst = stake > 0 ? formatMoney(stake * 1.95) : "—";
 
   return (
     <div className="flex flex-col h-full">
@@ -291,7 +329,7 @@ export default function TerminalContextPanel(props: TerminalContextPanelProps) {
           {/* Payout estimate */}
           <div className="flex items-center justify-between px-2 py-1 rounded bg-[var(--green-soft)] border border-[var(--green)]/20">
             <span className="text-[10px] text-[var(--text-muted)]">Payout (est.)</span>
-            <span className="text-[11px] font-bold font-mono tabular-nums text-[var(--green)]">{payoutEst}</span>
+            <span className="text-[11px] font-bold font-mono tabular-nums text-[var(--green)]">{finalPayoutEst}</span>
           </div>
 
           {/* Buy button */}

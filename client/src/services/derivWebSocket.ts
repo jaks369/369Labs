@@ -513,6 +513,50 @@ class DerivWebSocketService {
     }
   }
 
+  /**
+   * Live payout quote straight from Deriv. Deriv's payout is not a flat
+   * stake * 1.95 — it depends on the symbol, contract type, direction and
+   * barrier digit. This sends a real `proposal` and returns the payout,
+   * ask price and current spot so the UI reflects what Deriv would actually
+   * pay for the exact selection.
+   */
+  public async getPayoutQuote(params: {
+    symbol: string;
+    contractType: DerivContractType;
+    amount: number;
+    duration?: number;
+    durationUnit?: "t" | "s" | "m";
+    growthRate?: number;
+    barrier?: number | string;
+    stopLoss?: number;
+    takeProfit?: number;
+  }): Promise<{ payout: number; askPrice: number; spot: number } | null> {
+    if (!this.authorized || this.apiMode !== "v1" || !this.ws || this.ws.readyState !== WebSocket.OPEN) return null;
+    const contractParams: Record<string, any> = {
+      amount: params.amount,
+      basis: "stake",
+      contract_type: params.contractType,
+      currency: "USD",
+      symbol: params.symbol,
+      ...(params.growthRate !== undefined ? { growth_rate: params.growthRate } : { duration: params.duration, duration_unit: params.durationUnit || "t" }),
+      ...(params.barrier !== undefined ? { barrier: String(params.barrier) } : {}),
+      ...(params.stopLoss !== undefined ? { stop_loss: String(params.stopLoss) } : {}),
+      ...(params.takeProfit !== undefined ? { take_profit: String(params.takeProfit) } : {}),
+    };
+    try {
+      const res = await this.sendRequest({ proposal: 1, ...contractParams }, 8000);
+      const p = res?.proposal;
+      if (!p?.id) return null;
+      return {
+        payout: Number(p.payout ?? 0),
+        askPrice: Number(p.ask_price ?? 0),
+        spot: Number(p.spot ?? 0),
+      };
+    } catch {
+      return null;
+    }
+  }
+
   public async fetchTickHistory(symbol: string, start: number, end: number): Promise<Tick[]> {
     let payload: Record<string, any> = { start, end, style: "ticks", adjust_start_time: 1 };
     for (const field of ["ticks_history", "ticks", "tick_history", "symbol"]) {
