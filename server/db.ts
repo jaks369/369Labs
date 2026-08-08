@@ -2123,6 +2123,57 @@ export async function ensureBotLogsTable(): Promise<void> {
   }
 }
 
+// bot.bot.getRuns / saveBotRun / getBotRunById relied on a botRuns table that was
+// only ever created via Drizzle migrations — fresh/preview databases never got it,
+// so /api/trpc/bot.getRuns 500'd with "table botRuns does not exist". This mirrors
+// the other ensure*Table helpers (idempotent CREATE IF NOT EXISTS + column
+// migration for the fields added later).
+export async function ensureBotRunsTable(): Promise<void> {
+  const pool = getRawPool();
+  if (!pool) return;
+  try {
+    await pool.execute(`CREATE TABLE IF NOT EXISTS botRuns (
+      id int AUTO_INCREMENT NOT NULL,
+      userId int NOT NULL,
+      strategyId int NOT NULL,
+      startTime timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      endTime timestamp,
+      status enum('running','stopped','error','paused','restarting') NOT NULL DEFAULT 'running',
+      totalTrades int NOT NULL DEFAULT 0,
+      totalProfitLoss decimal(18,8) NOT NULL DEFAULT 0,
+      errorMessage text,
+      safety json,
+      lossStreak int NOT NULL DEFAULT 0,
+      hasOpenTrade boolean NOT NULL DEFAULT false,
+      lastError text,
+      lastDailyReset timestamp,
+      createdAt timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updatedAt timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+      CONSTRAINT botRuns_id PRIMARY KEY(id)
+    )`);
+    console.log("[ensureBotRunsTable] created/migrated botRuns table");
+    // Migrate columns that were added after the initial table for pre-existing DBs.
+    for (const col of [
+      "ADD COLUMN safety json",
+      "ADD COLUMN lossStreak int NOT NULL DEFAULT 0",
+      "ADD COLUMN hasOpenTrade boolean NOT NULL DEFAULT false",
+      "ADD COLUMN lastError text",
+      "ADD COLUMN lastDailyReset timestamp",
+      "ADD COLUMN status enum('running','stopped','error','paused','restarting') NOT NULL DEFAULT 'running'",
+    ]) {
+      try {
+        await pool.execute(`ALTER TABLE botRuns ${col}`);
+      } catch (e2: any) {
+        if (e2?.errno !== 1060 && !e2?.message?.includes("Duplicate column")) {
+          console.warn("[ensureBotRunsTable] column migration note", e2?.message || e2);
+        }
+      }
+    }
+  } catch (e: any) {
+    console.error("[ensureBotRunsTable] create failed", e?.message || e);
+  }
+}
+
 export async function getWebhooksByUserId(userId: number): Promise<any[]> {
   const db = await getDb();
   if (!db) return [];

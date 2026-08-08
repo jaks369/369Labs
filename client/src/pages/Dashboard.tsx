@@ -644,11 +644,6 @@ export default function Dashboard() {
               tradeBusy={tradeBusy}
               tokenError={tokenError}
               onOpenToken={() => setShowTokenModal(true)}
-              todayPnl={todayPnl}
-              todayWinRate={todayWinRate}
-              todayTrades={todayTrades.length}
-              balance={balance}
-              currency={balanceInfo?.currency || "USD"}
               openPositions={(tradesQuery.data || []).filter((t: any) => t.result === "pending")}
               onSelectSymbol={(s) => setSelectedSymbol(s)}
             />

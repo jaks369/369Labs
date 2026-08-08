@@ -4,7 +4,7 @@ import { createExpressMiddleware } from "@trpc/server/adapters/express";
 import { appRouter } from "../routers";
 import { createContext } from "./context";
 import { serveStatic } from "./staticServe";
-import { getDb, pruneBadTicks, ensureSignalExpiryColumn, ensureSignalOosColumns, ensureSignalsTable, ensureNotificationSettingsColumns, ensureAuditLogsTable, ensureIpWhitelistTable, ensureTradesTable, ensureStrategiesTable, ensurePriceAlertsTable, ensureTickHistoryTable, recomputeLastDigits, ensureUserMemoryTable, ensurePluginsTable, ensureWebhooksTable, ensureAiKnowledgeTable, ensureUsersColumns, ensureSessionsTable, ensureSubscriptionsTable, ensureVerificationTokensTable, ensurePasswordResetTokensTable, ensureBotLogsTable } from "../db";
+import { getDb, pruneBadTicks, ensureSignalExpiryColumn, ensureSignalOosColumns, ensureSignalsTable, ensureNotificationSettingsColumns, ensureAuditLogsTable, ensureIpWhitelistTable, ensureTradesTable, ensureStrategiesTable, ensurePriceAlertsTable, ensureTickHistoryTable, recomputeLastDigits, ensureUserMemoryTable, ensurePluginsTable, ensureWebhooksTable, ensureAiKnowledgeTable, ensureUsersColumns, ensureSessionsTable, ensureSubscriptionsTable, ensureVerificationTokensTable, ensurePasswordResetTokensTable, ensureBotLogsTable, ensureBotRunsTable } from "../db";
 import { users } from "../../drizzle/schema";
 import { startTickCollector } from "../tickCollector";
 import { runWatch } from "../signalScanner";
@@ -204,8 +204,11 @@ const RATE = (limit: number, windowMs: number) => async (req: any, res: any, nex
 };
   app.use("/api/trpc", async (req: any, res: any, next: any) => {
     const url: string = req.url || "";
-    if (url.includes("signup") || url.includes("login") || url.includes("saveToken") || url.includes("removeToken") || url.includes("deleteAccount")) {
-      return RATE(10, 60_000)(req, res, next); // 10 auth/token writes per minute
+    if (url.includes("signup") || url.includes("login") || url.includes("deleteAccount")) {
+      return RATE(10, 60_000)(req, res, next); // 10 auth writes per minute
+    }
+    if (url.includes("saveToken") || url.includes("removeToken")) {
+      return RATE(30, 60_000)(req, res, next); // 30 Deriv token writes per minute (saveToken is called once per form save; 10/min tripped during connect+bugs)
     }
     if (url.includes("startRun") || url.includes("stopRun") || url.includes("closePosition") || url.includes("save") && (url.includes("trades") || url.includes("strategies"))) {
       return RATE(30, 60_000)(req, res, next); // 30 trading writes per minute
@@ -408,6 +411,7 @@ const RATE = (limit: number, windowMs: number) => async (req: any, res: any, nex
       try { await ensureVerificationTokensTable(); } catch (e) { logger.error("[startup] ensureVerificationTokensTable failed", { error: String(e) }); }
       try { await ensurePasswordResetTokensTable(); } catch (e) { logger.error("[startup] ensurePasswordResetTokensTable failed", { error: String(e) }); }
       try { await ensureBotLogsTable(); } catch (e) { logger.error("[startup] ensureBotLogsTable failed", { error: String(e) }); }
+try { await ensureBotRunsTable(); } catch (e) { logger.error("[startup] ensureBotRunsTable failed", { error: String(e) }); }
       try {
         const { aiOrchestrator } = await import("../ai/AIOrchestrator");
         aiOrchestrator.start();

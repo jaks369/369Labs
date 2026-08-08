@@ -54,7 +54,9 @@ export interface DerivSymbol {
 const DERIV_APP_ID = (import.meta as any).env?.VITE_DERIV_APP_ID || "33V0MWtYaZLLmAZBWUycN";
 const DERIV_API_BASE = "https://api.derivws.com";
 const DERIV_WS_PUBLIC = "wss://api.derivws.com/trading/v1/options/ws/public";
-const DERIV_WS_V3 = "wss://ws.derivws.com/websockets/v3?app_id=1089";
+// Trading happens ONLY on the OTP-authenticated socket (this.ws). The legacy
+// v3 host rejects the alphanumeric Build Client ID, so we never open a
+// secondary authorized socket with a hardcoded app_id.
 // If no tick has arrived for this long while symbols are subscribed, the live
 // feed is considered stale/frozen even if the socket itself is still open.
 const FEED_STALE_MS = 15000;
@@ -236,6 +238,11 @@ class DerivWebSocketService {
       this.pendingRequests.delete(data.req_id);
       if (data.error) pending.reject(new Error(data.error.message || "Deriv API error"));
       else pending.resolve(data);
+      // The message was a response to an explicit request (proposal, buy,
+      // balance, etc). Do NOT fall through to the generic error fan-out below:
+      // that would broadcast a failed trade/proposal as a "connection error"
+      // and stop every live chart.
+      return;
     }
     if (data.tick) {
       this.notifyTick({
@@ -452,7 +459,8 @@ class DerivWebSocketService {
 
   private keepAliveTimers: ReturnType<typeof setInterval>[] = [];
 
-  private startKeepAlive(socket: WebSocket, label: string) {
+  private startKeepAlive(socket: WebSocket | null, label: string) {
+    if (!socket || typeof socket.addEventListener !== "function") return;
     try {
       socket.send(JSON.stringify({ ping: 1, req_id: this.msgId++ }));
     } catch {}
@@ -557,129 +565,66 @@ class DerivWebSocketService {
   }
 
   private async v3Trade(params: PurchaseParams): Promise<PurchaseResult> {
-    return new Promise((resolve, reject) => {
-      try {
-        const ws = new WebSocket(DERIV_WS_V3);
-        const timeout = setTimeout(() => {
-          ws.close();
-          reject(new Error("v3 WS timed out"));
-        }, 30000);
-        let reqId = 1;
-        const pending = new Map<number, { res: (v: any) => void; rej: (e: Error) => void }>();
-        let proposalId = "";
-        let askPrice = 0;
-        let spot = 0;
-        ws.onopen = () => {
-          ws.send(JSON.stringify({ authorize: this.apiToken, req_id: reqId++ }));
-        };
-        ws.onmessage = (event) => {
-          let data: any;
-          try {
-            data = JSON.parse(event.data);
-          } catch {
-            return;
-          }
-          if (data.error) {
-            ws.close();
-            clearTimeout(timeout);
-            reject(new Error(data.error.message || JSON.stringify(data.error)));
-            return;
-          }
-          if (data.msg_type === "authorize") {
-            ws.send(
-              JSON.stringify({
-                proposal: 1,
-                amount: params.amount,
-                basis: "stake",
-                contract_type: params.contractType,
-                currency: "USD",
-                symbol: params.symbol,
-                ...(params.growthRate !== undefined
-                  ? { growth_rate: params.growthRate }
-                  : { duration: params.duration, duration_unit: params.durationUnit || "t" }),
-                ...(params.barrier !== undefined ? { barrier: String(params.barrier) } : {}),
-                req_id: reqId++,
-              }),
-            );
-          } else if (data.msg_type === "proposal") {
-            proposalId = data.proposal.id;
-            askPrice = data.proposal.ask_price;
-            spot = Number(data.proposal.spot ?? 0);
-            ws.send(JSON.stringify({ buy: proposalId, price: askPrice, req_id: reqId++ }));
-          } else if (data.msg_type === "buy") {
-            ws.close();
-            clearTimeout(timeout);
-            const b = data.buy;
-            this.lastBalance = { ...(this.lastBalance || {}), balance: b.balance_after ?? (this.lastBalance?.balance ?? 0) - params.amount };
-            this.notifyBalance(this.lastBalance);
-            resolve({
-              contractId: b.contract_id,
-              buyPrice: b.buy_price,
-              longcode: b.longcode || "",
-              balanceAfter: b.balance_after ?? 0,
-              entrySpot: spot > 0 ? spot : undefined,
-              entryTime: Date.now(),
-            });
-          }
-        };
-        ws.onerror = () => {
-          clearTimeout(timeout);
-          reject(new Error("v3 WS connection failed"));
-        };
-      } catch (e: any) {
-        reject(e);
-      }
-    });
+    throw new Error(
+      "Trading over a secondary legacy socket is disabled for this Build app. " +
+      "Trades must be placed on the OTP-authenticated connection.",
+    );
   }
 
   public async purchaseContract(params: PurchaseParams): Promise<PurchaseResult> {
     if (!this.authorized) throw new Error("Not authorized");
     if (this.apiMode === "v1") {
-      // Try v1 OTP WS — tries various message formats
-      try {
-        const contractParams = {
-          amount: params.amount,
-          basis: "stake",
-          contract_type: params.contractType,
-          currency: "USD",
-          symbol: params.symbol,
-          ...(params.growthRate !== undefined ? { growth_rate: params.growthRate } : { duration: params.duration, duration_unit: params.durationUnit || "t" }),
-          ...(params.barrier !== undefined ? { barrier: String(params.barrier) } : {}),
-        };
-        for (const format of [
-          { proposal: 1, ...contractParams },
-          { proposal: 1, contract: contractParams },
-          { proposal: 1, parameters: contractParams },
-        ]) {
-          const proposalRes = await this.sendRequest(format, 15000).catch(() => null);
-          if (proposalRes?.proposal) {
-            const buyRes = await this.sendRequest({ buy: proposalRes.proposal.id, price: proposalRes.proposal.ask_price });
-            if (!buyRes?.buy) continue;
-            const b = buyRes.buy.balance_after ?? (this.lastBalance?.balance ?? 0) - params.amount;
-            this.lastBalance = { ...(this.lastBalance || {}), balance: b };
-            this.notifyBalance(this.lastBalance);
-            const entrySpot = Number(proposalRes.proposal.spot ?? 0);
-            return {
-              contractId: buyRes.buy.contract_id,
-              buyPrice: buyRes.buy.buy_price,
-              longcode: buyRes.buy.longcode,
-              balanceAfter: b,
-              entrySpot: entrySpot > 0 ? entrySpot : undefined,
-              entryTime: Date.now(),
-            };
+      // The OTP-authenticated socket is the only valid trading path for this
+      // Build app. Send the standard v3-style proposal/buy messages directly on
+      // it (the legacy v3 host rejects the alphanumeric Build Client ID, so we
+      // never open a secondary authorized socket anymore). Any API error (bad
+      // symbol, expired OTP session, insufficient balance, …) is surfaced to
+      // the caller verbatim instead of being masked by a blind v3 fallback.
+      const contractParams: Record<string, any> = {
+        amount: params.amount,
+        basis: "stake",
+        contract_type: params.contractType,
+        currency: "USD",
+        symbol: params.symbol,
+        ...(params.growthRate !== undefined ? { growth_rate: params.growthRate } : { duration: params.duration, duration_unit: params.durationUnit || "t" }),
+        ...(params.barrier !== undefined ? { barrier: String(params.barrier) } : {}),
+        ...(params.stopLoss !== undefined ? { stop_loss: String(params.stopLoss) } : {}),
+        ...(params.takeProfit !== undefined ? { take_profit: String(params.takeProfit) } : {}),
+      };
+      let lastErr: string | null = null;
+      for (const format of [
+        { proposal: 1, ...contractParams },
+        { proposal: 1, contract: contractParams },
+        { proposal: 1, parameters: contractParams },
+      ]) {
+        try {
+          const proposalRes = await this.sendRequest(format, 15000);
+          if (!proposalRes?.proposal) {
+            lastErr = `No proposal returned: ${JSON.stringify(proposalRes).slice(0, 200)}`;
+            continue;
           }
+          const buyRes = await this.sendRequest({ buy: proposalRes.proposal.id, price: proposalRes.proposal.ask_price });
+          if (!buyRes?.buy) {
+            lastErr = `Buy rejected: ${JSON.stringify(buyRes).slice(0, 200)}`;
+            continue;
+          }
+          const b = buyRes.buy.balance_after ?? (this.lastBalance?.balance ?? 0) - params.amount;
+          this.lastBalance = { ...(this.lastBalance || {}), balance: b };
+          this.notifyBalance(this.lastBalance);
+          const entrySpot = Number(proposalRes.proposal.spot ?? 0);
+          return {
+            contractId: buyRes.buy.contract_id,
+            buyPrice: buyRes.buy.buy_price,
+            longcode: buyRes.buy.longcode,
+            balanceAfter: b,
+            entrySpot: entrySpot > 0 ? entrySpot : undefined,
+            entryTime: Date.now(),
+          };
+        } catch (e: any) {
+          lastErr = e?.message || String(e);
         }
-        console.warn("[Deriv WS] v1 proposal failed all formats");
-      } catch (e: any) {
-        console.warn("[Deriv WS] v1 proposal error:", e.message);
       }
-      // Fall back to v3 WS
-      try {
-        return await this.v3Trade(params);
-      } catch (e: any) {
-        console.error("[Deriv WS] v3Trade failed:", e.message);
-        throw new Error(e.message || "All trading methods failed");
-      }
+      throw new Error(lastErr || "All trading methods failed");
     }
     if (!this.ws || this.ws.readyState !== WebSocket.OPEN) throw new Error("WebSocket not connected");
     let proposalPayload: Record<string, any> = { proposal: 1, amount: params.amount, basis: "stake", contract_type: params.contractType, currency: "USD" };

@@ -1,6 +1,6 @@
 import { Loader2, Zap, TrendingUp, TrendingDown, Wallet } from "lucide-react";
 import type { ContractSelection } from "@/components/ContractTypeSelector";
-import { formatMoney, formatSignedMoney } from "@/lib/format";
+import { formatMoney } from "@/lib/format";
 import { getSymbolDisplayName } from "@/lib/symbols";
 
 interface TerminalContextPanelProps {
@@ -18,11 +18,6 @@ interface TerminalContextPanelProps {
   tradeBusy: boolean;
   tokenError?: string | null;
   onOpenToken?: () => void;
-  todayPnl?: number;
-  todayWinRate?: number | null;
-  todayTrades?: number;
-  balance?: number;
-  currency?: string;
   openPositions?: any[];
   onSelectSymbol?: (s: string) => void;
 }
@@ -41,11 +36,6 @@ export default function TerminalContextPanel(props: TerminalContextPanelProps) {
     tradeBusy,
     tokenError,
     onOpenToken,
-    todayPnl = 0,
-    todayWinRate = null,
-    todayTrades = 0,
-    balance = 0,
-    currency = "USD",
     openPositions = [],
     onSelectSymbol,
   } = props;
@@ -347,30 +337,6 @@ export default function TerminalContextPanel(props: TerminalContextPanelProps) {
               )}
             </div>
           )}
-        </div>
-      </div>
-
-      {/* Session stats — always visible */}
-      <div className="aurora-glass-panel mt-1.5 p-2.5">
-        <div className="grid grid-cols-4 gap-1.5">
-          <div className="rounded-lg bg-white/5 border border-[var(--border)] p-1.5 text-center">
-            <span className="text-[8px] text-[var(--text-muted)] uppercase tracking-wider block">P&L</span>
-            <span className={`text-[11px] font-bold font-mono tabular-nums ${todayPnl >= 0 ? "text-[var(--green)]" : "text-[var(--red)]"}`}>
-              {formatSignedMoney(todayPnl)}
-            </span>
-          </div>
-          <div className="rounded-lg bg-white/5 border border-[var(--border)] p-1.5 text-center">
-            <span className="text-[8px] text-[var(--text-muted)] uppercase tracking-wider block">Win Rate</span>
-            <span className="text-[11px] font-bold font-mono tabular-nums text-white">{todayWinRate == null ? "—" : `${todayWinRate}%`}</span>
-          </div>
-          <div className="rounded-lg bg-white/5 border border-[var(--border)] p-1.5 text-center">
-            <span className="text-[8px] text-[var(--text-muted)] uppercase tracking-wider block">Trades</span>
-            <span className="text-[11px] font-bold font-mono tabular-nums text-white">{todayTrades}</span>
-          </div>
-          <div className="rounded-lg bg-white/5 border border-[var(--border)] p-1.5 text-center">
-            <span className="text-[8px] text-[var(--text-muted)] uppercase tracking-wider block">Balance</span>
-            <span className="text-[11px] font-bold font-mono tabular-nums text-white">{formatMoney(balance)}</span>
-          </div>
         </div>
       </div>
 

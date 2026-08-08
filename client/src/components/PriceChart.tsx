@@ -287,6 +287,10 @@ export default function PriceChart({
   }, [zoomBy]);
 
   const onPointerDown = useCallback((e: React.PointerEvent) => {
+    // Pan with either the left or right mouse button (button 2 is the classic
+    // charting "grab" gesture). Suppress the browser context menu so right-drag
+    // moves the chart backward/forward instead of popping up the menu.
+    if (e.button === 2) e.preventDefault();
     (e.target as HTMLElement).setPointerCapture?.(e.pointerId);
     setDragging({ startX: e.clientX, startScroll: scrollBack });
   }, [scrollBack]);
@@ -300,7 +304,7 @@ export default function PriceChart({
   }, [dragging, chartW, totalBars, liveEdge]);
 
   const onCrosshairMove = useCallback((e: React.PointerEvent) => {
-    if (dragging || chartW <= 0) { setCrosshair(null); return; }
+    if (dragging || e.button !== 0 || chartW <= 0) { setCrosshair(null); return; }
     const rect = containerRef.current?.getBoundingClientRect();
     if (!rect) return;
     const mx = e.clientX - rect.left;
@@ -379,8 +383,9 @@ export default function PriceChart({
         onPointerMove={(e) => { onPointerMove(e); onCrosshairMove(e); }}
         onPointerUp={onPointerUp}
         onPointerLeave={() => { onPointerUp(); onCrosshairLeave(); }}
+        onContextMenu={(e) => e.preventDefault()}
         className={`w-full relative select-none ${fillHeight ? "flex-1 min-h-0" : heightClass || defaultHeight}`}
-        style={{ background: `linear-gradient(180deg, color-mix(in srgb, ${color} 6%, transparent) 0%, color-mix(in srgb, ${color} 1.5%, transparent) 60%, transparent 100%)`, cursor: dragging ? "grabbing" : "grab" }}
+        style={{ background: `linear-gradient(180deg, color-mix(in srgb, ${color} 6%, transparent) 0%, color-mix(in srgb, ${color} 1.5%, transparent) 60%, transparent 100%)`, cursor: dragging ? "grabbing" : "grab", touchAction: "none" }}
       >
         {error ? (
           <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 p-6">
