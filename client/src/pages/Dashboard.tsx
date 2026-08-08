@@ -51,6 +51,8 @@ export default function Dashboard() {
   const [tokenSaved, setTokenSaved] = useState(false);
   const [contract, setContract] = useState<ContractSelection>({ category: "rise_fall", direction: "rise" });
   const [stake, setStake] = useState<number>(1);
+  const [duration, setDuration] = useState<number>(5);
+  const [durationUnit, setDurationUnit] = useState<"t" | "m">("t");
   const [stopLoss, setStopLoss] = useState<number>(0);
   const [takeProfit, setTakeProfit] = useState<number>(0);
   const [tradeBusy, setTradeBusy] = useState(false);
@@ -261,7 +263,7 @@ export default function Dashboard() {
         symbol: selectedSymbol,
         contractType: contractType as any,
         amount: stake,
-        ...(isAccumulator ? { growthRate: contract.growthRate ?? 1 } : { duration: 5, durationUnit: "t" }),
+        ...(isAccumulator ? { growthRate: contract.growthRate ?? 1 } : { duration, durationUnit }),
         ...(contract.category === "over_under" && contract.barrier !== undefined ? { barrier: contract.barrier } : {}),
         ...(contract.category === "digits" && contract.digit !== undefined ? { barrier: contract.digit } : {}),
         ...(stopLoss > 0 ? { stopLoss } : {}),
@@ -639,6 +641,9 @@ export default function Dashboard() {
               contract={contract}
               stake={stake}
               onStakeChange={setStake}
+              duration={duration}
+              durationUnit={durationUnit}
+              onDurationChange={(n, u) => { setDuration(n); setDurationUnit(u); }}
               onContractChange={setContract}
               onQuickTrade={handleQuickTrade}
               tradeBusy={tradeBusy}
