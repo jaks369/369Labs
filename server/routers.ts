@@ -2825,6 +2825,13 @@ aiMarket: router({
     pendingTrades: adminProcedure.query(async () => {
       return { trades: await db.getPendingTrades() };
     }),
+    settlementHealth: adminProcedure.query(async () => {
+      const { settlementTracker } = await import("./SettlementTracker");
+      const exhaustion = settlementTracker as any;
+      const retries = exhaustion.getRetryCount ? Array.from(exhaustion.getRetryCount().entries()).slice(0, 20) : [];
+      const heartbeat = await db.getSettlementHeartbeat();
+      return { heartbeat, retries: (Array.from(retries) as [number, number][]).map(([id, n]) => ({ id, attempts: n })), pendingCount: (await db.getPendingTrades()).length };
+    }),
     createTestTrade: adminProcedure
       .input(z.object({ userId: z.number(), contractId: z.string(), symbol: z.string(), stake: z.string(), contractType: z.string(), entryPrice: z.string().optional() }))
       .mutation(async ({ input }) => {

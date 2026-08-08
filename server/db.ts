@@ -813,7 +813,7 @@ export async function saveTrade(trade: InsertTrade): Promise<Trade> {
 
 export async function getPendingTrades(): Promise<Trade[]> {
   const db = await getDb();
-  if (!db) return [];
+  if (!db) throw new Error("DB unavailable: no connection pool");
   try {
     return await db
       .select()
@@ -821,16 +821,21 @@ export async function getPendingTrades(): Promise<Trade[]> {
       .where(and(eq(trades.result, "pending"), sql`${trades.contractId} IS NOT NULL`))
       .orderBy(asc(trades.entryTime))
       .limit(200);
-  } catch {
+  } catch (err) {
     const pool = getRawPool();
-    if (!pool) return [];
+    if (!pool) throw new Error("getPendingTrades: drizzle failed and no raw pool");
     try {
       const [rows] = await pool.execute(
         "SELECT id, userId, botRunId, strategyId, entryTime, exitTime, entryPrice, exitPrice, stake, profitLoss, contractType, result, contractId, updatedAt FROM trades WHERE result = 'pending' AND contractId IS NOT NULL ORDER BY entryTime ASC LIMIT 200",
       );
       return rows as Trade[];
-    } catch {
-      return [];
+    } catch (rawErr: any) {
+      // Do NOT swallow into [] — a silent empty list fools the SettlementTracker
+      // into thinking there are no pending trades while rows rot in "pending"
+      // forever (observed: #390001/#390002 sat untouched for 5h but signals kept
+      // flowing). Surface the failure so the tracker records it in the heartbeat
+      // and keeps the loop honest.
+      throw new Error(`getPendingTrades failed (drizzle + raw): ${rawErr?.message || String(rawErr)}`);
     }
   }
 }
@@ -1854,6 +1859,83 @@ export async function ensureSignalBaselineColumn(): Promise<void> {
     console.log("[ensureSignalBaselineColumn] added baselineWinRate column");
   } catch (e: any) {
     if (e?.errno !== 1060) console.error("[ensureSignalBaselineColumn] add failed", e?.message || e);
+  }
+}
+
+export interface SettlementHeartbeat {
+  pendingCount: number;
+  settledCount: number;
+  errorCount: number;
+  derivOk: boolean;
+  lastError: string | null;
+}
+
+export async function ensureSettlementHeartbeatTable(): Promise<void> {
+  const pool = getRawPool();
+  if (!pool) return;
+  try {
+    await pool.execute(`CREATE TABLE IF NOT EXISTS settlementHeartbeat (
+      id int NOT NULL,
+      lastTickAt bigint NOT NULL,
+      pendingCount int NOT NULL DEFAULT 0,
+      settledCount int NOT NULL DEFAULT 0,
+      errorCount int NOT NULL DEFAULT 0,
+      derivOk varchar(5) NOT NULL DEFAULT 'null',
+      lastError varchar(255) NULL,
+      PRIMARY KEY(id)
+    )`);
+    console.log("[ensureSettlementHeartbeatTable] created settlementHeartbeat table");
+  } catch (e: any) {
+    console.error("[ensureSettlementHeartbeatTable] create failed", e?.message || e);
+  }
+}
+
+// Persist a single-row heartbeat so tracker liveness is observable from the DB
+// (the row's id is fixed at 1 and upserted every tick). If the tick loop stops
+// running, lastTickAt stops advancing — no more guessing from the signals table.
+export async function saveSettlementHeartbeat(data: SettlementHeartbeat): Promise<void> {
+  const pool = getRawPool();
+  if (!pool) return;
+  try {
+    await pool.execute(
+      `INSERT INTO settlementHeartbeat (id, lastTickAt, pendingCount, settledCount, errorCount, derivOk, lastError)
+       VALUES (1, ?, ?, ?, ?, ?, ?)
+       ON DUPLICATE KEY UPDATE lastTickAt=VALUES(lastTickAt), pendingCount=VALUES(pendingCount),
+         settledCount=VALUES(settledCount), errorCount=VALUES(errorCount), derivOk=VALUES(derivOk), lastError=VALUES(lastError)`,
+      [
+        Math.floor(Date.now() / 1000),
+        data.pendingCount,
+        data.settledCount,
+        data.errorCount,
+        data.derivOk ? "true" : "false",
+        data.lastError ? String(data.lastError).slice(0, 255) : null,
+      ],
+    );
+  } catch (e: any) {
+    console.error("[saveSettlementHeartbeat] failed", e?.message || e);
+  }
+}
+
+export async function getSettlementHeartbeat(): Promise<{ lastTickAt: number; pendingCount: number; settledCount: number; errorCount: number; derivOk: boolean; lastError: string | null } | null> {
+  const pool = getRawPool();
+  if (!pool) return null;
+  try {
+    const [rows] = await pool.execute(
+      `SELECT lastTickAt, pendingCount, settledCount, errorCount, derivOk, lastError FROM settlementHeartbeat WHERE id=1`,
+    );
+    const r = (rows as any[])[0];
+    if (!r) return null;
+    return {
+      lastTickAt: Number(r.lastTickAt),
+      pendingCount: Number(r.pendingCount),
+      settledCount: Number(r.settledCount),
+      errorCount: Number(r.errorCount),
+      derivOk: String(r.derivOk) === "true",
+      lastError: r.lastError,
+    };
+  } catch (e: any) {
+    console.error("[getSettlementHeartbeat] failed", e?.message || e);
+    return null;
   }
 }
 

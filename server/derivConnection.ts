@@ -324,6 +324,15 @@ class DerivConnection {
 class DerivManager {
   private connections = new Map<number, DerivConnection>();
 
+  // True if any connection is currently authorized. Used by the SettlementTracker
+  // heartbeat to distinguish "tracker loop dead" from "loop alive but Deriv down".
+  hasAuthorizedConnection(): boolean {
+    for (const conn of this.connections.values()) {
+      if (conn.isAuthorized()) return true;
+    }
+    return false;
+  }
+
   async ensureConnected(userId: number): Promise<DerivConnection | null> {
     let conn = this.connections.get(userId);
     if (conn && conn.isAuthorized()) return conn;

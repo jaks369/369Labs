@@ -4,13 +4,31 @@ import { botRunner } from "./botRunner";
 
 const POLL_INTERVAL = 2_000;
 // A live trade is reconciled every 2s from the moment it is created. A 5-tick
-// R_10/Vol contract sells ~10-15s after entry. If a contract has not resolved
+// R_10/Vol contract sells ~10-15s after entry. If a contract does not resolve
 // to win/loss within this wall-clock window, it is treated as unrecoverable and
 // marked "stuck" (released from Open Positions / for the bot) instead of being
 // retried forever. Using elapsed time (not an in-memory retry counter) makes
 // the tracker resilient to server restarts, which would otherwise silently keep
 // a broken contract in "pending" indefinitely.
 const STUCK_AFTER_MS = 30 * 60_000; // 30 min grace (5-tick + guard latch)
+
+// Persist a heartbeat each tick so loop liveness is debuggable from the DB even
+// when the process keeps running (previously only the signals side-channel showed
+// up; a dead tracker looked identical). The write is fire-and-forget: a failure
+// here must never take the tick loop down.
+function writeHeartbeat(stats: { pending: number; settled: number; errors: number; derivOk: boolean; lastError: string | null }) {
+  try {
+    if (typeof (db as any).saveSettlementHeartbeat === "function") {
+      (db as any).saveSettlementHeartbeat({
+        pendingCount: stats.pending,
+        settledCount: stats.settled,
+        errorCount: stats.errors,
+        derivOk: stats.derivOk,
+        lastError: stats.lastError,
+      }).catch(() => {});
+    }
+  } catch { /* non-critical */ }
+}
 
 export class SettlementTracker {
   private intervalId: ReturnType<typeof setInterval> | null = null;
@@ -60,8 +78,10 @@ export class SettlementTracker {
     const stats = { processed: 0, settled: 0, errors: 0 };
     if (this.running) return stats;
     this.running = true;
+    const heart = { pending: 0, settled: 0, errors: 0, derivOk: false, lastError: null as string | null };
     try {
       const pending = await db.getPendingTrades();
+      heart.pending = pending.length;
       for (const trade of pending) {
         const tradeId = trade.id;
         // Wall-clock, restart-proof stuck detection. The old MAX_RETRIES loop
@@ -95,17 +115,27 @@ export class SettlementTracker {
         try {
           await this.reconcile(trade);
           stats.settled++;
+          heart.settled++;
         } catch (e: any) {
           stats.errors++;
+          heart.errors++;
+          heart.lastError = e?.message || String(e);
           this.retryCount.set(tradeId, (this.retryCount.get(tradeId) || 0) + 1);
           const reason = e?.message || String(e);
           console.error(`[SettlementTracker] Reconcile failed for trade #${trade.id} (contract ${trade.contractId}, ${trade.symbol} ${trade.contractType}): ${reason}`);
         }
       }
-    } catch (e) {
+    } catch (e: any) {
+      heart.lastError = `tick_failed: ${e?.message || String(e)}`;
       console.error("[SettlementTracker] Tick error:", e);
     } finally {
       this.running = false;
+      try {
+        heart.derivOk = typeof (derivManager as any).hasAuthorizedConnection === "function"
+          ? (derivManager as any).hasAuthorizedConnection()
+          : false;
+      } catch { /* non-critical */ }
+      writeHeartbeat(heart);
     }
     return stats;
   }
