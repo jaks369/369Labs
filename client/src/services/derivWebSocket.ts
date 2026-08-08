@@ -564,13 +564,6 @@ class DerivWebSocketService {
     });
   }
 
-  private async v3Trade(params: PurchaseParams): Promise<PurchaseResult> {
-    throw new Error(
-      "Trading over a secondary legacy socket is disabled for this Build app. " +
-      "Trades must be placed on the OTP-authenticated connection.",
-    );
-  }
-
   public async purchaseContract(params: PurchaseParams): Promise<PurchaseResult> {
     if (!this.authorized) throw new Error("Not authorized");
     if (this.apiMode === "v1") {
