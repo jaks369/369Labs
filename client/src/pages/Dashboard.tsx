@@ -18,6 +18,7 @@ import { ContractSelection } from "@/components/ContractTypeSelector";
 import { VOLATILITY_SYMBOLS, getSymbolDisplayName } from "@/lib/symbols";
 import { getDecimalPlaces, lastDigitOf } from "@shared/lastDigit";
 import TerminalContextPanel from "@/components/TerminalContextPanel";
+import type { DurationUnit } from "@/components/DurationSelector";
 import { toast } from "@/components/Toast";
 import InsightsPopup from "@/components/InsightsPopup";
 import PopupPanel from "@/components/PopupPanel";
@@ -52,7 +53,7 @@ export default function Dashboard() {
   const [contract, setContract] = useState<ContractSelection>({ category: "rise_fall", direction: "rise" });
   const [stake, setStake] = useState<number>(1);
   const [duration, setDuration] = useState<number>(5);
-  const [durationUnit, setDurationUnit] = useState<"t" | "m">("t");
+  const [durationUnit, setDurationUnit] = useState<DurationUnit>("t");
   const [stopLoss, setStopLoss] = useState<number>(0);
   const [takeProfit, setTakeProfit] = useState<number>(0);
   const [tradeBusy, setTradeBusy] = useState(false);

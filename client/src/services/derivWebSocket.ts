@@ -17,7 +17,7 @@ export interface PurchaseParams {
   contractType: DerivContractType;
   amount: number;
   duration?: number;
-  durationUnit?: "t" | "s" | "m";
+  durationUnit?: "t" | "s" | "m" | "h" | "d";
   barrier?: number;
   growthRate?: number;
   stopLoss?: number;
@@ -525,7 +525,7 @@ class DerivWebSocketService {
     contractType: DerivContractType;
     amount: number;
     duration?: number;
-    durationUnit?: "t" | "s" | "m";
+    durationUnit?: "t" | "s" | "m" | "h" | "d";
     growthRate?: number;
     barrier?: number | string;
     stopLoss?: number;

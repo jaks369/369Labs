@@ -13,6 +13,12 @@ interface TickChartProps {
 
 const MAX_BUFFER = 2000;
 
+// How many historical ticks to pull for the initial chart. This is NOT the
+// visible window — 25/50/100/200 are just presets. The full buffer is fetched
+// up front and streamed afterwards so wheel-zooming out / dragging back
+// actually has history behind the line instead of a wall of no-data.
+const HISTORY_LIMIT = 500;
+
 // Module-level rolling cache so price history survives page navigation without
 // restarting from scratch. Keyed by symbol, capped at MAX_BUFFER points; once
 // full the oldest point is dropped and the new one appended (a running window,
@@ -69,25 +75,25 @@ export default function TickChart({ symbol, maxDataPoints = 100, compact = false
     const cached = rollingCache.get(symbol);
     if (cached && cached.length) {
       bufferRef.current = cached;
-      setVisibleData(cached.slice(-timeframe));
+      setVisibleData(cached.slice(-MAX_BUFFER));
       setInitialLoad(true);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [symbol]);
 
   // Initial history load - prepend to buffer once (only when nothing cached)
-  const historyQuery = trpc.market.getHistory.useQuery({ symbol, limit: maxDataPoints }, { enabled: Boolean(symbol) && !initialLoad });
+  const historyQuery = trpc.market.getHistory.useQuery({ symbol, limit: HISTORY_LIMIT }, { enabled: Boolean(symbol) && !initialLoad });
   useEffect(() => {
     const ticks = historyQuery.data?.ticks;
     if (!ticks || !ticks.length || initialLoad) return;
-    const hist = ticks.slice(-maxDataPoints).map((t) => ({
+    const hist = ticks.slice(-MAX_BUFFER).map((t) => ({
       time: new Date((t.epoch || 0) * 1000).toLocaleTimeString(),
       price: Number(t.price),
     }));
     if (hist.length) {
       bufferRef.current = hist;
       rollingCache.set(symbol, hist);
-      setVisibleData(hist.slice(-timeframe));
+      setVisibleData(hist.slice(-MAX_BUFFER));
       setInitialLoad(true);
     }
   }, [historyQuery.data, symbol, maxDataPoints, timeframe, initialLoad]);
@@ -116,7 +122,7 @@ export default function TickChart({ symbol, maxDataPoints = 100, compact = false
         const point = { time: new Date(tick.timestamp).toLocaleTimeString(), price: tick.price };
         bufferRef.current = [...bufferRef.current, point].slice(-MAX_BUFFER);
         rollingCache.set(symbol, bufferRef.current);
-        setVisibleData([...bufferRef.current].slice(-timeframe));
+        setVisibleData([...bufferRef.current].slice(-MAX_BUFFER));
         setError(null);
       },
       onError: (err: Error, sym?: string) => {
@@ -135,10 +141,12 @@ export default function TickChart({ symbol, maxDataPoints = 100, compact = false
     };
   }, [symbol, timeframe, initialLoad, toPoints]);
 
-  // Update visible slice when timeframe changes
+  // Update visible window when timeframe changes — PriceChart owns the viewport
+  // now (wheel zoom + drag pan), so we just hand it the full buffer. The pill
+  // presets (25/50/100/200) reseed visibleBars inside PriceChart.
   useEffect(() => {
     if (bufferRef.current.length) {
-      setVisibleData(bufferRef.current.slice(-timeframe));
+      setVisibleData(bufferRef.current.slice(-MAX_BUFFER));
     }
   }, [timeframe]);
 
@@ -152,6 +160,7 @@ export default function TickChart({ symbol, maxDataPoints = 100, compact = false
       fillHeight={fillHeight}
       timeframes={[25, 50, 100, 200]}
       timeframe={timeframe}
+      maxBars={MAX_BUFFER}
       onTimeframeChange={setTimeframe}
       followLabel="Return to live"
     />

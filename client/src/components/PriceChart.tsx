@@ -18,6 +18,10 @@ interface PriceChartProps {
   timeframes?: number[];
   timeframe?: number;
   onTimeframeChange?: (t: number) => void;
+  /** Zoom-out ceiling in bars. With live symbols this is the full rolling
+   *  buffer, NOT the pill presets — wheel zoom-out can show far more history
+   *  than the quick 25/50/100/200 pills imply. */
+  maxBars?: number;
   fitOnDataChange?: boolean;
   heightClass?: string;
   showStats?: boolean;
@@ -77,6 +81,7 @@ export default function PriceChart({
   timeframes,
   timeframe,
   onTimeframeChange,
+  maxBars = 2000,
   fitOnDataChange = false,
   heightClass,
   showStats = !compact,
@@ -243,7 +248,7 @@ export default function PriceChart({
 
   const zoomBy = useCallback((factor: number, anchorX?: number) => {
     const cur = viewportRef.current.visibleBars;
-    const next = Math.round(Math.min(200, Math.max(MIN_BARS, cur * factor)));
+    const next = Math.round(Math.min(maxBars, Math.max(MIN_BARS, cur * factor)));
     if (anchorX != null && dims.w > padX) {
       const frac = (anchorX - padX) / chartW;
       const anchorIdx = leftIdx + frac * (totalBars - 1);
@@ -253,7 +258,7 @@ export default function PriceChart({
       setScrollBack((s) => (s > 0 ? s : 0));
     }
     setVisibleBars(next);
-  }, [dims.w, chartW, leftIdx, totalBars, rightOffset, liveEdge]);
+  }, [dims.w, chartW, leftIdx, totalBars, rightOffset, liveEdge, maxBars]);
 
   // Native, NON-passive wheel listener. React's synthetic onWheel is attached
   // passively, so preventDefault is ignored there: wheel-scrolling over the

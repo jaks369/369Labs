@@ -8,7 +8,8 @@ import { derivWS, DerivSymbol } from "@/services/derivWebSocket";
 import { useDerivStatus } from "@/hooks/useDerivStatus";
 import DerivTokenModal from "@/components/DerivTokenModal";
 import ContractTypeSelector, { ContractSelection } from "@/components/ContractTypeSelector";
-import { DURATION_PRESETS } from "@/components/TerminalContextPanel";
+import DurationSelector from "@/components/DurationSelector";
+import type { DurationUnit } from "@/components/DurationSelector";
 import TickChart from "@/components/TickChart";
 import { VOLATILITY_SYMBOLS, getSymbolDisplayName } from "@/lib/symbols";
 import { getDecimalPlaces, lastDigitOf } from "@shared/lastDigit";
@@ -37,7 +38,7 @@ export default function MobileTerminal() {
   const [contract, setContract] = useState<ContractSelection>({ category: "rise_fall", direction: "rise" });
   const [stake, setStake] = useState<number>(1);
   const [duration, setDuration] = useState<number>(5);
-  const [durationUnit, setDurationUnit] = useState<"t" | "m">("t");
+  const [durationUnit, setDurationUnit] = useState<DurationUnit>("t");
   const [tradeBusy, setTradeBusy] = useState(false);
   const [showTokenModal, setShowTokenModal] = useState(false);
   const [showSymbolPicker, setShowSymbolPicker] = useState(false);
@@ -440,20 +441,11 @@ export default function MobileTerminal() {
           {contract.category !== "accumulator" && (
             <div>
               <div className="text-[9px] uppercase tracking-widest text-[var(--text-muted)] font-bold mb-1">Duration</div>
-              <div className="flex gap-1">
-                {DURATION_PRESETS.map((p) => {
-                  const active = durationUnit === p.durationUnit && duration === p.duration;
-                  return (
-                    <button
-                      key={p.label}
-                      onClick={() => { setDuration(p.duration); setDurationUnit(p.durationUnit); }}
-                      className={`flex-1 py-2 rounded-md text-caption font-bold cursor-pointer min-h-[36px] ${active ? "aurora-glow-green text-black" : "bg-[var(--surface-secondary)] text-[var(--text-muted)]"}`}
-                    >
-                      {p.label}
-                    </button>
-                  );
-                })}
-              </div>
+              <DurationSelector
+                value={duration}
+                unit={durationUnit}
+                onChange={(n, u) => { setDuration(n); setDurationUnit(u); }}
+              />
             </div>
           )}
           {isRiseFall ? (

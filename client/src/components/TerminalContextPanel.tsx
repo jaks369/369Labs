@@ -1,23 +1,11 @@
 import { useEffect, useState } from "react";
 import { Loader2, Zap, TrendingUp, TrendingDown, Wallet } from "lucide-react";
 import type { ContractSelection, ContractCategory } from "@/components/ContractTypeSelector";
+import DurationSelector from "@/components/DurationSelector";
+import type { DurationUnit } from "@/components/DurationSelector";
 import { formatMoney } from "@/lib/format";
 import { getSymbolDisplayName } from "@/lib/symbols";
 import { derivWS } from "@/services/derivWebSocket";
-
-export interface DurationPreset {
-  label: string;
-  duration: number;
-  durationUnit: "t" | "m";
-}
-
-export const DURATION_PRESETS: DurationPreset[] = [
-  { label: "5t", duration: 5, durationUnit: "t" },
-  { label: "10t", duration: 10, durationUnit: "t" },
-  { label: "15t", duration: 15, durationUnit: "t" },
-  { label: "1m", duration: 1, durationUnit: "m" },
-  { label: "5m", duration: 5, durationUnit: "m" },
-];
 
 interface TerminalContextPanelProps {
   selectedSymbol: string;
@@ -30,8 +18,8 @@ interface TerminalContextPanelProps {
   stake: number;
   onStakeChange: (n: number) => void;
   duration?: number;
-  durationUnit?: "t" | "m";
-  onDurationChange?: (n: number, unit: "t" | "m") => void;
+  durationUnit?: DurationUnit;
+  onDurationChange?: (n: number, unit: DurationUnit) => void;
   onContractChange: (c: ContractSelection) => void;
   onQuickTrade: (dir?: "rise" | "fall") => void;
   tradeBusy: boolean;
@@ -357,27 +345,19 @@ export default function TerminalContextPanel(props: TerminalContextPanelProps) {
             </div>
           </div>
 
-          {/* Duration selector */}
+          {/* Duration selector — Deriv-style unit dropdown + value stepper.
+              Hidden for accumulators (they have no end duration, only growth). */}
           {contract.category !== "accumulator" && (
             <div>
               <div className="flex items-center justify-between mb-1">
                 <span className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-wider">Duration</span>
-                <span className="text-[9px] text-[var(--text-muted)]">t = ticks</span>
+                <span className="text-[9px] text-[var(--text-muted)]">{`${duration ?? 5} ${durationUnit ?? "t"}`}</span>
               </div>
-              <div className="flex gap-1">
-                {DURATION_PRESETS.map((p) => {
-                  const active = (durationUnit ?? "t") === p.durationUnit && (duration ?? 5) === p.duration;
-                  return (
-                    <button
-                      key={p.label}
-                      onClick={() => onDurationChange?.(p.duration, p.durationUnit)}
-                      className={`flex-1 py-1 rounded text-[10px] font-bold transition-colors ${active ? "bg-[var(--accent)] text-black" : "bg-white/5 text-[var(--text-muted)] hover:text-white"}`}
-                    >
-                      {p.label}
-                    </button>
-                  );
-                })}
-              </div>
+              <DurationSelector
+                value={duration ?? 5}
+                unit={durationUnit ?? "t"}
+                onChange={(n, u) => onDurationChange?.(n, u)}
+              />
             </div>
           )}
 
