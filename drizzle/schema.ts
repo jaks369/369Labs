@@ -203,6 +203,10 @@ export const signals = mysqlTable("signals", {
   sampleSize: int("sampleSize").notNull(),
   winRate: decimal("winRate", { precision: 5, scale: 2 }).notNull(),
   confidence: decimal("confidence", { precision: 5, scale: 2 }).notNull(),
+  // Random-chance win rate for the rule's contract type (DIGITDIFF ~ 90%,
+  // DIGITMATCH ~ 10%, DIGITOVER/UNDER by barrier). Lets cards show edge =
+  // observed - baseline so "94% DIFFER" reads as its real ~4% edge over noise.
+  baselineWinRate: decimal("baselineWinRate", { precision: 5, scale: 2 }),
   // Out-of-sample validation results: the rule must hold on a forward (later)
   // portion of the tick window before the signal is persisted.
   oosWinRate: decimal("oosWinRate", { precision: 5, scale: 2 }),

@@ -1844,6 +1844,19 @@ export async function ensureSignalOosColumns(): Promise<void> {
   }
 }
 
+// Idempotently add the baselineWinRate column (random-chance win rate for the
+// rule's contract type) so UI cards can show observed-vs-null edge.
+export async function ensureSignalBaselineColumn(): Promise<void> {
+  const pool = getRawPool();
+  if (!pool) return;
+  try {
+    await pool.execute(`ALTER TABLE signals ADD COLUMN baselineWinRate decimal(5,2) NULL`);
+    console.log("[ensureSignalBaselineColumn] added baselineWinRate column");
+  } catch (e: any) {
+    if (e?.errno !== 1060) console.error("[ensureSignalBaselineColumn] add failed", e?.message || e);
+  }
+}
+
 // Recompute lastDigit from price for every row (corrects old data that stored
 // the units digit before the decimal instead of the true last decimal digit).
 // Gated behind RECOMPUTE_DIGITS=1 so it does not run on every boot.

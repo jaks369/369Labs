@@ -110,6 +110,36 @@ interface Candidate {
   pType: PatternType;
 }
 
+// Null win rate for a contract: what the win rate would be if next-tick digit
+// were uniform random. Surfaced next to observed win rates so a user reading
+// "94% DIGITDIFF" knows a ~90% baseline coin-flip leaves ~4% of real edge.
+export function nullWinRate(contractType: string, barrier: number | undefined): number {
+  switch (contractType) {
+    case "DIGITMATCH":
+      // next digit == barrier: 1 of 10
+      return 10;
+    case "DIGITDIFF":
+      // next digit != barrier: 9 of 10
+      return 90;
+    case "DIGITOVER": {
+      // next digit > barrier: (9 - d) of 10
+      const d = Math.min(9, Math.max(0, barrier ?? 5));
+      return (9 - d) / 10 * 100;
+    }
+    case "DIGITUNDER": {
+      // next digit < barrier: d of 10
+      const d = Math.min(9, Math.max(0, barrier ?? 5));
+      return d / 10 * 100;
+    }
+    case "DIGITEVEN":
+    case "DIGITODD":
+    case "CALL":
+    case "PUT":
+    default:
+      return 50;
+  }
+}
+
 // Analyze a window of {price, timestamp(ms)} ticks and emit candidate signals.
 // Each candidate is validated out-of-sample (forward half) before being returned.
 export async function scanTicks(opts: ScanOptions): Promise<any[]> {
@@ -137,7 +167,7 @@ export async function scanTicks(opts: ScanOptions): Promise<any[]> {
     lastDigit: lastDigitOf(Number(t.price), decimals),
   }));
 
-  const candidates: { rule: any; desc: string; pType: PatternType; inWins: number; inTotal: number; oosWins: number; oosTotal: number; pValue: number }[] = [];
+  const candidates: { rule: any; desc: string; pType: PatternType; inWins: number; inTotal: number; oosWins: number; oosTotal: number; pValue: number; baseline: number }[] = [];
 
   const evaluate = (rule: any, desc: string, pType: PatternType) => {
     const is = patternMatches(rule, prices, digits, 0, splitIdx, decimals);
@@ -151,8 +181,11 @@ export async function scanTicks(opts: ScanOptions): Promise<any[]> {
     
     // Compute p-value for in-sample win rate vs 50% null
     const pValue = binomialPValue(is.wins, inTotal);
+
+    const { contractType, barrier } = actionToContractType(rule);
+    const baseline = nullWinRate(contractType, barrier);
     
-    candidates.push({ rule, desc, pType, inWins: is.wins, inTotal, oosWins: oos.wins, oosTotal, pValue });
+    candidates.push({ rule, desc, pType, inWins: is.wins, inTotal, oosWins: oos.wins, oosTotal, pValue, baseline });
   };
   // --- Digit market conversion of a trigger digit d into the NEXT-tick digit ----
   // The "match" walks the tick stream: if the trigger digit occurs at tick i,
@@ -261,6 +294,9 @@ export async function scanTicks(opts: ScanOptions): Promise<any[]> {
       patternType: c.pType,
       sampleSize: c.inTotal,
       winRate: inRate.toFixed(2),
+      // Random-chance win rate for this contract type (e.g. DIGITDIFF ~ 90%).
+      // Observed rate minus this = the rule's actual edge over noise.
+      baselineWinRate: c.baseline.toFixed(2),
       // oosRate is already a percentage (0-100). Previously this was multiplied
       // by 100 again and clamped, so confidence was always 99 — meaningless.
       // Use the out-of-sample win rate as the confidence, capped at 99.
@@ -322,6 +358,7 @@ export async function runWatch(opts: ScanOptions): Promise<any[]> {
         sampleSize: f.sampleSize,
         winRate: f.winRate,
         confidence: f.confidence,
+        baselineWinRate: f.baselineWinRate,
         oosWinRate: Number(f.oos_win_rate),
         oosSampleSize: f.oos_sample_size,
         oosValidated: f.oosValidated ? "true" : "false",

@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
-import { CandlestickChart, Sparkles, TrendingUp, Clock, Bot, Loader2, ChevronDown, ChevronRight, FlaskConical, Users, Code, Shield, ShieldCheck, CheckCircle2, XCircle, BookOpen, Star, Upload } from "lucide-react";
+import { CandlestickChart, Sparkles, TrendingUp, Clock, Bot, Loader2, ChevronDown, ChevronRight, FlaskConical, Users, Code, Shield, ShieldCheck, CheckCircle2, XCircle, BookOpen, Star, Upload, Gauge } from "lucide-react";
 import { useLocation } from "wouter";
 import { toast } from "@/components/Toast";
 import { getValidSymbols, getSymbolDisplayName } from "@/lib/symbols";
@@ -66,6 +66,15 @@ export default function Marketplace() {
     } catch (e) {
       toast("Clone failed: " + (e instanceof Error ? e.message : String(e)), "error");
     }
+  };
+
+  // Observed out-of-sample win rate minus the contract type's random-chance
+  // baseline. Positive = real edge over a coin flip; near 0 = noise.
+  const edgeOverChance = (sig: any): number => {
+    const oos = Number(sig.oosWinRate);
+    const baseline = Number(sig.baselineWinRate);
+    if (sig.oosWinRate == null || sig.baselineWinRate == null) return 0;
+    return Math.round((oos - baseline) * 10) / 10;
   };
 
   const pluginsQuery = trpc.plugins.marketplace.useQuery();
@@ -170,6 +179,17 @@ export default function Marketplace() {
                           <span className="flex items-center gap-1 text-[var(--text-muted)]" title="Out-of-sample: the rule held on a forward (unseen) portion of the tick window, so it is not curve-fit.">
                             <ShieldCheck className="w-3 h-3" /> Out-of-sample <b className={Number(sig.oosWinRate) >= 60 ? "text-[var(--green)]" : "text-[var(--red)]"}>{sig.oosWinRate}%</b>
                             <span className="text-[var(--text-muted)]">({sig.oosSampleSize ?? "—"} samples)</span>
+                          </span>
+                        )}
+                        {sig.baselineWinRate != null && (
+                          <span
+                            className="flex items-center gap-1 text-[var(--text-muted)]"
+                            title={`Random-chance win rate for this contract type is ${sig.baselineWinRate}%. Anything near that is a coin flip — the real edge is observed minus baseline.`}
+                          >
+                            <Gauge className="w-3 h-3" /> vs chance <b className="text-white">{sig.baselineWinRate}%</b>
+                            <span className={`${edgeOverChance(sig) > 0 ? "text-[var(--green)]" : edgeOverChance(sig) < 0 ? "text-[var(--red)]" : "text-[var(--text-muted)]"}`}>
+                              ({edgeOverChance(sig) > 0 ? "+" : ""}{edgeOverChance(sig)}% edge)
+                            </span>
                           </span>
                         )}
                         <span className="text-[var(--text-muted)]">Samples <b className="text-white">{sig.sampleSize}</b></span>
