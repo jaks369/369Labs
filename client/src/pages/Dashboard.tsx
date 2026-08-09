@@ -228,7 +228,8 @@ export default function Dashboard() {
   const handleQuickTrade = async (dir?: "rise" | "fall") => {
     const direction = dir || contract.direction;
     if (!derivWS.isAuthorized()) {
-      addTradeLog("err", "Connect a Deriv token first (Settings).");
+      addTradeLog("err", "Deriv session dropped — reconnect your token to place trades.");
+      setShowTokenModal(true);
       return;
     }
     const dailyLossLimit = (memoryQuery.data?.memory as any)?.dailyLossLimit;

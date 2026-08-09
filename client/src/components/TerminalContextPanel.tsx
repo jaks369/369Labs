@@ -376,7 +376,7 @@ export default function TerminalContextPanel(props: TerminalContextPanelProps) {
           {isRiseFall ? (
             <button
               onClick={() => onQuickTrade(contract.direction)}
-              disabled={tradeBusy || !isAuthorized}
+              disabled={tradeBusy}
               className={`w-full h-10 flex items-center justify-center gap-2 rounded-lg text-sm font-bold text-white transition-all disabled:opacity-50 hover:brightness-110 ${
                 buyIsDown ? "bg-[var(--red)]" : "bg-[var(--green)]"
               }`}
@@ -387,7 +387,7 @@ export default function TerminalContextPanel(props: TerminalContextPanelProps) {
           ) : (
             <button
               onClick={() => onQuickTrade()}
-              disabled={tradeBusy || !isAuthorized}
+              disabled={tradeBusy}
               className={`w-full h-10 flex items-center justify-center gap-2 rounded-lg text-sm font-bold text-white transition-all disabled:opacity-50 hover:brightness-110 ${
                 contract.category === "even_odd" ? (buyIsDown ? "bg-[var(--red)]" : "bg-[var(--green)]") : ""
               }`}
