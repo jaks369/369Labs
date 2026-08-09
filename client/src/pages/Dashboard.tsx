@@ -61,6 +61,29 @@ export default function Dashboard() {
   const addTradeLog = (kind: "ok" | "err", text: string) => {
     setTradeLogs((prev) => [{ kind, text, time: new Date() }, ...prev].slice(0, 50));
   };
+  // Persist a trade record with bounded retry. A dropped session (401), a rate-limit
+  // (429) or a cold-start DB that hasn't connected yet can reject a single saveTrade
+  // attempt even though Deriv already took the stake. Retrying keeps the ledger
+  // consistent, and a final failure is surfaced as a visible log line instead of a
+  // silent loss (the old code had onSuccess only -> records vanished with no trace).
+  const persistTrade = async (payload: any, label: string): Promise<boolean> => {
+    const attempts = 3;
+    for (let i = 1; i <= attempts; i++) {
+      try {
+        await saveTradeMutation.mutateAsync(payload);
+        tradesQuery.refetch();
+        return true;
+      } catch (e: any) {
+        const msg = `${e?.message || String(e || "")}`;
+        if (i < attempts) {
+          await new Promise((r) => setTimeout(r, 450 * i));
+          continue;
+        }
+        addTradeLog("err", `${label} still not saved after ${attempts} tries: ${msg.slice(0, 140)}`);
+      }
+    }
+    return false;
+  };
   const [alertsOpen, setAlertsOpen] = useState(false);
   const [newAlertSym, setNewAlertSym] = useState("");
   const [newAlertDir, setNewAlertDir] = useState<"above" | "below">("above");
@@ -162,7 +185,7 @@ export default function Dashboard() {
       derivWS.subscribeToContract(contractId, (c: any) => {
         if (c.status !== "open") {
           const profit = parseFloat(c.profit || c.profit_loss || "0");
-          saveTradeMutation.mutate(
+          persistTrade(
             {
               result: (profit >= 0 ? "win" : "loss") as any,
               stake: meta.stake,
@@ -174,10 +197,10 @@ export default function Dashboard() {
               contractType: meta.contractType,
               contractId: String(contractId),
             } as any,
-            { onSuccess: () => tradesQuery.refetch() },
+            `Settle #${contractId}`,
           );
-          derivWS.clearContractMeta(contractId);
         }
+        derivWS.clearContractMeta(contractId);
       });
     }
   }, [derivWS.isAuthorized()]);
@@ -279,7 +302,7 @@ export default function Dashboard() {
       // Save an initial pending trade so it shows in history immediately.
       const entryTime = new Date();
       const entryPrice = String(entrySpot ?? purchase.buyPrice ?? stake);
-      saveTradeMutation.mutate(
+      persistTrade(
         {
           result: "pending" as any,
           stake: String(stake),
@@ -289,7 +312,7 @@ export default function Dashboard() {
           contractType: contractType,
           contractId: String(purchase.contractId),
         } as any,
-        { onSuccess: () => tradesQuery.refetch() },
+        `Save trade #${purchase.contractId}`,
       );
 
       derivWS.registerContractMeta(purchase.contractId, {
@@ -304,7 +327,7 @@ export default function Dashboard() {
           const profit = parseFloat(c.profit || c.profit_loss || "0");
           const resultLabel = profit >= 0 ? "WIN" : "LOSS";
           addTradeLog(profit >= 0 ? "ok" : "err", `Contract #${purchase.contractId} settled — ${resultLabel} ${formatSignedMoney(profit)}`);
-          saveTradeMutation.mutate(
+          persistTrade(
             {
               result: (profit >= 0 ? "win" : "loss") as any,
               stake: String(stake),
@@ -316,7 +339,7 @@ export default function Dashboard() {
               contractType: contractType,
               contractId: String(purchase.contractId),
             } as any,
-            { onSuccess: () => tradesQuery.refetch() },
+            `Settle #${purchase.contractId}`,
           );
           derivWS.clearContractMeta(purchase.contractId);
         }

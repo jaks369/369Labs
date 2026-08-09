@@ -52,6 +52,30 @@ export default function MobileTerminal() {
   const tokenQuery = trpc.deriv.getToken.useQuery();
   const memoryQuery = trpc.memory.get.useQuery();
   const { accountType } = useDerivStatus();
+  const [saveError, setSaveError] = useState<string | null>(null);
+
+  // Persist a trade record with bounded retry so a transient reject (dropped
+  // session, rate limit, cold-connecting DB) never silently loses a trade that
+  // Deriv already executed. On final failure the error is shown to the user.
+  const persistTrade = async (payload: any, label: string): Promise<boolean> => {
+    const attempts = 3;
+    for (let i = 1; i <= attempts; i++) {
+      try {
+        await saveTradeMutation.mutateAsync(payload);
+        tradesQuery.refetch();
+        setSaveError(null);
+        return true;
+      } catch (e: any) {
+        const msg = `${e?.message || String(e || "")}`;
+        if (i < attempts) {
+          await new Promise((r) => setTimeout(r, 450 * i));
+          continue;
+        }
+        setSaveError(`${label} still not saved: ${msg.slice(0, 140)}`);
+      }
+    }
+    return false;
+  };
 
   const openPositions = (tradesQuery.data || []).filter((t: any) => t.result === "pending");
 
@@ -187,7 +211,7 @@ export default function MobileTerminal() {
       if (typeof purchase.balanceAfter === "number") setBalance(purchase.balanceAfter);
       const entryTime = new Date();
       const entryPrice = String(purchase.entrySpot ?? purchase.buyPrice ?? stake);
-      saveTradeMutation.mutate(
+      persistTrade(
         {
           result: "pending" as any,
           stake: String(stake),
@@ -197,13 +221,13 @@ export default function MobileTerminal() {
           contractType,
           contractId: String(purchase.contractId),
         } as any,
-        { onSuccess: () => tradesQuery.refetch() },
+        `Save trade #${purchase.contractId}`,
       );
       derivWS.registerContractMeta(purchase.contractId, { stake: String(stake), entryPrice, entryTime: entryTime.toISOString(), symbol, contractType });
       derivWS.subscribeToContract(purchase.contractId, (c: any) => {
         if (c.status !== "open") {
           const profit = parseFloat(c.profit || c.profit_loss || "0");
-          saveTradeMutation.mutate(
+          persistTrade(
             {
               result: (profit >= 0 ? "win" : "loss") as any,
               stake: String(stake),
@@ -215,7 +239,7 @@ export default function MobileTerminal() {
               contractType,
               contractId: String(purchase.contractId),
             } as any,
-            { onSuccess: () => tradesQuery.refetch() },
+            `Settle #${purchase.contractId}`,
           );
           derivWS.clearContractMeta(purchase.contractId);
         }
@@ -518,6 +542,14 @@ export default function MobileTerminal() {
           )}
         </div>
       </div>
+
+      {/* Positions bar */}
+      {saveError && (
+        <div className="mx-4 mt-3 rounded-xl bg-[var(--red-soft)] border border-[var(--red)]/30 px-3 py-2">
+          <p className="text-[11px] font-bold text-[var(--red)]">Trade record not saved — refresh to sync</p>
+          <p className="text-[10px] text-[var(--text-muted)] mt-0.5 break-words">{saveError}</p>
+        </div>
+      )}
 
       {/* Positions bar */}
       <button
