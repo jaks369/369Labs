@@ -14,7 +14,7 @@ import { getDb, saveSignal as dbSaveSignal } from "./db";
 import { getTickHistory, normalizeSymbol } from "./aitools";
 import { notifyUser } from "./_core/notification";
 import { lastDigitOf, getDecimalPlaces } from "@shared/lastDigit";
-import { getStandardVolatilitySymbols } from "@shared/symbols";
+import { getAllSymbols } from "@shared/symbols";
 import {
   runAnalysis,
   PatternResult,
@@ -190,13 +190,47 @@ export async function runWatch(opts: ScanOptions): Promise<any[]> {
   return saved;
 }
 
+export interface WatchAllResult {
+  symbols: string[];
+  saved: any[];
+  perSymbol: { symbol: string; found: number }[];
+  errors: string[];
+}
+
+/**
+ * Watch EVERY symbol the app knows about (volatility, 1s indices, boom/crash)
+ * in one sweep. The engine evaluates the full fixed pattern library per symbol
+ * — every Deriv digit contract type (Matches/Differs, Even/Odd, Over/Under,
+ * Repeat/Change diagnostics) — so one run explores all markets and all
+ * contract types. One failing market must not abort the rest.
+ */
+export async function runWatchAll(opts: Omit<ScanOptions, "symbol">): Promise<WatchAllResult> {
+  const symbols = getAllSymbols();
+  const saved: any[] = [];
+  const perSymbol: { symbol: string; found: number }[] = [];
+  const errors: string[] = [];
+  for (const sym of symbols) {
+    try {
+      const res = await runWatch({ ...opts, symbol: sym });
+      saved.push(...res);
+      perSymbol.push({ symbol: sym, found: res.length });
+    } catch (e) {
+      errors.push(sym);
+      console.error("[signalScanner] runWatchAll", sym, e);
+    }
+  }
+  return { symbols, saved, perSymbol, errors };
+}
+
 // ---------------- always-on scanner (cron) ---------------
 
 let alwaysOnScannerInterval: ReturnType<typeof setInterval> | null = null;
 
 export function startAlwaysOnScanner(): void {
   if (alwaysOnScannerInterval) return;
-  const SYMBOLS = getStandardVolatilitySymbols();
+  // Sweep every symbol the app tracks (volatility + 1s + boom/crash). A true
+  // intelligence layer keeps exploring all markets on its own schedule.
+  const SYMBOLS = getAllSymbols();
   const INTERVAL_MS = 10 * 60 * 1000;
   const tick = async () => {
     try {

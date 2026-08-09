@@ -35,10 +35,10 @@ export class RiskEngine {
     const outlierRatio = prices.length > 0 ? outliers.length / prices.length : 0;
 
     const warnings: string[] = [];
-    if (outlierRatio > 0.05) warnings.push(`${(outlierRatio * 100).toFixed(0)}% of prices are outliers — erratic movement.`);
-    if (cv > 0.005) warnings.push(`High coefficient of variation (${(cv * 10000).toFixed(1)}).`);
-    if (lastPrice > avg + stdev * 2) warnings.push("Price near upper range — potential reversal.");
-    if (lastPrice < avg - stdev * 2) warnings.push("Price near lower range — potential bounce.");
+    if (outlierRatio > 0.05) warnings.push(`${(outlierRatio * 100).toFixed(0)}% of recent prices were unusually big jumps — the market jumped around.`);
+    if (cv > 0.005) warnings.push(`Price is swinging more than usual (${(cv * 10000).toFixed(0)}% spread).`);
+    if (lastPrice > avg + stdev * 2) warnings.push("Price is at the upper edge of its recent range — it can revert.");
+    if (lastPrice < avg - stdev * 2) warnings.push("Price is at the lower edge of its recent range — it can bounce.");
 
     // Trend quality: how consistently prices move in one direction
     let directionalCount = 0;
@@ -52,13 +52,13 @@ export class RiskEngine {
     const noiseRatio = prices.length > 1 ? stdev / Math.abs(mean(prices.slice(-10)) || 1) : 1;
     const confidence = Math.max(0, Math.min(100, Math.round(100 - noiseRatio * 5000)));
 
-    let recommendation = "Normal trading conditions.";
+    let recommendation = "Normal trading conditions — proceed as usual.";
     if (volLabel === "High" && outlierRatio > 0.05) {
-      recommendation = "High risk — reduce position size or wait for stability.";
+      recommendation = "Risk is high right now — cut position size or wait for the market to settle.";
     } else if (volLabel === "Low" && trendQuality > 60) {
-      recommendation = "Low risk, trending well — favorable for directional strategies.";
+      recommendation = "Calm with a clear direction — suitable for a small Rise/Fall play.";
     } else if (volLabel === "High") {
-      recommendation = "Elevated volatility — widen stops and reduce leverage.";
+      recommendation = "The market is moving sharply — widen your stops and use smaller stakes.";
     }
 
     return {

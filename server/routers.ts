@@ -2295,7 +2295,19 @@ watch: protectedProcedure
       .input(z.object({ symbol: z.string(), durationMinutes: z.number().default(30), patternType: z.enum(["any", "digit_streak", "digit_bias", "even_odd_run", "even_odd", "over_under", "match_diff", "momentum_after_digit"]).default('any'), minWinRate: z.number().default(55) }))
       .mutation(async ({ ctx, input }) => {
         try {
-          const { runWatch } = await import('./signalScanner');
+          const { runWatch, runWatchAll } = await import('./signalScanner');
+          if (input.symbol === "all") {
+            // One server-side sweep of every symbol the app tracks, exploring
+            // all digit contract types per market. Per-symbol failures are
+            // absorbed by runWatchAll and reported in `errors`.
+            const res = await runWatchAll({
+              userId: ctx.user.id,
+              sampleSize: Math.min(2000, input.durationMinutes * 20),
+              minWinRate: input.minWinRate,
+              patternType: input.patternType,
+            });
+            return { scanned: true, signalsFound: res.saved.length, signals: res.saved, symbols: res.symbols, perSymbol: res.perSymbol, errors: res.errors };
+          }
           const saved = await runWatch({
             userId: ctx.user.id,
             symbol: input.symbol,
@@ -2701,22 +2713,32 @@ watch: protectedProcedure
 aiMarket: router({
     overview: protectedProcedure.query(async () => {
       const { aiOrchestrator } = await import("./ai/AIOrchestrator");
+      const { intelligenceDirector } = await import("./ai/IntelligenceDirector");
+      const report = await intelligenceDirector.build();
       const state = aiOrchestrator.getState();
 
       const transformedPredictions = state.predictions.slice(-10).map((p: any) => {
         const confidence = p.confidence ?? 50;
-        const direction = p.prediction ?? "SIDEWAYS";
+        const direction = p.direction ?? (p.prediction === "RISE" ? "up" : p.prediction === "FALL" ? "down" : "neutral");
         return {
           market: p.symbol,
-          contractType: direction === "RISE" ? "RISE_FALL" : direction === "FALL" ? "RISE_FALL" : "DIGIT_DIFF",
-          prediction: direction,
+          contractType: p.contractType ?? (p.prediction === "RISE" || p.prediction === "FALL" ? "Rise/Fall" : "Digits"),
+          prediction: p.prediction,
+          direction,
           confidence,
-          risk: confidence > 70 ? "Low" : confidence > 40 ? "Medium" : "High",
+          risk: confidence > 60 ? "Low" : confidence > 40 ? "Medium" : "High",
           expectedDuration: "1t",
           reasoning: p.reasoning ?? [],
-          recommendation: direction === "SIDEWAYS" ? "No clear direction — consider waiting" :
-            direction === "RISE" ? "Consider RISE/CALL positions with tight stops" :
-            "Consider FALL/PUT positions with tight stops",
+          plain: p.plain ?? "",
+          lean: p.lean ?? "",
+          recommendation: p.recommendation ??
+            (p.prediction === "SIDEWAYS" || p.prediction === "NO CLEAR LEAN"
+              ? "No clear direction — consider waiting."
+              : "Small stake; the lean is momentary, not certain."),
+          observed: p.observed,
+          baseline: p.baseline,
+          edgePct: p.edgePct,
+          sampleN: p.sampleN,
         };
       });
 
@@ -2744,6 +2766,7 @@ aiMarket: router({
       }));
 
       return {
+        report,
         health: healthWithDirection,
         predictions: transformedPredictions,
         insights: state.insights,

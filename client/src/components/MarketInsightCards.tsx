@@ -47,6 +47,16 @@ function insightBg(type: string): string {
   }
 }
 
+function insightLabel(type: string): string {
+  switch (type) {
+    case "volatility_change": return "Volatility";
+    case "momentum_change": return "Drift";
+    case "digit_bias": return "Digits";
+    case "consolidation": return "Consolidation";
+    default: return "Insight";
+  }
+}
+
 function formatTime(ts: number): string {
   return new Date(ts).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" });
 }
@@ -99,7 +109,7 @@ export default function MarketInsightCards({ data, loading }: MarketInsightCards
             <div className="flex items-center justify-between mb-1.5">
               <div className={`flex items-center gap-1.5 ${insightColor(insight.type)}`}>
                 {insightIcon(insight.type)}
-                <span className="text-[8px] font-bold uppercase tracking-wider">{(insight.type || "").replace(/_/g, " ")}</span>
+                <span className="text-[8px] font-bold uppercase tracking-wider">{insightLabel(insight.type || "")}</span>
               </div>
               <span className="text-[8px] text-[var(--text-muted)]">{formatTime(insight.timestamp)}</span>
             </div>

@@ -29,10 +29,10 @@ export const riskIntelligence = {
     // Factor 2: Volatility
     if (risk.volatility === "High") {
       riskScore += 25;
-      factors.push("High volatility regime");
+      factors.push("Wild price movement right now — price moves are wider than normal");
     } else if (risk.volatility === "Low") {
       riskScore -= 10;
-      factors.push("Low volatility — stable conditions");
+      factors.push("Calm market — price movement is stable");
     }
 
     // Factor 3: Risk warnings
@@ -55,10 +55,10 @@ export const riskIntelligence = {
     // Factor 5: Trend quality
     if (risk.trendQuality > 60) {
       riskScore -= 10;
-      factors.push(`Strong trend quality (${risk.trendQuality}%)`);
+      factors.push(`Clear direction — momentum trend strength ${risk.trendQuality}%`);
     } else if (risk.trendQuality < 30) {
       riskScore += 10;
-      factors.push(`Weak trend quality (${risk.trendQuality}%)`);
+      factors.push(`No trend — price wanders without direction (quality ${risk.trendQuality}%)`);
     }
 
     // Clamp and classify

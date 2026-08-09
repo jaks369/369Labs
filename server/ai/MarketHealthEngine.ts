@@ -48,10 +48,10 @@ export class MarketHealthEngine {
 
     const tradeQuality = Math.max(1, Math.min(10, 10 - (noiseScore / 10) + (trendScore / 20)));
 
-    let recommendation = "Suitable for trend-following strategies";
-    if (noiseScore > 70) recommendation = "High noise — consider filtering or waiting";
-    if (trendScore < 20 && noiseScore > 60) recommendation = "Unfavorable — avoid trading";
-    if (trendScore > 70 && noiseScore < 40) recommendation = "Excellent conditions for trend-following strategies";
+    let recommendation = "Calm, stable movement — normal trading conditions.";
+    if (noiseScore > 70) recommendation = "Erratic — price jumps around; wait for calmer conditions.";
+    if (trendScore < 20 && noiseScore > 60) recommendation = "Choppy with no real drift — avoid trading right now.";
+    if (trendScore > 70 && noiseScore < 40) recommendation = "Crisp directional movement — best for Rise/Fall traders.";
 
     const overallScore = Math.round((trendScore + momentumScore + (100 - noiseScore)) / 3);
 

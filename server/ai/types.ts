@@ -27,6 +27,17 @@ export interface AIPrediction {
   confidence: number;
   reasoning: string[];
   timestamp: number;
+  // Plain-language decision support (PredictionEngine v2). The `prediction` is
+  // the strongest lean across ALL contract types, not just Rise/Fall.
+  direction?: "up" | "down" | "neutral" | null;
+  contractType?: string | null; // Deriv family: "Rise/Fall" | "Even/Odd" | "Matches/Differs" | "Over/Under"
+  lean?: string;         // short label e.g. "Fall (PUT)", "Even", "Matches 4"
+  plain?: string;        // one clear sentence a Deriv trader understands
+  recommendation?: string;
+  observed?: number;
+  baseline?: number;
+  edgePct?: number;      // observed - baseline in percentage points
+  sampleN?: number;
 }
 
 export interface RiskAssessment {

@@ -3,6 +3,10 @@ import { AIInsight } from "./types";
 import { lastDigitOf, getDecimalPlaces } from "@shared/lastDigit";
 import { getSymbolDisplayName } from "@shared/symbols";
 
+function pctOf(part: number, total: number): number {
+  return total > 0 ? Math.round((part / total) * 100) : 0;
+}
+
 export class InsightEngine {
   async generateAll(): Promise<AIInsight[]> {
     const insights: AIInsight[] = [];
@@ -18,8 +22,30 @@ export class InsightEngine {
 
         const prices = ticks.map((t: any) => Number(t.price)).filter((p: number) => !isNaN(p));
         const digits = prices.map(p => lastDigitOf(p, decimals));
+        const n = digits.length;
 
-        // Digit distribution analysis
+        // ---- Parity lean (Even/Odd) — every digit family is explored, not just direction ----
+        const evenCount = digits.filter((d) => d % 2 === 0).length;
+        const evenPct = pctOf(evenCount, n);
+        if (Math.abs(evenPct - 50) >= 5) {
+          const isEven = evenPct > 50;
+          insights.push({
+            id: `parity_lean_${symbol}`,
+            market: symbol,
+            displayName,
+            type: "digit_bias",
+            message: `${isEven ? "Even" : "Odd"} digits made up ${evenPct}% of the last ${n} ticks on ${displayName} (fair 50%) — that's a nudge toward “${isEven ? "Even" : "Odd"}” on an Even/Odd contract. Not a guarantee.`,
+            confidence: Math.min(80, Math.round(50 + Math.abs(evenPct - 50) * 3)),
+            reasoning: [
+              `Even digits: ${evenCount}/${n} (${evenPct}%)`,
+              `Odd digits: ${n - evenCount}/${n} (${100 - evenPct}%)`,
+              "Even/Odd pays ~90% on a win; a 5%+ tilt is the strongest digit-family signal currently visible.",
+            ],
+            timestamp: now,
+          });
+        }
+
+        // Digit bias (Matches/Differs)
         const digitCounts: Record<number, number> = {};
         for (const d of digits) digitCounts[d] = (digitCounts[d] || 0) + 1;
         const sorted = Object.entries(digitCounts).sort((a, b) => b[1] - a[1]);
@@ -27,41 +53,55 @@ export class InsightEngine {
         const coldest = sorted[sorted.length - 1];
         const distinctDigits = sorted.length;
 
-        // Hottest first | second half splits to detect an actual forward-holding bias.
-        // A "100% digit 0" on a coarse 1-second index is a rounding/scale artifact, not
-        // an edge — so we require the digit to vary within the window before claiming bias.
         if (
           hottest &&
-          Number(hottest[1]) > digits.length * 0.15 &&
+          Number(hottest[1]) > n * 0.15 &&
           distinctDigits >= 3 &&
           distinctDigits <= 8
         ) {
-          const pct = (Number(hottest[1]) / digits.length) * 100;
-          const pctCold = (Number(coldest[1]) / digits.length) * 100;
+          const pct = pctOf(Number(hottest[1]), digits.length);
+          const pctCold = pctOf(Number(coldest[1]), digits.length);
           const spread = pct - pctCold;
-          // Only surface as a candidate when the hot digit clearly dominates the cold one.
           if (spread >= 8) {
             insights.push({
-              // Stable content-derived ID (no Date.now): AIOrchestrator dedupes
-              // the live feed by insight.id, so a time-based ID meant the same
-              // bias was re-emitted every poll.
               id: `digit_bias_${symbol}_${hottest[0]}`,
               market: symbol,
               displayName,
               type: "digit_bias",
-              message: `${displayName}: Digit ${hottest[0]} appears ${pct.toFixed(0)}% of the time — a noticeable (not guaranteed) frequency tilt.`,
+              message: `Digit ${hottest[0]} appeared ${pct}% of the last ${n} ticks (fair 10%) — that's a nudge toward “Matches ${hottest[0]}” on a Matches/Differs contract. At fair 10% it should show up about half that often.`,
               confidence: Math.min(80, Math.round(pct)),
               reasoning: [
-                `Digit ${hottest[0]} count: ${hottest[1]} / ${digits.length} (${pct.toFixed(0)}%)`,
-                `Coldest digit ${coldest[0]}: ${coldest[1]} / ${digits.length} (${pctCold.toFixed(0)}%)`,
-                `Distinct digits sampled: ${distinctDigits}`,
+                `Digit ${hottest[0]}: ${hottest[1]}/${digits.length} (${pct}%)`,
+                `Coldest digit ${coldest[0]}: ${coldest[1]}/${digits.length} (${pctCold}%)`,
+                `A Matches ${hottest[0]} pays ~9× but only truly wins ~1 in 10 by chance — treat this as a tilt, not a system.`,
               ],
               timestamp: now,
             });
           }
         }
 
-        // Volatility regime detection
+        // Over/Under lean (barrier 4/5 split — fair 50%)
+        const over4Count = digits.filter((d) => d > 4).length;
+        const over4Pct = pctOf(over4Count, n);
+        if (Math.abs(over4Pct - 50) >= 5) {
+          const leanOver = over4Pct > 50;
+          insights.push({
+            id: `overunder_lean_${symbol}`,
+            market: symbol,
+            displayName,
+            type: "digit_bias",
+            message: `${over4Pct}% of the last ${n} ticks on ${displayName} were OVER 4 (fair 50%) — that's a tilt toward ${leanOver ? "Over 4" : "Under 5"} on an Over/Under contract.`,
+            confidence: Math.min(80, Math.round(50 + Math.abs(over4Pct - 50) * 3)),
+            reasoning: [
+              `Over 4 (digits 5–9): ${over4Count}/${digits.length} (${over4Pct}%)`,
+              `Under 5 (digits 0–4): ${digits.length - over4Count}/${digits.length} (${100 - over4Pct}%)`,
+              `Over/Under pays ~90% on a 50/50 barrier; a ±5pp tilt is notable in a 100-tick window.`,
+            ],
+            timestamp: now,
+          });
+        }
+
+        // Volatility regime — plain language
         const mean = prices.reduce((a: number, b: number) => a + b, 0) / prices.length;
         const variance = prices.reduce((a: number, b: number) => a + (b - mean) ** 2, 0) / prices.length;
         const std = Math.sqrt(variance);
@@ -76,9 +116,13 @@ export class InsightEngine {
             market: symbol,
             displayName,
             type: "volatility_change",
-            message: `${displayName}: Volatility spike detected — recent std ${recentStd.toFixed(4)} vs baseline ${std.toFixed(4)}. Caution advised.`,
+            message: `${displayName} has suddenly gotten wilder — recent ticks move about ${(recentStd / (std || 1)).toFixed(1)}× their normal range. Digits stay random, so use smaller stakes; there is no “certain” side.`,
             confidence: 75,
-            reasoning: [`Recent std: ${recentStd.toFixed(4)}`, `Baseline std: ${std.toFixed(4)}`, `Ratio: ${(recentStd / std).toFixed(2)}x`],
+            reasoning: [
+              `Recent swings: ${recentStd.toFixed(4)} vs the recent baseline ${std.toFixed(4)}.`,
+              `Bigger price moves do NOT change the fair 10%/50%/90% digits.`,
+              `Higher variance mainly means you may be whipsawed more — size down.`,
+            ],
             timestamp: now,
           });
         } else if (recentStd < std * 0.5 && std > 0) {
@@ -87,14 +131,18 @@ export class InsightEngine {
             market: symbol,
             displayName,
             type: "volatility_change",
-            message: `${displayName}: Volatility compression — market noise decreased. Potential breakout imminent.`,
+            message: `${displayName} has gone quiet — recent swings are ~${(recentStd / std).toFixed(2)}× their normal size. A quiet market often ends with a sharp tick, but for the digits that tiny tick is still 50/50. Don't chase a “breakout”.`,
             confidence: 65,
-            reasoning: [`Recent std: ${recentStd.toFixed(4)}`, `Baseline std: ${std.toFixed(4)}`, `Ratio: ${(recentStd / std).toFixed(2)}x`],
+            reasoning: [
+              `Recent swings: ${recentStd.toFixed(4)} vs the recent baseline ${std.toFixed(4)}.`,
+              `Calm feeds a sharp move some of the time — not most of the time.`,
+              `For Even/Odd or Matches the digit distribution stays fair while it's quiet.`,
+            ],
             timestamp: now,
           });
         }
 
-        // Trend strength
+        // Drift (context only — not a Rise/Fall edge)
         const firstHalf = prices.slice(0, Math.floor(prices.length / 2));
         const secondHalf = prices.slice(Math.floor(prices.length / 2));
         const firstMean = firstHalf.reduce((a: number, b: number) => a + b, 0) / firstHalf.length;
@@ -107,9 +155,13 @@ export class InsightEngine {
             market: symbol,
             displayName,
             type: "momentum_change",
-            message: `${displayName}: ${changePct > 0 ? "Upward" : "Downward"} trend of ${Math.abs(changePct).toFixed(3)}% over last ${prices.length} ticks.`,
-            confidence: Math.min(80, Math.round(Math.abs(changePct) * 1000)),
-            reasoning: [`First half avg: ${firstMean.toFixed(4)}`, `Second half avg: ${secondMean.toFixed(4)}`, `Change: ${changePct.toFixed(3)}%`],
+            message: `${displayName} drifted ${changePct > 0 ? "up" : "down"} about ${Math.abs(changePct).toFixed(3)}% across the last ${prices.length} ticks. That's a mild drift, NOT a strong Rise/Fall edge — a 1-tick Rise/Fall literally looks like 50/50.`,
+            confidence: Math.min(55, Math.round(Math.abs(changePct) * 800 + 35)),
+            reasoning: [
+              `First half average: ${firstMean.toFixed(4)}`,
+              `Second half average: ${secondMean.toFixed(4)}`,
+              `Drift this small does not beat the house's built-in edge.`,
+            ],
             timestamp: now,
           });
         }

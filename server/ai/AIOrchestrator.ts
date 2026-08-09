@@ -152,8 +152,9 @@ export class AIOrchestrator {
           if (risk.confidence > 70) {
             prediction = await this.predictionEngine.predict(symbol, prices);
             if (prediction) {
-              this.state.predictions.push(prediction);
-              if (this.state.predictions.length > 100) this.state.predictions = this.state.predictions.slice(-100);
+              // One live lean per symbol — replace, don't grow the list.
+              this.state.predictions = [...this.state.predictions.filter((p) => p.symbol !== symbol), prediction];
+              if (this.state.predictions.length > 60) this.state.predictions = this.state.predictions.slice(-60);
               this.pushFeed({
                 id: generateFeedId(),
                 symbol,

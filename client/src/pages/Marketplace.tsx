@@ -357,27 +357,27 @@ export default function Marketplace() {
             <h3 className="text-lg font-bold text-white">{hasSymbol ? "No condition cleared the bar" : "No signals yet"}</h3>
             <p className="text-sm text-[var(--text-muted)] mt-1 max-w-md mx-auto">
               {hasSymbol
-                ? "The engine validated the full fixed pattern library and found no rule that beat its fair baseline with FDR + walk-forward confirmation. Try another symbol or a longer window."
-                : "Ask 369AI to watch a market e.g. \"Watch R_50 for 30 minutes\" or let the always-on scanner validate patterns here."}
+                  ? "The engine validated the full fixed pattern library and found no rule that beat its fair baseline with FDR + walk-forward confirmation. Try another symbol or a longer window."
+                  : "Start a watch to sweep every symbol 369Labs tracks — volatility, 1s indices and boom/crash — testing Matches/Differs, Even/Odd, Over/Under and Repeat/Change against their real fair baselines. You can also ask 369AI e.g. \"Watch R_50 for 30 minutes\" or let the always-on scanner validate patterns here."}
             </p>
-            <Button onClick={async () => {
-                const syms = hasSymbol ? [symbol] : getValidSymbols();
-                setScanning(true);
-                let total = 0;
-                for (const s of syms) {
+              <Button onClick={async () => {
+                  setScanning(true);
                   try {
-                    const res: any = await scanMutation.mutateAsync({ symbol: s, durationMinutes: 60, minWinRate: 55, patternType: "any" });
-                    total += res?.signalsFound ?? 0;
-                  } catch {}
-                }
-                watchMutation.mutate({ symbol: hasSymbol ? symbol : "all", interval: "1h" });
-                setScanning(false);
-                signalsQuery.refetch();
-                if (total > 0) toast("Scan complete — " + total + " condition" + (total === 1 ? "" : "s") + " verified.", "success");
-                else toast("Scan done — no condition cleared the bar on this run.", "info");
-              }} disabled={scanning} className="mt-4 bg-[var(--accent)] hover:brightness-110 text-black text-sm px-4 py-2 rounded-lg">
-              {scanning ? "Scanning…" : hasSymbol ? "Re-scan this symbol" : "Start a watch"}
-            </Button>
+                    const res: any = await scanMutation.mutateAsync({ symbol: hasSymbol ? symbol : "all", durationMinutes: 60, minWinRate: 55, patternType: "any" });
+                    const total = res?.signalsFound ?? 0;
+                    const markets = hasSymbol ? 1 : (res?.perSymbol?.length ?? getValidSymbols().length);
+                    watchMutation.mutate({ symbol: hasSymbol ? symbol : "all", interval: "1h" });
+                    if (total > 0) toast(`Scan complete — ${total} condition${total === 1 ? "" : "s"} verified across ${markets} market${markets === 1 ? "" : "s"}.`, "success");
+                    else toast(`Scan done — no condition cleared the bar across ${markets} market${markets === 1 ? "" : "s"}.`, "info");
+                  } catch {
+                    toast("Scan failed — try again.", "error");
+                  } finally {
+                    setScanning(false);
+                    signalsQuery.refetch();
+                  }
+                }} disabled={scanning} className="mt-4 bg-[var(--accent)] hover:brightness-110 text-black text-sm px-4 py-2 rounded-lg">
+                {scanning ? (hasSymbol ? "Scanning…" : "Scanning all markets…") : hasSymbol ? "Re-scan this symbol" : "Start a full-market watch"}
+              </Button>
           </div>
         ) : (
           <div className="space-y-4">
