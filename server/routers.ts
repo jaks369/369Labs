@@ -2308,6 +2308,22 @@ watch: protectedProcedure
           return { scanned: false, signalsFound: 0, signals: [] };
         }
       }),
+    fit: protectedProcedure
+      .input(z.object({ symbol: z.string(), sampleSize: z.number().max(4000).default(1000) }).optional())
+      .query(async ({ ctx, input }) => {
+        try {
+          const { scanTicks } = await import('./signalScanner');
+          const symbols = input && input.symbol ? normalizeSymbol(input.symbol) : undefined;
+          if (!symbols) {
+            // no symbol -> return existing persisted signals (no live scan)
+            return { symbols: {}, signals: await db.getSignalsByUserId(ctx.user.id) };
+          }
+          const results = await scanTicks({ userId: ctx.user.id, symbol: symbols, sampleSize: input?.sampleSize });
+          return { scanned: true, symbol: symbols, results, signals: await db.getSignalsBySymbol(ctx.user.id, symbols) };
+        } catch {
+          return { scanned: false, results: [], signals: [] };
+        }
+      }),
   }),
   market: router({
     getHistory: publicProcedure

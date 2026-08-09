@@ -1,87 +1,278 @@
-import { useState } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
-import { CandlestickChart, Sparkles, TrendingUp, Clock, Bot, Loader2, ChevronDown, ChevronRight, FlaskConical, Users, Code, Shield, ShieldCheck, CheckCircle2, XCircle, BookOpen, Star, Upload, Gauge } from "lucide-react";
+import { CandlestickChart, Sparkles, Clock, Bot, Loader2, FlaskConical, Users, Code, Shield, BookOpen, Star, Upload, TimerReset } from "lucide-react";
 import { useLocation } from "wouter";
 import { toast } from "@/components/Toast";
 import { getValidSymbols, getSymbolDisplayName } from "@/lib/symbols";
 import { getDecimalPlaces } from "@shared/lastDigit";
 
+const TIER_META: Record<string, { label: string; cls: string; badge: string; desc: string }> = {
+  strong: { label: "Strong", badge: "🟢", cls: "bg-[var(--green)]/15 text-[var(--green)] border-[var(--green)]/30", desc: "Significant edge that held forward across 3+ walk-forward windows." },
+  watch: { label: "Watching", badge: "🟡", cls: "bg-[var(--accent)]/15 text-[var(--accent)] border-[var(--accent)]/30", desc: "Edge is present in-sample but needs more out-of-sample confirmation." },
+  failed: { label: "Failed", badge: "🔴", cls: "bg-[var(--red)]/15 text-[var(--red)] border-[var(--red)]/30", desc: "Edge did not hold in out-of-sample windows." },
+  no_edge: { label: "No edge", badge: "⚪", cls: "bg-white/5 text-[var(--text-muted)] border-[var(--border)]", desc: "Observed rate did not clear the fair baseline within confidence." },
+};
+
+function fmtPct(x: number): string { return (x * 100).toFixed(1) + "%"; }
+function fmtPp(x: number): string { return (x > 0 ? "+" : "") + x.toFixed(1) + "pp"; }
+function isStale(sig: any): boolean {
+  const now = Date.now() / 1000;
+  return (sig.expiresAt && now > sig.expiresAt) || (sig.discoveredAt && now > sig.discoveredAt + 4 * 3600);
+}
+
+function ProgressDots({ met, needed }: { met?: number; needed?: number }) {
+  if (met == null || needed == null) return null;
+  const n = Math.max(1, Math.min(12, needed || 1));
+  const filled = Math.max(0, Math.min(n, Math.round(met)));
+  return (
+    <span className="inline-flex gap-0.5 align-middle">
+      {Array.from({ length: n }).map((_, i) => (
+        <span key={i} className={`w-1.5 h-1.5 rounded-full inline-block ${i < filled ? "bg-[var(--accent)]" : "bg-[var(--text-muted)]/30"}`} />
+      ))}
+    </span>
+  );
+}
+
+function TierBadge({ sig }: { sig: any }) {
+  const tier = sig.tier ?? "no_edge";
+  const meta = TIER_META[tier] || TIER_META.no_edge;
+  if (isStale(sig)) {
+    return <span className="px-2 py-0.5 rounded text-micro font-bold border bg-white/5 text-[var(--text-muted)] border-[var(--border)]">⏳ Stale</span>;
+  }
+  return (
+    <span className={`px-2 py-0.5 rounded text-micro font-bold border ${meta.cls}`} title={meta.desc}>
+      {meta.badge} {meta.label}
+    </span>
+  );
+}
+
+function SignalCardRow({ sig, expandedId, setExpanded, onBacktest, onDeploy }: {
+  sig: any;
+  expandedId: string | number | null;
+  setExpanded: (v: string | number | null) => void;
+  onBacktest: () => void;
+  onDeploy: () => void;
+}) {
+  const tier = sig.tier ?? "no_edge";
+  const meta = TIER_META[tier] || TIER_META.no_edge;
+  const stale = isStale(sig);
+  const ev = Array.isArray(sig.evidence) ? sig.evidence.slice(0, 12) : [];
+  const walks: any[] = Array.isArray(sig.walks) ? sig.walks : [];
+  const observed = Number(sig.observed) || (Number(sig.winRate ?? 0) / 100);
+  const baseline = Number(sig.baseline) || (Number(sig.baselineWinRate ?? 0) / 100) || 0.5;
+  const edge = sig.edgePp != null ? sig.edgePp : Number(((observed - baseline) * 100).toFixed(1));
+  const ciLow = sig.ciLow != null ? Number(sig.ciLow) : sig.confidence != null ? Number(sig.confidence) / 100 : null;
+  const ciHigh = sig.ciHigh != null ? Number(sig.ciHigh) : null;
+  const supports = sig.supportsLabel || sig.title || sig.symbol;
+  const id = sig.id ?? sig.key ?? "";
+  const open = expandedId === id;
+
+  return (
+    <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl overflow-hidden">
+      <div className="p-4">
+        <div className="flex items-start justify-between gap-4">
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="px-2 py-0.5 rounded bg-[var(--accent-soft)] border border-[var(--accent-border)] text-[var(--accent)] text-micro font-bold">{getSymbolDisplayName(sig.symbol)}</span>
+              <span className="px-2 py-0.5 rounded bg-white/5 text-[var(--text-secondary)] text-micro border border-[var(--border)]">{supports}</span>
+              <TierBadge sig={sig} />
+              {sig.fdrAdjusted ? (
+                <span className="px-2 py-0.5 rounded text-micro bg-[var(--accent)]/10 text-[var(--accent)] border border-[var(--accent)]/20" title="Survived Benjamini–Hochberg FDR correction across the full scan.">FDR ✓</span>
+              ) : (
+                <span className="px-2 py-0.5 rounded text-micro bg-white/5 text-[var(--text-muted)] border border-[var(--border)]">no FDR</span>
+              )}
+            </div>
+
+            <h3 className="font-bold text-white mt-2">{sig.describe || sig.title}</h3>
+            {sig.description && <p className="text-sm text-[var(--text-secondary)] mt-1">{sig.description}</p>}
+
+            {/* stats grid */}
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-2 mt-3 text-xs">
+              <div className="rounded-lg bg-black/20 border border-[var(--border)] p-2">
+                <p className="text-[var(--text-muted)] text-[10px] uppercase tracking-wide">Baseline</p>
+                <p className="text-white font-bold mt-0.5">{fmtPct(baseline)}</p>
+              </div>
+              <div className="rounded-lg bg-black/20 border border-[var(--border)] p-2">
+                <p className="text-[var(--text-muted)] text-[10px] uppercase tracking-wide">Observed</p>
+                <p className="font-bold mt-0.5">{fmtPct(observed)}</p>
+              </div>
+              <div className="rounded-lg bg-black/20 border border-[var(--border)] p-2">
+                <p className="text-[var(--text-muted)] text-[10px] uppercase tracking-wide">Edge</p>
+                <p className={`font-bold mt-0.5 ${edge > 0 ? "text-[var(--green)]" : edge < 0 ? "text-[var(--red)]" : "text-[var(--text-muted)]"}`}>{fmtPp(edge)}</p>
+              </div>
+              <div className="rounded-lg bg-black/20 border border-[var(--border)] p-2" title="95% Wilson confidence interval for the observed rate. The pattern only counts when the lower bound clears the baseline.">
+                <p className="text-[var(--text-muted)] text-[10px] uppercase tracking-wide">95% CI</p>
+                <p className="text-[var(--text-secondary)] font-bold mt-0.5">{ciLow != null ? `${fmtPct(ciLow)}–${ciHigh != null ? fmtPct(ciHigh) : "—"}` : "—"}</p>
+              </div>
+              <div className="rounded-lg bg-black/20 border border-[var(--border)] p-2">
+                <p className="text-[var(--text-muted)] text-[10px] uppercase tracking-wide">Sample</p>
+                <p className="text-white font-bold mt-0.5">{sig.inSampleSize ?? sig.sampleSize ?? sig.walks?.reduce?.((s: number, w: any) => s + (w.n || 0), 0) ?? "—"}</p>
+              </div>
+            </div>
+
+            {/* walk-forward */}
+            {walks.length > 0 && (
+              <div className="mt-3">
+                <div className="flex items-center gap-2 text-[10px] text-[var(--text-muted)] uppercase tracking-wide">
+                  Walk-forward · {walks.length} windows
+                  <span className={`ml-auto font-bold ${(sig.holds ?? 0) >= 3 ? "text-[var(--green)]" : (sig.holds ?? 0) > 0 ? "text-[var(--accent)]" : "text-[var(--red)]"}`}>
+                    {(sig.holds ?? 0)} held · avg {fmtPct(sig.oosAvg ?? 0)}
+                  </span>
+                </div>
+                <div className="flex gap-1.5 mt-1.5">
+                  {walks.map((w: any, i: number) => {
+                    const cleared = w.rate > baseline;
+                    return (
+                      <div key={i} className="flex-1" title={`Window ${i + 1}: ${fmtPct(w.rate)} (n=${w.n})`}>
+                        <div className="h-1.5 rounded-full bg-black/30 overflow-hidden">
+                          <div className={`h-full rounded-full ${cleared ? "bg-[var(--green)]" : "bg-[var(--text-muted)]/40"}`} style={{ width: `${Math.min(100, Math.max(2, w.rate * 100))}%` }} />
+                        </div>
+                        <p className="text-[9px] text-[var(--text-muted)] mt-0.5 text-center">{fmtPct(w.rate)}</p>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* trigger / progress / verified */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 mt-3 text-xs">
+              <div className="rounded-lg bg-black/20 border border-[var(--border)] p-2">
+                <p className="text-[var(--text-muted)] text-[10px] uppercase tracking-wide">Trigger condition</p>
+                <p className="text-white mt-0.5">{sig.triggerText || sig.rule?.family || "—"}</p>
+              </div>
+              <div className="rounded-lg bg-black/20 border border-[var(--border)] p-2">
+                <p className="text-[var(--text-muted)] text-[10px] uppercase tracking-wide">Current progress</p>
+                <p className="text-[var(--text-secondary)] mt-0.5">
+                  {sig.currentProgress ? (
+                    <span className="inline-flex items-center gap-1.5">
+                      <ProgressDots met={sig.currentProgress.met} needed={sig.currentProgress.needed} />
+                      <span>{sig.currentProgress.current}</span>
+                    </span>
+                  ) : "—"}
+                </p>
+              </div>
+              <div className="rounded-lg bg-black/20 border border-[var(--border)] p-2">
+                <p className="text-[var(--text-muted)] text-[10px] uppercase tracking-wide">Last verified</p>
+                <p className="text-[var(--text-secondary)] mt-0.5 inline-flex items-center gap-1">
+                  <Clock className="w-3 h-3 text-[var(--text-muted)] inline" />
+                  {sig.discoveredAt ? new Date(sig.discoveredAt * 1000).toLocaleString() : "—"}
+                  {stale && <span className="text-[var(--red)] text-[10px]">· stale</span>}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-2 shrink-0">
+            <Button onClick={onBacktest} className="bg-[var(--accent)] hover:brightness-110 text-black text-xs px-3 py-1.5 rounded-lg flex items-center gap-1">
+              <FlaskConical className="w-3.5 h-3.5" /> Backtest
+            </Button>
+            <Button onClick={onDeploy} className="bg-[var(--green)]/20 text-[var(--green)] border border-[var(--green)]/30 text-xs px-3 py-1.5 rounded-lg flex items-center gap-1">
+              <Bot className="w-3.5 h-3.5" /> Deploy Bot
+            </Button>
+            <button onClick={() => setExpanded(open ? null : id)} className="text-body hover:text-[var(--accent)] flex items-center gap-1 justify-center">
+              {open ? "▾" : "▸"} Evidence
+            </button>
+          </div>
+        </div>
+      </div>
+      {open && (
+        <div className="border-t border-[var(--border)] aurora-glass p-4">
+          <div className="text-micro mb-2">Raw evidence (tick window) · Baseline {fmtPct(baseline)} · tier {meta.label}</div>
+          {ev.length ? (
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs font-mono">
+                <thead>
+                  <tr className="text-[var(--text-muted)] border-b border-[var(--border)]">
+                    <th className="p-2">#</th><th className="p-2">Time</th><th className="p-2 text-right">Price</th><th className="p-2 text-right">Digit</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[var(--border)]">
+                  {ev.map((t: any, i: number) => (
+                    <tr key={i}>
+                      <td className="p-2 text-[var(--text-muted)]">{i + 1}</td>
+                      <td className="p-2 text-[var(--text-secondary)]">{new Date((t.epoch || 0) * 1000).toLocaleTimeString()}</td>
+                      <td className="p-2 text-right text-white">{Number(t.price).toFixed(getDecimalPlaces(sig.symbol))}</td>
+                      <td className="p-2 text-right text-[var(--accent)]">{t.lastDigit}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <p className="text-xs text-[var(--text-muted)]">Details available after scan persists the condition window.</p>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function Marketplace() {
   const { isAuthenticated } = useAuth();
   const [, navigate] = useLocation();
   const [symbol, setSymbol] = useState<string>("");
-  const [expanded, setExpanded] = useState<number | null>(null);
+  const [expanded, setExpanded] = useState<string | number | null>(null);
   const [showUpload, setShowUpload] = useState(false);
   const [uploadName, setUploadName] = useState("");
   const [uploadDesc, setUploadDesc] = useState("");
-  const [uploadPrice, setUploadPrice] = useState("");
   const [uploadConfig, setUploadConfig] = useState("");
+  const [scanning, setScanning] = useState(false);
 
   const createBotMutation = trpc.strategies.save.useMutation();
-  const [sentId, setSentId] = useState<number | null>(null);
   const publishedQuery = trpc.strategies.publishedList.useQuery();
   const cloneMutation = trpc.strategies.save.useMutation();
   const watchMutation = trpc.ai.aiScheduledAnalysis.useMutation();
   const scanMutation = trpc.signals.watch.useMutation();
-  const [scanning, setScanning] = useState(false);
+
+  // Live engine results when a symbol is chosen; persisted list otherwise.
+  const hasSymbol = !!symbol;
+  const fitQuery = trpc.signals.fit.useQuery(
+    { symbol: hasSymbol ? symbol : "", sampleSize: 1000 },
+    { enabled: hasSymbol, refetchInterval: 60000, staleTime: 20000 },
+  );
   const signalsQuery = trpc.signals.list.useQuery(
     symbol ? { symbol } : {},
-    { refetchInterval: 30000 }
+    { enabled: !hasSymbol, refetchInterval: 30000, staleTime: 10000 },
   );
 
-  const sendToBot = async (sig: any) => {
+  const liveResults = useMemo(() => (Array.isArray(fitQuery.data?.results) ? fitQuery.data!.results : []), [fitQuery.data]);
+  const list: any[] = hasSymbol ? liveResults : (Array.isArray(signalsQuery.data) ? signalsQuery.data : []);
+  const real = list.filter((s) => !s.tier || s.tier === "strong" || s.tier === "watch");
+  const monitors = list.filter((s) => s.tier === "failed" || s.tier === "no_edge");
+
+  const sendToBot = useCallback(async (sig: any) => {
     try {
-      // Confidence-weighted stake: stronger signals trade bigger, weak ones trade small.
-      const confidence = Number(sig.confidence) || 50;
-      const BASE_STAKE = 2;
-      const MIN_STAKE = 0.35;
-      const scaledStake = Math.max(MIN_STAKE, +(BASE_STAKE * (confidence / 100)).toFixed(2));
-      const rule = {
-        ...(sig.rule || {}),
-        params: { ...(sig.rule?.params || {}), stake: scaledStake, confidence },
-      };
+      const rule = sig.rule || {};
       const strategy = await createBotMutation.mutateAsync({
-        name: sig.title || (sig.symbol + " insight"),
-        description: sig.description || "Created from a 369AI signal.",
-        config: { rule, source: "ai_signal", signalId: sig.id },
+        name: `${getSymbolDisplayName(sig.symbol)} · ${sig.supportsLabel || sig.title}`,
+        description: sig.describe || sig.description || "Created from a 369Labs validated condition.",
+        config: { rule: rule, source: "ai_signal", signalId: sig.id ?? null, tier: sig.tier },
       });
-      setSentId(sig.id);
+      if (strategy?.id != null) void sig.id;
+      toast("Bot created — open Bots to configure and start it.", "success");
       setTimeout(() => navigate("/bots"), 600);
     } catch (e) {
-      toast("Failed to create bot from signal: " + (e instanceof Error ? e.message : String(e)), "error");
+      toast("Failed to create bot: " + (e instanceof Error ? e.message : String(e)), "error");
     }
-  };
+  }, [createBotMutation, navigate]);
 
   const cloneStrategy = async (s: any) => {
     try {
-      await cloneMutation.mutateAsync({
-        name: s.name + " (cloned)",
-        description: s.description || "Cloned from community marketplace.",
-        config: s.config,
-        published: false,
-      });
-      toast("Cloned to your strategies. Open Strategy Builder or Bots to use it.", "success");
+      await cloneMutation.mutateAsync({ name: s.name + " (cloned)", description: s.description || "Cloned from community marketplace.", config: s.config, published: false });
+      toast("Cloned to your strategies.", "success");
     } catch (e) {
       toast("Clone failed: " + (e instanceof Error ? e.message : String(e)), "error");
     }
   };
 
-  // Observed out-of-sample win rate minus the contract type's random-chance
-  // baseline. Positive = real edge over a coin flip; near 0 = noise.
-  const edgeOverChance = (sig: any): number => {
-    const oos = Number(sig.oosWinRate);
-    const baseline = Number(sig.baselineWinRate);
-    if (sig.oosWinRate == null || sig.baselineWinRate == null) return 0;
-    return Math.round((oos - baseline) * 10) / 10;
-  };
-
   const pluginsQuery = trpc.plugins.marketplace.useQuery();
   if (!isAuthenticated) { navigate("/login"); return null; }
-  const signals = Array.isArray(signalsQuery.data) ? signalsQuery.data : [];
   const published = Array.isArray(publishedQuery.data) ? publishedQuery.data : [];
   const pluginList = Array.isArray(pluginsQuery.data) ? pluginsQuery.data : [];
+  const isLoading = hasSymbol ? fitQuery.isLoading : signalsQuery.isLoading;
 
   return (
     <div className="h-full text-white">
@@ -93,7 +284,7 @@ export default function Marketplace() {
           <div>
             <h1 className="text-xl font-bold tracking-tight">AI <span className="text-[var(--accent)]">Signals</span></h1>
             <p className="text-xs text-[var(--text-muted)] flex items-center gap-1.5">
-              <Sparkles className="w-3 h-3 text-[var(--accent)]" /> What 369AI discovered from live market data
+              <Shield className="w-3 h-3 text-[var(--accent)]" /> Fixed digit patterns vs their real fair baseline — CI, FDR, walk-forward
             </p>
           </div>
         </div>
@@ -109,137 +300,79 @@ export default function Marketplace() {
       </div>
 
       <div className="p-4 md:p-6 max-w-5xl mx-auto">
-        {signals.length > 0 && (
-          <div className="mb-6 flex items-start gap-2.5 bg-[var(--surface-secondary)] border border-[var(--border)] rounded-lg px-4 py-3 text-xs text-[var(--text-muted)] leading-relaxed">
-            <Shield className="w-4 h-4 text-[var(--accent)] mt-0.5 shrink-0" />
-            <p>
-              These signals are pattern scans over a limited recent tick window and have{" "}
-              <b className="text-[var(--text-secondary)]">not been validated on out-of-sample data</b>.
-              "Win rate" is the hit rate on the exact window where the pattern was found, not a
-              guarantee of future results. Stake is scaled by that in-sample rate. Trading involves
-              substantial risk — this is an analysis tool, not financial advice.
-            </p>
-          </div>
-        )}
-        {signalsQuery.isLoading ? (
+        <div className="mb-6 flex items-start gap-2.5 bg-[var(--surface-secondary)] border border-[var(--border)] rounded-lg px-4 py-3 text-xs text-[var(--text-muted)] leading-relaxed">
+          <Shield className="w-4 h-4 text-[var(--accent)] mt-0.5 shrink-0" />
+          <p>
+            A signal must (1) beat the <b className="text-[var(--text-secondary)]">correct contract baseline</b> (Matches 10%, Differs 90%, Even/Odd 50%, Over/Under by barrier),
+            (2) survive <b className="text-[var(--text-secondary)]">BH-FDR correction</b>, (3) <b className="text-[var(--text-secondary)]">hold across 5 walk-forward windows</b>,
+            and (4) map to a specific Deriv digit contract. Tiers: 🟢 Strong / 🟡 Watching / ⚪ No edge / 🔴 Failed / ⏳ Stale.
+            This is an analysis tool, not financial advice.
+          </p>
+        </div>
+
+        {isLoading ? (
           <div className="flex items-center justify-center gap-2 text-[var(--text-muted)] py-20">
-            <Loader2 className="w-5 h-5 animate-spin" /> Scanning market intelligence...
+            <Loader2 className="w-5 h-5 animate-spin" /> {hasSymbol ? "Running engine analysis…" : "Loading market intelligence…"}
           </div>
-        ) : signals.length === 0 ? (
+        ) : real.length === 0 ? (
           <div className="text-center py-20">
             <div className="w-16 h-16 mx-auto bg-[var(--accent-soft)] rounded-2xl flex items-center justify-center border border-[var(--accent-border)] mb-4">
               <CandlestickChart className="w-8 h-8 text-[var(--accent)]" />
             </div>
-            <h3 className="text-lg font-bold text-white">No signals yet</h3>
+            <h3 className="text-lg font-bold text-white">{hasSymbol ? "No condition cleared the bar" : "No signals yet"}</h3>
             <p className="text-sm text-[var(--text-muted)] mt-1 max-w-md mx-auto">
-              Tell 369AI to watch a market e.g. "Watch R_50 for 30 minutes and find repeatable patterns" or wait for the always-on scanner to surface setups here with full evidence.
+              {hasSymbol
+                ? "The engine validated the full fixed pattern library and found no rule that beat its fair baseline with FDR + walk-forward confirmation. Try another symbol or a longer window."
+                : "Ask 369AI to watch a market e.g. \"Watch R_50 for 30 minutes\" or let the always-on scanner validate patterns here."}
             </p>
-            <Button onClick={async () => { 
-                const syms = symbol ? [symbol] : getValidSymbols();
+            <Button onClick={async () => {
+                const syms = hasSymbol ? [symbol] : getValidSymbols();
                 setScanning(true);
                 let total = 0;
                 for (const s of syms) {
                   try {
-                    const res: any = await scanMutation.mutateAsync({ symbol: s, durationMinutes: 30, minWinRate: 55, patternType: "any" });
+                    const res: any = await scanMutation.mutateAsync({ symbol: s, durationMinutes: 60, minWinRate: 55, patternType: "any" });
                     total += res?.signalsFound ?? 0;
                   } catch {}
                 }
-                watchMutation.mutate({ symbol: symbol || "all", interval: "1h" });
+                watchMutation.mutate({ symbol: hasSymbol ? symbol : "all", interval: "1h" });
                 setScanning(false);
-                if (total > 0) {
-                  toast("Scan complete — " + total + " pattern" + (total === 1 ? "" : "s") + " found across " + syms.length + " symbol" + (syms.length === 1 ? "" : "s") + ".", "success");
-                } else {
-                  toast("Scan done — no patterns found. Try a longer watch or different symbol.", "info");
-                }
                 signalsQuery.refetch();
+                if (total > 0) toast("Scan complete — " + total + " condition" + (total === 1 ? "" : "s") + " verified.", "success");
+                else toast("Scan done — no condition cleared the bar on this run.", "info");
               }} disabled={scanning} className="mt-4 bg-[var(--accent)] hover:brightness-110 text-black text-sm px-4 py-2 rounded-lg">
-              {scanning ? "Scanning..." : "Start a watch"}
+              {scanning ? "Scanning…" : hasSymbol ? "Re-scan this symbol" : "Start a watch"}
             </Button>
           </div>
         ) : (
           <div className="space-y-4">
-            {signals.map((sig: any) => {
-              const win = parseFloat(sig.winRate);
-              const isOpen = expanded === sig.id;
-              const ev = Array.isArray(sig.evidence) ? sig.evidence.slice(0, 12) : [];
-              return (
-                <div key={sig.id} className="bg-[var(--card)] border border-[var(--border)] rounded-xl overflow-hidden">
-                  <div className="p-4 flex items-start justify-between gap-4">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="px-2 py-0.5 rounded bg-[var(--accent-soft)] border border-[var(--accent-border)] text-[var(--accent)] text-micro">{getSymbolDisplayName(sig.symbol)}</span>
-                        <span className="px-2 py-0.5 rounded bg-white/5 text-[var(--text-secondary)] text-micro">{sig.patternType}</span>
-                        <span className={`px-2 py-0.5 rounded text-micro ${sig.source === "always-on" ? "bg-[var(--accent-soft)] text-[var(--accent)]" : "bg-[var(--accent-soft)] text-[var(--accent)]"}`}>{sig.source}</span>
-                      </div>
-                      <h3 className="font-bold text-white mt-2">{sig.title}</h3>
-                      <p className="text-sm text-[var(--text-secondary)] mt-1">{sig.description}</p>
-                      <div className="flex items-center gap-4 mt-3 text-xs">
-                        <span className="flex items-center gap-1 text-[var(--text-muted)]"><TrendingUp className="w-3 h-3" /> In-sample win rate <b className={win >= 65 ? "text-[var(--green)]" : "text-[var(--red)]"}>{win}%</b></span>
-                        {sig.oosWinRate != null && (
-                          <span className="flex items-center gap-1 text-[var(--text-muted)]" title="Out-of-sample: the rule held on a forward (unseen) portion of the tick window, so it is not curve-fit.">
-                            <ShieldCheck className="w-3 h-3" /> Out-of-sample <b className={Number(sig.oosWinRate) >= 60 ? "text-[var(--green)]" : "text-[var(--red)]"}>{sig.oosWinRate}%</b>
-                            <span className="text-[var(--text-muted)]">({sig.oosSampleSize ?? "—"} samples)</span>
-                          </span>
-                        )}
-                        {sig.baselineWinRate != null && (
-                          <span
-                            className="flex items-center gap-1 text-[var(--text-muted)]"
-                            title={`Random-chance win rate for this contract type is ${sig.baselineWinRate}%. Anything near that is a coin flip — the real edge is observed minus baseline.`}
-                          >
-                            <Gauge className="w-3 h-3" /> vs chance <b className="text-white">{sig.baselineWinRate}%</b>
-                            <span className={`${edgeOverChance(sig) > 0 ? "text-[var(--green)]" : edgeOverChance(sig) < 0 ? "text-[var(--red)]" : "text-[var(--text-muted)]"}`}>
-                              ({edgeOverChance(sig) > 0 ? "+" : ""}{edgeOverChance(sig)}% edge)
-                            </span>
-                          </span>
-                        )}
-                        <span className="text-[var(--text-muted)]">Samples <b className="text-white">{sig.sampleSize}</b></span>
-                        <span className="text-[var(--text-muted)]">Stake <b className="text-[var(--accent)]">${(Math.max(0.35, +(2 * (Number(sig.confidence) || 50) / 100)).toFixed(2))}</b> <span className="text-[var(--text-muted)]">(scaled)</span></span>
-                        <span className="flex items-center gap-1 text-[var(--text-muted)]"><Clock className="w-3 h-3" /> {new Date((sig.discoveredAt || 0) * 1000).toLocaleString()}</span>
-                      </div>
+            {monitors.length > 0 && (
+              <div className="flex flex-wrap gap-2 items-center text-[10px] text-[var(--text-brown)]">
+                <span className="text-[var(--text-muted)]">Shown: {real.length} clear · Monitored without verified edge: {monitors.length}</span>
+              </div>
+            )}
+            {real.map((sig: any) => (
+              <SignalCardRow key={sig.key ?? sig.id} sig={sig} expandedId={expanded} setExpanded={setExpanded} onBacktest={() => navigate("/backtesting?signal=" + (sig.id ?? ""))} onDeploy={() => sendToBot(sig)} />
+            ))}
+            {monitors.length > 0 && (
+              <details className="bg-[var(--card)] border border-[var(--border)] rounded-xl overflow-hidden">
+                <summary className="p-3 text-xs text-[var(--text-muted)] cursor-pointer flex items-center gap-2 font-bold">
+                  <TimerReset className="w-3.5 h-3.5" /> Monitored patterns with no verified edge ({monitors.length})
+                </summary>
+                <div className="px-3 pb-3 space-y-2">
+                  {monitors.map((sig: any) => (
+                    <div key={sig.id ?? sig.key} className="flex items-center justify-between text-xs rounded-lg bg-black/20 border border-[var(--border)] px-3 py-2">
+                      <span className="text-[var(--text-secondary)]">{sig.supportsLabel || sig.title} · {sig.triggerText || "—"}</span>
+                      <span className={`text-micro px-2 py-0.5 rounded border ${TIER_META[sig.tier]?.cls || TIER_META.no_edge.cls}`}>{TIER_META[sig.tier]?.label || sig.tier}</span>
                     </div>
-                    <div className="flex flex-col gap-2 shrink-0">
-                      <Button onClick={() => navigate("/backtesting?signal=" + sig.id)} className="bg-[var(--accent)] hover:brightness-110 text-black text-xs px-3 py-1.5 rounded-lg flex items-center gap-1">
-                        <FlaskConical className="w-3.5 h-3.5" /> Backtest
-                      </Button>
-                      <Button onClick={() => sendToBot(sig)} className="bg-[var(--green)]/20 text-[var(--green)] border border-[var(--green)]/30 text-xs px-3 py-1.5 rounded-lg flex items-center gap-1">
-                        <Bot className="w-3.5 h-3.5" /> Deploy Bot
-                      </Button>
-                      <button onClick={() => setExpanded(isOpen ? null : sig.id)} className="text-body hover:text-[var(--accent)] flex items-center gap-1 justify-center">
-                        {isOpen ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />} Evidence
-                      </button>
-                    </div>
-                  </div>
-                  {isOpen && (
-                    <div className="border-t border-[var(--border)] aurora-glass p-4">
-                      <div className="text-micro mb-2">Raw evidence (tick window)</div>
-                      <div className="overflow-x-auto">
-                        <table className="w-full text-left text-xs font-mono">
-                          <thead>
-                            <tr className="text-[var(--text-muted)] border-b border-[var(--border)]">
-                              <th className="p-2">#</th><th className="p-2">Time</th><th className="p-2 text-right">Price</th><th className="p-2 text-right">Digit</th>
-                            </tr>
-                          </thead>
-                          <tbody className="divide-y divide-[var(--border)]">
-                            {ev.map((t: any, i: number) => (
-                              <tr key={i}>
-                                <td className="p-2 text-[var(--text-muted)]">{i + 1}</td>
-                                <td className="p-2 text-[var(--text-secondary)]">{new Date((t.epoch || 0) * 1000).toLocaleTimeString()}</td>
-                                <td className="p-2 text-right text-white">{Number(t.price).toFixed(getDecimalPlaces(sig.symbol))}</td>
-                                <td className="p-2 text-right text-[var(--accent)]">{t.lastDigit}</td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
-                      <pre className="mt-3 text-body bg-[var(--surface-secondary)] rounded-lg p-3 overflow-x-auto">{JSON.stringify(sig.rule, null, 2)}</pre>
-                    </div>
-                  )}
+                  ))}
                 </div>
-              );
-            })}
+              </details>
+            )}
           </div>
         )}
 
+        {/* Plugin SDK */}
         <div className="mt-10">
           <h2 className="text-xl font-bold text-white mb-1 flex items-center gap-2">
             <Code className="w-5 h-5 text-[var(--accent)]" /> Plugin SDK
@@ -262,31 +395,10 @@ export default function Marketplace() {
   return { name: "My Plugin", version: "1.0.0" };
 }`}</pre>
             </div>
-            <div className="grid grid-cols-2 gap-3 text-xs">
-              <div className="bg-[var(--surface-secondary)] rounded-lg p-3">
-                <p className="text-white font-bold mb-1">Available Hooks</p>
-                <ul className="text-[var(--text-muted)] space-y-1">
-                  <li><code className="text-[var(--accent)]">onTrade</code> — trade executed</li>
-                  <li><code className="text-[var(--accent)]">onTick</code> — price tick</li>
-                  <li><code className="text-[var(--accent)]">onAlert</code> — alert triggered</li>
-                  <li><code className="text-[var(--accent)]">onBotStart</code> — bot started</li>
-                  <li><code className="text-[var(--accent)]">onBotStop</code> — bot stopped</li>
-                </ul>
-              </div>
-              <div className="bg-[var(--surface-secondary)] rounded-lg p-3">
-                <p className="text-white font-bold mb-1">Permissions</p>
-                <ul className="text-[var(--text-muted)] space-y-1">
-                  <li><code className="text-[var(--accent)]">trades:read</code> — view trades</li>
-                  <li><code className="text-[var(--accent)]">trades:write</code> — execute trades</li>
-                  <li><code className="text-[var(--accent)]">bots:read</code> — view bots</li>
-                  <li><code className="text-[var(--accent)]">alerts:read</code> — view alerts</li>
-                  <li><code className="text-[var(--accent)]">data:export</code> — export data</li>
-                </ul>
-              </div>
-            </div>
           </div>
         </div>
 
+        {/* Plugin Marketplace */}
         <div className="mt-10">
           <h2 className="text-xl font-bold text-white mb-1 flex items-center gap-2">
             <Shield className="w-5 h-5 text-[var(--accent)]" /> Plugin Marketplace
@@ -297,11 +409,8 @@ export default function Marketplace() {
               <div className="flex justify-center py-6"><Loader2 className="w-5 h-5 animate-spin text-[var(--accent)]" /></div>
             ) : pluginList.length === 0 ? (
               <div className="text-center py-8 px-4">
-                <div className="w-12 h-12 mx-auto bg-[var(--accent-soft)] rounded-2xl flex items-center justify-center border border-[var(--accent-border)] mb-3">
-                  <Shield className="w-6 h-6 text-[var(--accent)]" />
-                </div>
+                <Shield className="w-6 h-6 text-[var(--accent)] mx-auto mb-2" />
                 <p className="text-sm text-[var(--text-muted)]">No plugins available yet.</p>
-                <p className="text-xs text-[var(--text-disabled)] mt-1">Create one using the Plugin SDK above.</p>
               </div>
             ) : (
               pluginList.map((plugin: any) => (
@@ -311,10 +420,7 @@ export default function Marketplace() {
                       <span className="text-sm font-bold text-white">{plugin.name}</span>
                       <span className="text-xs text-[var(--text-muted)] ml-2">v{plugin.version || "1.0.0"}</span>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-caption">{plugin.author || "Community"}</span>
-                      <span className="text-caption px-2 py-0.5 rounded bg-[var(--accent)]/20 text-[var(--accent)]">{plugin.hook || "general"}</span>
-                    </div>
+                    <span className="text-caption px-2 py-0.5 rounded bg-[var(--accent)]/20 text-[var(--accent)]">{plugin.hook || "general"}</span>
                   </div>
                   <p className="text-xs text-[var(--text-secondary)] mt-1">{plugin.description || ""}</p>
                 </div>
@@ -323,6 +429,7 @@ export default function Marketplace() {
           </div>
         </div>
 
+        {/* Community Strategies */}
         <div className="mt-10">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-xl font-bold text-white flex items-center gap-2">
@@ -343,7 +450,6 @@ export default function Marketplace() {
                 <Users className="w-6 h-6 text-[var(--accent)]" />
               </div>
               <p className="text-sm text-[var(--text-muted)]">No published strategies yet.</p>
-              <p className="text-xs text-[var(--text-disabled)] mt-1">Publish one from the Strategy Builder or upload here.</p>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -359,9 +465,7 @@ export default function Marketplace() {
                       </div>
                     </div>
                     <div className="flex flex-col gap-2 shrink-0">
-                      <Button onClick={() => cloneStrategy(s)} className="bg-[var(--accent)] hover:brightness-110 text-black text-xs px-3 py-1.5 rounded-lg">
-                        Clone
-                      </Button>
+                      <Button onClick={() => cloneStrategy(s)} className="bg-[var(--accent)] hover:brightness-110 text-black text-xs px-3 py-1.5 rounded-lg">Clone</Button>
                     </div>
                   </div>
                 </div>
@@ -387,14 +491,20 @@ export default function Marketplace() {
                   <textarea value={uploadDesc} onChange={(e) => setUploadDesc(e.target.value)} className="w-full bg-[var(--card)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-white resize-none" rows={3} placeholder="Describe your strategy..." />
                 </div>
                 <div>
-                  <label className="text-xs text-[var(--text-muted)] font-bold block mb-1">Price (credits)</label>
-                  <input type="number" value={uploadPrice} onChange={(e) => setUploadPrice(e.target.value)} className="w-full bg-[var(--card)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-white" placeholder="0 (free)" />
-                </div>
-                <div>
                   <label className="text-xs text-[var(--text-muted)] font-bold block mb-1">Config (JSON)</label>
                   <textarea value={uploadConfig} onChange={(e) => setUploadConfig(e.target.value)} className="w-full bg-[var(--card)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-white font-mono resize-none" rows={4} placeholder='{"rule":{"conditions":[...],"actions":[...]}}' />
                 </div>
-                <Button onClick={async () => { if (!uploadName.trim()) { toast("Strategy name required", "error"); return; } let config: any = {}; if (uploadConfig.trim()) { try { config = JSON.parse(uploadConfig); } catch { toast("Invalid JSON config", "error"); return; } } try { await cloneMutation.mutateAsync({ name: uploadName, description: uploadDesc || "Published from Marketplace", config, published: true }); toast("Strategy published to community!", "success"); setShowUpload(false); setUploadName(""); setUploadDesc(""); setUploadPrice(""); setUploadConfig(""); publishedQuery.refetch(); } catch (e: any) { toast(e?.message || "Failed to publish", "error"); } }} className="w-full bg-[var(--accent)] text-[var(--bg)] text-xs font-bold py-2 rounded-lg">Submit for Review</Button>
+                <Button onClick={async () => {
+                  if (!uploadName.trim()) { toast("Strategy name required", "error"); return; }
+                  let config: any = {};
+                  if (uploadConfig.trim()) { try { config = JSON.parse(uploadConfig); } catch { toast("Invalid JSON config", "error"); return; } }
+                  try {
+                    await cloneMutation.mutateAsync({ name: uploadName, description: uploadDesc || "Published from Marketplace", config, published: true });
+                    toast("Strategy published to community!", "success");
+                    setShowUpload(false); setUploadName(""); setUploadDesc(""); setUploadConfig("");
+                    publishedQuery.refetch();
+                  } catch (e: any) { toast(e?.message || "Failed to publish", "error"); }
+                }} className="w-full bg-[var(--accent)] text-[var(--bg)] text-xs font-bold py-2 rounded-lg">Submit for Review</Button>
               </div>
             </div>
           </div>
@@ -403,4 +513,3 @@ export default function Marketplace() {
     </div>
   );
 }
-

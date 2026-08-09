@@ -44,6 +44,41 @@ export async function getTickHistory(symbol: string, count = 100) {
   return prices.map((p, i) => ({ price: p, timestamp: times[i] * 1000 }));
 }
 
+// Deriv caps ticks_history at 5,000 ticks per request. This paginates backward
+// using the `end` param so Priority-3 patterns (multi-digit sequences) can get
+// deeper history. Returns ticks oldest -> newest.
+export async function getTickHistoryDeep(symbol: string, count = 10000): Promise<{ price: number; timestamp: number }[]> {
+  const sym = normalizeSymbol(symbol);
+  const MAX = 5000;
+  const results: { price: number; timestamp: number }[] = [];
+  let end: number | 'latest' = 'latest';
+  // Some capacity safety; most requests are far below this.
+  const capRequests = Math.max(1, Math.ceil(count / MAX)) + 2;
+  for (let r = 0; r < capRequests && results.length < count; r++) {
+    const want = Math.min(MAX, count - results.length);
+    const res = await sendDeriv({ ticks_history: sym, end, start: end === 'latest' ? Math.floor(Date.now() / 1000) - want * 3 : undefined, adjust_start_time: 1, count: want });
+    if (res.error) throw new Error(res.error.message);
+    const prices: number[] = res.history?.prices || [];
+    const times: number[] = res.history?.times || [];
+    if (prices.length === 0) break;
+    const chunk = prices.map((p, i) => ({ price: p, timestamp: times[i] * 1000 }));
+    // Guarantee newest -> oldest ordering regardless of API direction.
+    let ordered = chunk;
+    const asc = chunk.length > 1 && chunk[1].timestamp > chunk[0].timestamp;
+    if (asc) ordered = chunk.slice().reverse();
+    const nextEnd = ordered.length ? ordered[ordered.length - 1].timestamp : undefined;
+    for (const t of ordered) {
+      if (results.length >= count) break;
+      results.push(t);
+    }
+    if (nextEnd == null) break;
+    end = Math.floor(nextEnd / 1000) - 2;
+  }
+  // Return oldest -> newest like getTickHistory's contract.
+  results.reverse();
+  return results;
+}
+
 export async function getActiveSymbols() {
   const res = await sendDeriv({ active_symbols: 'full' });
   if (res.error) throw new Error(res.error.message);
