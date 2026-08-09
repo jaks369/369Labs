@@ -30,7 +30,11 @@ export type PatternType =
   | "over_under_transition"
   | "repeat_change"
   | "streak_followon"
-  | "alternation_break";
+  | "alternation_break"
+  | "digit_transition"
+  | "hl_alternation"
+  | "repeat_change_alternation"
+  | "repeat_change_state";
 export type PatternCat = "any" | PatternType;
 
 export interface ScanOptions {
@@ -121,6 +125,9 @@ function ruleFromContract(c: ContractSupport): Record<string, any> {
       parts.action.barrier = c.barrier;
       parts.condition = { indicator: "last_digit", comparison: "less_than", barrier: c.barrier, count: 1 };
       break;
+    case "DIGITREPEAT": // no direct Deriv contract — diagnostics only
+    case "DIGITCHANGE":
+      return { signalVersion: 2, family: null, patternTypePinned: null, analysisOnly: true, ...c };
   }
   return { signalVersion: 2, family: null, patternTypePinned: null, ...parts };
 }
@@ -137,6 +144,8 @@ export async function runWatch(opts: ScanOptions): Promise<any[]> {
 
   for (const r of results) {
     if (r.tier !== "strong" && r.tier !== "watch") continue; // §3: only tiers that beat baseline with CI + WF
+    if (r.supports.contract === "DIGITREPEAT" || r.supports.contract === "DIGITCHANGE") continue; // analysis-only, no Deriv contract
+    if (r.oosInsufficient) continue; // do not persist a verdict on insufficient forward data
     const symbol = normalizeSymbol(opts.symbol);
     const edgeText = `${r.edgePp > 0 ? "+" : ""}${r.edgePp} pp`;
     const wfText = `${r.holds}/${r.walks.length} OOS windows held (avg ${(r.oosAvg * 100).toFixed(1)}%)`;

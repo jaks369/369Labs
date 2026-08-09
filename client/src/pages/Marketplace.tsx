@@ -10,10 +10,39 @@ import { getDecimalPlaces } from "@shared/lastDigit";
 
 const TIER_META: Record<string, { label: string; cls: string; badge: string; desc: string }> = {
   strong: { label: "Strong", badge: "🟢", cls: "bg-[var(--green)]/15 text-[var(--green)] border-[var(--green)]/30", desc: "Significant edge that held forward across 3+ walk-forward windows." },
-  watch: { label: "Watching", badge: "🟡", cls: "bg-[var(--accent)]/15 text-[var(--accent)] border-[var(--accent)]/30", desc: "Edge is present in-sample but needs more out-of-sample confirmation." },
-  failed: { label: "Failed", badge: "🔴", cls: "bg-[var(--red)]/15 text-[var(--red)] border-[var(--red)]/30", desc: "Edge did not hold in out-of-sample windows." },
+  watch: { label: "Interesting", badge: "🟡", cls: "bg-[var(--accent)]/15 text-[var(--accent)] border-[var(--accent)]/30", desc: "Edge is present in-sample but needs more out-of-sample confirmation." },
+  insufficient: { label: "Insufficient data", badge: "🟠", cls: "bg-[var(--accent)]/10 text-[var(--text-secondary)] border-[var(--accent)]/20", desc: "Not enough out-of-sample ticks to judge — treat as unconfirmed, not failed." },
+  failed: { label: "Failed", badge: "🔴", cls: "bg-[var(--red)]/15 text-[var(--red)] border-[var(--red)]/30", desc: "Enough forward data existed and the edge did not hold." },
   no_edge: { label: "No edge", badge: "⚪", cls: "bg-white/5 text-[var(--text-muted)] border-[var(--border)]", desc: "Observed rate did not clear the fair baseline within confidence." },
 };
+
+// Decision-support interpretation + action, quote the measured numbers (§ spec:
+// conclusion/action first, expandable math below; "DO NOTHING is intelligence").
+function interpretation(sig: any, observed: number, baseline: number): string {
+  const sup = sig.supportsLabel || sig.title || "this condition";
+  const edge = sig.edgePp != null ? sig.edgePp : Math.round((observed - baseline) * 1000) / 10;
+  const oos = sig.oosInsufficient
+    ? `only ${sig.oosTotal ?? 0} forward ticks observed — too few to confirm`
+    : `${sig.holds ?? 0}/${sig.walks?.length ?? 0} forward windows held (avg ${fmtPct(sig.oosAvg ?? 0)})`;
+  const signif = sig.fdrAdjusted ? `p=${Number(sig.pValue).toExponential(2)} after FDR` : "not significant after FDR";
+  return `${sup}: baseline ${fmtPct(baseline)}, observed ${fmtPct(observed)} (edge ${fmtPp(edge)}), ${oos}, ${signif}.`;
+}
+
+function aiAction(sig: any): { text: string; cls: string } {
+  switch (sig.tier) {
+    case "strong":
+      return { text: `Consider a small ${sig.supportsLabel || "trade"} on ${getSymbolDisplayName(sig.symbol)}; re-test every 2h as the edge decays.`, cls: "text-[var(--green)]" };
+    case "watch":
+      return { text: `Interesting but unconfirmed — watch ${getSymbolDisplayName(sig.symbol)}; do not size up until forward windows hold.`, cls: "text-[var(--accent)]" };
+    case "insufficient":
+      return { text: "Insufficient forward data — waiting is the correct action.", cls: "text-[var(--text-secondary)]" };
+    case "failed":
+      return { text: `Edge failed to hold forward on ${getSymbolDisplayName(sig.symbol)} — do not trade this.`, cls: "text-[var(--red)]" };
+    case "no_edge":
+    default:
+      return { text: "No reliable edge vs the fair baseline — doing nothing is intelligence.", cls: "text-[var(--text-muted)]" };
+  }
+}
 
 function fmtPct(x: number): string { return (x * 100).toFixed(1) + "%"; }
 function fmtPp(x: number): string { return (x > 0 ? "+" : "") + x.toFixed(1) + "pp"; }
@@ -110,6 +139,12 @@ function SignalCardRow({ sig, expandedId, setExpanded, onBacktest, onDeploy }: {
                 <p className="text-[var(--text-muted)] text-[10px] uppercase tracking-wide">Sample</p>
                 <p className="text-white font-bold mt-0.5">{sig.inSampleSize ?? sig.sampleSize ?? sig.walks?.reduce?.((s: number, w: any) => s + (w.n || 0), 0) ?? "—"}</p>
               </div>
+            </div>
+
+            {/* AI interpretation + action (conclusion first, math above stays expandable) */}
+            <div className="mt-3 rounded-lg border border-[var(--border)] bg-black/10 px-3 py-2 text-xs space-y-1">
+              <p className="text-[var(--text-muted)]"><span className="text-[var(--accent)] font-bold">AI interpretation</span> · {interpretation(sig, observed, baseline)}</p>
+              <p className={`font-bold ${aiAction(sig).cls}`}><span className="text-[var(--accent)]">AI action</span> · {aiAction(sig).text}</p>
             </div>
 
             {/* walk-forward */}
@@ -241,7 +276,7 @@ export default function Marketplace() {
   const liveResults = useMemo(() => (Array.isArray(fitQuery.data?.results) ? fitQuery.data!.results : []), [fitQuery.data]);
   const list: any[] = hasSymbol ? liveResults : (Array.isArray(signalsQuery.data) ? signalsQuery.data : []);
   const real = list.filter((s) => !s.tier || s.tier === "strong" || s.tier === "watch");
-  const monitors = list.filter((s) => s.tier === "failed" || s.tier === "no_edge");
+  const monitors = list.filter((s) => s.tier === "failed" || s.tier === "no_edge" || s.tier === "insufficient");
 
   const sendToBot = useCallback(async (sig: any) => {
     try {
@@ -305,7 +340,7 @@ export default function Marketplace() {
           <p>
             A signal must (1) beat the <b className="text-[var(--text-secondary)]">correct contract baseline</b> (Matches 10%, Differs 90%, Even/Odd 50%, Over/Under by barrier),
             (2) survive <b className="text-[var(--text-secondary)]">BH-FDR correction</b>, (3) <b className="text-[var(--text-secondary)]">hold across 5 walk-forward windows</b>,
-            and (4) map to a specific Deriv digit contract. Tiers: 🟢 Strong / 🟡 Watching / ⚪ No edge / 🔴 Failed / ⏳ Stale.
+            and (4) map to a specific Deriv digit contract. Tiers: 🟢 Strong / 🟡 Interesting / 🟠 Insufficient data / ⚪ No edge / 🔴 Failed / ⏳ Stale.
             This is an analysis tool, not financial advice.
           </p>
         </div>

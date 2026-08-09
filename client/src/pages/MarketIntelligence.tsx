@@ -18,10 +18,51 @@ const SCREENER_SYMBOLS = getAllSymbols() ?? [];
 
 const TIER_META: Record<string, { label: string; badge: string; cls: string; desc: string }> = {
   strong: { label: "Strong", badge: "🟢", cls: "bg-[var(--green)]/15 text-[var(--green)] border-[var(--green)]/30", desc: "Edge held across 3+ walk-forward windows with FDR correction." },
-  watch: { label: "Watching", badge: "🟡", cls: "bg-[var(--accent)]/15 text-[var(--accent)] border-[var(--accent)]/30", desc: "Edge present in-sample; needs more forward confirmation." },
-  failed: { label: "Failed", badge: "🔴", cls: "bg-[var(--red)]/15 text-[var(--red)] border-[var(--red)]/30", desc: "Failed to hold forward." },
+  watch: { label: "Interesting", badge: "🟡", cls: "bg-[var(--accent)]/15 text-[var(--accent)] border-[var(--accent)]/30", desc: "Edge present in-sample; needs more forward confirmation." },
+  insufficient: { label: "Insufficient data", badge: "🟠", cls: "bg-[var(--accent)]/10 text-[var(--text-secondary)] border-[var(--accent)]/20", desc: "Too few forward ticks to verify — unconfirmed, not failed." },
+  failed: { label: "Failed", badge: "🔴", cls: "bg-[var(--red)]/15 text-[var(--red)] border-[var(--red)]/30", desc: "Failed to hold forward with adequate data." },
   no_edge: { label: "No edge", badge: "⚪", cls: "bg-white/5 text-[var(--text-muted)] border-[var(--border)]", desc: "No clear edge over the fair baseline." },
 };
+
+// Decision-support verdict: conclude ACTION first, quote the numbers that drive it.
+function verdictFor(results: any[], symbolName: string): { state: "TRADE" | "WATCH" | "WAIT" | "NO TRADE"; cls: string; title: string; detail: string } {
+  const strong = results.filter((r) => r.tier === "strong");
+  const watch = results.filter((r) => r.tier === "watch");
+  const insufficient = results.filter((r) => r.tier === "insufficient");
+  if (strong.length > 0) {
+    const top = strong[0];
+    return {
+      state: "TRADE",
+      cls: "border-[var(--green)]/40 bg-[var(--green)]/10",
+      title: `Trade candidate: ${top.supportsLabel} on ${symbolName}`,
+      detail: `${top.describe} Baseline ${(top.baseline * 100).toFixed(1)}% → observed ${(top.observed * 100).toFixed(1)}% (edge +${top.edgePp}pp), ${top.holds}/${top.walks?.length ?? 0} forward windows held. Small size, re-test every 2h.`,
+    };
+  }
+  if (watch.length > 0) {
+    const top = watch[0];
+    return {
+      state: "WATCH",
+      cls: "border-[var(--accent)]/40 bg-[var(--accent)]/10",
+      title: `Interesting but unconfirmed: ${top.supportsLabel}`,
+      detail: `Baseline ${(top.baseline * 100).toFixed(1)}% → observed ${(top.observed * 100).toFixed(1)}% (edge +${top.edgePp}pp) but only ${top.holds}/${top.walks?.length ?? 0} forward windows held yet. Do not size up.`,
+    };
+  }
+  if (insufficient.length > 0) {
+    const top = insufficient[0];
+    return {
+      state: "WAIT",
+      cls: "border-[var(--accent)]/30 bg-black/10",
+      title: "Insufficient forward data to judge",
+      detail: `${top.supportsLabel} showed an in-sample edge but only ${top.oosTotal ?? 0} forward ticks exist. This is not a failure — waiting is correct.`,
+    };
+  }
+  return {
+    state: "NO TRADE",
+    cls: "border-[var(--border)] bg-black/20",
+    title: "No condition cleared the bar",
+    detail: `The engine compared the full fixed pattern library against each contract's fair baseline (CI, FDR, walk-forward) on ${symbolName} and found no reliable edge. Doing nothing is intelligence.`,
+  };
+}
 
 export default function MarketIntelligencePage() {
   const { isAuthenticated } = useAuth();
@@ -131,7 +172,26 @@ export default function MarketIntelligencePage() {
             <div className="flex items-center justify-center gap-2 text-[var(--text-muted)] py-10">
               <Loader2 className="w-4 h-4 animate-spin" /> Running fixed-pattern engine on {getSymbolDisplayName(active)}…
             </div>
-          ) : !noneHeld && (strong.length + watch.length > 0) ? (
+          ) : (
+            <>
+              {/* Decision-support verdict banner */}
+              {(() => {
+                const v = verdictFor(results, getSymbolDisplayName(active));
+                return (
+                  <div className={`rounded-xl border px-4 py-3 mb-4 ${v.cls}`}>
+                    <div className="flex items-center gap-2">
+                      {v.state === "TRADE" && <TrendingUp className="w-4 h-4 text-[var(--green)]" />}
+                      {v.state === "WATCH" && <Activity className="w-4 h-4 text-[var(--accent)]" />}
+                      {v.state === "WAIT" && <AlertTriangle className="w-4 h-4 text-[var(--accent)]" />}
+                      {v.state === "NO TRADE" && <EyeOff className="w-4 h-4 text-[var(--text-muted)]" />}
+                      <span className={`text-sm font-extrabold tracking-wide ${v.state === "TRADE" ? "text-[var(--green)]" : v.state === "WATCH" || v.state === "WAIT" ? "text-[var(--accent)]" : "text-[var(--text-muted)]"}`}>{v.state}</span>
+                      <span className="text-sm font-bold text-white">{v.title}</span>
+                    </div>
+                    <p className="text-xs text-[var(--text-secondary)] mt-1">{v.detail}</p>
+                  </div>
+                );
+              })()}
+          {!noneHeld && (strong.length + watch.length > 0) ? (
             <div className="space-y-3">
               <p className="text-[10px] text-[var(--text-muted)]">Conditions below use the same engine and acceptance rules as the AI Signals page — CI vs baseline, BH-FDR, walk-forward. They describe what the data shows, they do not direct trading.</p>
               {[...strong, ...watch].map((r: any, i: number) => (
@@ -166,6 +226,8 @@ export default function MarketIntelligencePage() {
                 fair baseline (CI clears, BH-FDR, walk-forward). This is a valid outcome — sitting out is data-driven, not a failure of the scan.
               </p>
             </div>
+          )}
+            </>
           )}
         </PageSection>
 

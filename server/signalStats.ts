@@ -91,41 +91,66 @@ export interface WalkForwardWindow {
 export const WALK_FORWARD_WINDOWS = 5;
 /** Minimum windows that must hold (CI low > baseline) for it to count as stable. */
 export const WALK_FORWARD_REQUIRED = 3;
+/** Minimum samples a window needs before its hold/pass decision is trustworthy. */
+export const MIN_WINDOW_SAMPLES = 20;
+/** Minimum total out-of-sample samples before a "failed" verdict is permitted. */
+export const MIN_OOS_SAMPLES = 40;
+/**
+ * Minimum absolute edge (percentage points over baseline) a candidate must show
+ * in-sample to be worth watching. Kills noise like "51% vs 50% is nothing".
+ */
+export const MIN_EDGE_PP = 3;
 
 export interface WalkForwardResult {
   windows: WalkForwardWindow[];
   avgRate: number;
   holdCount: number;
+  settledCount: number;
+  oosTotal: number;
   stable: boolean;
 }
 
 export function walkForwardSummary(windowsIn: { wins: number; n: number }[], baseline: number): WalkForwardResult {
   const windows: WalkForwardWindow[] = windowsIn.map((w) => ({ ...w, rate: w.n > 0 ? w.wins / w.n : 0 }));
-  const settled = windows.filter((w) => w.n >= 20);
+  const settled = windows.filter((w) => w.n >= MIN_WINDOW_SAMPLES);
   const holdCount = settled.filter((w) => wilsonInterval(w.wins, w.n).low > baseline).length;
   const avgRate = settled.length ? settled.reduce((s, w) => s + w.rate, 0) / settled.length : 0;
   return {
     windows,
     avgRate,
     holdCount,
+    settledCount: settled.length,
+    oosTotal: windows.reduce((s, w) => s + w.n, 0),
     stable: holdCount >= WALK_FORWARD_REQUIRED,
   };
 }
 
-export type SignalTier = "strong" | "watch" | "failed" | "no_edge";
+export type SignalTier = "strong" | "watch" | "insufficient" | "failed" | "no_edge";
 
 /**
- * Assign an overall tier from the in-sample significance decision AND the
- * walk-forward hold count.
+ * Assign an overall tier from the in-sample significance decision, the
+ * in-sample edge magnitude AND the walk-forward hold count.
+ *
+ * Order of decisions matters (§ spec):
+ *  1. no_edge       — not significant vs baseline, CI does not clear baseline,
+ *                     or the observed edge is below MIN_EDGE_PP ("51% vs 50%").
+ *  2. insufficient  — significant edge exists in-sample but there is NOT enough
+ *                     out-of-sample data to judge it. This is a watch-state, NOT
+ *                     "failed": a verdict of failure requires adequate forward data.
+ *  3. failed        — enough forward data existed and the edge did not hold.
+ *  4. strong        — edge held forward across >= WALK_FORWARD_REQUIRED windows.
+ *  5. watch         — edge present in-sample, held in some but not all windows.
  */
 export function assignTier(
   significant: boolean,
   ciLowClears: boolean,
+  edgePp: number,
+  oosTotal: number,
   wf: WalkForwardResult,
 ): SignalTier {
-  if (!significant || !ciLowClears) return "no_edge";
-  if (wf.windows.length === 0) return significant ? "watch" : "no_edge";
-  // looks good in-sample but failed to hold forward
+  if (!significant || !ciLowClears || Math.abs(edgePp) < MIN_EDGE_PP) return "no_edge";
+  if (oosTotal < MIN_OOS_SAMPLES) return "insufficient";
+  if (wf.settledCount === 0) return "insufficient";
   if (wf.holdCount === 0) return "failed";
   if (wf.holdCount >= WALK_FORWARD_REQUIRED) return "strong";
   return "watch";

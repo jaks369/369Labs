@@ -20,6 +20,7 @@ import {
   walkForwardSummary,
   assignTier,
   WALK_FORWARD_WINDOWS,
+  MIN_OOS_SAMPLES,
   SignalTier,
 } from "./signalStats";
 
@@ -33,7 +34,11 @@ export type PatternFamily =
   | "over_under_transition"
   | "repeat_change"
   | "streak_followon"
-  | "alternation_break";
+  | "alternation_break"
+  | "digit_transition"
+  | "hl_alternation"
+  | "repeat_change_alternation"
+  | "repeat_change_state";
 
 export type ContractSupport =
   | { contract: "DIGITMATCH"; digit: number }
@@ -41,7 +46,9 @@ export type ContractSupport =
   | { contract: "DIGITEVEN" }
   | { contract: "DIGITODD" }
   | { contract: "DIGITOVER"; barrier: number }
-  | { contract: "DIGITUNDER"; barrier: number };
+  | { contract: "DIGITUNDER"; barrier: number }
+  | { contract: "DIGITREPEAT" }
+  | { contract: "DIGITCHANGE" };
 
 export function contractLabel(c: ContractSupport): string {
   switch (c.contract) {
@@ -51,14 +58,18 @@ export function contractLabel(c: ContractSupport): string {
     case "DIGITODD": return "Odd";
     case "DIGITOVER": return `Over ${c.barrier}`;
     case "DIGITUNDER": return `Under ${c.barrier}`;
+    case "DIGITREPEAT": return "Repeat prev";
+    case "DIGITCHANGE": return "Change from prev";
   }
 }
 
 /** Correct contract-specific baseline. NOT a generic 50% (§1.2). */
 export function baselineFor(c: ContractSupport): number {
   switch (c.contract) {
-    case "DIGITMATCH": return 0.1;
-    case "DIGITDIFF": return 0.9;
+    case "DIGITMATCH":
+    case "DIGITREPEAT": return 0.1;
+    case "DIGITDIFF":
+    case "DIGITCHANGE": return 0.9;
     case "DIGITEVEN":
     case "DIGITODD": return 0.5;
     case "DIGITOVER":
@@ -80,6 +91,9 @@ function digitOutcome(digit: number, c: ContractSupport): "win" | "loss" | null 
     case "DIGITODD": return digit % 2 === 1 ? "win" : "loss";
     case "DIGITOVER": return digit > c.barrier ? "win" : digit < c.barrier ? "loss" : null;
     case "DIGITUNDER": return digit < c.barrier ? "win" : digit > c.barrier ? "loss" : null;
+    case "DIGITREPEAT":
+    case "DIGITCHANGE":
+      return null; // resolved by the library outcome callback which has both ticks
   }
 }
 
@@ -293,7 +307,145 @@ export function buildLibrary(): RawCandidate[] {
     });
   }
 
+  // ---- §2.8 digit transition 10×10 (Last Digit Stats style) ----
+  // After digit `a`, what is the next digit? Per-cell baseline is 10% (any of
+  // the 10 next digits is equally likely under a fair last-digit stream).
+  for (let a = 0; a <= 9; a++) {
+    for (let b = 0; b <= 9; b++) {
+      lib.push({
+        key: `dt-${a}-${b}`,
+        family: "digit_transition",
+        contract: { contract: "DIGITMATCH", digit: b },
+        describe: `After digit ${a}, the next digit was ${b} more often than its fair 10% rate, supporting a Matches ${b} contract.`,
+        triggerText: `Digit ${a} printed, next is ${b}`,
+        isFrequency: false,
+        armed: (digits, i) => digits[i] === a,
+        outcome: (digits, j) => (digits[j] === b ? "win" : "loss"),
+        currentProgress: (tail) => {
+          const last = tail.length > 1 ? tail[tail.length - 1] : null;
+          return { met: last === a ? 1 : 0, needed: 1, current: last === a ? "armed → next is " + b : `waiting for digit ${a}` };
+        },
+      });
+    }
+  }
+
+  // ---- §2.9 High/Low alternation continuation ----
+  // After L ticks that strictly alternate High(5-9)/Low(0-4), does the
+  // alternation continue? Baseline is 50% (either side equally likely).
+  for (const altLen of [3, 4, 5]) {
+    const HL = (d: number) => d >= 5;
+    const alternates = (digits: number[], i: number): boolean => {
+      if (i < altLen) return false;
+      for (let k = i - altLen + 1; k <= i; k++) if (HL(digits[k]) === HL(digits[k - 1])) return false;
+      return true;
+    };
+    lib.push({
+      key: `hl-alt-L${altLen}`,
+      family: "hl_alternation",
+      contract: { contract: "DIGITOVER", barrier: 4 },
+      describe: `After ${altLen} alternating High/Low digits ending on Low, the next digit rose back above 4 (alternation continues).`,
+      triggerText: `${altLen}-tick High/Low alternation ending Low, then High`,
+      isFrequency: false,
+      armed: (digits, i) => alternates(digits, i) && !HL(digits[i]),
+      outcome: (digits, j) => (HL(digits[j]) ? "win" : "loss"),
+      currentProgress: (tail) => {
+        let n = 1;
+        for (let k = tail.length - 1; k > 0; k--) { if (HL(tail[k]) !== HL(tail[k - 1])) n++; else break; }
+        return { met: Math.min(n, altLen), needed: altLen, current: n >= altLen ? (HL(tail[tail.length - 1] ?? 0) ? "armed (High)" : "waiting (Low)") : `${n}/${altLen}` };
+      },
+    });
+    lib.push({
+      key: `hl-alt-H${altLen}`,
+      family: "hl_alternation",
+      contract: { contract: "DIGITUNDER", barrier: 5 },
+      describe: `After ${altLen} alternating High/Low digits ending on High, the next digit dropped below 5 (alternation continues).`,
+      triggerText: `${altLen}-tick High/Low alternation ending High, then Low`,
+      isFrequency: false,
+      armed: (digits, i) => alternates(digits, i) && HL(digits[i]),
+      outcome: (digits, j) => (HL(digits[j]) ? "loss" : "win"),
+      currentProgress: (tail) => {
+        let n = 1;
+        for (let k = tail.length - 1; k > 0; k--) { if (HL(tail[k]) !== HL(tail[k - 1])) n++; else break; }
+        return { met: Math.min(n, altLen), needed: altLen, current: n >= altLen ? (HL(tail[tail.length - 1] ?? 0) ? "armed (High)" : "waiting (Low)") : `${n}/${altLen}` };
+      },
+    });
+  }
+
+  // ---- §2.10 Repeat/Change alternation ----
+  // After L transitions that strictly alternate repeat(R)/change(C), does the
+  // alternation continue? Predicting "repeat" is a 10% baseline, "change" 90%.
+  for (const altLen of [3, 4, 5]) {
+    const isRep = (digits: number[], k: number) => digits[k] === digits[k - 1];
+    const altTransitions = (digits: number[], i: number): boolean => {
+      if (i < altLen) return false;
+      for (let k = i - altLen + 1; k <= i; k++) if (isRep(digits, k) === isRep(digits, k - 1)) return false;
+      return true;
+    };
+    // ... → C ending: alternation continues to a repeat (10% baseline)
+    lib.push({
+      key: `rc-alt-C${altLen}`,
+      family: "repeat_change_alternation",
+      contract: { contract: "DIGITREPEAT" },
+      describe: `After ${altLen} alternating repeat/change transitions ending in a change, the next transition was a repeat — i.e. the R/C alternation continued.`,
+      triggerText: `${altLen}-transition R/C alternation ending C, then repeat`,
+      isFrequency: false,
+      armed: (digits, i) => altTransitions(digits, i) && isRep(digits, i) === false,
+      outcome: (digits, j) => (isRep(digits, j) ? "win" : "loss"),
+      currentProgress: () => ({ met: 0, needed: 1, current: "alternation state" }),
+    });
+    // ... → R ending: alternation continues to a change (90% baseline)
+    lib.push({
+      key: `rc-alt-R${altLen}`,
+      family: "repeat_change_alternation",
+      contract: { contract: "DIGITCHANGE" },
+      describe: `After ${altLen} alternating repeat/change transitions ending in a repeat, the next transition was a change — i.e. the R/C alternation continued.`,
+      triggerText: `${altLen}-transition R/C alternation ending R, then change`,
+      isFrequency: false,
+      armed: (digits, i) => altTransitions(digits, i) && isRep(digits, i) === true,
+      outcome: (digits, j) => (isRep(digits, j) ? "loss" : "win"),
+      currentProgress: () => ({ met: 0, needed: 1, current: "alternation state" }),
+    });
+  }
+
+  // ---- §2.11 Repeat/Change 4-branch state space ----
+  // Condition on the PREVIOUS transition (R or C) and predict the NEXT
+  // transition (R or C). Baselines: repeat 10%, change 90% (same as Matches
+  // / Differs — "next differs from current" is the 90% fair rate).
+  const RC_CONTRACTS: Array<{ prevRep: boolean; nextRep: boolean; contract: ContractSupport; verb: string }> = [
+    { prevRep: false, nextRep: false, contract: { contract: "DIGITCHANGE" }, verb: "change-after-change" },
+    { prevRep: false, nextRep: true, contract: { contract: "DIGITREPEAT" }, verb: "repeat-after-change" },
+    { prevRep: true, nextRep: false, contract: { contract: "DIGITCHANGE" }, verb: "change-after-repeat" },
+    { prevRep: true, nextRep: true, contract: { contract: "DIGITREPEAT" }, verb: "repeat-after-repeat" },
+  ];
+  for (const rc of RC_CONTRACTS) {
+    lib.push({
+      key: `rc-${rc.prevRep ? "R" : "C"}-${rc.nextRep ? "R" : "C"}`,
+      family: "repeat_change_state",
+      contract: rc.contract,
+      describe: `${rc.verb}: after a ${rc.prevRep ? "repeat" : "change"} transition, the next transition was a ${rc.nextRep ? "repeat" : "change"} above its ${(baselineFor(rc.contract) * 100).toFixed(0)}% baseline.`,
+      triggerText: `prev ${rc.prevRep ? "repeat" : "change"} → next ${rc.nextRep ? "repeat" : "change"}`,
+      isFrequency: false,
+      armed: (digits, i) => {
+        if (i < 1) return false;
+        return isRepNext(digits, i, rc.prevRep);
+      },
+      outcome: (digits, j) => {
+        if (j < 1) return "loss";
+        return isRepNext(digits, j, rc.nextRep) ? "win" : "loss";
+      },
+      currentProgress: (tail) => {
+        if (tail.length < 2) return { met: 0, needed: 1, current: "needs 2 ticks" };
+        const prev = tail[tail.length - 1] === tail[tail.length - 2];
+        return { met: prev === rc.prevRep ? 1 : 0, needed: 1, current: `prev ${prev ? "repeat" : "change"} — ` + (prev === rc.prevRep ? "armed" : "mismatch") };
+      },
+    });
+  }
+
   return lib;
+}
+
+function isRepNext(digits: number[], i: number, rep: boolean): boolean {
+  return (digits[i] === digits[i - 1]) === rep;
 }
 
 /** One walk-forward window's settled outcome. */
@@ -318,6 +470,8 @@ export interface PatternResult {
   walks: RunBucket[];
   oosAvg: number;
   holds: number;
+  oosTotal: number;
+  oosInsufficient: boolean;
   describe: string;
   triggerText: string;
   currentProgress: { met: number; needed: number; current: string };
@@ -408,7 +562,7 @@ export function runAnalysis(inp: ScoreInput): PatternResult[] {
     const ci = wilsonInterval(wins, total);
     const buckets = wf.get(ev.cand.key) || [];
     const eff = walkForwardSummary(buckets, b);
-    const tier = assignTier(rejected[idx], ci.low > b, eff);
+    const tier = assignTier(rejected[idx], ci.low > b, toPp(observed, b), eff.oosTotal, eff);
     results.push({
       key: ev.cand.key,
       family: ev.cand.family,
@@ -427,6 +581,8 @@ export function runAnalysis(inp: ScoreInput): PatternResult[] {
       walks: buckets,
       oosAvg: eff.avgRate,
       holds: eff.holdCount,
+      oosTotal: eff.oosTotal,
+      oosInsufficient: eff.oosTotal < MIN_OOS_SAMPLES || eff.settledCount === 0,
       describe: ev.cand.describe,
       triggerText: ev.cand.triggerText,
       currentProgress: ev.cand.currentProgress(digits.slice(-30)),
