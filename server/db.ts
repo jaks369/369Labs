@@ -88,6 +88,10 @@ function parseDbUrl(url: string) {
     queueLimit: Number(process.env.DB_POOL_QUEUE_LIMIT) || 20,
     enableKeepAlive: true,
     keepAliveInitialDelay: 10000,
+    // Fail fast instead of hanging requests (Render cold start + TiDB sleep):
+    // without these, an idle/restarting DB holds every HTTP request hostage.
+    connectTimeout: Number(process.env.DB_CONNECT_TIMEOUT) || 10000,
+    acquireTimeout: Number(process.env.DB_ACQUIRE_TIMEOUT) || 15000,
   };
   if (parsed.hostname.includes("tidbcloud.com")) {
     config.ssl = { rejectUnauthorized: false };

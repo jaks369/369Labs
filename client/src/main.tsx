@@ -51,10 +51,23 @@ const trpcClient = trpc.createClient({
         return {};
       },
       fetch(input, init) {
-        return globalThis.fetch(input, {
-          ...(init ?? {}),
-          credentials: "include",
-        });
+        // Cap every API request so a cold-starting / unreachable server produces
+        // a surfaced error + Retry instead of an endless spinner.
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 60000);
+        const external = init as RequestInit | undefined;
+        const signal = external?.signal;
+        if (signal) {
+          if (signal.aborted) controller.abort();
+          else signal.addEventListener("abort", () => controller.abort());
+        }
+        return globalThis
+          .fetch(input, {
+            ...(external ?? {}),
+            credentials: "include",
+            signal: controller.signal,
+          })
+          .finally(() => clearTimeout(timeout));
       },
     }),
   ],
