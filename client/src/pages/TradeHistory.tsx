@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { trpc } from "@/lib/trpc";
 import { Loader2, Download, AlertCircle, BarChart3, TrendingUp, TrendingDown, ChevronLeft, ChevronRight } from "lucide-react";
@@ -10,13 +10,12 @@ export default function TradeHistory() {
   const [, navigate] = useLocation();
   const [page, setPage] = useState(1);
   const pageSize = 50;
-  const tradesQuery = trpc.trades.list.useQuery({ limit: pageSize, offset: (page - 1) * pageSize });
-  const exportQuery = trpc.trades.exportCsv.useQuery();
+  const tradesQuery = trpc.trades.list.useQuery({ limit: pageSize, offset: (page - 1) * pageSize }, { placeholderData: (prev: any) => prev, staleTime: 15000 });
+  const exportQuery = trpc.trades.exportCsv.useQuery(void 0, { enabled: false, staleTime: Infinity });
 
-  if (!isAuthenticated) {
-    navigate("/login");
-    return null;
-  }
+  useEffect(() => {
+    if (!isAuthenticated) navigate("/login");
+  }, [isAuthenticated, navigate]);
 
   const trades = tradesQuery.data || [];
   const totalTrades = trades.length;

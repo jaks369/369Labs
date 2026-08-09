@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
-import { Loader2, ChevronDown, TrendingUp, TrendingDown, Zap, Wallet, ShieldCheck, X, Activity, Search } from "lucide-react";
+import { Loader2, ChevronDown, TrendingUp, TrendingDown, Zap, Wallet, ShieldCheck, X, Activity, Search, History } from "lucide-react";
 import { FilterPill } from "@/components/ui/filter-pill";
 import { derivWS, DerivSymbol } from "@/services/derivWebSocket";
 import { useDerivStatus } from "@/hooks/useDerivStatus";
@@ -11,6 +11,7 @@ import ContractTypeSelector, { ContractSelection } from "@/components/ContractTy
 import DurationSelector from "@/components/DurationSelector";
 import type { DurationUnit } from "@/components/DurationSelector";
 import TickChart from "@/components/TickChart";
+import { usePersistentState } from "@/hooks/usePersistentState";
 import { VOLATILITY_SYMBOLS, getSymbolDisplayName } from "@/lib/symbols";
 import { getDecimalPlaces, lastDigitOf } from "@shared/lastDigit";
 import { formatMoney, formatNumber } from "@/lib/format";
@@ -28,17 +29,17 @@ const TIMEFRAMES: { label: string; points: number }[] = [
 export default function MobileTerminal() {
   const { isAuthenticated } = useAuth();
   const [, navigate] = useLocation();
-  const [symbol, setSymbol] = useState<string>(ALL_FALLBACK[0]?.symbol || "R_100");
+  const [symbol, setSymbol] = usePersistentState<string>("369labs.terminal.symbol", ALL_FALLBACK[0]?.symbol || "R_100");
   const [liveSymbols, setLiveSymbols] = useState<DerivSymbol[]>([]);
   const symbols: DerivSymbol[] = liveSymbols.length > 0 ? liveSymbols : ALL_FALLBACK;
-  const [timeframe, setTimeframe] = useState(1);
+  const [timeframe, setTimeframe] = usePersistentState<number>("369labs.terminal.timeframe", 1);
   const [ticks, setTicks] = useState<any[]>([]);
   const [balance, setBalance] = useState(0);
   const [balanceInfo, setBalanceInfo] = useState<{ currency: string; accountType: string } | null>(null);
-  const [contract, setContract] = useState<ContractSelection>({ category: "rise_fall", direction: "rise" });
-  const [stake, setStake] = useState<number>(1);
-  const [duration, setDuration] = useState<number>(5);
-  const [durationUnit, setDurationUnit] = useState<DurationUnit>("t");
+  const [contract, setContract] = usePersistentState<ContractSelection>("369labs.terminal.contract", { category: "rise_fall", direction: "rise" });
+  const [stake, setStake] = usePersistentState<number>("369labs.terminal.stake", 1);
+  const [duration, setDuration] = usePersistentState<number>("369labs.terminal.duration", 5);
+  const [durationUnit, setDurationUnit] = usePersistentState<DurationUnit>("369labs.terminal.durationUnit", "t");
   const [tradeBusy, setTradeBusy] = useState(false);
   const [showTokenModal, setShowTokenModal] = useState(false);
   const [showSymbolPicker, setShowSymbolPicker] = useState(false);
@@ -53,6 +54,7 @@ export default function MobileTerminal() {
   const memoryQuery = trpc.memory.get.useQuery();
   const { accountType } = useDerivStatus();
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [showPriceHistory, setShowPriceHistory] = useState(false);
 
   // Persist a trade record with bounded retry so a transient reject (dropped
   // session, rate limit, cold-connecting DB) never silently loses a trade that
@@ -292,6 +294,13 @@ export default function MobileTerminal() {
             <span className="text-[10px] font-bold px-2 py-1 rounded-md aurora-glass text-[var(--green)]">
               {accountBadge}
             </span>
+            <button
+              onClick={() => setShowPriceHistory((v) => !v)}
+              className="p-2 rounded-md aurora-glass text-[var(--text-muted)] hover:text-white transition-colors shrink-0"
+              title="Price History"
+            >
+              <History className="w-4 h-4" />
+            </button>
           </div>
         </div>
         {/* Price hierarchy: Current / Open / High / Low */}
@@ -608,6 +617,46 @@ export default function MobileTerminal() {
       )}
 
       <DerivTokenModal open={showTokenModal} onClose={() => setShowTokenModal(false)} />
+
+      {/* Price History bottom sheet */}
+      {showPriceHistory && (
+        <div className="fixed inset-0 z-[95] bg-black/60 flex items-end animate-modal-backdrop" onClick={() => setShowPriceHistory(false)}>
+          <div
+            className="w-full aurora-glass border-t border-[rgba(255,255,255,0.08)] rounded-t-2xl max-h-[70vh] overflow-y-auto pb-6 animate-sheet-up"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="sticky top-0 aurora-glass px-4 py-3 border-b border-[rgba(255,255,255,0.08)] flex items-center justify-between">
+              <h3 className="text-sm font-bold text-white">Price History · {selectedDisplay}</h3>
+              <button onClick={() => setShowPriceHistory(false)} className="text-[var(--text-muted)] hover:text-white">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <div className="px-4 space-y-0.5">
+              {ticks.length === 0 ? (
+                <p className="text-xs text-[var(--text-muted)] text-center py-10">No price data yet. Waiting for live ticks…</p>
+              ) : (
+                ticks.slice(0, 60).map((t: any, i: number) => {
+                  const prevPrice = i < ticks.length - 1 ? ticks[i + 1]?.price : t.price;
+                  const dir = t.price > prevPrice ? "up" : t.price < prevPrice ? "down" : null;
+                  return (
+                    <div key={`${t.epoch}-${i}`} className="flex items-center justify-between py-1.5 px-2 rounded text-[11px]">
+                      <span className="text-[var(--text-muted)] font-mono text-[10px]">{new Date((t.epoch || 0) * 1000).toLocaleTimeString()}</span>
+                      <span className="flex items-center gap-1">
+                        {dir === "up" && <span className="text-[var(--green)]">▲</span>}
+                        {dir === "down" && <span className="text-[var(--red)]">▼</span>}
+                        <span className="font-mono tabular-nums text-white">{Number(t.price).toFixed(decimalPlaces)}</span>
+                      </span>
+                      <span className="font-mono text-[10px] font-bold" style={{ color: t.lastDigit >= 5 ? "var(--green)" : "var(--red)" }}>
+                        {t.lastDigit}
+                      </span>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

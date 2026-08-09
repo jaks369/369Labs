@@ -1,5 +1,5 @@
 import { useAuth } from "@/_core/hooks/useAuth";
-import { useEffect, useState, useRef, useCallback } from "react";
+import { useEffect, useState, useRef, useCallback, useMemo } from "react";
 import { createPortal } from "react-dom";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
@@ -23,6 +23,7 @@ import { toast } from "@/components/Toast";
 import InsightsPopup from "@/components/InsightsPopup";
 import PopupPanel from "@/components/PopupPanel";
 import WatchlistPanel from "@/components/WatchlistPanel";
+import { usePersistentState } from "@/hooks/usePersistentState";
 
 const ALL_FALLBACK: DerivSymbol[] = VOLATILITY_SYMBOLS.map((s) => ({ ...s, decimalPlaces: 2 }));
 
@@ -41,21 +42,23 @@ export default function Dashboard() {
   const [balance, setBalance] = useState(0);
   const [balanceInfo, setBalanceInfo] = useState<{ currency: string; accountType: string } | null>(null);
   const [botRunning, setBotRunning] = useState(false);
-  const [selectedSymbol, setSelectedSymbol] = useState(ALL_FALLBACK[0]?.symbol || "");
+  // Terminal state is persisted so navigating away and back keeps the chosen
+  // symbol, contract, stake and duration instead of resetting to defaults.
+  const [selectedSymbol, setSelectedSymbol] = usePersistentState<string>("369labs.terminal.symbol", ALL_FALLBACK[0]?.symbol || "");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [showSymbolPicker, setShowSymbolPicker] = useState(false);
   const [symbolSearch, setSymbolSearch] = useState("");
-  const [marketFilter, setMarketFilter] = useState<"all" | "vol" | "1s" | "boom" | "other">("all");
+  const [marketFilter, setMarketFilter] = usePersistentState<"all" | "vol" | "1s" | "boom" | "other">("369labs.terminal.marketFilter", "all");
   const [showTokenModal, setShowTokenModal] = useState(false);
   const [watchlistOpen, setWatchlistOpen] = useState(true);
   const [tokenError, setTokenError] = useState<string | null>(null);
   const [tokenSaved, setTokenSaved] = useState(false);
-  const [contract, setContract] = useState<ContractSelection>({ category: "rise_fall", direction: "rise" });
-  const [stake, setStake] = useState<number>(1);
-  const [duration, setDuration] = useState<number>(5);
-  const [durationUnit, setDurationUnit] = useState<DurationUnit>("t");
-  const [stopLoss, setStopLoss] = useState<number>(0);
-  const [takeProfit, setTakeProfit] = useState<number>(0);
+  const [contract, setContract] = usePersistentState<ContractSelection>("369labs.terminal.contract", { category: "rise_fall", direction: "rise" });
+  const [stake, setStake] = usePersistentState<number>("369labs.terminal.stake", 1);
+  const [duration, setDuration] = usePersistentState<number>("369labs.terminal.duration", 5);
+  const [durationUnit, setDurationUnit] = usePersistentState<DurationUnit>("369labs.terminal.durationUnit", "t");
+  const [stopLoss, setStopLoss] = usePersistentState<number>("369labs.terminal.stopLoss", 0);
+  const [takeProfit, setTakeProfit] = usePersistentState<number>("369labs.terminal.takeProfit", 0);
   const [tradeBusy, setTradeBusy] = useState(false);
   const [tradeLogs, setTradeLogs] = useState<{ kind: "ok" | "err"; text: string; time: Date }[]>([]);
   const addTradeLog = (kind: "ok" | "err", text: string) => {
@@ -135,7 +138,7 @@ export default function Dashboard() {
   }, [urlSearch]);
   const priceQuery = trpc.market.getHistory.useQuery(
     { symbol: selectedSymbol, limit: 200 },
-    { enabled: historyTab === "prices", staleTime: 30000, gcTime: 60000 },
+    { enabled: (historyTab === "prices" || dataPopupTab === "prices" || dataPopupTab === "ohlc") && Boolean(selectedSymbol), staleTime: 30000, gcTime: 120000 },
   );
 
   // Live tick buffer: stream ticks from the Deriv WS so the header price and
@@ -205,8 +208,21 @@ export default function Dashboard() {
     }
   }, [derivWS.isAuthorized()]);
 
-  // Use live ticks if streaming, else fall back to the DB snapshot.
-  const displayTicks = liveTicks.length ? liveTicks : (priceQuery.data?.ticks || []).slice(0, 50);
+  // Use live ticks if streaming, else fall back to the DB snapshot. Merge the
+  // server history with live ticks (deduped by epoch, newest first) so the price
+  // history stays populated even right after navigation, before the WS reconnects.
+  const displayTicks = useMemo(() => {
+    const hist = (priceQuery.data?.ticks || []).slice().reverse();
+    const live = liveTicks;
+    if (live.length === 0) return hist.slice(0, 100);
+    const seen = new Set<number>();
+    return [...live, ...hist].filter((t: any) => {
+      const k = t.epoch;
+      if (k == null || seen.has(k)) return false;
+      seen.add(k);
+      return true;
+    }).slice(0, 100);
+  }, [liveTicks, priceQuery.data]);
 
   const allTrades = (tradesQuery.data || []) as any[];
   const settled = allTrades.filter((t: any) => t.result === "win" || t.result === "loss");
@@ -594,6 +610,10 @@ export default function Dashboard() {
                 </div>
                 {/* Quick Access Popups — single toggle */}
                 <div className="hidden md:flex items-center gap-0.5 shrink-0">
+                  <button onClick={() => { setDataPopupTab("prices"); setDataPopupOpen(true); }} className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-white/5 border border-[var(--border)] text-[10px] font-bold text-[var(--text-muted)] hover:text-white hover:border-[rgba(255,255,255,0.15)] transition-colors" title="Price History: last prices & digits for this symbol">
+                    <History className="w-3 h-3" />
+                    <span className="hidden xl:inline">History</span>
+                  </button>
                   <button onClick={() => { setDataPopupTab("watchlist"); setDataPopupOpen(true); }} className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-white/5 border border-[var(--border)] text-[10px] font-bold text-[var(--text-muted)] hover:text-white hover:border-[rgba(255,255,255,0.15)] transition-colors" title="Data: Watchlist, Trade History, Prices">
                     <Star className="w-3 h-3" />
                   </button>

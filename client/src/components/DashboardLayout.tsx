@@ -47,7 +47,7 @@ import {
   ChevronRight,
   Keyboard,
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useCallback, useState } from "react";
 import { useLocation } from "wouter";
 import { DashboardLayoutSkeleton } from './DashboardLayoutSkeleton';
 import { Button } from "./ui/button";
@@ -211,6 +211,22 @@ function NavDrawer({
     return () => document.removeEventListener("keydown", onEsc);
   }, [open, onClose]);
 
+  // Persist the nav list scrollTop so deep links don't reset it on reopen.
+  const navScrollRef = useRef<HTMLDivElement>(null);
+  const NAV_SCROLL_KEY = "369labs.nav.scrollTop";
+  useEffect(() => {
+    if (!open) return;
+    try {
+      const saved = Number(localStorage.getItem(NAV_SCROLL_KEY) || "0");
+      if (saved > 0 && navScrollRef.current) navScrollRef.current.scrollTop = saved;
+    } catch { /* ignore */ }
+  }, [open, location]);
+  const persistNavScroll = useCallback(() => {
+    if (navScrollRef.current) {
+      try { localStorage.setItem(NAV_SCROLL_KEY, String(navScrollRef.current.scrollTop)); } catch { /* ignore */ }
+    }
+  }, []);
+
   if (!open) return null;
 
   const go = (path: string) => {
@@ -256,7 +272,7 @@ function NavDrawer({
         </div>
 
         {/* Groups */}
-        <div className="flex-1 overflow-y-auto min-h-0 px-2 py-1 space-y-3">
+        <div ref={navScrollRef} onScroll={persistNavScroll} className="flex-1 overflow-y-auto min-h-0 px-2 py-1 space-y-3">
           {navGroups.map((group) => {
             const accent = groupAccent[group.title] || "var(--accent)";
             const hasActiveChild = group.items.some((item) => item.path === location);
