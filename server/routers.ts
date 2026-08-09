@@ -2336,6 +2336,10 @@ watch: protectedProcedure
           return { scanned: false, results: [], signals: [] };
         }
       }),
+    watchStatus: protectedProcedure.query(async () => {
+      const { getWatchStatus } = await import('./signalScanner');
+      return getWatchStatus();
+    }),
   }),
   market: router({
     getHistory: publicProcedure

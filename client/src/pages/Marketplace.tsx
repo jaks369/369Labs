@@ -1,8 +1,8 @@
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
-import { CandlestickChart, Sparkles, Clock, Bot, Loader2, FlaskConical, Users, Code, Shield, BookOpen, Star, Upload, TimerReset } from "lucide-react";
+import { CandlestickChart, Clock, Bot, Loader2, FlaskConical, Users, Code, Shield, BookOpen, Star, Upload, TimerReset, Activity } from "lucide-react";
 import { useLocation } from "wouter";
 import { toast } from "@/components/Toast";
 import { getValidSymbols, getSymbolDisplayName } from "@/lib/symbols";
@@ -46,6 +46,13 @@ function aiAction(sig: any): { text: string; cls: string } {
 
 function fmtPct(x: number): string { return (x * 100).toFixed(1) + "%"; }
 function fmtPp(x: number): string { return (x > 0 ? "+" : "") + x.toFixed(1) + "pp"; }
+function timeAgo(ts: number | null | undefined): string {
+  if (!ts) return "never";
+  const sec = Math.max(0, Math.round((Date.now() - ts) / 1000));
+  if (sec < 60) return `${sec}s ago`;
+  if (sec < 3600) return `${Math.round(sec / 60)}m ago`;
+  return `${Math.round(sec / 3600)}h ago`;
+}
 function isStale(sig: any): boolean {
   const now = Date.now() / 1000;
   return (sig.expiresAt && now > sig.expiresAt) || (sig.discoveredAt && now > sig.discoveredAt + 4 * 3600);
@@ -259,8 +266,9 @@ export default function Marketplace() {
   const createBotMutation = trpc.strategies.save.useMutation();
   const publishedQuery = trpc.strategies.publishedList.useQuery();
   const cloneMutation = trpc.strategies.save.useMutation();
-  const watchMutation = trpc.ai.aiScheduledAnalysis.useMutation();
   const scanMutation = trpc.signals.watch.useMutation();
+  const watchStatusQuery = trpc.signals.watchStatus.useQuery(undefined, { refetchInterval: 10000, staleTime: 5000 });
+  const watchStatus = watchStatusQuery.data;
 
   // Live engine results when a symbol is chosen; persisted list otherwise.
   const hasSymbol = !!symbol;
@@ -277,6 +285,45 @@ export default function Marketplace() {
   const list: any[] = hasSymbol ? liveResults : (Array.isArray(signalsQuery.data) ? signalsQuery.data : []);
   const real = list.filter((s) => !s.tier || s.tier === "strong" || s.tier === "watch");
   const monitors = list.filter((s) => s.tier === "failed" || s.tier === "no_edge" || s.tier === "insufficient");
+
+  // ---- always-on watch: the Signals page keeps itself scanning -------------
+  // The server heap runs a 3-min always-on sweep; the page additionally
+  // auto-triggers one full-market scan on first load (and, if the server
+  // sweep has gone quiet, e.g. a fresh deploy), so any visitor always sees
+  // live results — no button required.
+  const runFullScan = useCallback(async (notify: boolean, targetSymbol?: string) => {
+    setScanning(true);
+    try {
+      const sym = targetSymbol || (hasSymbol ? symbol : "all");
+      const res: any = await scanMutation.mutateAsync({ symbol: sym, durationMinutes: 60, minWinRate: 55, patternType: "any" });
+      const total = res?.signalsFound ?? 0;
+      const markets = sym === "all" ? (res?.perSymbol?.length ?? getValidSymbols().length) : 1;
+      if (notify && total > 0) toast(`Watch refreshed — ${total} condition${total === 1 ? "" : "s"} verified across ${markets} market${markets === 1 ? "" : "s"}.`, "success");
+      else if (notify) toast(`Watch refreshed — no condition cleared the bar across ${markets} market${markets === 1 ? "" : "s"}.`, "info");
+    } catch {
+      if (notify) toast("Scan failed — try again.", "error");
+    } finally {
+      setScanning(false);
+      signalsQuery.refetch();
+      if (hasSymbol && targetSymbol !== symbol) fitQuery.refetch();
+    }
+  }, [scanMutation, signalsQuery, fitQuery, hasSymbol, symbol]);
+
+  const autoScanRan = useRef(false);
+  useEffect(() => {
+    if (autoScanRan.current || hasSymbol || !watchStatus) return;
+    autoScanRan.current = true;
+    const now = Date.now();
+    const goneQuiet = !watchStatus.enabled || (watchStatus.lastScanAt && now - watchStatus.lastScanAt > 6 * 60 * 1000);
+    // defer so the full-market scan (which sets `scanning`) starts off the
+    // effect tick, avoiding a synchronous setState-in-effect cascade
+    const t = setTimeout(() => { if (goneQuiet) runFullScan(false); }, 300);
+    return () => clearTimeout(t);
+  }, [watchStatus, hasSymbol, runFullScan]);
+
+  const lastScanLabel = watchStatus?.lastScanAt ? timeAgo(watchStatus.lastScanAt) : "first scan pending";
+  const nextScanLabel = watchStatus?.nextScanAt ? timeAgo(watchStatus.nextScanAt) : "—";
+  const beingWatched = watchStatus?.enabled ?? false;
 
   const sendToBot = useCallback(async (sig: any) => {
     try {
@@ -328,6 +375,18 @@ export default function Marketplace() {
             <option value="">All symbols</option>
             {getValidSymbols().map((s) => <option key={s} value={s}>{getSymbolDisplayName(s)}</option>)}
           </select>
+          <span className={`inline-flex items-center gap-1.5 text-xs px-3 py-2 rounded-lg border ${beingWatched && !scanning ? "border-[var(--green)]/30 bg-[var(--green)]/10 text-[var(--green)]" : "border-[var(--accent)]/30 bg-[var(--accent)]/10 text-[var(--accent)]"}`}>
+            <Activity className={`w-3.5 h-3.5 ${scanning ? "animate-pulse" : ""}`} />
+            {scanning
+              ? "Scanning all markets…"
+              : beingWatched
+                ? `Always watching ${watchStatus?.symbols?.length ?? getValidSymbols().length} markets · last ${lastScanLabel} · next ${nextScanLabel}`
+                : "Watch starting…"}
+          </span>
+          <Button onClick={() => runFullScan(true, "all")} disabled={scanning} className="bg-[var(--accent)] hover:brightness-110 text-black text-xs px-4 py-2 rounded-lg flex items-center gap-1">
+            {scanning ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <FlaskConical className="w-3.5 h-3.5" />}
+            {scanning ? "Scanning…" : "Scan now"}
+          </Button>
           <Button onClick={() => navigate("/ai-assistant")} className="bg-[var(--accent)] hover:brightness-110 text-black text-xs px-4 py-2 rounded-lg flex items-center gap-1">
             <Bot className="w-4 h-4" /> Ask 369AI
           </Button>
@@ -360,22 +419,7 @@ export default function Marketplace() {
                   ? "The engine validated the full fixed pattern library and found no rule that beat its fair baseline with FDR + walk-forward confirmation. Try another symbol or a longer window."
                   : "Start a watch to sweep every symbol 369Labs tracks — volatility, 1s indices and boom/crash — testing Matches/Differs, Even/Odd, Over/Under and Repeat/Change against their real fair baselines. You can also ask 369AI e.g. \"Watch R_50 for 30 minutes\" or let the always-on scanner validate patterns here."}
             </p>
-              <Button onClick={async () => {
-                  setScanning(true);
-                  try {
-                    const res: any = await scanMutation.mutateAsync({ symbol: hasSymbol ? symbol : "all", durationMinutes: 60, minWinRate: 55, patternType: "any" });
-                    const total = res?.signalsFound ?? 0;
-                    const markets = hasSymbol ? 1 : (res?.perSymbol?.length ?? getValidSymbols().length);
-                    watchMutation.mutate({ symbol: hasSymbol ? symbol : "all", interval: "1h" });
-                    if (total > 0) toast(`Scan complete — ${total} condition${total === 1 ? "" : "s"} verified across ${markets} market${markets === 1 ? "" : "s"}.`, "success");
-                    else toast(`Scan done — no condition cleared the bar across ${markets} market${markets === 1 ? "" : "s"}.`, "info");
-                  } catch {
-                    toast("Scan failed — try again.", "error");
-                  } finally {
-                    setScanning(false);
-                    signalsQuery.refetch();
-                  }
-                }} disabled={scanning} className="mt-4 bg-[var(--accent)] hover:brightness-110 text-black text-sm px-4 py-2 rounded-lg">
+              <Button onClick={() => runFullScan(true)} disabled={scanning} className="mt-4 bg-[var(--accent)] hover:brightness-110 text-black text-sm px-4 py-2 rounded-lg">
                 {scanning ? (hasSymbol ? "Scanning…" : "Scanning all markets…") : hasSymbol ? "Re-scan this symbol" : "Start a full-market watch"}
               </Button>
           </div>

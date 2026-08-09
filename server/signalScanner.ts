@@ -15,6 +15,8 @@ import { getTickHistory, normalizeSymbol } from "./aitools";
 import { notifyUser } from "./_core/notification";
 import { lastDigitOf, getDecimalPlaces } from "@shared/lastDigit";
 import { getAllSymbols } from "@shared/symbols";
+import { and, eq, gt } from "drizzle-orm";
+import { signals } from "../drizzle/schema";
 import {
   runAnalysis,
   PatternResult,
@@ -154,6 +156,29 @@ export async function runWatch(opts: ScanOptions): Promise<any[]> {
       `${r.describe} Baseline ${(r.baseline * 100).toFixed(1)}%, observed ${(r.observed * 100).toFixed(1)}% (edge ${edgeText}). ` +
       `${wfText}. ${r.fdrAdjusted ? "FDR-adjusted p=" + r.pValue.toFixed(4) : "Not FDR-significant."} Verified ${new Date(r.discoveredAt * 1000).toUTCString()}.`;
 
+    // Dedup: this function is also the always-on scanner's per-symbol worker.
+    // If an identical condition (same symbol + rule/supportsLabel) is already
+    // persisted and unexpired, skip the re-insert + re-notify so a repeating
+    // cron doesn't spam duplicate rows and notifications every cycle.
+    try {
+      const existing = await db
+        .select({ id: signals.id })
+        .from(signals)
+        .where(
+          and(
+            eq(signals.userId, opts.userId),
+            eq(signals.symbol, symbol),
+            eq(signals.title, title),
+            gt(signals.expiresAt, Math.floor(Date.now() / 1000)),
+          ),
+        )
+        .limit(1);
+      if (existing.length > 0) continue;
+    } catch (e) {
+      // dedup is best-effort (e.g. schema drift) — never block the scan on it
+      console.error("[signalScanner] dedup check failed", e);
+    }
+
     try {
       const s = await dbSaveSignal({
         userId: opts.userId,
@@ -173,6 +198,7 @@ export async function runWatch(opts: ScanOptions): Promise<any[]> {
         discoveredAt: r.discoveredAt,
         startEpoch: r.window.startEpoch,
         endEpoch: r.window.endEpoch,
+        expiresAt: r.expiresAt,
         source: "watch",
       } as any);
       saved.push(s);
@@ -226,28 +252,82 @@ export async function runWatchAll(opts: Omit<ScanOptions, "symbol">): Promise<Wa
 
 let alwaysOnScannerInterval: ReturnType<typeof setInterval> | null = null;
 
+export interface AlwaysOnStatus {
+  enabled: boolean;
+  inProgress: boolean;
+  startedAt: number | null;
+  lastScanAt: number | null;
+  nextScanAt: number | null;
+  intervalMs: number;
+  symbols: string[];
+  activeSymbol: string | null;
+  lastCycle: { startedAt: number; durationMs: number; scans: number } | null;
+}
+
+const status: AlwaysOnStatus = {
+  enabled: false,
+  inProgress: false,
+  startedAt: null,
+  lastScanAt: null,
+  nextScanAt: null,
+  intervalMs: 0,
+  symbols: [],
+  activeSymbol: null,
+  lastCycle: null,
+};
+
+/** Snapshot of the always-on scanner so the UI can report "watching since/last/next". */
+export function getWatchStatus(): AlwaysOnStatus {
+  return {
+    ...status,
+    symbols: [...status.symbols],
+    lastCycle: status.lastCycle ? { ...status.lastCycle } : null,
+  };
+}
+
 export function startAlwaysOnScanner(): void {
   if (alwaysOnScannerInterval) return;
-  // Sweep every symbol the app tracks (volatility + 1s + boom/crash). A true
+  // Sweep every symbol the app tracks (volatility + 1s + boom/crash) — a true
   // intelligence layer keeps exploring all markets on its own schedule.
   const SYMBOLS = getAllSymbols();
-  const INTERVAL_MS = 10 * 60 * 1000;
+  const INTERVAL_MS = 3 * 60 * 1000; // 3 min — the Signals page is a live watch, not a nightly report
+  status.enabled = true;
+  status.startedAt = Date.now();
+  status.intervalMs = INTERVAL_MS;
+  status.symbols = SYMBOLS;
+
   const tick = async () => {
+    if (status.inProgress) return; // never overlap cycles
+    status.inProgress = true;
+    status.activeSymbol = null;
+    const cycleStart = Date.now();
+    let scans = 0;
     try {
       const db = await getDb();
-      if (!db) return;
-      const allUsers = await db.select().from((await import("../drizzle/schema")).users);
-      for (const u of allUsers) {
-        for (const sym of SYMBOLS) {
-          try {
-            await runWatch({ userId: u.id, symbol: sym, sampleSize: 1000 });
-          } catch (e) { console.error("[alwaysOnScanner] symbol", sym, e); }
+      if (db) {
+        const allUsers = await db.select().from((await import("../drizzle/schema")).users);
+        for (const u of allUsers) {
+          for (const sym of SYMBOLS) {
+            status.activeSymbol = sym;
+            try {
+              await runWatch({ userId: u.id, symbol: sym, sampleSize: 1000 });
+              scans++;
+            } catch (e) { console.error("[alwaysOnScanner] symbol", sym, e); }
+          }
         }
       }
-      console.log("[alwaysOnScanner] cycle complete");
-    } catch (e) { console.error("[alwaysOnScanner]", e); }
+      status.lastCycle = { startedAt: cycleStart, durationMs: Date.now() - cycleStart, scans };
+      status.lastScanAt = Date.now();
+      status.nextScanAt = Date.now() + INTERVAL_MS;
+      console.log(`[alwaysOnScanner] cycle complete (${scans} scans, ${(status.lastCycle.durationMs / 1000).toFixed(1)}s)`);
+    } catch (e) {
+      console.error("[alwaysOnScanner]", e);
+    } finally {
+      status.activeSymbol = null;
+      status.inProgress = false;
+    }
   };
-  setTimeout(tick, 60 * 1000); // first run 1 min after boot
+  setTimeout(tick, 15 * 1000); // first run shortly after boot
   alwaysOnScannerInterval = setInterval(tick, INTERVAL_MS);
 }
 
@@ -255,6 +335,9 @@ export function stopAlwaysOnScanner(): void {
   if (alwaysOnScannerInterval) {
     clearInterval(alwaysOnScannerInterval);
     alwaysOnScannerInterval = null;
+    status.enabled = false;
+    status.inProgress = false;
+    status.activeSymbol = null;
     console.log("[alwaysOnScanner] stopped");
   }
 }
