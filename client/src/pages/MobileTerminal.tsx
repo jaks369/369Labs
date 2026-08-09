@@ -47,14 +47,18 @@ export default function MobileTerminal() {
   const [marketFilter, setMarketFilter] = useState<"all" | "vol" | "1s" | "boom">("all");
   const [showPositions, setShowPositions] = useState(false);
   const [tokenError, setTokenError] = useState<string | null>(null);
+  const [showPriceHistory, setShowPriceHistory] = useState(false);
 
   const tradesQuery = trpc.trades.list.useQuery({ limit: 50 });
   const saveTradeMutation = trpc.trades.save.useMutation();
   const tokenQuery = trpc.deriv.getToken.useQuery();
   const memoryQuery = trpc.memory.get.useQuery();
+  const historyQuery = trpc.market.getHistory.useQuery(
+    { symbol, limit: 200 },
+    { enabled: showPriceHistory && Boolean(symbol), staleTime: 30000, gcTime: 120000 },
+  );
   const { accountType } = useDerivStatus();
   const [saveError, setSaveError] = useState<string | null>(null);
-  const [showPriceHistory, setShowPriceHistory] = useState(false);
 
   // Persist a trade record with bounded retry so a transient reject (dropped
   // session, rate limit, cold-connecting DB) never silently loses a trade that
@@ -141,6 +145,19 @@ export default function MobileTerminal() {
 
   const decimalPlaces = derivWS.decimalPlacesFor(symbol);
   const windowTicks = ticks.slice(0, TIMEFRAMES[timeframe].points);
+  // Merge server tick history with live ticks (deduped by epoch, newest first)
+  // so the Price History sheet is populated even before the WS reconnects.
+  const historyTicks = useMemo(() => {
+    const hist = (historyQuery.data?.ticks || []).slice().reverse();
+    if (ticks.length === 0) return hist.slice(0, 60);
+    const seen = new Set<number>();
+    return [...ticks, ...hist].filter((t: any) => {
+      const k = t.epoch;
+      if (k == null || seen.has(k)) return false;
+      seen.add(k);
+      return true;
+    }).slice(0, 60);
+  }, [ticks, historyQuery.data]);
   const last = windowTicks[0];
   const price = last?.price;
   const open = windowTicks[windowTicks.length - 1]?.price;
@@ -632,11 +649,11 @@ export default function MobileTerminal() {
               </button>
             </div>
             <div className="px-4 space-y-0.5">
-              {ticks.length === 0 ? (
+              {historyTicks.length === 0 ? (
                 <p className="text-xs text-[var(--text-muted)] text-center py-10">No price data yet. Waiting for live ticks…</p>
               ) : (
-                ticks.slice(0, 60).map((t: any, i: number) => {
-                  const prevPrice = i < ticks.length - 1 ? ticks[i + 1]?.price : t.price;
+                historyTicks.slice(0, 60).map((t: any, i: number) => {
+                  const prevPrice = i < historyTicks.length - 1 ? historyTicks[i + 1]?.price : t.price;
                   const dir = t.price > prevPrice ? "up" : t.price < prevPrice ? "down" : null;
                   return (
                     <div key={`${t.epoch}-${i}`} className="flex items-center justify-between py-1.5 px-2 rounded text-[11px]">
