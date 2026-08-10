@@ -287,7 +287,7 @@ export default function MobileTerminal() {
   })();
 
   return (
-    <div className="h-full bg-[var(--bg-base)] pb-20 lg:hidden">
+    <div className="h-full bg-[var(--bg-base)] pb-28 lg:hidden">
       {/* Header: symbol · live price · LIVE */}
       <div className="sticky top-0 z-30 aurora-glass border-b border-[rgba(255,255,255,0.08)] px-4 pt-3 pb-2">
         <div className="flex items-center justify-between gap-3">
@@ -351,15 +351,15 @@ export default function MobileTerminal() {
       </div>
 
       {showSymbolPicker && (
-        <div className="fixed inset-0 z-[90] bg-black/60 flex items-start justify-center animate-modal-backdrop" onClick={() => setShowSymbolPicker(false)}>
+        <div className="fixed inset-0 z-[100] bg-[#0A0C10] flex flex-col animate-modal-backdrop" onClick={() => setShowSymbolPicker(false)}>
           <div
-            className="w-full aurora-glass border-b border-[rgba(255,255,255,0.08)] rounded-b-2xl shadow-2xl max-h-[68vh] overflow-y-auto animate-sheet-up"
+            className="w-full flex-1 flex flex-col bg-[#0A0C10] overflow-y-auto animate-sheet-up"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="px-4 py-3 border-b border-[rgba(255,255,255,0.08)] flex items-center justify-between sticky top-0 aurora-glass z-10">
-              <h3 className="text-sm font-bold text-white">Select Market</h3>
-              <button onClick={() => setShowSymbolPicker(false)} className="text-[var(--text-muted)] hover:text-white">
-                <X className="w-4 h-4" />
+            <div className="px-4 py-3 border-b border-[rgba(255,255,255,0.08)] flex items-center justify-between sticky top-0 bg-[#0A0C10] z-10">
+              <h3 className="text-base font-bold text-white">Select Market</h3>
+              <button onClick={() => setShowSymbolPicker(false)} className="text-[var(--text-muted)] hover:text-white p-2">
+                <X className="w-5 h-5" />
               </button>
             </div>
             <div className="p-4 space-y-3">

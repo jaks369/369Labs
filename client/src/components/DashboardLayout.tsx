@@ -480,7 +480,7 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
         </div>
       )}
 
-      <main className={`flex-1 overflow-y-auto min-h-0 flex flex-col ${isMobile ? "pb-16" : ""}`}>
+      <main className={`flex-1 overflow-y-auto min-h-0 flex flex-col ${isMobile ? "pb-24" : ""}`}>
         {!riskDismissed && (
           <div className="flex items-center gap-3 aurora-glass border-b border-[rgba(255,255,255,0.08)] px-4 py-1.5 text-micro leading-snug text-[var(--text-muted)] rounded-none shrink-0">
             <span className="font-semibold uppercase tracking-wider text-[var(--text-muted)]/60 shrink-0 text-[9px]">Risk</span>
