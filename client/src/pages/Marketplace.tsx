@@ -298,8 +298,8 @@ export default function Marketplace() {
       const res: any = await scanMutation.mutateAsync({ symbol: sym, durationMinutes: 60, minWinRate: 55, patternType: "any" });
       const total = res?.signalsFound ?? 0;
       const markets = sym === "all" ? (res?.perSymbol?.length ?? getValidSymbols().length) : 1;
-      if (notify && total > 0) toast(`Watch refreshed — ${total} condition${total === 1 ? "" : "s"} verified across ${markets} market${markets === 1 ? "" : "s"}.`, "success");
-      else if (notify) toast(`Watch refreshed — no condition cleared the bar across ${markets} market${markets === 1 ? "" : "s"}.`, "info");
+      if (notify && total > 0) toast(`Watch refreshed — ${total} new condition${total === 1 ? "" : "s"} verified across ${markets} market${markets === 1 ? "" : "s"}.`, "success");
+      else if (notify) toast(`Watch refreshed — no NEW conditions found across ${markets} market${markets === 1 ? "" : "s"} (already-live signals stay on this page). The scanner keeps watching continuously.`, "info");
     } catch {
       if (notify) toast("Scan failed — try again.", "error");
     } finally {
