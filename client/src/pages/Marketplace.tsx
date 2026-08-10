@@ -411,17 +411,25 @@ export default function Marketplace() {
         ) : real.length === 0 ? (
           <div className="text-center py-20">
             <div className="w-16 h-16 mx-auto bg-[var(--accent-soft)] rounded-2xl flex items-center justify-center border border-[var(--accent-border)] mb-4">
-              <CandlestickChart className="w-8 h-8 text-[var(--accent)]" />
+              <Activity className={`w-8 h-8 text-[var(--accent)] ${scanning ? "animate-pulse" : ""}`} />
             </div>
-            <h3 className="text-lg font-bold text-white">{hasSymbol ? "No condition cleared the bar" : "No signals yet"}</h3>
+            <h3 className="text-lg font-bold text-white">{hasSymbol ? "No condition cleared the bar" : "Watching — no verified edge right now"}</h3>
             <p className="text-sm text-[var(--text-muted)] mt-1 max-w-md mx-auto">
               {hasSymbol
-                  ? "The engine validated the full fixed pattern library and found no rule that beat its fair baseline with FDR + walk-forward confirmation. Try another symbol or a longer window."
-                  : "Start a watch to sweep every symbol 369Labs tracks — volatility, 1s indices and boom/crash — testing Matches/Differs, Even/Odd, Over/Under and Repeat/Change against their real fair baselines. You can also ask 369AI e.g. \"Watch R_50 for 30 minutes\" or let the always-on scanner validate patterns here."}
+                  ? "The engine validated the full fixed pattern library for this symbol and found no rule that beat its fair baseline with FDR + walk-forward confirmation. Try another symbol or a longer window."
+                  : `The scanner is continuously watching ${beingWatched ? `${watchStatus?.symbols?.length ?? getValidSymbols().length} markets` : "all markets"} and re-validates every ${(watchStatus?.intervalMs ?? 180000) / 60000} minutes. It tests Matches/Differs, Even/Odd, Over/Under and Repeat/Change against their real fair baselines. New conditions appear here automatically — this page refreshes on its own — so no manual scan is needed. "No edge found" is a valid, honest result: doing nothing is intelligence.`}
             </p>
-              <Button onClick={() => runFullScan(true)} disabled={scanning} className="mt-4 bg-[var(--accent)] hover:brightness-110 text-black text-sm px-4 py-2 rounded-lg">
-                {scanning ? (hasSymbol ? "Scanning…" : "Scanning all markets…") : hasSymbol ? "Re-scan this symbol" : "Start a full-market watch"}
-              </Button>
+            <p className="text-xs text-[var(--text-muted)] mt-2 flex items-center justify-center gap-1.5">
+              <Activity className="w-3.5 h-3.5 text-[var(--accent)]" />
+              {scanning
+                ? "Scanning all markets…"
+                : beingWatched
+                  ? `Last full sweep ${lastScanLabel} · next ${nextScanLabel}`
+                  : "Starting watch…"}
+            </p>
+            <Button onClick={() => runFullScan(true)} disabled={scanning} className="mt-4 bg-[var(--accent)] hover:brightness-110 text-black text-sm px-4 py-2 rounded-lg">
+              {scanning ? (hasSymbol ? "Scanning…" : "Scanning all markets…") : hasSymbol ? "Re-scan this symbol" : "Re-scan now"}
+            </Button>
           </div>
         ) : (
           <div className="space-y-4">
