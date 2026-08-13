@@ -48,10 +48,15 @@ function fmtPct(x: number): string { return (x * 100).toFixed(1) + "%"; }
 function fmtPp(x: number): string { return (x > 0 ? "+" : "") + x.toFixed(1) + "pp"; }
 function timeAgo(ts: number | null | undefined): string {
   if (!ts) return "never";
-  const sec = Math.max(0, Math.round((Date.now() - ts) / 1000));
-  if (sec < 60) return `${sec}s ago`;
-  if (sec < 3600) return `${Math.round(sec / 60)}m ago`;
-  return `${Math.round(sec / 3600)}h ago`;
+  const diff = Date.now() - ts;
+  if (diff < 0) return `in ${timeFmt(-diff)}`; // future timestamp (e.g. nextScanAt)
+  return `${timeFmt(diff)} ago`;
+}
+function timeFmt(ms: number): string {
+  const sec = Math.max(0, Math.round(ms / 1000));
+  if (sec < 60) return `${sec}s`;
+  if (sec < 3600) return `${Math.round(sec / 60)}m`;
+  return `${Math.round(sec / 3600)}h`;
 }
 function isStale(sig: any): boolean {
   const now = Date.now() / 1000;
