@@ -10,7 +10,7 @@ import { getAllSymbols, getSymbolDisplayName } from "@shared/symbols";
 // Written in plain language so the model can answer "how do I..." and
 // "what is..." questions about this app and Deriv without guessing.
 
-const APP_KNOWLEDGE = `369Labs is an automated trading copilot for Deriv volatility indices. Key features the user can ask about:
+export const APP_KNOWLEDGE = `369Labs is an automated trading copilot for Deriv volatility indices. Key features the user can ask about:
 - Strategy Builder: design trading rules (last digit, even/odd, over/under, consecutive rise/fall) with barriers and win-rate targets.
 - Strategy Engine: backtest and score strategies on historical tick data, walk-forward validation, strengths/weaknesses, improvement scores.
 - Signals (Watch): an always-on scanner sweeps every market every ~3 minutes and surfaces digit patterns with a real statistical edge. A signal has a symbol, a condition, a win rate and an expiry; a fresh signal means the condition is currently live and tradeable.
@@ -20,7 +20,7 @@ const APP_KNOWLEDGE = `369Labs is an automated trading copilot for Deriv volatil
 - Settings: API keys (user can bring their own OpenAI-compatible key), risk preferences, symbols, notifications (Telegram/email).
 - The app trades Deriv volatility indices: R_10/R_25/R_50/R_75/R_100 (standard), 1HZ10V..1HZ100V (1-second), plus Boom/Crash indices (BOOM300/500/1000, CRASH300/500/1000). 1-second indices tick roughly every 1 second; standard indices tick roughly every 2 seconds. Digits are derived from the last decimal place of the tick price.`;
 
-const DERIV_KNOWLEDGE = `Deriv (deriv.com) is the broker behind these indices. A digit contract bets on a property of the NEXT tick's last digit:
+export const DERIV_KNOWLEDGE = `Deriv (deriv.com) is the broker behind these indices. A digit contract bets on a property of the NEXT tick's last digit:
 - Matches / Differs: next digit equals a chosen digit (10%) or not (90%).
 - Even / Odd: next digit is even (50%) or odd (50%).
 - Over / Under: next digit is above a barrier (default 5 => digits 6-9, 40%) or below (digits 0-4, 40%), with 5 as the "equal" barrier.
