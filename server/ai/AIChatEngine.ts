@@ -4,6 +4,7 @@ import { AIKnowledgeType } from "./knowledgeTypes";
 import { getAITradingCopilot } from "./AITradingCopilot";
 import { getAIExplainabilityEngine } from "./AIExplainability";
 import { lastDigitOf, getDecimalPlaces } from "@shared/lastDigit";
+import { getAllSymbols, getSymbolDisplayName } from "@shared/symbols";
 
 export interface ChatResponse {
   answer: string;
@@ -42,10 +43,75 @@ export function getConversationCount(): number {
   return conversations.size;
 }
 
+/* = Symbol + pattern extraction = */
+
+const KNOWN_SYMBOLS = getAllSymbols();
+
+// Resolve a natural-language symbol mention ("V-15", "V15", "Volatility 15
+// (1s)", "R100", "Boom 300", "1HZ100V", ...) to a known symbol, or null.
+function extractSymbol(message: string): string | null {
+  const raw = message.toUpperCase().replace(/-/g, " ");
+
+  let direct: string | null = null;
+  let bestLen = 0;
+  for (const s of KNOWN_SYMBOLS) {
+    if (new RegExp("\\b" + s + "\\b").test(raw) && s.length > bestLen) {
+      direct = s;
+      bestLen = s.length;
+    }
+  }
+  if (direct) return direct;
+
+  const rMatch = raw.match(/\bR\s*(\d{2,3})\b/);
+  if (rMatch) {
+    const cand = "R_" + rMatch[1];
+    if (KNOWN_SYMBOLS.includes(cand)) return cand;
+  }
+
+  const volMatch = raw.match(/\bVOLATILITY\s*(\d{2,3})\b/);
+  if (volMatch) {
+    const is1s = /1\s*S\b|\(1S\)/.test(raw);
+    const cand1s = "1HZ" + volMatch[1] + "V";
+    const cand = "R_" + volMatch[1];
+    if (is1s && KNOWN_SYMBOLS.includes(cand1s)) return cand1s;
+    if (KNOWN_SYMBOLS.includes(cand)) return cand;
+    if (KNOWN_SYMBOLS.includes(cand1s)) return cand1s;
+  }
+
+  const vMatch = raw.match(/\b(?:V|1HZ)\s*(\d{2,3})\b/);
+  if (vMatch) {
+    const cand = "1HZ" + vMatch[1] + "V";
+    if (KNOWN_SYMBOLS.includes(cand)) return cand;
+  }
+
+  const vSuffix = raw.match(/\b(\d{2,3})\s*V\b/);
+  if (vSuffix) {
+    const cand = "1HZ" + vSuffix[1] + "V";
+    if (KNOWN_SYMBOLS.includes(cand)) return cand;
+  }
+
+  const boomCrash = raw.match(/\b(BOOM|CRASH)\s*(\d+)\b/);
+  if (boomCrash) {
+    const cand = boomCrash[1] + boomCrash[2];
+    if (KNOWN_SYMBOLS.includes(cand)) return cand;
+  }
+
+  return null;
+}
+
+// Is the message asking about an observed tick pattern (streaks, runs,
+// repeats, over/under streaks) rather than a generic market query?
+function isPatternObservation(m: string): boolean {
+  return /\b(streak|streaks|consecutive|repeat|run|sequence|random|normal|expected|longest|pattern)\b/.test(m)
+    || /\bover-?streak\w*\b/.test(m)
+    || /\bunder-?streak\w*\b/.test(m);
+}
+
 /* = Intent detection = */
 
 function detectIntent(message: string): string {
   const m = message.toLowerCase();
+  if (extractSymbol(message) && isPatternObservation(m)) return "market";
   if (/\b(trade|lost|losing|loss|won|winning|win|pnl|profit|result|outcome)\b/.test(m)) return "trades";
   if (/\b(strategy|strategies|review|score|rating|strength|weakness)\b/.test(m)) return "strategies";
   if (/\b(market|symbol|volatility|volatile|health|trend|momentum|noise|signal)\b/.test(m)) return "market";
@@ -234,14 +300,123 @@ async function handleStrategies(userId: number, message: string): Promise<ChatRe
   };
 }
 
+async function handlePattern(userId: number, symbol: string, message: string): Promise<ChatResponse> {
+  const engines: string[] = ["TickPatternValidator"];
+  const evidence: string[] = [];
+  const m = message.toLowerCase();
+  const display = getSymbolDisplayName(symbol) || symbol;
+
+  let ticks: { price: string; epoch: number }[] = [];
+  try {
+    ticks = await db.getTickHistory(symbol, 500);
+  } catch {
+    /* fall through */
+  }
+
+  if (!ticks || ticks.length < 50) {
+    return {
+      answer: `I couldn't pull enough recent ticks for ${display} (${symbol}) to validate that pattern — I need at least ~50 ticks and only got ${ticks?.length ?? 0}. The always-on scanner is watching this market; ask again shortly.`,
+      confidence: 75,
+      evidence,
+      enginesUsed: engines,
+      timestamp: Date.now(),
+    };
+  }
+
+  const decimals = getDecimalPlaces(symbol);
+  const digits = ticks.map((t) => lastDigitOf(Number(t.price), decimals)).filter((d) => !isNaN(d));
+  const n = digits.length;
+
+  const lastDigit = digits[n - 1];
+  const prevDigit = digits[n - 2];
+
+  // A "run"/"streak" helper: consecutive ticks where predicate holds.
+  const longestRun = (pred: (d: number, i: number, arr: number[]) => boolean): number => {
+    let best = 0;
+    let cur = 0;
+    for (let i = 0; i < digits.length; i++) {
+      cur = pred(digits[i], i, digits) ? cur + 1 : 0;
+      if (cur > best) best = cur;
+    }
+    return best;
+  };
+  const freq = (pred: (d: number) => boolean): number => Math.round((digits.filter(pred).length / n) * 100);
+
+  const overStreak = longestRun((d) => d > 5);
+  const underStreak = longestRun((d) => d < 5);
+  const evenStreak = longestRun((d) => d % 2 === 0);
+  const oddStreak = longestRun((d) => d % 2 !== 0);
+  const repeatStreak = longestRun((_d, i, arr) => i > 0 && arr[i] === arr[i - 1]);
+  const riseStreak = longestRun((_d, i, arr) => i > 0 && arr[i] > arr[i - 1]);
+  const fallStreak = longestRun((_d, i, arr) => i > 0 && arr[i] < arr[i - 1]);
+
+  const pct = {
+    over: freq((d) => d > 5),
+    under: freq((d) => d < 5),
+    even: freq((d) => d % 2 === 0),
+    odd: freq((d) => d % 2 !== 0),
+    repeat: Math.round((digits.filter((d, i) => i > 0 && d === digits[i - 1]).length / n) * 100),
+    rise: Math.round((digits.filter((d, i) => i > 0 && d > digits[i - 1]).length / n) * 100),
+    fall: Math.round((digits.filter((d, i) => i > 0 && d < digits[i - 1]).length / n) * 100),
+  };
+
+  evidence.push(`Validated over the last ${n} ticks of ${symbol}`);
+  evidence.push(`Last digit ${lastDigit} (previous ${prevDigit}). Longest streaks: Over=${overStreak}, Under=${underStreak}, Even=${evenStreak}, Odd=${oddStreak}, Repeat-same=${repeatStreak}, Rise=${riseStreak}, Fall=${fallStreak}`);
+  evidence.push(`Frequencies: Over ${pct.over}%, Under ${pct.under}%, Even ${pct.even}%, Odd ${pct.odd}%, Repeat ${pct.repeat}%, Rise ${pct.rise}%, Fall ${pct.fall}%`);
+
+  // Fair baseline for a fair uniform 0-9 digit stream:
+  //   P(over) = P(digit>5) = 4/10 = 40%; P(under)=40%; P(even)=P(odd)=50%;
+  //   P(repeat) = P(d==prev) = 10%; P(rise)=P(fall)=45% each (10% tie).
+  const fair: Record<string, number> = { over: 40, under: 40, even: 50, odd: 50, repeat: 10, rise: 45, fall: 45 };
+  const streaks: Record<string, number> = { over: overStreak, under: underStreak, even: evenStreak, odd: oddStreak, repeat: repeatStreak, rise: riseStreak, fall: fallStreak };
+
+  // Expected longest run of k consecutive successes in n trials, p=success prob.
+  // For p, E[max run] ≈ log_{1/p}(n * (1-p)) + ... A handy empirical bound:
+  // a run of length L has probability p^L; it is "surprising" if p^L * n < ~0.01
+  // (i.e. you'd need 100x the observed window to expect it once by chance).
+  const surprising: string[] = [];
+  for (const [key, L] of Object.entries(streaks)) {
+    if (L < 4) continue;
+    const p = fair[key] / 100;
+    const expectedPerWindow = n * Math.pow(p, L);
+    if (expectedPerWindow < 0.01) surprising.push(`${key} (run of ${L}, p^L·n = ${expectedPerWindow.toExponential(1)})`);
+  }
+
+  const wantStreak = /\bover-?streak\b|\bunder-?streak\b|\bstreak\b|\bconsecutive\b|\brun\b/.test(m);
+  const wantVolatility = /\bvolatil/i.test(m);
+  const wantEvenOdd = /\b(even|odd|parity)\b/.test(m);
+
+  let answer = `${display} (${symbol}) over the last ${n} ticks: last digit was ${lastDigit}, previous ${prevDigit}. `;
+
+  if (wantStreak && surprising.length > 0) {
+    answer += `You're right to notice — these streaks are beyond what a fair random digit stream produces: ${surprising.join("; ")}. `;
+  } else if (wantStreak) {
+    answer += `I checked streak lengths and none are statistically surprising for a fair digit stream (longest: Over=${overStreak}, Under=${underStreak}, Even=${evenStreak}, Odd=${oddStreak}, Repeat-same=${repeatStreak}, Rise=${riseStreak}, Fall=${fallStreak}). `;
+  }
+
+  if (wantEvenOdd) {
+    answer += `Even/Odd split is ${pct.even}%/${pct.odd}% (fair 50/50). `;
+  }
+  if (wantVolatility) {
+    answer += `Over/Under split ${pct.over}%/${pct.under}% (fair 40/40), rise/fall ${pct.rise}%/${pct.fall}% (fair 45/45). `;
+  }
+
+  answer += `Note: a streak in the past does not change the odds of the next tick — Deriv's volatility indices are simulated from a fair random process, so an Over-streak doesn't make "Under" more or less likely next.`;
+
+  return { answer, confidence: 85, evidence, enginesUsed: engines, timestamp: Date.now() };
+}
+
 async function handleMarket(userId: number, message: string): Promise<ChatResponse> {
   const engines: string[] = ["MarketHealthEngine", "PredictionEngine", "RiskIntelligence"];
   const evidence: string[] = [];
   const { aiOrchestrator } = await import("./AIOrchestrator");
   const m = message.toLowerCase();
 
-  const symbolMatch = m.match(/\b(r_\d{2,3}|1hz\d+v)\b/i);
-  const targetSymbol = symbolMatch ? symbolMatch[0].toUpperCase() : null;
+  const targetSymbol = extractSymbol(message);
+
+  if (targetSymbol && isPatternObservation(m)) {
+    return handlePattern(userId, targetSymbol, message);
+  }
 
   if (targetSymbol && /\b(digit|hottest|probability|percent|even|odd|last)\b/.test(m)) {
     try {
