@@ -93,7 +93,7 @@ export default function AIChatWindow() {
           <div className="flex flex-col items-center justify-center h-full text-center py-8">
             <MessageSquare className="w-8 h-8 text-[var(--border)] mb-2" />
             <p className="text-micro text-[var(--text-muted)] max-w-xs">
-              Ask me anything about your trading — trades, strategies, market conditions, AI performance, or your current session.
+              Ask me anything about your trading and this app — signals, strategies, market health, your session, or how a feature works.
             </p>
           </div>
         )}

@@ -6,6 +6,43 @@ import { getAIExplainabilityEngine } from "./AIExplainability";
 import { lastDigitOf, getDecimalPlaces } from "@shared/lastDigit";
 import { getAllSymbols, getSymbolDisplayName } from "@shared/symbols";
 
+/* = App + Deriv knowledge base (injected into the LLM system prompt) = */
+// Written in plain language so the model can answer "how do I..." and
+// "what is..." questions about this app and Deriv without guessing.
+
+const APP_KNOWLEDGE = `369Labs is an automated trading copilot for Deriv volatility indices. Key features the user can ask about:
+- Strategy Builder: design trading rules (last digit, even/odd, over/under, consecutive rise/fall) with barriers and win-rate targets.
+- Strategy Engine: backtest and score strategies on historical tick data, walk-forward validation, strengths/weaknesses, improvement scores.
+- Signals (Watch): an always-on scanner sweeps every market every ~3 minutes and surfaces digit patterns with a real statistical edge. A signal has a symbol, a condition, a win rate and an expiry; a fresh signal means the condition is currently live and tradeable.
+- Market Intelligence: per-symbol market health (score, trend, momentum, noise, volatility), hot markets, risk advisories, digit distributions.
+- AI 369 Chat: this assistant. It can reference trades, strategies, signals, market health and performance.
+- Trading features: place real/props Deriv trades, paper trading, bots, telemetry, journals, AI performance analytics.
+- Settings: API keys (user can bring their own OpenAI-compatible key), risk preferences, symbols, notifications (Telegram/email).
+- The app trades Deriv volatility indices: R_10/R_25/R_50/R_75/R_100 (standard), 1HZ10V..1HZ100V (1-second), plus Boom/Crash indices (BOOM300/500/1000, CRASH300/500/1000). 1-second indices tick roughly every 1 second; standard indices tick roughly every 2 seconds. Digits are derived from the last decimal place of the tick price.`;
+
+const DERIV_KNOWLEDGE = `Deriv (deriv.com) is the broker behind these indices. A digit contract bets on a property of the NEXT tick's last digit:
+- Matches / Differs: next digit equals a chosen digit (10%) or not (90%).
+- Even / Odd: next digit is even (50%) or odd (50%).
+- Over / Under: next digit is above a barrier (default 5 => digits 6-9, 40%) or below (digits 0-4, 40%), with 5 as the "equal" barrier.
+- Digits are a fair random process: a past streak never changes the odds of the next tick. Regulators treat high-volatility products as high risk.`;
+
+function buildSystemPrompt(context: string): string {
+  return `You are 369AI, a friendly, plain-English trading copilot inside 369Labs. You help with the user's own trading data and with questions about 369Labs and Deriv.
+Rules:
+- Talk like a helpful human, in simple short sentences. Avoid jargon unless you explain it.
+- Use the trader's real context below whenever it is relevant. Never invent numbers.
+- If the question is about the app or Deriv, use the knowledge sections.
+- If you genuinely don't have the answer or data, say so directly and suggest what the user can do (e.g. where in the app to find it).
+- Under ~180 words.
+- Never present predictions or patterns as certainties or guaranteed returns. Any trade decision is the trader's responsibility.
+
+${APP_KNOWLEDGE}
+
+${DERIV_KNOWLEDGE}
+
+${context ? `\nTrader's current context (from the app):\n${context}` : ""}`;
+}
+
 export interface ChatResponse {
   answer: string;
   confidence: number;
@@ -113,8 +150,11 @@ function detectIntent(message: string): string {
   const m = message.toLowerCase();
   if (extractSymbol(message) && isPatternObservation(m)) return "market";
   if (/\b(trade|lost|losing|loss|won|winning|win|pnl|profit|result|outcome)\b/.test(m)) return "trades";
+  if (/\b(how do i|how to|what is|what does)\b/.test(m) && /\b(signal|scanner|strategy|backtest|bot|market intelligence|journal|paper trading|deriv|feature|app)\b/.test(m)) return "app";
   if (/\b(strategy|strategies|review|score|rating|strength|weakness)\b/.test(m)) return "strategies";
-  if (/\b(market|symbol|volatility|volatile|health|trend|momentum|noise|signal)\b/.test(m)) return "market";
+  if (/\b(signal|signals|scan|watch|alert)\b/.test(m)) return "signals";
+  if (extractSymbol(message)) return "market";
+  if (/\b(market|symbol|volatility|volatile|health|trend|momentum|noise)\b/.test(m)) return "market";
   if (/\b(confidence|evidence|explain|reason|why|how|sure|certain)\b/.test(m)) return "ai";
   if (/\b(performance|accuracy|improve|drop|profit|profitable|mistake)s?\b/.test(m)) return "performance";
   if (/\b(session|today|overtrading|streak|coach|risk)\b/.test(m)) return "session";
@@ -749,6 +789,139 @@ async function handleSession(userId: number, message: string): Promise<ChatRespo
   };
 }
 
+async function handleSignals(userId: number): Promise<ChatResponse> {
+  const engines: string[] = ["SignalScanner", "TickPatternValidator"];
+  const evidence: string[] = [];
+
+  let watchInfo = "";
+  try {
+    const { getWatchStatus } = await import("../signalScanner");
+    const ws = getWatchStatus();
+    if (ws?.enabled) {
+      const mins = Math.round((ws.intervalMs || 0) / 60000);
+      watchInfo = `Always-on scanner: watching ${ws.symbols?.length || 0} markets, sweeping every ~${mins} min.`;
+    }
+  } catch {}
+
+  const signals = await db.getSignalsByUserId(userId, 10);
+  if (signals.length === 0) {
+    return {
+      answer: `${watchInfo ? watchInfo + " " : ""}No live signals right now — the scanner is watching, but no pattern has cleared the statistical bar yet. That's the engine being honest, not a failure. Re-check after the next sweep.`,
+      confidence: 85,
+      evidence,
+      enginesUsed: engines,
+      timestamp: Date.now(),
+    };
+  }
+
+  signals.slice(0, 5).forEach((s: any) => {
+    evidence.push(`${s.symbol}: ${s.title} (winRate ${s.winRate}%)`);
+  });
+
+  return {
+    answer: `${watchInfo ? watchInfo + " " : ""}You have ${signals.length} live signal${signals.length > 1 ? "s" : ""}: ${signals.slice(0, 5).map((s: any) => `${getSymbolDisplayName(s.symbol) || s.symbol} — "${s.title}" (${s.winRate}% win rate)`).join("; ")}.`,
+    confidence: 90,
+    evidence,
+    enginesUsed: engines,
+    timestamp: Date.now(),
+  };
+}
+
+async function handleApp(userId: number, message: string): Promise<ChatResponse> {
+  const engines: string[] = ["AppKnowledge"];
+  const evidence: string[] = [];
+  const m = message.toLowerCase();
+
+  if (/\b(signal|scan|watch)\b/.test(m)) {
+    evidence.push("Signals = the always-on scanner's findings. A signal is a digit pattern with a real statistical edge that is live right now.");
+    return {
+      answer: "Signals are what the always-on scanner finds: a digit pattern (like 'last digit repeats 5' or 'even/odd runs') that has a win rate clearly above the fair baseline and is live right now. Open the Signals page (Marketplace) to see them; each has a symbol, a condition, and a win rate.",
+      confidence: 90,
+      evidence,
+      enginesUsed: engines,
+      timestamp: Date.now(),
+    };
+  }
+  if (/\b(strategy|builder)\b/.test(m)) {
+    evidence.push("Strategy Builder lets you define trading rules with conditions, barriers and win-rate targets.");
+    return {
+      answer: "The Strategy Builder lets you create trading rules from digit conditions — for example 'buy Over 5 when the last digit has been Under for 3 straight ticks'. Set a win-rate target and the engine will score and backtest it for you.",
+      confidence: 90,
+      evidence,
+      enginesUsed: engines,
+      timestamp: Date.now(),
+    };
+  }
+  if (/\b(backtest|backtesting)\b/.test(m)) {
+    evidence.push("Backtesting replays a strategy against historical tick data to estimate performance.");
+    return {
+      answer: "Backtesting replays a strategy against real historical tick data and reports win rate, sample size, and whether the edge holds out-of-sample. It's the best way to check a strategy before risking money.",
+      confidence: 90,
+      evidence,
+      enginesUsed: engines,
+      timestamp: Date.now(),
+    };
+  }
+  if (/\b(bot|bot)\b/.test(m)) {
+    evidence.push("Bots run a strategy automatically on Deriv with real or paper money.");
+    return {
+      answer: "Bots run a strategy automatically on Deriv for you — real-money or paper. You pick a strategy, a stake, and risk settings, and the bot places the trades and tracks results.",
+      confidence: 90,
+      evidence,
+      enginesUsed: engines,
+      timestamp: Date.now(),
+    };
+  }
+  if (/\b(market intelligence)\b/.test(m)) {
+    evidence.push("Market Intelligence shows per-symbol health, volatility, risk and digit distributions.");
+    return {
+      answer: "Market Intelligence is a dashboard showing each market's health score, trend, momentum, noise, volatility, risk advisories, and last-digit distributions — a quick read on which markets are behaving cleanly.",
+      confidence: 90,
+      evidence,
+      enginesUsed: engines,
+      timestamp: Date.now(),
+    };
+  }
+  if (/\b(journal)\b/.test(m)) {
+    evidence.push("Journal logs your trades so the AI can review wins and losses.");
+    return {
+      answer: "The Journal logs every trade so the AI can review why you won or lost, spot repeated mistakes, and track your win rate and PnL over time.",
+      confidence: 90,
+      evidence,
+      enginesUsed: engines,
+      timestamp: Date.now(),
+    };
+  }
+  if (/\b(paper trading|paper)\b/.test(m)) {
+    evidence.push("Paper trading lets you practice without real money.");
+    return {
+      answer: "Paper trading is a practice mode — the same strategies and markets, but no real money. Great for testing ideas and the bot's behavior before going live.",
+      confidence: 90,
+      evidence,
+      enginesUsed: engines,
+      timestamp: Date.now(),
+    };
+  }
+  if (/\b(deriv)\b/.test(m)) {
+    evidence.push("Deriv is the broker behind the volatility indices the app trades.");
+    return {
+      answer: "Deriv (deriv.com) is the broker behind these indices. The app trades Deriv volatility indices: R_10 to R_100 (standard, ~2s ticks), 1HZ10V to 1HZ100V (1-second ticks), and Boom/Crash indices. You place digit contracts on each tick's last digit.",
+      confidence: 90,
+      evidence,
+      enginesUsed: engines,
+      timestamp: Date.now(),
+    };
+  }
+
+  return {
+    answer: "369Labs is your Deriv trading copilot. Ask me about Signals (the always-on scanner's findings), Strategy Builder, Backtesting, Bots, Market Intelligence, the Journal, Paper Trading, or about Deriv indices themselves.",
+    confidence: 90,
+    evidence,
+    enginesUsed: engines,
+    timestamp: Date.now(),
+  };
+}
+
 async function handleGeneral(userId: number, message: string): Promise<ChatResponse> {
   const engines: string[] = [];
   const evidence: string[] = [];
@@ -800,6 +973,8 @@ function buildIntentResponse(intent: string, userId: number, message: string): P
     case "ai": return handleAI(userId, message);
     case "performance": return handlePerformance(userId, message);
     case "session": return handleSession(userId, message);
+    case "signals": return handleSignals(userId);
+    case "app": return handleApp(userId, message);
     default: return handleGeneral(userId, message);
   }
 }
@@ -824,15 +999,17 @@ async function resolveAIKey(userId: number): Promise<string> {
   }
 }
 
-async function getAIClient(apiKey: string) {
-  const existing = _aiClients.get(apiKey);
+async function getAIClient(apiKey: string, baseUrl?: string) {
+  const url = baseUrl || process.env.AI_API_BASE_URL || "";
+  const key = url ? `${url}|${apiKey}` : apiKey;
+  const existing = _aiClients.get(key);
   if (existing) return existing;
   const mod = await import("groq-sdk");
   const client = new mod.default({
     apiKey,
-    ...(process.env.AI_API_BASE_URL ? { baseURL: process.env.AI_API_BASE_URL } : {}),
+    ...(url ? { baseURL: url } : {}),
   });
-  _aiClients.set(apiKey, client);
+  _aiClients.set(key, client);
   return client;
 }
 
@@ -869,6 +1046,33 @@ async function buildContextSummary(userId: number): Promise<string> {
     if (m.style) parts.push(`Trading style: ${m.style}.`);
     if (m.notes) parts.push(`Trader notes: ${m.notes}.`);
   } catch {}
+  // Live always-on scanner state (watching since / last / next scan).
+  try {
+    const { getWatchStatus } = await import("../signalScanner");
+    const ws = getWatchStatus();
+    if (ws?.enabled) {
+      const mins = Math.round((ws.intervalMs || 0) / 60000);
+      parts.push(`Scanner: always-on, sweeping ${ws.symbols?.length || 0} markets every ~${mins} min; last scan ${ws.lastScanAt ? new Date(ws.lastScanAt).toISOString() : "n/a"}, next ${ws.nextScanAt ? new Date(ws.nextScanAt).toISOString() : "n/a"}${ws.lastCycle ? ` (last cycle ${ws.lastCycle.scans} scans in ${(ws.lastCycle.durationMs / 1000).toFixed(0)}s)` : ""}.`);
+    } else {
+      parts.push("Scanner: currently off.");
+    }
+  } catch {}
+  // Live signals the engine has persisted for this user.
+  try {
+    const signals = await db.getSignalsByUserId(userId, 5);
+    if (signals.length > 0) {
+      parts.push(`Live signals: ${signals.map((s: any) => `${s.symbol} "${s.title}" (winRate ${s.winRate}%)`).join("; ")}.`);
+    }
+  } catch {}
+  // Live market health snapshot (top few by score).
+  try {
+    const { aiOrchestrator } = await import("./AIOrchestrator");
+    const health = aiOrchestrator.getHealth();
+    if (health.length > 0) {
+      const top = [...health].sort((a, b) => b.score - a.score).slice(0, 5);
+      parts.push(`Market health: ${top.map((h) => `${h.symbol} score ${h.score} (${h.volatility} vol)`).join(", ")}.`);
+    }
+  } catch {}
   return parts.join("\n");
 }
 
@@ -877,20 +1081,23 @@ async function tryLLMResponse(userId: number, message: string): Promise<ChatResp
   if (!apiKey) return null;
   try {
     const client = await getAIClient(apiKey);
-    const model = process.env.AI_MODEL || "gpt-4o-mini";
+    let model = process.env.AI_MODEL || "gpt-4o-mini";
+    let baseUrl = process.env.AI_API_BASE_URL || "";
+    try {
+      const mem = await db.getUserMemory(userId);
+      const cfg = (mem as any)?.aiModelConfig || {};
+      if (cfg.model) model = cfg.model;
+      if (cfg.baseUrl) baseUrl = cfg.baseUrl;
+    } catch {}
+    const effectiveClient = baseUrl && baseUrl !== (process.env.AI_API_BASE_URL || "") ? await getAIClient(apiKey, baseUrl) : client;
     const history = conversations.get(userId) || [];
     const context = await buildContextSummary(userId);
     const messages: any[] = [
-      {
-        role: "system",
-        content:
-          "You are 369AI, the trading copilot inside 369Labs. Answer concisely and helpfully using the trader's real data when relevant. If you don't know something, say so. Keep it under ~180 words. Never present predictions as certainties: they are model estimates, and any trading decision is the trader's responsibility. Do not claim guaranteed returns or that a strategy is risk-free." +
-          (context ? `\n\nTrader context:\n${context}` : ""),
-      },
+      { role: "system", content: buildSystemPrompt(context) },
       ...history.slice(-10).map((m) => ({ role: m.role, content: m.content })),
       { role: "user", content: message },
     ];
-    const answer = await llmChatCompletion(client, { model, messages, max_tokens: 400, temperature: 0.4 });
+    const answer = await llmChatCompletion(effectiveClient, { model, messages, max_tokens: 400, temperature: 0.4 });
     if (!answer) return null;
     return { answer, confidence: 88, evidence: [], enginesUsed: [`LLM (${model})`], timestamp: Date.now() };
   } catch (err: any) {
@@ -923,14 +1130,14 @@ export class AIChatEngine {
 
   getQuickQuestions(): string[] {
     return [
+      "What live signals do I have?",
       "Why did my last trade lose?",
       "Which strategy performs best?",
       "How healthy is R_100?",
-      "Why has my accuracy dropped?",
+      "V-15 (1s) keeps over-streaking, is that normal?",
+      "How do I backtest a strategy?",
+      "What is Market Intelligence?",
       "How am I doing today?",
-      "What should I improve?",
-      "Show me evidence",
-      "Am I overtrading?",
     ];
   }
 }
