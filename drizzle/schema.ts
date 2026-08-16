@@ -447,3 +447,80 @@ export const subscriptions = mysqlTable("subscriptions", {
 
 export type Subscription = typeof subscriptions.$inferSelect;
 export type InsertSubscription = typeof subscriptions.$inferInsert;
+
+// Active AI-concierge guiding signals: deterministic technical-confluence
+// scans persisted per user so every emitted signal has an auditable outcome
+// (open -> win/loss/expired) and a truthful running accuracy ledger.
+export const guidingSignals = mysqlTable("guidingSignals", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull().references(() => users.id, { onDelete: "cascade" }),
+  symbol: varchar("symbol", { length: 32 }).notNull(),
+  family: varchar("family", { length: 32 }).notNull(), // "momentum_confluence" | "digit_edge"
+  direction: varchar("direction", { length: 8 }).notNull(), // "up" | "down"
+  contractType: varchar("contractType", { length: 16 }),
+  barrier: varchar("barrier", { length: 8 }),
+  confidence: int("confidence").notNull(), // 0-100
+  strength: varchar("strength", { length: 8 }).notNull(), // STRONG | MEDIUM | WEAK
+  reasons: json("reasons").notNull(), // string[] plain-language reasoning
+  entryPrice: decimal("entryPrice", { precision: 18, scale: 8 }),
+  entryEpoch: bigint("entryEpoch", { mode: "number" }).notNull(),
+  windowTicks: int("windowTicks").notNull(), // horizon for outcome resolution
+  stake: decimal("stake", { precision: 18, scale: 8 }), // recommended stake (informational)
+  status: varchar("status", { length: 12 }).notNull().default("open"), // open | win | loss | expired
+  outcomeEpoch: bigint("outcomeEpoch", { mode: "number" }),
+  generatedAt: bigint("generatedAt", { mode: "number" }).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type GuidingSignal = typeof guidingSignals.$inferSelect;
+export type InsertGuidingSignal = typeof guidingSignals.$inferInsert;
+
+// Per-strategy performance stats used to rank the published strategy gallery
+// honestly from the audited trade ledger (not invented star ratings).
+export const strategyStats = mysqlTable("strategyStats", {
+  id: int("id").autoincrement().primaryKey(),
+  strategyId: int("strategyId").notNull(),
+  usageCount: int("usageCount").default(0).notNull(),
+  wins: int("wins").default(0).notNull(),
+  losses: int("losses").default(0).notNull(),
+  totalPnl: decimal("totalPnl", { precision: 18, scale: 8 }).default("0").notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type StrategyStat = typeof strategyStats.$inferSelect;
+export type InsertStrategyStat = typeof strategyStats.$inferInsert;
+
+// Copy trading: follower follows a leader (both are app users with a Deriv
+// token). Every mirrored fill is recorded in copyMirrors for an audit trail.
+export const copyRelations = mysqlTable("copyRelations", {
+  id: int("id").autoincrement().primaryKey(),
+  followerUserId: int("followerUserId").notNull().references(() => users.id, { onDelete: "cascade" }),
+  leaderUserId: int("leaderUserId").notNull().references(() => users.id, { onDelete: "cascade" }),
+  stakeMultiplier: decimal("stakeMultiplier", { precision: 10, scale: 4 }).default("1").notNull(),
+  maxStake: decimal("maxStake", { precision: 18, scale: 8 }),
+  active: boolean("active").default(true).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type CopyRelation = typeof copyRelations.$inferSelect;
+export type InsertCopyRelation = typeof copyRelations.$inferInsert;
+
+// Audit log of every mirrored copy trade: source (leader) trade -> mirrored
+// contract on the follower's Deriv account.
+export const copyMirrors = mysqlTable("copyMirrors", {
+  id: int("id").autoincrement().primaryKey(),
+  leaderUserId: int("leaderUserId").notNull(),
+  followerUserId: int("followerUserId").notNull().references(() => users.id, { onDelete: "cascade" }),
+  sourceTradeId: int("sourceTradeId").notNull(),
+  mirroredTradeId: int("mirroredTradeId"),
+  symbol: varchar("symbol", { length: 32 }).notNull(),
+  contractType: varchar("contractType", { length: 16 }).notNull(),
+  stake: decimal("stake", { precision: 18, scale: 8 }).notNull(),
+  status: varchar("status", { length: 16 }).notNull().default("mirrored"), // mirrored | skipped | failed
+  reason: varchar("reason", { length: 64 }),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type CopyMirror = typeof copyMirrors.$inferSelect;
+export type InsertCopyMirror = typeof copyMirrors.$inferInsert;

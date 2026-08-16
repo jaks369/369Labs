@@ -46,6 +46,8 @@ import {
   X,
   ChevronRight,
   Keyboard,
+  Radar,
+  Layers,
 } from "lucide-react";
 import { useEffect, useRef, useCallback, useState } from "react";
 import { useLocation } from "wouter";
@@ -69,6 +71,7 @@ const navGroups: NavGroup[] = [
       { icon: LayoutDashboard, label: "Terminal", path: "/dashboard" },
       { icon: CandlestickChart, label: "Markets", path: "/markets" },
       { icon: Book, label: "Order Book", path: "/order-book" },
+      { icon: Radar, label: "Concierge", path: "/concierge" },
       { icon: Star, label: "Watchlist", path: "/watchlist" },
       { icon: Wallet, label: "Portfolio", path: "/portfolio" },
       { icon: BarChart3, label: "Trade History", path: "/trades" },
@@ -84,6 +87,7 @@ const navGroups: NavGroup[] = [
       { icon: FlaskConical, label: "Backtesting", path: "/backtesting" },
       { icon: RotateCcw, label: "Replay", path: "/replay" },
       { icon: Workflow, label: "Workflows", path: "/workflow" },
+      { icon: Users, label: "Copy Trading", path: "/copy-trading" },
     ],
   },
   {
@@ -103,6 +107,7 @@ const navGroups: NavGroup[] = [
     items: [
       { icon: BarChart3, label: "Analytics", path: "/analytics" },
       { icon: BarChart3, label: "Strategy Comparison", path: "/strategy-comparison" },
+      { icon: Layers, label: "Strategy Gallery", path: "/strategy-gallery" },
       { icon: Code2, label: "AI Coding", path: "/coding" },
       { icon: Zap, label: "Plugins", path: "/plugins" },
     ],

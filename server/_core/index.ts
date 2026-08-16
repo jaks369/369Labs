@@ -4,7 +4,7 @@ import { createExpressMiddleware } from "@trpc/server/adapters/express";
 import { appRouter } from "../routers";
 import { createContext } from "./context";
 import { serveStatic } from "./staticServe";
-import { getDb, pruneBadTicks, ensureSignalExpiryColumn, ensureSignalOosColumns, ensureSignalBaselineColumn, ensureSettlementHeartbeatTable, ensureSignalsTable, ensureNotificationSettingsColumns, ensureAuditLogsTable, ensureIpWhitelistTable, ensureTradesTable, ensureTradesStuckResult, ensureTradesLedgerColumns, ensureTradesContractIndex, ensureReconcilerRunsTable, ensureStrategiesTable, ensurePriceAlertsTable, ensureTickHistoryTable, recomputeLastDigits, ensureUserMemoryTable, ensurePluginsTable, ensureWebhooksTable, ensureAiKnowledgeTable, ensureUsersColumns, ensureSessionsTable, ensureSubscriptionsTable, ensureVerificationTokensTable, ensurePasswordResetTokensTable, ensureBotLogsTable, ensureBotRunsTable } from "../db";
+import { getDb, pruneBadTicks, ensureSignalExpiryColumn, ensureSignalOosColumns, ensureSignalBaselineColumn, ensureSettlementHeartbeatTable, ensureSignalsTable, ensureNotificationSettingsColumns, ensureAuditLogsTable, ensureIpWhitelistTable, ensureTradesTable, ensureTradesStuckResult, ensureTradesLedgerColumns, ensureTradesContractIndex, ensureReconcilerRunsTable, ensureStrategiesTable, ensurePriceAlertsTable, ensureTickHistoryTable, recomputeLastDigits, ensureUserMemoryTable, ensurePluginsTable, ensureWebhooksTable, ensureAiKnowledgeTable, ensureUsersColumns, ensureSessionsTable, ensureSubscriptionsTable, ensureVerificationTokensTable, ensurePasswordResetTokensTable, ensureBotLogsTable, ensureBotRunsTable, ensureGuidingSignalsTable, ensureStrategyStatsTable, ensureCopyRelationsTable, ensureCopyMirrorsTable } from "../db";
 import { users } from "../../drizzle/schema";
 import { startTickCollector } from "../tickCollector";
 import { runWatch } from "../signalScanner";
@@ -417,6 +417,10 @@ const RATE = (limit: number, windowMs: number) => async (req: any, res: any, nex
       try { await ensureVerificationTokensTable(); } catch (e) { logger.error("[startup] ensureVerificationTokensTable failed", { error: String(e) }); }
       try { await ensurePasswordResetTokensTable(); } catch (e) { logger.error("[startup] ensurePasswordResetTokensTable failed", { error: String(e) }); }
       try { await ensureBotLogsTable(); } catch (e) { logger.error("[startup] ensureBotLogsTable failed", { error: String(e) }); }
+      try { await ensureGuidingSignalsTable(); } catch (e) { logger.error("[startup] ensureGuidingSignalsTable failed", { error: String(e) }); }
+      try { await ensureStrategyStatsTable(); } catch (e) { logger.error("[startup] ensureStrategyStatsTable failed", { error: String(e) }); }
+      try { await ensureCopyRelationsTable(); } catch (e) { logger.error("[startup] ensureCopyRelationsTable failed", { error: String(e) }); }
+      try { await ensureCopyMirrorsTable(); } catch (e) { logger.error("[startup] ensureCopyMirrorsTable failed", { error: String(e) }); }
 try { await ensureBotRunsTable(); } catch (e) { logger.error("[startup] ensureBotRunsTable failed", { error: String(e) }); }
       try {
         const { aiOrchestrator } = await import("../ai/AIOrchestrator");
@@ -473,6 +477,11 @@ try { await ensureBotRunsTable(); } catch (e) { logger.error("[startup] ensureBo
         const { botRunner } = await import("../botRunner");
         await botRunner.restoreFromDb();
       } catch (e) { logger.error("[startup] BotRunner restore failed", { error: String(e) }); }
+      try {
+        const { startConciergeScanner } = await import("../concierge");
+        startConciergeScanner();
+        logger.info("[startup] Concierge scanner started");
+      } catch (e) { logger.error("[startup] Concierge scanner failed", { error: String(e) }); }
     })();
   }
 

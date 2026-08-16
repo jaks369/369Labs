@@ -1,3 +1,23 @@
+/**
+ * AITradingCopilot — live, data-backed session coaching.
+ *
+ * Previously a stub that returned zeros. Now delegates to the concierge
+ * engine's pure helpers (computeSessionCoach / computeSmartAlerts /
+ * computeSessionSummary / computePreTradeChecklist) so the "chat + assist"
+ * surfaces and the Consierge page share the same honest math. The public
+ * method shapes stay unchanged for AIChatEngine compatibility.
+ */
+
+import * as db from "../db";
+import { aiOrchestrator } from "./AIOrchestrator";
+import {
+  computeSessionCoach,
+  computeSmartAlerts,
+  computeSessionSummary,
+  computePreTradeChecklist,
+  TradeLike,
+} from "../concierge";
+
 export interface SessionCoachResult {
   wins: number;
   losses: number;
@@ -48,39 +68,73 @@ export interface DecisionComparison {
   lessons: string[];
 }
 
+async function liveBalance(userId: number): Promise<number> {
+  try {
+    const { getPortfolioSnapshot } = await import("../tradingService");
+    return (await getPortfolioSnapshot(userId)).balance || 0;
+  } catch {
+    return 0;
+  }
+}
+
 class AITradingCopilot {
   private sessionStart: Date | null = null;
+  private sessionUserId: number | null = null;
+
   async sessionCoach(userId: number): Promise<SessionCoachResult> {
+    const trades = await db.getTradesByUserId(userId, 200);
+    const volatilityBySymbol: Record<string, string> = {};
+    for (const t of trades) {
+      if (!t.symbol || volatilityBySymbol[t.symbol]) continue;
+      volatilityBySymbol[t.symbol] = aiOrchestrator.getHealthFor(t.symbol)?.volatility ?? "Unknown";
+    }
+    const [balance, startMs] = [await liveBalance(userId), this.sessionStart?.getTime() ?? 0];
+    const res = computeSessionCoach({ trades: trades as TradeLike[], sessionStartMs: startMs, balance, volatilityBySymbol });
     return {
-      wins: 0, losses: 0, sessionAccuracy: 0, sessionDuration: "0m",
-      coachingMessages: [], currentStreak: "none", streakCount: 0, totalExposure: 0,
+      wins: res.wins,
+      losses: res.losses,
+      sessionAccuracy: res.sessionAccuracy,
+      sessionDuration: res.sessionDuration,
+      coachingMessages: res.coachingMessages.map((m) => m.message),
+      currentStreak: res.streakCount > 0 ? res.currentStreak.toLowerCase() : "none",
+      streakCount: res.streakCount,
+      totalExposure: res.totalExposure,
     };
   }
 
   async smartAlerts(userId: number): Promise<SmartAlert[]> {
-    return [];
+    const [trades, advisories] = await Promise.all([
+      db.getTradesByUserId(userId, 100),
+      Promise.resolve(aiOrchestrator.getRiskAdvisories()),
+    ]);
+    return computeSmartAlerts(trades as TradeLike[], advisories);
   }
 
   async sessionSummary(userId: number): Promise<SessionSummaryResult> {
+    const trades = await db.getTradesByUserId(userId, 200);
+    const res = computeSessionSummary(trades as TradeLike[]);
     return {
-      tradingSummary: "No trading data available.", strengths: [], mistakes: [],
-      improvementOpportunities: [], sessionDuration: "0m",
+      tradingSummary: res.tradingSummary,
+      strengths: res.strengths,
+      mistakes: res.mistakes,
+      improvementOpportunities: res.improvementOpportunities,
+      sessionDuration: res.sessionDuration,
     };
   }
 
   async preTradeChecklist(userId: number, symbol: string, contractType?: string, stake?: number): Promise<PreTradeChecklist> {
-    const riskLevel: "low" | "medium" | "high" = (stake ?? 0) > 100 ? "high" : (stake ?? 0) > 20 ? "medium" : "low";
+    const [balance, advisory] = await Promise.all([
+      liveBalance(userId),
+      Promise.resolve(aiOrchestrator.getRiskAdvisoryFor(symbol)),
+    ]);
+    const res = computePreTradeChecklist({ symbol, contractType, stake, balance, advisory: advisory ?? null });
     return {
-      symbol,
-      riskLevel,
-      recommendations: [
-        `Check recent trend for ${symbol}`,
-        contractType ? `Contract type: ${contractType}` : "Consider optimal contract type",
-        "Ensure account balance supports the trade",
-      ],
-      suggestedStake: Math.min(stake ?? 10, 50),
-      maxStake: 200,
-      warnings: riskLevel === "high" ? ["High stake relative to typical exposure"] : [],
+      symbol: res.symbol,
+      riskLevel: res.riskLevel,
+      recommendations: res.recommendations,
+      suggestedStake: res.suggestedStake,
+      maxStake: res.maxStake,
+      warnings: res.warnings,
     };
   }
 
@@ -107,6 +161,7 @@ class AITradingCopilot {
 
   startSession(userId: number): void {
     this.sessionStart = new Date();
+    this.sessionUserId = userId;
   }
 }
 

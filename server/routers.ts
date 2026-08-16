@@ -1115,6 +1115,19 @@ export const appRouter = router({
       }
     }),
 
+    // Gallery variant: published strategies with audited-lookup stats so the
+    // gallery ranks honestly from the real trade ledger, never invented ratings.
+    publishedGallery: protectedProcedure.query(async () => {
+      try {
+        return await db.getPublishedStrategiesWithStats();
+      } catch (error) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Failed to retrieve published gallery",
+        });
+      }
+    }),
+
     getById: protectedProcedure
       .input(z.object({ id: z.number() }))
       .query(async ({ ctx, input }) => {
@@ -1400,9 +1413,13 @@ save: protectedProcedure
             ...input,
             entryPrice: input.entryPrice || "0",
           });
+          import("./copyTrader").then(({ broadcastLeaderFill }) =>
+            broadcastLeaderFill(trade, ctx.user.id).catch(() => {})
+          ).catch(() => {});
           if (input.result !== "pending") {
             const pnl = parseFloat(input.profitLoss || "0");
             if (input.strategyId) {
+              db.recordStrategyStat(input.strategyId, input.result, pnl).catch(() => {});
               import("./ai/StrategyEngine/StrategyPerformanceTracker").then(({ strategyPerformanceTracker }) => {
                 strategyPerformanceTracker.recordOutcome(ctx.user.id, String(input.strategyId), 50, 50, 1, input.result === "win", pnl).catch(() => {});
               }).catch(() => {});
@@ -1539,6 +1556,9 @@ save: protectedProcedure
           source: "manual_fill",
           reconciled: false, // client assertion — portfolio-verified only when the reconciler confirms it
         } as any);
+        import("./copyTrader").then(({ broadcastLeaderFill }) =>
+          broadcastLeaderFill(trade, ctx.user.id).catch(() => {})
+        ).catch(() => {});
         return { trade, existed: false };
       }),
 
@@ -3183,6 +3203,174 @@ aiMarket: router({
     performances: protectedProcedure.query(async ({ ctx }) => {
       const { strategyPerformanceTracker } = await import("./ai/StrategyEngine");
       return strategyPerformanceTracker.getAllPerformances(ctx.user.id);
+    }),
+  }),
+  concierge: router({
+    briefing: protectedProcedure.query(async ({ ctx }) => {
+      const { buildBriefing } = await import("./concierge");
+      let balance: number | undefined;
+      try {
+        const { getPortfolioSnapshot } = await import("./tradingService");
+        balance = (await getPortfolioSnapshot(ctx.user.id)).balance || 0;
+      } catch {
+        balance = undefined;
+      }
+      return buildBriefing(ctx.user.id, balance);
+    }),
+    sessionCoach: protectedProcedure.query(async ({ ctx }) => {
+      const { getAITradingCopilot } = await import("./ai/AITradingCopilot");
+      return getAITradingCopilot().sessionCoach(ctx.user.id);
+    }),
+    smartAlerts: protectedProcedure.query(async ({ ctx }) => {
+      const { getAITradingCopilot } = await import("./ai/AITradingCopilot");
+      return getAITradingCopilot().smartAlerts(ctx.user.id);
+    }),
+    sessionSummary: protectedProcedure.query(async ({ ctx }) => {
+      const { getAITradingCopilot } = await import("./ai/AITradingCopilot");
+      return getAITradingCopilot().sessionSummary(ctx.user.id);
+    }),
+    preTradeChecklist: protectedProcedure
+      .input(z.object({ symbol: z.string(), contractType: z.string().optional(), stake: z.number().optional() }))
+      .query(async ({ ctx, input }) => {
+        const { getAITradingCopilot } = await import("./ai/AITradingCopilot");
+        return getAITradingCopilot().preTradeChecklist(ctx.user.id, input.symbol, input.contractType, input.stake);
+      }),
+    marketContext: protectedProcedure
+      .input(z.object({ symbol: z.string() }))
+      .query(async ({ input }) => {
+        const { buildMarketContext } = await import("./concierge");
+        const { aiOrchestrator } = await import("./ai/AIOrchestrator");
+        let prices: number[] = [];
+        try {
+          prices = (await getTickHistory(input.symbol, 60)).map((t: any) => Number(t.price));
+        } catch { prices = []; }
+        return buildMarketContext(input.symbol, aiOrchestrator.getHealthFor(input.symbol) ?? null, prices);
+      }),
+    calendar: protectedProcedure.query(async () => {
+      const { upcomingCalendarEvents } = await import("./concierge");
+      return upcomingCalendarEvents(4);
+    }),
+    liveCandidates: protectedProcedure.query(async () => {
+      const { scanAllSymbolsLive } = await import("./concierge");
+      return scanAllSymbolsLive();
+    }),
+    history: protectedProcedure
+      .input(z.object({ limit: z.number().default(50) }))
+      .query(async ({ ctx, input }) => {
+        return db.listGuidingSignals(ctx.user.id, input.limit);
+      }),
+    accuracy: protectedProcedure.query(async ({ ctx }) => {
+      return db.guidingSignalAccuracy(ctx.user.id);
+    }),
+    latest: protectedProcedure.query(async ({ ctx }) => {
+      const rows = await db.listGuidingSignals(ctx.user.id, 1);
+      return rows[0] ?? null;
+    }),
+    scanNow: protectedProcedure.mutation(async ({ ctx }) => {
+      const { scanAndPersistForUser } = await import("./concierge");
+      return scanAndPersistForUser(ctx.user.id);
+    }),
+    settle: protectedProcedure.mutation(async ({ ctx }) => {
+      const { settleOpenGuidingSignals } = await import("./concierge");
+      return settleOpenGuidingSignals(ctx.user.id);
+    }),
+    getSettings: protectedProcedure.query(async ({ ctx }) => {
+      const { getSettingsFor } = await import("./concierge");
+      return getSettingsFor(ctx.user.id);
+    }),
+    patchSettings: protectedProcedure
+      .input(z.object({
+        enabled: z.boolean().optional(),
+        telegramBriefings: z.boolean().optional(),
+        maxPerDay: z.number().min(1).max(50).optional(),
+        stakePct: z.number().min(0.1).max(25).optional(),
+        symbols: z.array(z.string()).max(12).optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const { updateSettings, getSettingsFor } = await import("./concierge");
+        await updateSettings(ctx.user.id, input);
+        return getSettingsFor(ctx.user.id);
+      }),
+    loopStatus: protectedProcedure.query(async () => {
+      const { getConciergeLoopStatus } = await import("./concierge");
+      return getConciergeLoopStatus();
+    }),
+  }),
+  copy: router({
+    list: protectedProcedure.query(async ({ ctx }) => {
+      const relations = await db.listCopyRelationsForFollower(ctx.user.id);
+      const users = await db.listAllUsers();
+      const name = new Map(users.map((u) => [u.id, u.name || u.email]));
+      return relations.map((r) => ({
+        ...r,
+        leaderName: name.get(r.leaderUserId) || `User #${r.leaderUserId}`,
+        stakeMultiplier: Number(r.stakeMultiplier),
+        maxStake: r.maxStake != null ? Number(r.maxStake) : null,
+      }));
+    }),
+    add: protectedProcedure
+      .input(z.object({
+        leaderUserId: z.number().int().positive(),
+        stakeMultiplier: z.number().positive().default(1),
+        maxStake: z.number().positive().optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        if (input.leaderUserId === ctx.user.id) {
+          throw new TRPCError({ code: "BAD_REQUEST", message: "You can't follow yourself" });
+        }
+        const existing = await db.listCopyRelationsForFollower(ctx.user.id);
+        if (existing.some((r) => r.leaderUserId === input.leaderUserId)) {
+          throw new TRPCError({ code: "CONFLICT", message: "Already following this trader" });
+        }
+        const rel = await db.saveCopyRelation({
+          followerUserId: ctx.user.id,
+          leaderUserId: input.leaderUserId,
+          stakeMultiplier: String(input.stakeMultiplier),
+          maxStake: input.maxStake != null ? String(input.maxStake) : null,
+          active: true,
+        });
+        if (!rel) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Failed to create copy relation" });
+        db.saveAuditLog({ userId: ctx.user.id, action: "copy.add", target: String(input.leaderUserId) }).catch(() => {});
+        return rel;
+      }),
+    remove: protectedProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ ctx, input }) => {
+        await db.deleteCopyRelation(input.id, ctx.user.id);
+        return { ok: true };
+      }),
+    setActive: protectedProcedure
+      .input(z.object({ id: z.number(), active: z.boolean() }))
+      .mutation(async ({ ctx, input }) => {
+        await db.setCopyRelationActive(input.id, ctx.user.id, input.active);
+        return { ok: true };
+      }),
+    mirrors: protectedProcedure.query(async ({ ctx }) => {
+      return db.listCopyMirrors(ctx.user.id, 100);
+    }),
+    leaderTrades: protectedProcedure
+      .input(z.object({ leaderUserId: z.number(), limit: z.number().default(20) }))
+      .query(async ({ input }) => {
+        return db.getTradesByUserId(input.leaderUserId, Math.min(input.limit, 50));
+      }),
+    peers: protectedProcedure.query(async ({ ctx }) => {
+      const users = (await db.listAllUsers()).filter((u) => u.id !== ctx.user.id);
+      const withStats = await Promise.all(users.slice(0, 12).map(async (u) => {
+        const trades = await db.getTradesByUserId(u.id, 100);
+        const settled = trades.filter((t) => t.result === "win" || t.result === "loss");
+        const wins = settled.filter((t) => t.result === "win").length;
+        const pnl = settled.reduce((s, t) => s + (parseFloat(t.profitLoss?.toString() || "0") || 0), 0);
+        return {
+          userId: u.id,
+          name: u.name || u.email,
+          tradeCount: settled.length,
+          wins,
+          losses: settled.length - wins,
+          winRate: settled.length > 0 ? Math.round((wins / settled.length) * 100) : 0,
+          pnl: Math.round(pnl * 100) / 100,
+        };
+      }));
+      return withStats.filter((p) => p.tradeCount > 0).sort((a, b) => b.pnl - a.pnl);
     }),
   }),
 });

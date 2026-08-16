@@ -68,6 +68,16 @@ import {
   webhookDeliveries,
   WebhookDelivery,
   InsertWebhookDelivery,
+  guidingSignals,
+  GuidingSignal,
+  InsertGuidingSignal,
+  strategyStats,
+  CopyRelation,
+  InsertCopyRelation,
+  copyRelations,
+  copyMirrors,
+  CopyMirror,
+  InsertCopyMirror,
 } from "../drizzle/schema";
 import { ENV } from "./_core/env";
 import { encrypt, decrypt } from "./_core/encryption";
@@ -719,6 +729,81 @@ export async function getPublishedStrategies(): Promise<Strategy[]> {
     } catch {
       return [];
     }
+  }
+}
+
+/** Published strategies enriched with audited ledger stats (usage, win-rate, PnL). */
+export async function getPublishedStrategiesWithStats(): Promise<Array<Strategy & { stats: { usageCount: number; wins: number; losses: number; totalPnl: number; winRatePct: number } }>> {
+  const base = await getPublishedStrategies();
+  if (base.length === 0) return [];
+  const ids = base.map((s) => s.id);
+  const pool = getRawPool();
+  const empty = { usageCount: 0, wins: 0, losses: 0, totalPnl: 0, winRatePct: 0 };
+  if (pool) {
+    try {
+      const [rows] = await pool.execute(
+        `SELECT strategyId, COUNT(*) AS usageCount,
+           SUM(CASE WHEN result='win' THEN 1 ELSE 0 END) AS wins,
+           SUM(CASE WHEN result='loss' THEN 1 ELSE 0 END) AS losses,
+           COALESCE(SUM(profitLoss), 0) AS totalPnl
+         FROM trades WHERE strategyId IS NOT NULL AND strategyId IN (${ids.map(() => "?").join(",")})
+         GROUP BY strategyId`,
+        ids,
+      );
+      const byId = new Map<number, any>((rows as any[]).map((r) => [Number(r.strategyId), r]));
+      return base.map((s) => {
+        const r = byId.get(s.id);
+        if (!r) return { ...s, stats: empty };
+        const wins = Number(r.wins || 0);
+        const losses = Number(r.losses || 0);
+        return {
+          ...s,
+          stats: {
+            usageCount: Number(r.usageCount || 0),
+            wins,
+            losses,
+            totalPnl: Number(r.totalPnl || 0),
+            winRatePct: wins + losses > 0 ? Math.round((wins / (wins + losses)) * 100) : 0,
+          },
+        };
+      });
+    } catch {
+      return base.map((s) => ({ ...s, stats: empty }));
+    }
+  }
+  const db = await getDb();
+  if (!db) return base.map((s) => ({ ...s, stats: empty }));
+  try {
+    const rows = await db
+      .select({
+        strategyId: trades.strategyId,
+        usageCount: sql<number>`COUNT(*)`,
+        wins: sql<number>`SUM(CASE WHEN ${trades.result} = 'win' THEN 1 ELSE 0 END)`,
+        losses: sql<number>`SUM(CASE WHEN ${trades.result} = 'loss' THEN 1 ELSE 0 END)`,
+        totalPnl: sql<number>`COALESCE(SUM(${trades.profitLoss}), 0)`,
+      })
+      .from(trades)
+      .where(and(sql`${trades.strategyId} IS NOT NULL`, inArray(trades.strategyId, ids)))
+      .groupBy(trades.strategyId);
+    const byId = new Map(rows.map((r) => [Number(r.strategyId), r]));
+    return base.map((s) => {
+      const r = byId.get(s.id);
+      if (!r) return { ...s, stats: empty };
+      const wins = Number(r.wins || 0);
+      const losses = Number(r.losses || 0);
+      return {
+        ...s,
+        stats: {
+          usageCount: Number(r.usageCount || 0),
+          wins,
+          losses,
+          totalPnl: Number(r.totalPnl || 0),
+          winRatePct: wins + losses > 0 ? Math.round((wins / (wins + losses)) * 100) : 0,
+        },
+      };
+    });
+  } catch {
+    return base.map((s) => ({ ...s, stats: empty }));
   }
 }
 
@@ -2803,4 +2888,337 @@ export async function importUserData(userId: number, data: Record<string, any>):
     }
   }
   return { imported };
+}
+
+// ---------------------------------------------------------------------------
+// AI Concierge — guiding signals, copy trading, strategy gallery stats
+// (idempotent ensure* migrations run at boot like the other ensure* helpers)
+// ---------------------------------------------------------------------------
+
+export async function ensureGuidingSignalsTable(): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+  try {
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS guidingSignals (
+        id int NOT NULL AUTO_INCREMENT,
+        userId int NOT NULL,
+        symbol varchar(32) NOT NULL,
+        family varchar(32) NOT NULL,
+        direction varchar(8) NOT NULL,
+        contractType varchar(16),
+        barrier varchar(8),
+        confidence int NOT NULL,
+        strength varchar(8) NOT NULL,
+        reasons json NOT NULL,
+        entryPrice decimal(18,8),
+        entryEpoch bigint NOT NULL,
+        windowTicks int NOT NULL,
+        stake decimal(18,8),
+        status varchar(12) NOT NULL DEFAULT 'open',
+        outcomeEpoch bigint,
+        generatedAt bigint NOT NULL,
+        createdAt timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (id),
+        KEY guidingSignals_userId_status (userId, status),
+        KEY guidingSignals_userId_symbol (userId, symbol)
+      )
+    `);
+  } catch (e: any) {
+    console.error("[ensureGuidingSignalsTable] failed", e?.message || e);
+  }
+}
+
+export async function saveGuidingSignal(row: InsertGuidingSignal): Promise<GuidingSignal | null> {
+  const db = await getDb();
+  if (!db) return null;
+  try {
+    const result = await db.insert(guidingSignals).values(row);
+    const id = (result as any)[0]?.insertId || (result as any).insertId;
+    if (!id) return null;
+    return (await db.select().from(guidingSignals).where(eq(guidingSignals.id, Number(id))).limit(1))[0] ?? null;
+  } catch (e: any) {
+    console.error("[saveGuidingSignal] failed", e?.message || e);
+    return null;
+  }
+}
+
+export async function listOpenGuidingSignals(userId: number): Promise<GuidingSignal[]> {
+  const db = await getDb();
+  if (!db) return [];
+  try {
+    return await db.select().from(guidingSignals).where(
+      and(eq(guidingSignals.userId, userId), eq(guidingSignals.status, "open")),
+    ).orderBy(asc(guidingSignals.entryEpoch)).limit(200);
+  } catch {
+    return [];
+  }
+}
+
+export async function listGuidingSignals(userId: number, limit: number = 100): Promise<GuidingSignal[]> {
+  const db = await getDb();
+  if (!db) return [];
+  try {
+    return await db.select().from(guidingSignals).where(eq(guidingSignals.userId, userId))
+      .orderBy(desc(guidingSignals.generatedAt)).limit(limit);
+  } catch {
+    return [];
+  }
+}
+
+export async function setGuidingSignalOutcome(id: number, status: "win" | "loss" | "expired", outcomeEpoch: number): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+  try {
+    await db.update(guidingSignals).set({ status, outcomeEpoch }).where(eq(guidingSignals.id, id));
+  } catch (e: any) {
+    console.error("[setGuidingSignalOutcome] failed", e?.message || e);
+  }
+}
+
+export async function guidingSignalAccuracy(userId: number, limit = 250): Promise<{ total: number; wins: number; losses: number; winRatePct: number; byStrength: Record<string, { total: number; wins: number; winRatePct: number }> }> {
+  const db = await getDb();
+  if (!db) return { total: 0, wins: 0, losses: 0, winRatePct: 0, byStrength: {} };
+  try {
+    const rows = await db.select().from(guidingSignals)
+      .where(and(eq(guidingSignals.userId, userId), eq(guidingSignals.status, "open")))
+      .orderBy(desc(guidingSignals.generatedAt)).limit(0);
+    void rows;
+    const pooled = await listGuidingSignals(userId, limit);
+    const settled = pooled.filter((s) => s.status === "win" || s.status === "loss");
+    const wins = settled.filter((s) => s.status === "win").length;
+    const losses = settled.length - wins;
+    const byStrength: Record<string, { total: number; wins: number; winRatePct: number }> = {};
+    for (const s of pooled.filter((x) => x.status === "win" || x.status === "loss")) {
+      const key = s.strength;
+      byStrength[key] = byStrength[key] || { total: 0, wins: 0, winRatePct: 0 };
+      byStrength[key].total++;
+      if (s.status === "win") byStrength[key].wins++;
+    }
+    for (const k of Object.keys(byStrength)) {
+      byStrength[k].winRatePct = byStrength[k].total > 0 ? Math.round((byStrength[k].wins / byStrength[k].total) * 100) : 0;
+    }
+    return {
+      total: settled.length,
+      wins,
+      losses,
+      winRatePct: settled.length > 0 ? Math.round((wins / settled.length) * 100) : 0,
+      byStrength,
+    };
+  } catch {
+    return { total: 0, wins: 0, losses: 0, winRatePct: 0, byStrength: {} };
+  }
+}
+
+// ---- strategy gallery stats ----------------------------------------------
+
+export async function ensureStrategyStatsTable(): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+  try {
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS strategyStats (
+        id int NOT NULL AUTO_INCREMENT,
+        strategyId int NOT NULL,
+        usageCount int NOT NULL DEFAULT 0,
+        wins int NOT NULL DEFAULT 0,
+        losses int NOT NULL DEFAULT 0,
+        totalPnl decimal(18,8) NOT NULL DEFAULT 0,
+        updatedAt timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        PRIMARY KEY (id),
+        UNIQUE KEY strategyStats_strategyId (strategyId)
+      )
+    `);
+  } catch (e: any) {
+    console.error("[ensureStrategyStatsTable] failed", e?.message || e);
+  }
+}
+
+export async function recordStrategyStat(strategyId: number, result: string | null | undefined, pnl: number): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+  const winsDelta = result === "win" ? 1 : 0;
+  const lossesDelta = result === "loss" ? 1 : 0;
+  try {
+    await db.execute(sql`
+      INSERT INTO strategyStats (strategyId, usageCount, wins, losses, totalPnl)
+      VALUES (${strategyId}, 1, ${winsDelta}, ${lossesDelta}, ${pnl})
+      ON DUPLICATE KEY UPDATE
+        usageCount = usageCount + 1,
+        wins = wins + ${winsDelta},
+        losses = losses + ${lossesDelta},
+        totalPnl = totalPnl + ${pnl},
+        updatedAt = CURRENT_TIMESTAMP
+    `);
+  } catch (e: any) {
+    console.error("[recordStrategyStat] failed", e?.message || e);
+  }
+}
+
+export async function getStrategyStats(strategyId: number): Promise<{ usageCount: number; wins: number; losses: number; totalPnl: number; winRatePct: number } | null> {
+  const db = await getDb();
+  if (!db) return null;
+  try {
+    const rows = await db.execute(sql`SELECT * FROM strategyStats WHERE strategyId = ${strategyId}`);
+    const row = Array.isArray(rows) ? (rows as any[])[0] : (rows as any)?.rows?.[0];
+    if (!row) return null;
+    const wins = Number(row.wins || 0);
+    const losses = Number(row.losses || 0);
+    return {
+      usageCount: Number(row.usageCount || 0),
+      wins,
+      losses,
+      totalPnl: Number(row.totalPnl || 0),
+      winRatePct: wins + losses > 0 ? Math.round((wins / (wins + losses)) * 100) : 0,
+    };
+  } catch {
+    return null;
+  }
+}
+
+// ---- copy trading ---------------------------------------------------------
+
+export async function ensureCopyRelationsTable(): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+  try {
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS copyRelations (
+        id int NOT NULL AUTO_INCREMENT,
+        followerUserId int NOT NULL,
+        leaderUserId int NOT NULL,
+        stakeMultiplier decimal(10,4) NOT NULL DEFAULT 1,
+        maxStake decimal(18,8),
+        active boolean NOT NULL DEFAULT TRUE,
+        createdAt timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updatedAt timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        PRIMARY KEY (id),
+        UNIQUE KEY copyRelations_pair (followerUserId, leaderUserId)
+      )
+    `);
+  } catch (e: any) {
+    console.error("[ensureCopyRelationsTable] failed", e?.message || e);
+  }
+}
+
+export async function ensureCopyMirrorsTable(): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+  try {
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS copyMirrors (
+        id int NOT NULL AUTO_INCREMENT,
+        leaderUserId int NOT NULL,
+        followerUserId int NOT NULL,
+        sourceTradeId int NOT NULL,
+        mirroredTradeId int,
+        symbol varchar(32) NOT NULL,
+        contractType varchar(16) NOT NULL,
+        stake decimal(18,8) NOT NULL,
+        status varchar(16) NOT NULL DEFAULT 'mirrored',
+        reason varchar(64),
+        createdAt timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (id),
+        UNIQUE KEY copyMirrors_source_follower (sourceTradeId, followerUserId),
+        KEY copyMirrors_follower (followerUserId)
+      )
+    `);
+  } catch (e: any) {
+    console.error("[ensureCopyMirrorsTable] failed", e?.message || e);
+  }
+}
+
+export async function saveCopyRelation(rel: InsertCopyRelation): Promise<CopyRelation | null> {
+  const db = await getDb();
+  if (!db) return null;
+  try {
+    const result = await db.insert(copyRelations).values(rel);
+    const id = (result as any)[0]?.insertId || (result as any).insertId;
+    return id ? (await db.select().from(copyRelations).where(eq(copyRelations.id, Number(id))).limit(1))[0] ?? null : null;
+  } catch (e: any) {
+    console.error("[saveCopyRelation] failed", e?.message || e);
+    return null;
+  }
+}
+
+export async function listCopyRelationsForFollower(followerUserId: number): Promise<CopyRelation[]> {
+  const db = await getDb();
+  if (!db) return [];
+  try {
+    return await db.select().from(copyRelations).where(eq(copyRelations.followerUserId, followerUserId));
+  } catch {
+    return [];
+  }
+}
+
+export async function listRelationsForLeader(leaderUserId: number): Promise<CopyRelation[]> {
+  const db = await getDb();
+  if (!db) return [];
+  try {
+    return await db.select().from(copyRelations).where(
+      and(eq(copyRelations.leaderUserId, leaderUserId), eq(copyRelations.active, true)),
+    );
+  } catch {
+    return [];
+  }
+}
+
+export async function setCopyRelationActive(id: number, followerUserId: number, active: boolean): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+  try {
+    await db.update(copyRelations).set({ active }).where(
+      and(eq(copyRelations.id, id), eq(copyRelations.followerUserId, followerUserId)),
+    );
+  } catch (e: any) {
+    console.error("[setCopyRelationActive] failed", e?.message || e);
+  }
+}
+
+export async function deleteCopyRelation(id: number, followerUserId: number): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+  try {
+    await db.delete(copyRelations).where(
+      and(eq(copyRelations.id, id), eq(copyRelations.followerUserId, followerUserId)),
+    );
+  } catch (e: any) {
+    console.error("[deleteCopyRelation] failed", e?.message || e);
+  }
+}
+
+export async function didMirror(sourceTradeId: number, followerUserId: number): Promise<boolean> {
+  const db = await getDb();
+  if (!db) return false;
+  try {
+    const rows = await db.select({ id: copyMirrors.id }).from(copyMirrors)
+      .where(and(eq(copyMirrors.sourceTradeId, sourceTradeId), eq(copyMirrors.followerUserId, followerUserId))).limit(1);
+    return rows.length > 0;
+  } catch {
+    return false;
+  }
+}
+
+export async function saveCopyMirror(mirror: InsertCopyMirror): Promise<CopyMirror | null> {
+  const db = await getDb();
+  if (!db) return null;
+  try {
+    const result = await db.insert(copyMirrors).values(mirror);
+    const id = (result as any)[0]?.insertId || (result as any).insertId;
+    return id ? (await db.select().from(copyMirrors).where(eq(copyMirrors.id, Number(id))).limit(1))[0] ?? null : null;
+  } catch (e: any) {
+    console.error("[saveCopyMirror] failed", e?.message || e);
+    return null;
+  }
+}
+
+export async function listCopyMirrors(followerUserId: number, limit: number = 100): Promise<CopyMirror[]> {
+  const db = await getDb();
+  if (!db) return [];
+  try {
+    return await db.select().from(copyMirrors).where(eq(copyMirrors.followerUserId, followerUserId))
+      .orderBy(desc(copyMirrors.createdAt)).limit(limit);
+  } catch {
+    return [];
+  }
 }

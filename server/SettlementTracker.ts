@@ -216,6 +216,11 @@ export class SettlementTracker {
       } catch (e: any) {
         console.warn(`[SettlementTracker] strategy tracker import failed for trade ${trade.id}:`, e?.message || e);
       }
+      try {
+        db.recordStrategyStat(trade.strategyId, outcome, profit).catch(() => {});
+      } catch (e: any) {
+        console.warn(`[SettlementTracker] strategy stat failed for trade ${trade.id}:`, e?.message || e);
+      }
     }
 
     try {
