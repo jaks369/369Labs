@@ -1510,6 +1510,44 @@ save: protectedProcedure
         await db.saveAuditLog({ userId: ctx.user.id, action: "trades.linkToJournal", target: String(input.knowledgeId), detail: { tradeId: trade.id, contractId: input.contractId } }).catch(() => {});
         return { linked: true, tradeId: trade.id, symbol: trade.symbol };
       }),
+
+    // Idempotent record of an ALREADY-PLACED Deriv fill. Unlike `save`, this
+    // bypasses the stake clamp: the contract already exists on Deriv, so a
+    // validation rejection can only create a real-money trade with no ledger
+    // row. Used by the client right after purchaseContract and by the reconciler.
+    recordFill: protectedProcedure
+      .input(z.object({
+        contractId: z.string().min(1),
+        symbol: z.string().min(1),
+        contractType: z.string().optional(),
+        stake: z.string().optional(),
+        entryPrice: z.string().optional(),
+        entryTime: z.date().optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const existing = await db.getTradeByContractId(ctx.user.id, input.contractId);
+        if (existing) return { trade: existing, existed: true };
+        const trade = await db.saveTrade({
+          userId: ctx.user.id,
+          contractId: input.contractId,
+          symbol: input.symbol || "R_100",
+          contractType: input.contractType || "CALL",
+          stake: input.stake || "0",
+          entryPrice: input.entryPrice || "0",
+          entryTime: input.entryTime || new Date(),
+          result: "pending",
+          source: "manual_fill",
+          reconciled: false, // client assertion — portfolio-verified only when the reconciler confirms it
+        } as any);
+        return { trade, existed: false };
+      }),
+
+    // User-facing "fix my history": run the reconciler for the current user.
+    reconcile: protectedProcedure.mutation(async ({ ctx }) => {
+      const { reconcileUser } = await import("./reconciliation");
+      const counts = await reconcileUser(ctx.user.id, false);
+      return { ok: true, ...counts };
+    }),
   }),
 
   // Price Alerts
@@ -2907,6 +2945,32 @@ aiMarket: router({
       const heartbeat = await db.getSettlementHeartbeat();
       return { heartbeat, retries: (Array.from(retries) as [number, number][]).map(([id, n]) => ({ id, attempts: n })), pendingCount: (await db.getPendingTrades()).length };
     }),
+    ledgerHealth: adminProcedure.query(async () => {
+      const [heartbeat, runs, counts] = await Promise.all([
+        db.getSettlementHeartbeat(),
+        db.getReconcilerRuns(10),
+        db.getTradeStatusCounts(),
+      ]);
+      return {
+        heartbeat,
+        recentRuns: runs,
+        pendingCount: counts.pending,
+        stuckCount: counts.stuck,
+        settledToday: counts.settledToday,
+      };
+    }),
+    runReconciliation: adminProcedure
+      .input(z.object({ dryRun: z.boolean().default(true) }))
+      .mutation(async ({ input }) => {
+        const { runFullSweep } = await import("./reconciliation");
+        const counts = await runFullSweep({ dryRun: input.dryRun });
+        return { ok: true, ...counts };
+      }),
+    reconRunHistory: adminProcedure
+      .input(z.object({ limit: z.number().default(20) }))
+      .query(async ({ input }) => {
+        return { runs: await db.getReconcilerRuns(input.limit) };
+      }),
     createTestTrade: adminProcedure
       .input(z.object({ userId: z.number(), contractId: z.string(), symbol: z.string(), stake: z.string(), contractType: z.string(), entryPrice: z.string().optional() }))
       .mutation(async ({ input }) => {

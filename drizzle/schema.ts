@@ -102,11 +102,28 @@ export const trades = mysqlTable("trades", {
   contractType: varchar("contractType", { length: 32 }).default("CALL"),
   result: varchar("result", { length: 16 }),
   contractId: varchar("contractId", { length: 64 }),
+  source: varchar("source", { length: 32 }),
+  discoveredAt: timestamp("discoveredAt"),
+  reconciled: boolean("reconciled").default(false).notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
 
 export type Trade = typeof trades.$inferSelect;
 export type InsertTrade = typeof trades.$inferInsert;
+
+// Reconciliation audit log: each run of the ledger reconciler records how many
+// rows it reconstructed / settled / marked stuck (and why not).
+export const reconcilerRuns = mysqlTable("reconcilerRuns", {
+  id: int("id").autoincrement().primaryKey(),
+  runStart: timestamp("runStart").defaultNow().notNull(),
+  runEnd: timestamp("runEnd"),
+  userId: int("userId"),
+  actions: json("actions"), // { reconstructed, settled, stuck, skippedNoToken, errors }
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type ReconcilerRun = typeof reconcilerRuns.$inferSelect;
+export type InsertReconcilerRun = typeof reconcilerRuns.$inferInsert;
 
 // Bot execution logs: timestamped messages for each bot run
 export const botLogs = mysqlTable("botLogs", {

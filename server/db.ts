@@ -133,6 +133,20 @@ class AsyncMutex {
 
 const tradeMutex = new AsyncMutex();
 
+// Minimal contract view the reconciler can rebuild a missing ledger row from.
+export interface PortfolioContractInput {
+  contractId: number | string;
+  contractType: string;
+  symbol: string;
+  stake: number;
+  entryPrice: number;
+  purchasedAt: number | null;
+  isSold: boolean;
+  profit: number;
+  soldAt: number | null;
+  source?: string;
+}
+
 export async function getDb() {
   if (!_db && !_dbError) {
     if (!process.env.DATABASE_URL) {
@@ -516,6 +530,25 @@ export async function saveDerivToken(token: InsertDerivToken): Promise<DerivToke
   )[0];
 }
 
+export async function getTradeStatusCounts(): Promise<{ pending: number; stuck: number; settledToday: number }> {
+  const pool = getRawPool();
+  if (!pool) return { pending: 0, stuck: 0, settledToday: 0 };
+  try {
+    const [rows] = await pool.execute(
+      `SELECT
+         SUM(result = 'pending') AS pending,
+         SUM(result = 'stuck') AS stuck,
+         SUM(result IN ('win','loss') AND exitTime >= DATE_SUB(NOW(), INTERVAL 24 HOUR)) AS settledToday
+       FROM trades`,
+    );
+    const r = (rows as any[])[0] || {};
+    return { pending: Number(r.pending || 0), stuck: Number(r.stuck || 0), settledToday: Number(r.settledToday || 0) };
+  } catch (e: any) {
+    console.error("[getTradeStatusCounts] failed", e?.message || e);
+    return { pending: 0, stuck: 0, settledToday: 0 };
+  }
+}
+
 export async function getDerivTokenByUserId(userId: number): Promise<DerivToken | undefined> {
   const db = await getDb();
   if (!db) return undefined;
@@ -542,6 +575,81 @@ export async function removeDerivToken(userId: number): Promise<void> {
   const db = await getDb();
   if (!db) return;
   await db.update(derivTokens).set({ isActive: false }).where(eq(derivTokens.userId, userId));
+}
+
+// Users who have at least one active Deriv token — the reconciler sweep bound.
+export async function getUsersWithActiveTokens(): Promise<number[]> {
+  const pool = getRawPool();
+  if (pool) {
+    try {
+      const [rows] = await pool.execute("SELECT DISTINCT userId FROM derivTokens WHERE isActive = TRUE");
+      return (rows as any[]).map((r) => Number(r.userId));
+    } catch (e: any) {
+      console.error("[getUsersWithActiveTokens] raw failed", e?.message || e);
+    }
+  }
+  const db = await getDb();
+  if (!db) return [];
+  try {
+    const rows = await db.selectDistinct({ userId: derivTokens.userId }).from(derivTokens).where(eq(derivTokens.isActive, true));
+    return rows.map((r) => r.userId);
+  } catch (e: any) {
+    console.error("[getUsersWithActiveTokens] drizzle failed", e?.message || e);
+    return [];
+  }
+}
+
+// Reconstruct a missing ledger row from a Deriv portfolio contract. Idempotent:
+// saveTrade dedups on (userId, contractId) via the in-process mutex + (with M0's
+// unique index) the DB itself, so a concurrent fill path can't double-insert.
+export async function reconstructTradeFromContract(userId: number, contract: PortfolioContractInput): Promise<{ trade: Trade | null; existed: boolean }> {
+  const now = new Date();
+  const entryTime = contract.purchasedAt != null ? new Date(contract.purchasedAt * 1000) : now;
+  try {
+    const trade = await saveTrade({
+      userId,
+      symbol: contract.symbol || "R_100",
+      contractType: contract.contractType || "CALL",
+      stake: String(contract.stake || "0"),
+      entryPrice: String(contract.entryPrice || "0"),
+      contractId: String(contract.contractId),
+      result: contract.isSold ? (contract.profit >= 0 ? "win" : "loss") : "pending",
+      profitLoss: contract.isSold ? contract.profit.toFixed(8) : undefined,
+      entryTime,
+      exitTime: contract.isSold && contract.soldAt != null ? new Date(contract.soldAt * 1000) : undefined,
+      source: contract.source || "reconcile",
+      discoveredAt: now,
+      reconciled: true,
+    } as InsertTrade & { source?: string; discoveredAt?: Date; reconciled?: boolean });
+    return { trade, existed: false };
+  } catch (e: any) {
+    // Duplicate key (contract already recorded) → report as existed.
+    if (e?.errno === 1062 || /Duplicate/i.test(e?.message || "")) {
+      const existing = await getTradeByContractId(userId, String(contract.contractId));
+      return { trade: existing || null, existed: true };
+    }
+    throw e;
+  }
+}
+
+export async function getTradeByContractId(userId: number, contractId: string): Promise<Trade | undefined> {
+  const db = await getDb();
+  if (!db) return undefined;
+  try {
+    return (await db.select().from(trades).where(and(eq(trades.userId, userId), eq(trades.contractId, contractId))).limit(1))[0];
+  } catch {
+    const pool = getRawPool();
+    if (!pool) return undefined;
+    try {
+      const [rows] = await pool.execute(
+        "SELECT id, userId, botRunId, strategyId, entryTime, exitTime, entryPrice, exitPrice, stake, profitLoss, contractType, result, contractId, source, discoveredAt, reconciled, updatedAt FROM trades WHERE userId=? AND contractId=? LIMIT 1",
+        [userId, contractId],
+      );
+      return (rows as any[])[0] || undefined;
+    } catch {
+      return undefined;
+    }
+  }
 }
 
 export async function saveStrategy(strategy: InsertStrategy): Promise<Strategy> {
@@ -846,6 +954,36 @@ export async function getPendingTrades(): Promise<Trade[]> {
       // and keeps the loop honest.
       throw new Error(`getPendingTrades failed (drizzle + raw): ${rawErr?.message || String(rawErr)}`);
     }
+  }
+}
+
+// Pending trades for a single user (the global getPendingTrades is what the
+// SettlementTracker uses; the reconciler needs the per-user subset).
+export async function getPendingTradesForUser(userId: number): Promise<Trade[]> {
+  const pool = getRawPool();
+  if (pool) {
+    try {
+      const [rows] = await pool.execute(
+        "SELECT id, userId, botRunId, strategyId, entryTime, exitTime, entryPrice, exitPrice, stake, profitLoss, contractType, result, contractId, source, discoveredAt, reconciled, updatedAt FROM trades WHERE result = 'pending' AND contractId IS NOT NULL AND userId = ? ORDER BY entryTime ASC LIMIT 200",
+        [userId],
+      );
+      return rows as Trade[];
+    } catch (e: any) {
+      console.error("[getPendingTradesForUser] raw failed", e?.message || e);
+    }
+  }
+  const db = await getDb();
+  if (!db) throw new Error("DB unavailable: no connection pool");
+  try {
+    return await db
+      .select()
+      .from(trades)
+      .where(and(eq(trades.result, "pending"), sql`${trades.contractId} IS NOT NULL`, eq(trades.userId, userId)))
+      .orderBy(asc(trades.entryTime))
+      .limit(200);
+  } catch (e: any) {
+    console.error("[getPendingTradesForUser] drizzle failed", e?.message || e);
+    return [];
   }
 }
 
@@ -1788,6 +1926,191 @@ export async function ensureTradesStuckResult(): Promise<void> {
       return;
     }
     console.error("[ensureTradesStuckResult] migration note (non-fatal):", e?.message || e);
+  }
+}
+
+// Ledger-correctness columns: where a trade came from, when reconciliation saw
+// it, and whether the reconciler (or the fill path) has validated it against the
+// Deriv portfolio. Added idempotently on boot (MySQL ignores duplicate column).
+export async function ensureTradesLedgerColumns(): Promise<void> {
+  const pool = getRawPool();
+  if (!pool) return;
+  const cols = [
+    "ADD COLUMN source varchar(32) NULL",
+    "ADD COLUMN discoveredAt timestamp NULL",
+    "ADD COLUMN reconciled boolean NOT NULL DEFAULT false",
+  ];
+  for (const col of cols) {
+    try {
+      await pool.execute(`ALTER TABLE trades ${col}`);
+    } catch (e2: any) {
+      if (e2?.errno !== 1060 && !e2?.message?.includes("Duplicate column")) {
+        console.warn("[ensureTradesLedgerColumns] note", e2?.message || e2);
+      }
+    }
+  }
+  console.log("[ensureTradesLedgerColumns] source/discoveredAt/reconciled present");
+}
+
+// Unique (userId, contractId) at the DB level. The in-process mutex in saveTrade
+// only serializes within one server instance; the unique index makes concurrent
+// inserts (client fill + reconciler) safe across instances and restarts.
+export async function ensureTradesContractIndex(): Promise<void> {
+  const pool = getRawPool();
+  if (!pool) return;
+  try {
+    // Preflight: if user rows already contain duplicates we can't add the index
+    // without deduping first. Dedup (backup-guarded) then retry the index.
+    const [dupes]: any = await pool.execute(
+      "SELECT userId, contractId, COUNT(*) c FROM trades WHERE contractId IS NOT NULL AND contractId <> '' GROUP BY userId, contractId HAVING c > 1 ORDER BY c DESC LIMIT 500",
+    );
+    if (dupes.length > 0) {
+      const { archived, deleted, repointed } = await dedupeTradesForUniqueIndex();
+      console.log(`[ensureTradesContractIndex] ${dupes.length} duplicate (userId, contractId) groups — deduped (archived=${archived}, deleted=${deleted}, aiKnowledge repointed=${repointed})`);
+    }
+    await pool.execute(
+      "ALTER TABLE trades ADD UNIQUE INDEX uq_trades_user_contract (userId, contractId)",
+    );
+    console.log("[ensureTradesContractIndex] unique (userId, contractId) index present");
+  } catch (e: any) {
+    if (e?.errno === 1061 || /Duplicate key name/i.test(e?.message || "")) return;
+    console.error("[ensureTradesContractIndex] migration note (non-fatal):", e?.message || e);
+  }
+}
+
+// Backup-guarded dedup of duplicate (userId, contractId) rows. These rows are
+// literal double-recordings of ONE real Deriv contract (dual-path settlement
+// both wrote a row), so removing the surplus and keeping the earliest row only
+// corrects the ledger — it does not delete history. Every removed row is
+// snapshotted into `tradesDupArchive` for instant rollback, and journal entries
+// in aiKnowledge that pointed at a removed row are re-pointed to the survivor.
+export async function dedupeTradesForUniqueIndex(): Promise<{ archived: number; deleted: number; repointed: number }> {
+  const pool = getRawPool();
+  if (!pool) return { archived: 0, deleted: 0, repointed: 0 };
+  const conn = await pool.getConnection();
+  try {
+    await conn.execute(`CREATE TABLE IF NOT EXISTS tradesDupArchive (
+      id bigint AUTO_INCREMENT PRIMARY KEY,
+      originalTradeId int NOT NULL,
+      userId int NOT NULL,
+      contractId varchar(64) NOT NULL,
+      keptTradeId int NOT NULL,
+      snapshot json NOT NULL,
+      archivedAt timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP
+    )`);
+
+    const [dupes]: any = await conn.execute(
+      "SELECT userId, contractId, MIN(id) AS keepId, GROUP_CONCAT(id) AS allIds FROM trades WHERE contractId IS NOT NULL AND contractId <> '' GROUP BY userId, contractId HAVING COUNT(*) > 1 LIMIT 500",
+    );
+
+    let archived = 0;
+    let deleted = 0;
+    let repointed = 0;
+
+    for (const g of dupes) {
+      const ids = String(g.allIds).split(",").map((s: string) => Number(s));
+      const keepId = Number(g.keepId);
+      const removeIds = ids.filter((id: number) => id !== keepId);
+      if (removeIds.length === 0) continue;
+      const inList = removeIds.join(",");
+
+      await conn.beginTransaction();
+      try {
+        // Snapshot every removed row before it disappears.
+        const [rows]: any = await conn.execute(`SELECT * FROM trades WHERE id IN (${inList})`);
+        for (const row of rows) {
+          await conn.execute(
+            "INSERT INTO tradesDupArchive (originalTradeId, userId, contractId, keptTradeId, snapshot) VALUES (?, ?, ?, ?, ?)",
+            [row.id, row.userId, row.contractId, keepId, JSON.stringify(row)],
+          );
+          archived++;
+        }
+        // Re-point any journal/fill entries that referenced a removed row.
+        const sqlAI = await conn.execute(`UPDATE aiKnowledge SET relatedTradeId = ? WHERE relatedTradeId IN (${inList})`, [keepId]);
+        repointed += Number((sqlAI as any)[0]?.affectedRows || 0);
+        // Remove the surplus rows for this contract.
+        const del = await conn.execute(`DELETE FROM trades WHERE id IN (${inList})`);
+        deleted += Number((del as any)[0]?.affectedRows || 0);
+        await conn.commit();
+      } catch (e: any) {
+        await conn.rollback();
+        throw e;
+      }
+    }
+    return { archived, deleted, repointed };
+  } catch (e: any) {
+    console.error("[dedupeTradesForUniqueIndex] failed:", e?.message || e);
+    return { archived: 0, deleted: 0, repointed: 0 };
+  } finally {
+    conn.release();
+  }
+}
+
+export async function ensureReconcilerRunsTable(): Promise<void> {
+  const pool = getRawPool();
+  if (!pool) return;
+  try {
+    await pool.execute(`CREATE TABLE IF NOT EXISTS reconcilerRuns (
+      id int AUTO_INCREMENT NOT NULL,
+      runStart timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      runEnd timestamp NULL,
+      userId int NULL,
+      actions json NULL,
+      createdAt timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      CONSTRAINT reconcilerRuns_id PRIMARY KEY(id)
+    )`);
+    console.log("[ensureReconcilerRunsTable] created reconcilerRuns table");
+  } catch (e: any) {
+    console.error("[ensureReconcilerRunsTable] create failed", e?.message || e);
+  }
+}
+
+export async function logReconcilerRun(data: {
+  runStart: Date;
+  runEnd: Date;
+  userId?: number;
+  actions: Record<string, number>;
+}): Promise<void> {
+  const pool = getRawPool();
+  if (!pool) {
+    const db = await getDb();
+    if (!db) return;
+    try {
+      const { reconcilerRuns } = await import("../drizzle/schema");
+      await db.insert(reconcilerRuns).values({
+        runStart: data.runStart,
+        runEnd: data.runEnd,
+        userId: data.userId ?? null,
+        actions: data.actions,
+      } as any);
+      return;
+    } catch (e: any) { console.error("[logReconcilerRun] drizzle insert failed", e?.message || e); return; }
+  }
+  try {
+    await pool.execute(
+      "INSERT INTO reconcilerRuns (runStart, runEnd, userId, actions) VALUES (?, ?, ?, ?)",
+      [data.runStart, data.runEnd, data.userId ?? null, JSON.stringify(data.actions)],
+    );
+  } catch (e: any) {
+    console.error("[logReconcilerRun] failed", e?.message || e);
+  }
+}
+
+export async function getReconcilerRuns(limit: number = 20): Promise<any[]> {
+  const pool = getRawPool();
+  if (!pool) return [];
+  const safeLimit = Math.max(1, Math.min(200, Math.floor(limit || 20)));
+  try {
+    const [rows] = await pool.execute(
+      `SELECT id, runStart, runEnd, userId, actions FROM reconcilerRuns ORDER BY id DESC LIMIT ${safeLimit}`,
+    );
+    return (rows as any[]).map((r) => ({
+      ...r,
+      actions: typeof r.actions === "string" ? JSON.parse(r.actions) : r.actions,
+    }));
+  } catch (e: any) {
+    console.error("[getReconcilerRuns] failed", e?.message || e);
+    return [];
   }
 }
 

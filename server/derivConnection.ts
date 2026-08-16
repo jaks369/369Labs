@@ -35,6 +35,20 @@ interface AccountInfo {
   accountType: string;
 }
 
+// One entry of the `portfolio` request response — the ground truth for
+// "what actually exists on Deriv", used by the ledger reconciler.
+export interface PortfolioContract {
+  contractId: number;
+  contractType: string;
+  symbol: string;
+  stake: number;
+  entryPrice: number;
+  purchasedAt: number | null; // seconds
+  isSold: boolean;
+  profit: number;
+  soldAt: number | null; // seconds
+}
+
 interface ConnectionSnapshot {
   connected: boolean;
   authorized: boolean;
@@ -284,6 +298,29 @@ class DerivConnection {
     const res = await this.sendRaw({ proposal_open_contract: 1, contract_id: contractId });
     if (res?.error) throw new Error(res.error.message);
     return res?.proposal_open_contract || null;
+  }
+
+  /**
+   * Pull the real portfolio (open + recently sold contracts) for this user's
+   * account. This is the server-side ground truth the ledger is reconciled
+   * against; `getSnapshot()` only reflects reactively-streamed positions.
+   */
+  async getPortfolio(): Promise<PortfolioContract[]> {
+    await this.ensureConnected();
+    const res = await this.sendRaw({ portfolio: 1 });
+    if (res?.error) throw new Error(res.error.message);
+    const contracts: any[] = res?.portfolio?.contracts || [];
+    return contracts.map((c: any) => ({
+      contractId: Number(c.contract_id),
+      contractType: c.contract_type ?? "",
+      symbol: c.underlying ?? "",
+      stake: parseFloat(c.buy_price) || 0,
+      entryPrice: parseFloat(c.entry_tick) || 0,
+      purchasedAt: c.purchase_time != null ? Number(c.purchase_time) : null,
+      isSold: Number(c.is_sold) === 1,
+      profit: parseFloat(c.profit) || 0,
+      soldAt: c.selling_time != null ? Number(c.selling_time) : null,
+    }));
   }
 
   async closePosition(contractId: number): Promise<any> {
