@@ -1,8 +1,8 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { toast } from "@/components/Toast";
-import { Shield, Activity, Clock, HardDrive, Database, Cpu, Loader2, ScrollText, BarChart3, Users } from "lucide-react";
+import { Shield, Activity, Clock, HardDrive, Database, Cpu, Loader2, ScrollText, BarChart3, Users, RefreshCw, HeartPulse } from "lucide-react";
 
 export default function Admin() {
   const { user } = useAuth();
@@ -11,10 +11,20 @@ export default function Admin() {
   const listQuery = trpc.admin.listUsers.useQuery(undefined, { enabled: isAdmin });
   const auditLogsQuery = trpc.admin.auditLogs.useQuery({ limit: 100 }, { enabled: isAdmin });
   const healthQuery = trpc.admin.systemHealth.useQuery(undefined, { enabled: isAdmin });
+  const ledgerQuery = trpc.admin.ledgerHealth.useQuery(undefined, { enabled: isAdmin, refetchInterval: 30_000 });
+  const reconHistoryQuery = trpc.admin.reconRunHistory.useQuery({ limit: 20 }, { enabled: isAdmin });
+  const runReconcileMutation = trpc.admin.runReconciliation.useMutation();
   const promoteMutation = trpc.admin.promoteToAdmin.useMutation({ onSuccess: () => listQuery.refetch() });
   const demoteMutation = trpc.admin.demoteToUser.useMutation({ onSuccess: () => listQuery.refetch() });
   const deleteMutation = trpc.admin.deleteUser.useMutation({ onSuccess: () => listQuery.refetch() });
-  const [tab, setTab] = useState<"users" | "audit" | "health" | "perf" | "config" | "stats" | "features">("users");
+  const [tab, setTab] = useState<"users" | "audit" | "health" | "perf" | "ledger" | "stats">("users");
+  const [dryRunMode, setDryRunMode] = useState(true);
+  // Beat so the heartbeat "stale" pulse refreshes between refetchIntervals.
+  const [, setNowTick] = useState(0);
+  useEffect(() => {
+    const t = setInterval(() => setNowTick((n) => n + 1), 5_000);
+    return () => clearInterval(t);
+  }, []);
 
   if (!user || user.role !== "admin") {
     return <div className="flex items-center justify-center min-h-[60vh] text-[var(--text-muted)]">Access denied. Admin privileges required.</div>;
@@ -39,9 +49,9 @@ export default function Admin() {
       </div>
 
       <div className="flex gap-2 border-b border-[var(--border)] pb-3">
-          {(["users", "audit", "health", "perf", "stats"] as const).map(t => (
+          {(["users", "audit", "ledger", "health", "perf", "stats"] as const).map(t => (
           <button key={t} onClick={() => setTab(t)} className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${tab === t ? "bg-[var(--accent)] text-black" : "text-[var(--text-secondary)] hover:text-white"}`}>
-            {t === "users" ? "Users" : t === "audit" ? "Audit Logs" : t === "health" ? "System Health" : t === "perf" ? "Performance" : "Usage Stats"}
+            {t === "users" ? "Users" : t === "audit" ? "Audit Logs" : t === "ledger" ? "Ledger Health" : t === "health" ? "System Health" : t === "perf" ? "Performance" : "Usage Stats"}
           </button>
         ))}
       </div>
@@ -221,6 +231,124 @@ export default function Admin() {
           ) : (
             <p className="text-xs text-[var(--text-muted)]">System health data unavailable.</p>
           )}
+        </div>
+      )}
+
+      {tab === "ledger" && (
+        <div className="space-y-4">
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="flex items-center gap-2">
+              <Activity className="w-4 h-4 text-[var(--accent)]" />
+              <span className="text-xs font-bold text-[var(--text-muted)] uppercase tracking-wider">Ledger Health (Pillar #1)</span>
+            </div>
+            <div className="ml-auto flex items-center gap-2">
+              <label className="flex items-center gap-1.5 text-xs text-[var(--text-muted)]">
+                <input type="checkbox" checked={dryRunMode} onChange={(e) => setDryRunMode(e.target.checked)} className="accent-[var(--accent)]" />
+                Dry run (no writes)
+              </label>
+              <button
+                onClick={() => runReconcileMutation.mutate({ dryRun: dryRunMode })}
+                disabled={runReconcileMutation.isPending || !ledgerQuery.data}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[var(--accent)] text-black text-xs font-bold hover:brightness-110 transition-all disabled:opacity-50"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${runReconcileMutation.isPending ? "animate-spin" : ""}`} />
+                {runReconcileMutation.isPending ? "Running…" : "Run reconciliation now"}
+              </button>
+            </div>
+          </div>
+
+          {ledgerQuery.isLoading ? (
+            <div className="flex justify-center py-8"><Loader2 className="w-6 h-6 animate-spin text-[var(--accent)]" /></div>
+          ) : ledgerQuery.isError ? (
+            <div className="text-center text-[var(--red)] text-sm py-8">Failed to load ledger health</div>
+          ) : ledgerQuery.data ? (() => {
+            const hb = ledgerQuery.data.heartbeat ?? null;
+            const hbAgeSec = hb ? Math.floor(Date.now() / 1000 - hb.lastTickAt) : Number.POSITIVE_INFINITY;
+            const hbStale = !hb || hbAgeSec > 30;
+            const hbAgeLabel = hb ? `${hbAgeSec > 3600 ? Math.floor(hbAgeSec / 3600) + "h" : hbAgeSec + "s"}` : "—";
+            return (
+              <>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
+                    <p className="text-micro">Pending</p>
+                    <p className="text-3xl font-bold text-white mt-1">{ledgerQuery.data.pendingCount}</p>
+                    <p className="text-[11px] text-[var(--text-muted)] mt-1">awaiting settlement</p>
+                  </div>
+                  <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
+                    <p className="text-micro">Stuck</p>
+                    <p className={`text-3xl font-bold mt-1 ${ledgerQuery.data.stuckCount > 0 ? "text-[var(--red)]" : "text-white"}`}>{ledgerQuery.data.stuckCount}</p>
+                    <p className="text-[11px] text-[var(--text-muted)] mt-1">need attention</p>
+                  </div>
+                  <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
+                    <p className="text-micro">Settled Today</p>
+                    <p className="text-3xl font-bold text-[var(--green)] mt-1">{ledgerQuery.data.settledToday}</p>
+                    <p className="text-[11px] text-[var(--text-muted)] mt-1">win/loss recorded</p>
+                  </div>
+                  <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
+                    <p className="text-micro">Settlement Loop</p>
+                    <p className={`text-xl font-bold mt-1 flex items-center gap-2 ${hbStale ? "text-[var(--red)]" : "text-[var(--green)]"}`}>
+                      <span className={`w-2 h-2 rounded-full ${hbStale ? "bg-[var(--red)]" : "bg-[var(--green)] animate-pulse"}`} />
+                      {hbStale ? "Stale" : "Alive"}
+                    </p>
+                    <p className="text-[11px] text-[var(--text-muted)] mt-1">last tick {hbAgeLabel} ago</p>
+                  </div>
+                </div>
+
+                <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
+                  <div className="flex items-center gap-2 mb-3"><HeartPulse className="w-4 h-4 text-[var(--accent)]" /><h3 className="text-sm font-bold text-white">Settlement Heartbeat</h3></div>
+                  {hb ? (
+                    <div className="space-y-2 text-xs">
+                      <div className="flex items-center gap-2">
+                        <span className={`w-2 h-2 rounded-full ${hb.derivOk ? "bg-[var(--green)]" : "bg-[var(--red)]"}`} />
+                        <span className="text-white">Deriv {hb.derivOk ? "connected" : "unavailable"}</span>
+                      </div>
+                      <div className="flex justify-between"><span className="text-[var(--text-muted)]">Last tick</span><span className="text-white">{new Date(hb.lastTickAt * 1000).toLocaleTimeString()}</span></div>
+                      <div className="flex justify-between"><span className="text-[var(--text-muted)]">Pending / Settled / Errors</span><span className="text-white">{hb.pendingCount} / {hb.settledCount} / {hb.errorCount}</span></div>
+                      {hb.lastError && <div className="rounded border border-[var(--red)]/30 bg-[var(--red)]/10 px-2 py-1.5 text-[var(--red)] font-mono truncate">{hb.lastError}</div>}
+                    </div>
+                  ) : (
+                    <p className="text-xs text-[var(--text-muted)]">No heartbeat yet — the tracker hasn't ticked on this instance.</p>
+                  )}
+                </div>
+
+                <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
+                  <div className="flex items-center gap-2 mb-3"><RefreshCw className="w-4 h-4 text-[var(--accent)]" /><h3 className="text-sm font-bold text-white">Reconciler — last {reconHistoryQuery.data?.runs.length || 0} runs</h3></div>
+                  {runReconcileMutation.data && (
+                    <div className="mb-3 rounded-lg border border-[var(--accent)]/30 bg-[var(--accent)]/10 px-3 py-2 text-xs text-[var(--accent)] font-mono">
+                      Last run: {JSON.stringify(runReconcileMutation.data)}
+                    </div>
+                  )}
+                  {reconHistoryQuery.data?.runs.length ? (
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-xs">
+                        <thead>
+                          <tr className="text-[var(--text-muted)] border-b border-[var(--border)]">
+                            <th className="pb-2 text-left font-bold">Start</th><th className="pb-2 text-left font-bold">User</th><th className="pb-2 text-left font-bold">Reconciled</th><th className="pb-2 text-left font-bold">Settled</th><th className="pb-2 text-left font-bold">Stuck</th><th className="pb-2 text-left font-bold">Matched</th><th className="pb-2 text-left font-bold">NoToken</th><th className="pb-2 text-left font-bold">Errors</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-[var(--border)]">
+                          {(reconHistoryQuery.data?.runs || []).map((r: any) => (
+                            <tr key={r.id} className="hover:bg-white/5">
+                              <td className="py-2 text-[var(--text-muted)] whitespace-nowrap">{new Date(r.runStart).toLocaleTimeString()}</td>
+                              <td className="py-2">{r.userId ?? "all"}</td>
+                              <td className="py-2">{r.actions?.reconstructed ?? 0}</td>
+                              <td className="py-2">{r.actions?.settled ?? 0}</td>
+                              <td className="py-2">{r.actions?.stuck ?? 0}</td>
+                              <td className="py-2">{r.actions?.pendingMatched ?? 0}</td>
+                              <td className="py-2">{r.actions?.skippedNoToken ?? 0}</td>
+                              <td className="py-2">{r.actions?.errors ?? 0}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  ) : (
+                    <p className="text-xs text-[var(--text-muted)]">No reconciler runs recorded yet.</p>
+                  )}
+                </div>
+              </>
+            );
+          })() : null}
         </div>
       )}
     </div>

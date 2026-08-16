@@ -825,7 +825,15 @@ export default function Dashboard() {
                           <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${trade.result === "win" ? "bg-[var(--green)]" : trade.result === "loss" ? "bg-[var(--red)]" : "bg-[var(--accent)]"}`} />
                           <div className="min-w-0">
                             <p className="text-[11px] font-bold text-white truncate">{getSymbolDisplayName(trade.symbol)}</p>
-                            <p className="text-[9px] text-[var(--text-muted)]">{trade.contractType} · {trade.entryTime ? new Date(trade.entryTime).toLocaleTimeString() : "—"}</p>
+                            <p className="text-[9px] text-[var(--text-muted)] flex items-center gap-1.5 flex-wrap min-w-0">
+                              {trade.contractType} · {trade.entryTime ? new Date(trade.entryTime).toLocaleTimeString() : "—"}
+                              {trade.source && trade.source !== "manual" && trade.source !== "manual_fill" && (
+                                <span className="px-1 py-px rounded bg-white/5 border border-[rgba(255,255,255,0.10)] text-[8px] font-bold uppercase tracking-wider text-[var(--text-secondary)]">{trade.source}</span>
+                              )}
+                              {trade.reconciled ? (
+                                <span className="inline-flex items-center gap-0.5 text-[8px] font-bold uppercase tracking-wider text-[var(--green)] animate-pulse">✓ reconciled</span>
+                              ) : null}
+                            </p>
                           </div>
                         </div>
                         <div className="text-right shrink-0">

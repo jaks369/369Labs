@@ -1087,7 +1087,7 @@ export async function getTradesByUserId(userId: number, limit: number = 50, offs
     if (!pool) return [];
     try {
       const [rows] = await pool.execute(
-        "SELECT id, userId, botRunId, strategyId, entryTime, exitTime, entryPrice, exitPrice, stake, profitLoss, contractType, result, contractId, updatedAt FROM trades WHERE userId=? ORDER BY updatedAt DESC LIMIT ? OFFSET ?",
+        "SELECT id, userId, botRunId, strategyId, entryTime, exitTime, entryPrice, exitPrice, stake, profitLoss, contractType, result, contractId, source, discoveredAt, reconciled, updatedAt FROM trades WHERE userId=? ORDER BY updatedAt DESC LIMIT ? OFFSET ?",
         [userId, limit, offset],
       );
       return rows as Trade[];
