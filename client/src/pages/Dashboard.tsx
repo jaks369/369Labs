@@ -473,6 +473,34 @@ export default function Dashboard() {
     };
   }, [tokenError]);
 
+  // Execution-assist: apply an intent pushed by Concierge / Digit Trader so the
+  // terminal reflects the guided setup even when /dashboard is already mounted.
+  useEffect(() => {
+    const apply = (detail?: any) => {
+      let intent: any = detail || null;
+      if (!intent) {
+        try {
+          const raw = localStorage.getItem("369labs.terminal.intentLabel");
+          if (raw) { intent = { label: JSON.parse(raw) }; localStorage.removeItem("369labs.terminal.intentLabel"); }
+        } catch { /* ignore */ }
+      }
+      try {
+        const symbol = localStorage.getItem("369labs.terminal.symbol");
+        const contract = localStorage.getItem("369labs.terminal.contract");
+        const stake = localStorage.getItem("369labs.terminal.stake");
+        if (symbol) setSelectedSymbol(JSON.parse(symbol));
+        if (contract) setContract(JSON.parse(contract));
+        if (stake) setStake(Number(JSON.parse(stake)));
+        if (intent?.label) addTradeLog("ok", `Terminal prefilled from ${intent.label}`);
+      } catch { /* ignore corrupt prefill */ }
+    };
+    apply(undefined);
+    const handler = (e: Event) => apply((e as CustomEvent).detail);
+    window.addEventListener("369labs:trade-intent", handler);
+    return () => window.removeEventListener("369labs:trade-intent", handler);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const [symbols, setSymbols] = useState<DerivSymbol[]>([]);
   const [widgets, setWidgets] = useState<string[]>(["trades", "signals", "chart", "history", "alerts"]);
   const [showWidgetConfig, setShowWidgetConfig] = useState(false);

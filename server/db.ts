@@ -71,6 +71,9 @@ import {
   guidingSignals,
   GuidingSignal,
   InsertGuidingSignal,
+  digitReads,
+  DigitRead,
+  InsertDigitRead,
   strategyStats,
   CopyRelation,
   InsertCopyRelation,
@@ -3007,6 +3010,124 @@ export async function guidingSignalAccuracy(userId: number, limit = 250): Promis
     };
   } catch {
     return { total: 0, wins: 0, losses: 0, winRatePct: 0, byStrength: {} };
+  }
+}
+
+// ---- digit trader reads ----------------------------------------------------
+
+export async function ensureDigitReadsTable(): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+  try {
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS digitReads (
+        id int NOT NULL AUTO_INCREMENT,
+        userId int NOT NULL,
+        symbol varchar(32) NOT NULL,
+        readType varchar(8) NOT NULL,
+        barrier int,
+        label varchar(24) NOT NULL,
+        confidence int NOT NULL,
+        strength varchar(8) NOT NULL,
+        sample int NOT NULL,
+        freq decimal(6,2) NOT NULL,
+        baseline decimal(6,2) NOT NULL,
+        deltaPp decimal(6,2) NOT NULL,
+        reasons json NOT NULL,
+        decisionEpoch bigint NOT NULL,
+        status varchar(12) NOT NULL DEFAULT 'open',
+        outcomeEpoch bigint,
+        generatedAt bigint NOT NULL,
+        createdAt timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (id),
+        KEY digitReads_userId_status (userId, status),
+        KEY digitReads_userId_symbol (userId, symbol)
+      )
+    `);
+  } catch (e: any) {
+    console.error("[ensureDigitReadsTable] failed", e?.message || e);
+  }
+}
+
+export async function saveDigitRead(row: InsertDigitRead): Promise<DigitRead | null> {
+  const db = await getDb();
+  if (!db) return null;
+  try {
+    const result = await db.insert(digitReads).values(row);
+    const id = (result as any)[0]?.insertId || (result as any).insertId;
+    if (!id) return null;
+    return (await db.select().from(digitReads).where(eq(digitReads.id, Number(id))).limit(1))[0] ?? null;
+  } catch (e: any) {
+    console.error("[saveDigitRead] failed", e?.message || e);
+    return null;
+  }
+}
+
+/** Open reads within the dedup window, optionally filtered by symbol. */
+export async function listOpenDigitReads(userId: number, symbol?: string, sinceEpoch = 0): Promise<DigitRead[]> {
+  const db = await getDb();
+  if (!db) return [];
+  try {
+    const conds = [eq(digitReads.userId, userId), eq(digitReads.status, "open")];
+    if (symbol) conds.push(eq(digitReads.symbol, symbol));
+    if (sinceEpoch > 0) conds.push(gt(digitReads.generatedAt, sinceEpoch));
+    return await db.select().from(digitReads).where(and(...conds))
+      .orderBy(asc(digitReads.decisionEpoch)).limit(200);
+  } catch {
+    return [];
+  }
+}
+
+export async function listDigitReads(userId: number, limit: number = 100): Promise<DigitRead[]> {
+  const db = await getDb();
+  if (!db) return [];
+  try {
+    return await db.select().from(digitReads).where(eq(digitReads.userId, userId))
+      .orderBy(desc(digitReads.generatedAt)).limit(limit);
+  } catch {
+    return [];
+  }
+}
+
+export async function setDigitReadOutcome(id: number, status: "win" | "loss" | "expired", outcomeEpoch: number): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+  try {
+    await db.update(digitReads).set({ status, outcomeEpoch }).where(eq(digitReads.id, id));
+  } catch (e: any) {
+    console.error("[setDigitReadOutcome] failed", e?.message || e);
+  }
+}
+
+export async function digitReadAccuracy(userId: number, limit = 250): Promise<{ total: number; wins: number; losses: number; expired: number; winRatePct: number; byStrength: Record<string, { total: number; wins: number; winRatePct: number }> }> {
+  const db = await getDb();
+  if (!db) return { total: 0, wins: 0, losses: 0, expired: 0, winRatePct: 0, byStrength: {} };
+  try {
+    const pooled = await listDigitReads(userId, limit);
+    const settled = pooled.filter((s) => s.status === "win" || s.status === "loss");
+    const wins = settled.filter((s) => s.status === "win").length;
+    const losses = settled.length - wins;
+    const expired = pooled.filter((s) => s.status === "expired").length;
+    const byStrength: Record<string, { total: number; wins: number; winRatePct: number }> = {};
+    for (const s of settled) {
+      const key = s.strength;
+      byStrength[key] = byStrength[key] || { total: 0, wins: 0, winRatePct: 0 };
+      byStrength[key].total++;
+      if (s.status === "win") byStrength[key].wins++;
+    }
+    for (const k of Object.keys(byStrength)) {
+      byStrength[k].winRatePct = byStrength[k].total > 0 ? Math.round((byStrength[k].wins / byStrength[k].total) * 100) : 0;
+    }
+    return {
+      total: settled.length,
+      wins,
+      losses,
+      expired,
+      winRatePct: settled.length > 0 ? Math.round((wins / settled.length) * 100) : 0,
+      byStrength,
+    };
+  } catch {
+    return { total: 0, wins: 0, losses: 0, expired: 0, winRatePct: 0, byStrength: {} };
   }
 }
 

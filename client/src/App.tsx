@@ -60,6 +60,7 @@ const LazyCoding = lazy(() => import("./pages/Coding"));
 const LazyConcierge = lazy(() => import("./pages/Concierge"));
 const LazyCopyTrading = lazy(() => import("./pages/CopyTrading"));
 const LazyStrategyGallery = lazy(() => import("./pages/StrategyGallery"));
+const LazyDigitTrader = lazy(() => import("./pages/DigitTrader"));
 
 const LazyLoad = ({ children }: { children: React.ReactNode }) => (
   <Suspense fallback={<div className="flex items-center justify-center min-h-[60vh]"><div className="h-8 w-8 border-2 border-[var(--accent)] border-t-transparent rounded-full animate-spin" /></div>}>{children}</Suspense>
@@ -140,6 +141,7 @@ function Router() {
       <Route path={"/concierge"}><AppLayout><LazyLoad><LazyConcierge /></LazyLoad></AppLayout></Route>
       <Route path={"/copy-trading"}><AppLayout><LazyLoad><LazyCopyTrading /></LazyLoad></AppLayout></Route>
       <Route path={"/strategy-gallery"}><AppLayout><LazyLoad><LazyStrategyGallery /></LazyLoad></AppLayout></Route>
+      <Route path={"/digit-trader"}><AppLayout><LazyLoad><LazyDigitTrader /></LazyLoad></AppLayout></Route>
       <Route path={"/plugins"}><AppLayout><Plugins /></AppLayout></Route>
       <Route path={"/webhooks"}><AppLayout><WebhooksPage /></AppLayout></Route>
       <Route path={"/api-docs"}><AppLayout><ApiDocs /></AppLayout></Route>

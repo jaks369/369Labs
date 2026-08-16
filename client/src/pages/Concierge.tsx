@@ -21,6 +21,7 @@ import {
   BarChart3,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { pushTradeIntent } from "@/lib/tradeIntent";
 
 function badge(level: string) {
   const map: Record<string, string> = {
@@ -121,13 +122,32 @@ export default function Concierge() {
             </div>
             <p className="text-sm text-[var(--text-secondary)] mt-3">{brief.summary}</p>
             {brief.nextMove && (
-              <div className="mt-4 grid grid-cols-2 md:grid-cols-5 gap-3">
-                <Metric label="Symbol" value={brief.nextMove.symbolLabel} />
-                <Metric label="Direction" value={brief.nextMove.signal.direction === "up" ? "Rise" : "Fall"} accent={brief.nextMove.signal.direction === "up" ? "text-[var(--green)]" : "text-[var(--red)]"} />
-                <Metric label="Confidence" value={`${brief.nextMove.signal.confidence}%`} />
-                <Metric label="Suggested stake" value={`$${brief.nextMove.suggestedStake}`} accent="text-[var(--accent-soft)]" />
-                <Metric label="Max stake" value={`$${brief.nextMove.maxStake}`} />
-              </div>
+              <>
+                <div className="mt-4 grid grid-cols-2 md:grid-cols-5 gap-3">
+                  <Metric label="Symbol" value={brief.nextMove.symbolLabel} />
+                  <Metric label="Direction" value={brief.nextMove.signal.direction === "up" ? "Rise" : "Fall"} accent={brief.nextMove.signal.direction === "up" ? "text-[var(--green)]" : "text-[var(--red)]"} />
+                  <Metric label="Confidence" value={`${brief.nextMove.signal.confidence}%`} />
+                  <Metric label="Suggested stake" value={`$${brief.nextMove.suggestedStake}`} accent="text-[var(--accent-soft)]" />
+                  <Metric label="Max stake" value={`$${brief.nextMove.maxStake}`} />
+                </div>
+                <button
+                  onClick={() => {
+                    const sig = brief.nextMove!.signal;
+                    pushTradeIntent({
+                      symbol: sig.symbol,
+                      contract: { category: "rise_fall", direction: sig.direction === "up" ? "rise" : "fall" },
+                      stake: brief.nextMove!.suggestedStake,
+                      duration: 5,
+                      durationUnit: "t",
+                      label: `Concierge ${sig.strength} ${sig.confidence}%`,
+                    });
+                    navigate("/dashboard");
+                  }}
+                  className="mt-4 inline-flex items-center gap-2 px-3 py-1.5 rounded-lg border border-[var(--accent)]/40 bg-[var(--accent)]/10 text-[var(--accent-soft)] text-xs font-bold hover:bg-[var(--accent)]/20 transition-colors"
+                >
+                  Trade this → <span className="text-[10px] font-medium opacity-70">prefills the terminal · you confirm</span>
+                </button>
+              </>
             )}
             <p className="text-[11px] text-[var(--text-disabled)] mt-3">{brief.disclaimer}</p>
           </div>

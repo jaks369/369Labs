@@ -475,6 +475,33 @@ export const guidingSignals = mysqlTable("guidingSignals", {
 export type GuidingSignal = typeof guidingSignals.$inferSelect;
 export type InsertGuidingSignal = typeof guidingSignals.$inferInsert;
 
+// Digit Trader reads: honest OVER/UNDER/EVEN/ODD observations of the digit
+// stream, persisted per user with a next-tick outcome so the ledger trend
+// truthfully stays near the ~50% fair baseline (a read is a tilt, not an edge).
+export const digitReads = mysqlTable("digitReads", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull().references(() => users.id, { onDelete: "cascade" }),
+  symbol: varchar("symbol", { length: 32 }).notNull(),
+  readType: varchar("readType", { length: 8 }).notNull(), // OVER | UNDER | EVEN | ODD
+  barrier: int("barrier"), // null for EVEN/ODD
+  label: varchar("label", { length: 24 }).notNull(), // "Over 4", "Under 5", "Even", "Odd"
+  confidence: int("confidence").notNull(), // capped ~58 on purpose
+  strength: varchar("strength", { length: 8 }).notNull(), // STRONG | MEDIUM | WEAK
+  sample: int("sample").notNull(), // digits observed
+  freq: decimal("freq", { precision: 6, scale: 2 }).notNull(), // observed frequency %
+  baseline: decimal("baseline", { precision: 6, scale: 2 }).notNull(), // fair %
+  deltaPp: decimal("deltaPp", { precision: 6, scale: 2 }).notNull(),
+  reasons: json("reasons").notNull(), // string[]
+  decisionEpoch: bigint("decisionEpoch", { mode: "number" }).notNull(), // last window tick
+  status: varchar("status", { length: 12 }).notNull().default("open"), // open | win | loss | expired
+  outcomeEpoch: bigint("outcomeEpoch", { mode: "number" }),
+  generatedAt: bigint("generatedAt", { mode: "number" }).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type DigitRead = typeof digitReads.$inferSelect;
+export type InsertDigitRead = typeof digitReads.$inferInsert;
+
 // Per-strategy performance stats used to rank the published strategy gallery
 // honestly from the audited trade ledger (not invented star ratings).
 export const strategyStats = mysqlTable("strategyStats", {

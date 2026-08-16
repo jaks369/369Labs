@@ -48,6 +48,7 @@ import {
   Keyboard,
   Radar,
   Layers,
+  Hash,
 } from "lucide-react";
 import { useEffect, useRef, useCallback, useState } from "react";
 import { useLocation } from "wouter";
@@ -72,6 +73,7 @@ const navGroups: NavGroup[] = [
       { icon: CandlestickChart, label: "Markets", path: "/markets" },
       { icon: Book, label: "Order Book", path: "/order-book" },
       { icon: Radar, label: "Concierge", path: "/concierge" },
+      { icon: Hash, label: "Digit Trader", path: "/digit-trader" },
       { icon: Star, label: "Watchlist", path: "/watchlist" },
       { icon: Wallet, label: "Portfolio", path: "/portfolio" },
       { icon: BarChart3, label: "Trade History", path: "/trades" },

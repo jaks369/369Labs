@@ -22,7 +22,6 @@ import {
   GuideStrength,
 } from "./indicatorSignal";
 import type { MarketHealth, RiskAdvisory } from "./ai/types";
-import { lastDigitOf, getDecimalPlaces } from "@shared/lastDigit";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -659,9 +658,5 @@ export async function updateSettings(userId: number, patch: Partial<ConciergeSet
 export async function getSettingsFor(userId: number): Promise<ConciergeSettings> {
   return getSettings(userId);
 }
-
-// Re-export workspace accessor for the routers
-export const lastDigitOfExport = lastDigitOf;
-export const getDecimalPlacesExport = getDecimalPlaces;
 
 export type MarketHealthRef = MarketHealth;

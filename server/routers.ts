@@ -3296,6 +3296,32 @@ aiMarket: router({
       return getConciergeLoopStatus();
     }),
   }),
+  digitTrader: router({
+    snapshot: protectedProcedure
+      .input(z.object({ symbol: z.string().min(1) }))
+      .query(async ({ input }) => {
+        const { getDigitSnapshot } = await import("./digitTrader");
+        return getDigitSnapshot(input.symbol);
+      }),
+    scan: protectedProcedure
+      .input(z.object({ symbol: z.string().min(1) }))
+      .mutation(async ({ ctx, input }) => {
+        const { scanAndPersistForUser } = await import("./digitTrader");
+        return scanAndPersistForUser(ctx.user.id, input.symbol);
+      }),
+    history: protectedProcedure
+      .input(z.object({ limit: z.number().default(50) }))
+      .query(async ({ ctx, input }) => {
+        return db.listDigitReads(ctx.user.id, input.limit);
+      }),
+    accuracy: protectedProcedure.query(async ({ ctx }) => {
+      return db.digitReadAccuracy(ctx.user.id);
+    }),
+    settle: protectedProcedure.mutation(async ({ ctx }) => {
+      const { settleOpenDigitReads } = await import("./digitTrader");
+      return settleOpenDigitReads(ctx.user.id);
+    }),
+  }),
   copy: router({
     list: protectedProcedure.query(async ({ ctx }) => {
       const relations = await db.listCopyRelationsForFollower(ctx.user.id);
