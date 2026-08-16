@@ -29,7 +29,7 @@ function makeTrade(overrides: any = {}) {
     entryPrice: "100.00",
     profitLoss: null,
     result: "pending",
-    entryTime: new Date("2026-07-25T10:00:00Z"),
+    entryTime: new Date(Date.now() - 60_000),
     exitTime: null,
     strategyId: null,
     botRunId: null,
@@ -55,11 +55,15 @@ function freshTracker(): SettlementTracker {
   return new SettlementTracker();
 }
 
+function makeConn() {
+  return { getContractStatus: mockGetContractStatus, isAuthorized: () => true };
+}
+
 describe("SettlementTracker — start / stop", () => {
   let tracker: SettlementTracker;
 
   beforeEach(() => {
-    vi.clearAllMocks();
+    vi.resetAllMocks();
     mockGetPendingTrades.mockResolvedValue([]);
     tracker = freshTracker();
   });
@@ -93,7 +97,7 @@ describe("SettlementTracker — tick", () => {
   let tracker: SettlementTracker;
 
   beforeEach(() => {
-    vi.clearAllMocks();
+    vi.resetAllMocks();
     tracker = freshTracker();
   });
 
@@ -110,7 +114,7 @@ describe("SettlementTracker — tick", () => {
     const trade2 = makeTrade({ id: 2, contractId: "222" });
     const trade3 = makeTrade({ id: 3, contractId: "333" });
     mockGetPendingTrades.mockResolvedValue([trade1, trade2, trade3]);
-    mockEnsureConnected.mockResolvedValue({ getContractStatus: mockGetContractStatus });
+    mockEnsureConnected.mockResolvedValue(makeConn());
     mockGetContractStatus
       .mockResolvedValueOnce(makeContractResponse())
       .mockResolvedValueOnce(makeContractResponse({ profit: -5.00, status: "lost" }))
@@ -131,11 +135,15 @@ describe("SettlementTracker — tick", () => {
     expect(mockEnsureConnected).not.toHaveBeenCalled();
   });
 
-  it("skips trades at max retries", async () => {
+  it("reconciles trades even with high in-memory retry count (wall-clock stuck detection replaces MAX_RETRIES)", async () => {
     (tracker as any).retryCount.set(1, 100);
     mockGetPendingTrades.mockResolvedValue([makeTrade({ id: 1 })]);
+    mockEnsureConnected.mockResolvedValue(makeConn());
+    mockGetContractStatus.mockResolvedValue(makeContractResponse());
+    mockSettleTrade.mockResolvedValue(makeTrade());
+
     await (tracker as any).tick();
-    expect(mockEnsureConnected).not.toHaveBeenCalled();
+    expect(mockSettleTrade).toHaveBeenCalledTimes(1);
   });
 
   it("increments retry count on failure", async () => {
@@ -150,7 +158,7 @@ describe("SettlementTracker — tick", () => {
     mockGetPendingTrades.mockResolvedValue([makeTrade({ id: 1 })]);
     mockEnsureConnected
       .mockRejectedValueOnce(new Error("first fail"))
-      .mockResolvedValueOnce({ getContractStatus: mockGetContractStatus });
+      .mockResolvedValueOnce(makeConn());
     mockGetContractStatus.mockResolvedValue(makeContractResponse());
     mockSettleTrade.mockResolvedValue(makeTrade());
 
@@ -172,9 +180,9 @@ describe("SettlementTracker — reconcile", () => {
   let tracker: SettlementTracker;
 
   beforeEach(() => {
-    vi.clearAllMocks();
+    vi.resetAllMocks();
     tracker = freshTracker();
-    mockEnsureConnected.mockResolvedValue({ getContractStatus: mockGetContractStatus });
+    mockEnsureConnected.mockResolvedValue(makeConn());
   });
 
   it("returns early if no contractId", async () => {
@@ -288,7 +296,7 @@ describe("Duplicate Settlement Protection", () => {
 
   it("retry entry deleted on successful reconciliation", async () => {
     const tracker = freshTracker();
-    mockEnsureConnected.mockResolvedValue({ getContractStatus: mockGetContractStatus });
+    mockEnsureConnected.mockResolvedValue(makeConn());
     mockGetContractStatus.mockResolvedValue(makeContractResponse());
     mockSettleTrade.mockResolvedValue(makeTrade());
 
@@ -302,7 +310,7 @@ describe("Concurrent Trade Handling", () => {
   let tracker: SettlementTracker;
 
   beforeEach(() => {
-    vi.clearAllMocks();
+    vi.resetAllMocks();
     tracker = freshTracker();
   });
 
@@ -313,7 +321,7 @@ describe("Concurrent Trade Handling", () => {
       makeTrade({ id: 3, contractId: "103", userId: 2 }),
     ];
     mockGetPendingTrades.mockResolvedValue(trades);
-    mockEnsureConnected.mockResolvedValue({ getContractStatus: mockGetContractStatus });
+    mockEnsureConnected.mockResolvedValue(makeConn());
     mockGetContractStatus
       .mockResolvedValueOnce(makeContractResponse({ contract_id: 101 }))
       .mockResolvedValueOnce(makeContractResponse({ contract_id: 102, status: "lost", profit: -2.00 }))
@@ -334,7 +342,7 @@ describe("Concurrent Trade Handling", () => {
       makeTrade({ id: 2, contractId: "102" }),
     ]);
     mockEnsureConnected
-      .mockResolvedValueOnce({ getContractStatus: mockGetContractStatus })
+      .mockResolvedValueOnce(makeConn())
       .mockRejectedValueOnce(new Error("connection lost"));
     mockGetContractStatus.mockResolvedValue(makeContractResponse());
     mockSettleTrade.mockResolvedValue(makeTrade({ id: 1 }));
@@ -350,7 +358,7 @@ describe("Server Restart Recovery", () => {
   let tracker: SettlementTracker;
 
   beforeEach(() => {
-    vi.clearAllMocks();
+    vi.resetAllMocks();
     tracker = freshTracker();
   });
 
@@ -362,9 +370,9 @@ describe("Server Restart Recovery", () => {
   });
 
   it("processes old pending trades from DB", async () => {
-    const oldTrade = makeTrade({ id: 99, entryTime: new Date("2026-07-20T00:00:00Z") });
+    const oldTrade = makeTrade({ id: 99, entryTime: new Date(Date.now() - 5 * 60_000) });
     mockGetPendingTrades.mockResolvedValue([oldTrade]);
-    mockEnsureConnected.mockResolvedValue({ getContractStatus: mockGetContractStatus });
+    mockEnsureConnected.mockResolvedValue(makeConn());
     mockGetContractStatus.mockResolvedValue(makeContractResponse());
     mockSettleTrade.mockResolvedValue(makeTrade({ id: 99 }));
 
@@ -378,9 +386,9 @@ describe("Status Edge Cases", () => {
   let tracker: SettlementTracker;
 
   beforeEach(() => {
-    vi.clearAllMocks();
+    vi.resetAllMocks();
     tracker = freshTracker();
-    mockEnsureConnected.mockResolvedValue({ getContractStatus: mockGetContractStatus });
+    mockEnsureConnected.mockResolvedValue(makeConn());
   });
 
   it('handles "sold" status', async () => {
@@ -443,12 +451,12 @@ describe("Memory Leak Prevention", () => {
   let tracker: SettlementTracker;
 
   beforeEach(() => {
-    vi.clearAllMocks();
+    vi.resetAllMocks();
     tracker = freshTracker();
   });
 
   it("retryCount does not grow for settled trades", async () => {
-    mockEnsureConnected.mockResolvedValue({ getContractStatus: mockGetContractStatus });
+    mockEnsureConnected.mockResolvedValue(makeConn());
     mockGetContractStatus.mockResolvedValue(makeContractResponse());
     mockSettleTrade.mockResolvedValue(makeTrade());
 
