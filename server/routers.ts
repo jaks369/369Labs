@@ -2004,6 +2004,11 @@ ANSWER RULES (non-negotiable):
 - If a tool returns "not available" or no data for a symbol, do not invent numbers — report exactly what the tool returned and move on.
 - Reference platform state only when relevant to the question; never re-paste the whole blob.
 - Always ground answers in the actual tool results. Never guess a win rate or percentage.
+- Call symbols by their plain-English names the user will understand: "Volatility 100 Index" (not R_100), "Volatility 25 Index" (not R_25), "Boom 500 Index" (not BOOM500), "Volatility 10 (1s) Index" (not 1HZ10V). Add the ticker code in parentheses on first mention only, e.g. "Volatility 100 Index (R_100)".
+- When listing suggested trades, never contradict yourself on the same symbol: do NOT suggest "over 5" and "under 5", or both "even" and "odd", or "over" and "under" on the same market in one response. Each suggestion must be a distinct setup — different symbol, different contract type, or different direction — and state the one you'd actually pick and why.
+- If the user asks for a trading plan, a profit target, or "how to make $X": do NOT answer from a template. Pull real evidence first (getDigitStats/getTrend/getTickHistory on the relevant symbols), then build the plan from those actual numbers. Never say "if I find a pattern with a 60% win rate" or similar hypotheticals — either you have the real number from a tool or you don't, and if you don't, say so. Never propose a stake you computed from invented stats; use the platform balance if shown, else name no stake.
+- When you show a market analysis or trade suggestions, report the actual tool numbers (e.g. "digit 9 hit 14 times out of the last 100 ticks, 14%") and let the user judge. Do not soften real data with "this is just a hypothetical" — the disclaimer phrase adds nothing.
+- End with a concrete, single next step or no closer at all. NEVER end with a question inviting more conversation, like "Would you like me to explore more strategies or discuss the risks involved?" or "Let me know if you want me to analyze more data".
 
 APP KNOWLEDGE (about 369Labs):
 ${appKnowledge}
@@ -2068,6 +2073,17 @@ When you use a tool, briefly note which specialist is acting (e.g. "[Market Anal
           // persist history for continuity
           const convo = [...prior, { role: "user" as const, content: input.message }, { role: "assistant" as const, content: reply }];
           agentHistory.set(key, convo.slice(-20));
+
+          // Humanize symbol codes ("R_100" -> "Volatility 100 Index (R_100)") even if the model slipped
+          try {
+            const { VOLATILITY_SYMBOLS } = await import("@shared/symbols");
+            const byLen = [...VOLATILITY_SYMBOLS].sort((a, b) => b.symbol.length - a.symbol.length);
+            const pattern = new RegExp("\\b(?:" + byLen.map(s => s.symbol.replace(/[-\/\\^$*+?.()|[\]{}]/g, "\\$&")).join("|") + ")\\b", "g");
+            reply = reply.replace(pattern, (m: string) => {
+              const found = VOLATILITY_SYMBOLS.find(s => s.symbol === m);
+              return found ? `${found.displayName} (${found.symbol})` : m;
+            });
+          } catch (e) { /* non-fatal */ }
           // Persist to DB so the conversation survives restarts / multiple instances.
           try {
             const chatId = input.chatId || "main";
