@@ -87,6 +87,7 @@ export default function Dashboard() {
     }
     return false;
   };
+
   const [alertsOpen, setAlertsOpen] = useState(false);
   const [newAlertSym, setNewAlertSym] = useState("");
   const [newAlertDir, setNewAlertDir] = useState<"above" | "below">("above");
@@ -97,6 +98,56 @@ export default function Dashboard() {
   const botRunsQuery = trpc.bot.getRuns.useQuery();
   const tokenQuery = trpc.deriv.getToken.useQuery();
   const saveTradeMutation = trpc.trades.save.useMutation();
+  const recordFillMutation = trpc.trades.recordFill.useMutation();
+  const reconcileMutation = trpc.trades.reconcile.useMutation();
+  const [pendingRecords, setPendingRecords] = useState<{ contractId: string; symbol: string; contractType?: string; stake?: string; entryPrice?: string; entryTime: Date }[]>([]);
+  const [recordFillPending, setRecordFillPending] = useState(false);
+
+  // M3 ledger hardening: a Deriv fill MUST have a DB row. recordFill is called
+  // immediately after purchaseContract (bypasses the stake clamp — the contract
+  // already exists on Deriv). If it fails we keep the contract in `pendingRecords`
+  // (visible banner) and auto-run the server reconciler so the row still appears
+  // without the user doing anything. The server ledger is authoritative: once a
+  // row exists for a contract (retry, reconciler, or settle save), the banner clears.
+  const addPendingRecord = (r: any) => {
+    setPendingRecords((prev) => (prev.some((p) => String(p.contractId) === String(r.contractId)) ? prev : [...prev, r]));
+  };
+  const recordFillOrFlag = async (payload: any) => {
+    try {
+      await recordFillMutation.mutateAsync(payload);
+      tradesQuery.refetch();
+      return true;
+    } catch (e: any) {
+      const msg = `${e?.message || String(e || "")}`;
+      addPendingRecord(payload);
+      addTradeLog("err", `Contract #${payload.contractId} placed — record pending (${msg.slice(0, 120)}); reconciling…`);
+      reconcileMutation.mutate(undefined, {
+        onError: (e2: any) => addTradeLog("err", `Auto-reconcile failed: ${`${e2?.message || String(e2 || "")}`.slice(0, 120)}`),
+      });
+      return false;
+    }
+  };
+  const retryPendingRecords = async () => {
+    const batch = [...pendingRecords];
+    if (!batch.length) return;
+    setRecordFillPending(true);
+    try {
+      for (const r of batch) {
+        await recordFillMutation.mutateAsync(r);
+      }
+      tradesQuery.refetch();
+    } catch (e: any) {
+      addTradeLog("err", `Retry record failed: ${`${e?.message || String(e || "")}`.slice(0, 120)}`);
+    } finally {
+      setRecordFillPending(false);
+    }
+  };
+  useEffect(() => {
+    if (!pendingRecords.length) return;
+    const known = new Set((tradesQuery.data || []).map((t: any) => String(t.contractId)));
+    const next = pendingRecords.filter((r) => !known.has(String(r.contractId)));
+    if (next.length !== pendingRecords.length) setPendingRecords(next);
+  }, [tradesQuery.data, pendingRecords]);
   const memoryQuery = trpc.memory.get.useQuery();
   const alertsQuery = trpc.alerts.list.useQuery();
   const createAlertMutation = trpc.alerts.create.useMutation({
@@ -315,21 +366,20 @@ export default function Dashboard() {
       addTradeLog("ok", `Trade placed — contract #${purchase.contractId} on ${selectedSymbol}${entrySuffix}`);
       if (typeof purchase.balanceAfter === "number") setBalance(purchase.balanceAfter);
 
-      // Save an initial pending trade so it shows in history immediately.
+      // Ledger-first: the DB row is part of the success contract. recordFill
+      // bypasses the stake clamp (G2) — the contract already exists on Deriv,
+      // and a rejected save can only create a real-money trade with no ledger
+      // row. Failure keeps the contract in the unrecorded banner + auto-reconcile.
       const entryTime = new Date();
       const entryPrice = String(entrySpot ?? purchase.buyPrice ?? stake);
-      persistTrade(
-        {
-          result: "pending" as any,
-          stake: String(stake),
-          entryPrice,
-          entryTime,
-          symbol: selectedSymbol,
-          contractType: contractType,
-          contractId: String(purchase.contractId),
-        } as any,
-        `Save trade #${purchase.contractId}`,
-      );
+      recordFillOrFlag({
+        contractId: String(purchase.contractId),
+        symbol: selectedSymbol,
+        contractType,
+        stake: String(stake),
+        entryPrice,
+        entryTime,
+      });
 
       derivWS.registerContractMeta(purchase.contractId, {
         stake: String(stake),
@@ -630,6 +680,33 @@ export default function Dashboard() {
             </div>
 
             {/* Trade Type Pill Row — always visible above chart */}
+            {pendingRecords.length > 0 && (
+              <div className="flex items-center justify-between gap-3 px-3 py-1.5 border-b border-[rgba(255,255,255,0.12)] shrink-0" style={{ background: "rgba(255,120,40,0.14)" }}>
+                <div className="flex items-center gap-2 min-w-0">
+                  <Loader2 className={`w-3 h-3 shrink-0 ${recordFillPending ? "animate-spin" : ""} text-[#ffb56b]`} />
+                  <span className="text-[11px] font-semibold text-white truncate">
+                    {pendingRecords.length} contract{pendingRecords.length > 1 ? "s" : ""} placed but not yet recorded
+                  </span>
+                </div>
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <button
+                    onClick={retryPendingRecords}
+                    disabled={recordFillPending || reconcileMutation.isPending}
+                    className="px-2 py-1 rounded text-[10px] font-bold text-black hover:brightness-110 transition-all disabled:opacity-50"
+                    style={{ background: "linear-gradient(135deg, var(--aurora-teal), var(--aurora-purple))" }}
+                  >
+                    Retry record
+                  </button>
+                  <button
+                    onClick={() => reconcileMutation.mutate()}
+                    disabled={recordFillPending || reconcileMutation.isPending}
+                    className="px-2 py-1 rounded text-[10px] font-bold border border-[rgba(255,255,255,0.15)] text-white hover:bg-white/5 transition-all disabled:opacity-50"
+                  >
+                    Reconcile
+                  </button>
+                </div>
+              </div>
+            )}
             <div className="flex items-center gap-1 px-3 py-1.5 border-b border-[rgba(255,255,255,0.08)] shrink-0 overflow-x-auto scrollbar-none" style={{ background: 'transparent' }}>
               {([
                 { id: "rise_fall", label: "Rise/Fall" },
