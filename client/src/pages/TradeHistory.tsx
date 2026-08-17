@@ -9,20 +9,51 @@ export default function TradeHistory() {
   const { isAuthenticated } = useAuth();
   const [, navigate] = useLocation();
   const [page, setPage] = useState(1);
+  const [fSymbol, setFSymbol] = useState("");
+  const [fResult, setFResult] = useState("");
+  const [fFrom, setFFrom] = useState("");
+  const [fTo, setFTo] = useState("");
+  const [active, setActive] = useState<{ symbol?: string; result?: string; from?: string; to?: string }>({});
   const pageSize = 50;
-  const tradesQuery = trpc.trades.list.useQuery({ limit: pageSize, offset: (page - 1) * pageSize }, { placeholderData: (prev: any) => prev, staleTime: 15000 });
+  const tradesQuery = trpc.trades.list.useQuery(
+    {
+      limit: pageSize,
+      offset: (page - 1) * pageSize,
+      symbol: active.symbol || undefined,
+      result: active.result || undefined,
+      dateFrom: active.from ? new Date(active.from) : undefined,
+      dateTo: active.to ? new Date(active.to) : undefined,
+    },
+    { placeholderData: (prev: any) => prev, staleTime: 15000 }
+  );
+  const symbolsQuery = trpc.trades.symbols.useQuery();
   const exportQuery = trpc.trades.exportCsv.useQuery(void 0, { enabled: false, staleTime: Infinity });
 
   useEffect(() => {
     if (!isAuthenticated) navigate("/login");
   }, [isAuthenticated, navigate]);
 
+  const applyFilters = () => {
+    setActive({
+      symbol: fSymbol || undefined,
+      result: fResult || undefined,
+      from: fFrom || undefined,
+      to: fTo || undefined,
+    });
+    setPage(1);
+  };
+  const resetFilters = () => {
+    setFSymbol(""); setFResult(""); setFFrom(""); setFTo("");
+    setActive({});
+    setPage(1);
+  };
+
   const trades = tradesQuery.data || [];
   const totalTrades = trades.length;
   // Filter settled trades only for stats
-  const settledTrades = trades.filter(t => (t as any).result !== "pending");
-  const wins = settledTrades.filter(t => (t as any).result === "win").length;
-  const losses = settledTrades.filter(t => (t as any).result === "loss").length;
+  const settledTrades = trades.filter(t => t.result !== "pending");
+  const wins = settledTrades.filter(t => t.result === "win").length;
+  const losses = settledTrades.filter(t => t.result === "loss").length;
   const totalPnL = settledTrades.reduce((sum, t) => sum + parseFloat(t.profitLoss?.toString() || "0"), 0);
   const winRate = settledTrades.length > 0 ? (wins / settledTrades.length) * 100 : 0;
   const avgTrade = settledTrades.length > 0 ? totalPnL / settledTrades.length : 0;
@@ -64,6 +95,69 @@ export default function TradeHistory() {
             <Download className="w-4 h-4" />
             Export CSV
           </button>
+        </div>
+
+        {/* Filters */}
+        <div className="flex flex-wrap items-end gap-3 mb-6 bg-[var(--card)] rounded-xl border border-[var(--border)] p-4">
+          <div className="flex flex-col gap-1">
+            <span className="text-micro text-[var(--text-muted)]">Symbol</span>
+            <select
+              value={fSymbol}
+              onChange={(e) => setFSymbol(e.target.value)}
+              className="bg-black/20 border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-white min-w-[140px]"
+            >
+              <option value="">All</option>
+              {(symbolsQuery.data || []).map((s) => (
+                <option key={s} value={s}>{s}</option>
+              ))}
+            </select>
+          </div>
+          <div className="flex flex-col gap-1">
+            <span className="text-micro text-[var(--text-muted)]">Result</span>
+            <select
+              value={fResult}
+              onChange={(e) => setFResult(e.target.value)}
+              className="bg-black/20 border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-white min-w-[120px]"
+            >
+              <option value="">All</option>
+              <option value="win">Win</option>
+              <option value="loss">Loss</option>
+              <option value="pending">Pending</option>
+            </select>
+          </div>
+          <div className="flex flex-col gap-1">
+            <span className="text-micro text-[var(--text-muted)]">From</span>
+            <input
+              type="date"
+              value={fFrom}
+              onChange={(e) => setFFrom(e.target.value)}
+              className="bg-black/20 border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-white"
+            />
+          </div>
+          <div className="flex flex-col gap-1">
+            <span className="text-micro text-[var(--text-muted)]">To</span>
+            <input
+              type="date"
+              value={fTo}
+              onChange={(e) => setFTo(e.target.value)}
+              className="bg-black/20 border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-white"
+            />
+          </div>
+          <div className="flex gap-2">
+            <button onClick={applyFilters} className="btn btn-primary btn-sm">Apply</button>
+            <button onClick={resetFilters} className="btn btn-outline btn-sm">Reset</button>
+          </div>
+          {(active.symbol || active.result || active.from || active.to) && (
+            <span className="text-xs text-[var(--text-muted)] self-center">
+              Filtered:{" "}
+              {[
+                active.symbol ? `symbol=${active.symbol}` : "",
+                active.result ? `result=${active.result}` : "",
+                active.from ? `from=${active.from}` : "",
+                active.to ? `to=${active.to}` : "",
+              ].filter(Boolean).join(" · ") || "none"}
+            </span>
+          )}
         </div>
 
         {/* Stats Bar */}
@@ -161,7 +255,7 @@ export default function TradeHistory() {
                         </td>
                         <td>
                           <span className="tag text-[10px] font-semibold tracking-wider uppercase">
-                            {trade.contractType || (trade as any).type || "—"}
+                            {trade.contractType || "—"}
                           </span>
                         </td>
                         <td className="text-xs font-mono tabular-nums">
@@ -171,7 +265,7 @@ export default function TradeHistory() {
                           {trade.exitTime ? new Date(trade.exitTime).toLocaleString() : "—"}
                         </td>
                         <td className="text-right font-mono tabular-nums">
-                          {formatPrice(trade.entryPrice, (trade as any).symbol)}
+                          {formatPrice(trade.entryPrice, trade.symbol)}
                         </td>
                         <td className="text-right font-mono tabular-nums">
                           {formatMoney(trade.stake)}
@@ -183,11 +277,11 @@ export default function TradeHistory() {
                         </td>
                         <td className="text-center">
                           <span className={
-                            (trade as any).result === "win" ? "badge-pill badge-win" :
-                            (trade as any).result === "loss" ? "badge-pill badge-loss" :
+                            trade.result === "win" ? "badge-pill badge-win" :
+                            trade.result === "loss" ? "badge-pill badge-loss" :
                             "badge-pill badge-warning"
                           }>
-                            {(trade as any).result || "—"}
+                            {trade.result || "—"}
                           </span>
                         </td>
                       </tr>

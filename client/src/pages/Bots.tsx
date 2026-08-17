@@ -71,6 +71,7 @@ export default function Bots() {
 
   const strategiesQuery = trpc.strategies.list.useQuery();
   const derivTokenQuery = trpc.deriv.getToken.useQuery();
+  const memoryQuery = trpc.memory.get.useQuery();
   const startRunMutation = trpc.bot.startRun.useMutation();
   const stopRunMutation = trpc.bot.stopRun.useMutation();
   const saveTradeMutation = trpc.trades.save.useMutation();
@@ -137,6 +138,21 @@ export default function Bots() {
     return message;
   };
 
+  const buildSafety = (): { maxRiskPerTrade?: number; maxDailyLoss?: number; maxDailyTrades?: number; maxConsecutiveLosses?: number } => {
+    const mem = (memoryQuery.data?.memory ?? {}) as Record<string, unknown>;
+    const m = mem.riskCaps as Record<string, unknown> | undefined;
+    const cap = (v: unknown) => {
+      const n = Number(v);
+      return Number.isFinite(n) && n > 0 ? n : undefined;
+    };
+    return {
+      maxRiskPerTrade: cap(m?.maxRiskPerTrade),
+      maxDailyLoss: cap(m?.maxDailyLoss),
+      maxDailyTrades: cap(m?.maxDailyTrades),
+      maxConsecutiveLosses: cap(m?.maxConsecutiveLosses),
+    };
+  };
+
   const handleDeploy = async (strategy: { id: number; name: string; config: any }) => {
     const rule = extractRule(strategy.config);
     if (!rule) {
@@ -162,7 +178,7 @@ export default function Bots() {
         return;
       }
 
-      const botRun = await startRunMutation.mutateAsync({ strategyId: strategy.id });
+      const botRun = await startRunMutation.mutateAsync({ strategyId: strategy.id, safety: buildSafety() });
 
       // Trigger immediate refetch to pick up the new bot from server
       setRefreshKey((k) => k + 1);

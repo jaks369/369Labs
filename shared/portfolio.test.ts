@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { dailyTrend, trendSummary, timeInTradeStats, formatDurationSec } from "./portfolio";
+import { dailyTrend, trendSummary, timeInTradeStats, formatDurationSec, equityCurve, calendarHeatmap } from "./portfolio";
 
 function t(entry: string, pnl: number, result: "win" | "loss" | null, exit?: string) {
   return { entryTime: entry, exitTime: exit ?? null, profitLoss: pnl, result };
@@ -80,5 +80,68 @@ describe("timeInTradeStats", () => {
     expect(formatDurationSec(null)).toBe("—");
     expect(formatDurationSec(192)).toBe("3m 12s");
     expect(formatDurationSec(3840)).toBe("1h 4m");
+  });
+});
+
+describe("equityCurve", () => {
+  it("accumulates pnl chronologically", () => {
+    const eq = equityCurve([
+      t("2026-01-01T00:00:00Z", 10, "win"),
+      t("2026-01-01T00:05:00Z", -4, "loss"),
+      t("2026-01-02T00:00:00Z", 7, "win"),
+    ]);
+    expect(eq.points.map((p) => p.pnl)).toEqual([10, 6, 13]);
+    expect(eq.totalPnl).toBe(13);
+    expect(eq.peakPnl).toBe(13);
+    expect(eq.maxDrawdownPct).toBe(40);
+    expect(eq.currentDrawdownPct).toBe(0);
+  });
+
+  it("measures drawdown from peak", () => {
+    const eq = equityCurve([
+      t("2026-01-01T00:00:00Z", 100, "win"),
+      t("2026-01-01T00:05:00Z", -50, "loss"),
+    ]);
+    expect(eq.points.map((p) => p.pnl)).toEqual([100, 50]);
+    expect(eq.peakPnl).toBe(100);
+    expect(eq.maxDrawdownPct).toBe(50);
+    expect(eq.currentDrawdownPct).toBe(50);
+  });
+
+  it("sorts out-of-order rows and ignores invalid pnl", () => {
+    const eq = equityCurve([
+      t("2026-01-02T00:00:00Z", 5, "win"),
+      t("not-a-date", 999, "win"),
+      t("2026-01-01T00:00:00Z", -5, "loss"),
+    ]);
+    expect(eq.points.map((p) => p.pnl)).toEqual([-5, 0]);
+  });
+});
+
+describe("calendarHeatmap", () => {
+  it("covers the requested month span in order", () => {
+    const cal = calendarHeatmap([], 12);
+    expect(cal.length).toBeGreaterThan(330);
+    expect(cal.length).toBeLessThan(380);
+    const first = new Date(cal[0].date);
+    const last = new Date(cal[cal.length - 1].date);
+    expect(last.getTime()).toBeGreaterThan(first.getTime());
+  });
+
+  it("buckets a trade onto its day with intensity", () => {
+    const cal = calendarHeatmap([t(new Date().toISOString(), 25, "win")], 12);
+    const today = cal[cal.length - 1];
+    expect(today.trades).toBe(1);
+    expect(today.pnl).toBe(25);
+    expect(today.intensity).toBe(1);
+  });
+
+  it("normalizes intensity to the largest |pnl| day", () => {
+    const now = new Date();
+    const day2 = new Date(now.getTime() - 2 * 86400000);
+    const cal = calendarHeatmap([t(now.toISOString(), 10, "win"), t(day2.toISOString(), -100, "loss")], 12);
+    const today = cal[cal.length - 1];
+    expect(today.intensity).toBeCloseTo(0.1, 1);
+    expect(today.trades).toBe(1);
   });
 });

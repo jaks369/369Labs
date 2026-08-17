@@ -45,7 +45,7 @@ export const HOLD_BUCKETS: Array<{ label: string; maxSec: number | null }> = [
 
 const toMs = (v: Date | string | number | null | undefined): number | null => {
   if (v == null || v === "") return null;
-  const t = new Date(v as any).getTime();
+  const t = new Date(v as Date | string | number).getTime();
   return Number.isFinite(t) ? t : null;
 };
 
@@ -146,4 +146,90 @@ export function formatDurationSec(sec: number | null): string {
   if (sec < 60) return `${sec}s`;
   if (sec < 3600) return `${Math.floor(sec / 60)}m ${sec % 60}s`;
   return `${Math.floor(sec / 3600)}h ${Math.floor((sec % 3600) / 60)}m`;
+}
+
+export interface EquityPoint {
+  i: number; // trade index (0-based)
+  time: number; // entry epoch ms
+  pnl: number; // cumulative P&L
+}
+
+export interface EquityStats {
+  points: EquityPoint[];
+  totalPnl: number;
+  peakPnl: number;
+  maxDrawdownPct: number; // % from peak to trough
+  currentDrawdownPct: number; // % from peak to last point
+}
+
+/** Cumulative equity curve from settled trades (chronological). */
+export function equityCurve(trades: TradeLike[]): EquityStats {
+  const settled = trades
+    .map((t) => ({ time: toMs(t.entryTime), pnl: Number(t.profitLoss ?? 0) }))
+    .filter((t) => t.time != null && Number.isFinite(t.pnl))
+    .sort((a, b) => (a.time as number) - (b.time as number));
+  let running = 0;
+  let peak = 0;
+  let maxDD = 0;
+  const points: EquityPoint[] = settled.map((t, i) => {
+    running += t.pnl;
+    peak = Math.max(peak, running);
+    const dd = peak > 0 ? ((peak - running) / peak) * 100 : 0;
+    maxDD = Math.max(maxDD, dd);
+    return { i, time: t.time as number, pnl: Math.round(running * 100) / 100 };
+  });
+  const last = points.length ? points[points.length - 1].pnl : 0;
+  const peakPnl = peak;
+  const currentDrawdownPct = peak > 0 && last < peak ? ((peak - last) / peak) * 100 : 0;
+  return {
+    points,
+    totalPnl: last,
+    peakPnl: Math.round(peakPnl * 100) / 100,
+    maxDrawdownPct: Math.round(maxDD * 10) / 10,
+    currentDrawdownPct: Math.round(currentDrawdownPct * 10) / 10,
+  };
+}
+
+export interface CalendarDay {
+  date: string; // "YYYY-MM-DD"
+  pnl: number;
+  trades: number;
+  intensity: number; // 0..1 (0 = no trades, up to 1 = biggest |pnl| day)
+}
+
+/** GitHub-style P&L calendar for the last `months` calendar months. */
+export function calendarHeatmap(trades: TradeLike[], months = 12): CalendarDay[] {
+  const byDay = new Map<string, { pnl: number; trades: number }>();
+  for (const t of trades) {
+    const ms = toMs(t.entryTime);
+    if (ms == null || ms > Date.now() + 86400000) continue;
+    const pnl = Number(t.profitLoss ?? 0);
+    if (!Number.isFinite(pnl)) continue;
+    const key = dayKey(ms);
+    const day = byDay.get(key) || { pnl: 0, trades: 0 };
+    day.pnl += pnl;
+    day.trades += 1;
+    byDay.set(key, day);
+  }
+  const now = new Date();
+  const start = new Date(now.getFullYear(), now.getMonth() - (months - 1), 1);
+  const endMs = now.getTime();
+  const out: CalendarDay[] = [];
+  let maxAbs = 1;
+  for (let d = new Date(start); d.getTime() <= endMs; d.setDate(d.getDate() + 1)) {
+    const key = dayKey(d.getTime());
+    const day = byDay.get(key);
+    if (day) maxAbs = Math.max(maxAbs, Math.abs(day.pnl));
+  }
+  for (let d = new Date(start); d.getTime() <= endMs; d.setDate(d.getDate() + 1)) {
+    const key = dayKey(d.getTime());
+    const day = byDay.get(key);
+    out.push({
+      date: key,
+      pnl: day ? Math.round(day.pnl * 100) / 100 : 0,
+      trades: day?.trades ?? 0,
+      intensity: day ? Math.min(1, Math.abs(day.pnl) / maxAbs) : 0,
+    });
+  }
+  return out;
 }

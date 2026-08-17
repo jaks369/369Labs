@@ -11,6 +11,7 @@ import { sendEmail, buildResetEmail, buildVerificationEmail } from "./_core/emai
 import { getTickHistory, getActiveSymbols, getDigitStats, getTrend, suggestStrategy, TOOL_DEFS, buildActionIntent, normalizeSymbol, detectWatchIntent } from "./aitools";
 import type { PatternType } from "./signalScanner";
 import { lastDigitOf, getDecimalPlaces } from "@shared/lastDigit";
+import { equityCurve, type TradeLike } from "@shared/portfolio";
 import { createHmac, timingSafeEqual, randomBytes } from "crypto";
 
 function hexToBase32(hex: string): string {
@@ -1363,18 +1364,60 @@ export const appRouter = router({
   // Trade History
   trades: router({
     list: protectedProcedure
-      .input(z.object({ limit: z.number().default(50), offset: z.number().default(0) }))
+      .input(z.object({
+        limit: z.number().default(50),
+        offset: z.number().default(0),
+        symbol: z.string().optional(),
+        result: z.string().optional(),
+        dateFrom: z.date().optional(),
+        dateTo: z.date().optional(),
+      }))
       .query(async ({ ctx, input }) => {
         try {
-          return await db.getTradesByUserId(ctx.user.id, input.limit, input.offset);
+          return await db.getTradesByUserId(ctx.user.id, input.limit, input.offset, {
+            symbol: input.symbol || undefined,
+            result: input.result || undefined,
+            dateFrom: input.dateFrom,
+            dateTo: input.dateTo,
+          });
         } catch (error) {
           console.error("[trades.list] Error:", error);
           return [];
         }
       }),
 
-    exportCsv: protectedProcedure
-      .query(async ({ ctx }) => {
+    health: protectedProcedure.query(async ({ ctx }) => {
+      try {
+        const all = await db.getTradesByUserId(ctx.user.id, 5000);
+        const toLike = (t: typeof all[number]): TradeLike => ({ entryTime: t.entryTime, profitLoss: t.profitLoss ?? undefined, result: t.result ?? undefined });
+        const overall = equityCurve(all.map(toLike));
+        const bySymbol: Record<string, ReturnType<typeof equityCurve> & { trades: number }> = {};
+        for (const t of all) {
+          const sym = t.symbol || "UNKNOWN";
+          if (bySymbol[sym]) continue;
+          const perSymbol = all.filter((x) => (x.symbol || "UNKNOWN") === sym);
+          bySymbol[sym] = {
+            ...equityCurve(perSymbol.map(toLike)),
+            trades: perSymbol.length,
+          };
+        }
+        return { overall, bySymbol };
+      } catch (error) {
+        console.error("[trades.health] Error:", error);
+        return { overall: equityCurve([]), bySymbol: {} };
+      }
+    }),
+
+    symbols: protectedProcedure.query(async ({ ctx }) => {
+      try {
+        return await db.getTradeSymbolsByUserId(ctx.user.id);
+      } catch (error) {
+        console.error("[trades.symbols] Error:", error);
+        return [];
+      }
+    }),
+
+    exportCsv: protectedProcedure      .query(async ({ ctx }) => {
         try {
           const trades = await db.getTradesByUserId(ctx.user.id, 5000);
           const header = ["id","symbol","result","stake","profitLoss","entryTime","exitTime","contractId"];

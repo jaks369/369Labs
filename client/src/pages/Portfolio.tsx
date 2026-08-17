@@ -10,7 +10,7 @@ import { PageContainer, PageSection } from "@/components/PageSection";
 import { getSymbolDisplayName } from "@/lib/symbols";
 import { formatMoney, formatNumber } from "@/lib/format";
 import PriceChart from "@/components/PriceChart";
-import { dailyTrend, trendSummary, timeInTradeStats, formatDurationSec } from "@shared/portfolio";
+import { dailyTrend, trendSummary, timeInTradeStats, formatDurationSec, equityCurve, calendarHeatmap } from "@shared/portfolio";
 
 export default function Portfolio() {
   const { isAuthenticated } = useAuth();
@@ -107,11 +107,13 @@ export default function Portfolio() {
   }
 
   // Additive insights, computed purely from the already-fetched ledger.
-  const trend = dailyTrend(settledTrades as any, 30);
+  const trend = dailyTrend(settledTrades, 30);
   const trend30 = trendSummary(trend);
   const activeTrend = trend.filter((d) => d.trades > 0);
-  const hold = timeInTradeStats(settledTrades as any);
+  const hold = timeInTradeStats(settledTrades);
   const maxTrendPnl = Math.max(1, ...trend.map((d) => Math.abs(d.pnl)));
+  const calendar = calendarHeatmap(settledTrades, 12);
+  const equity = equityCurve(settledTrades);
 
   return (
     <PageContainer className="page-container">
@@ -376,7 +378,78 @@ export default function Portfolio() {
               </div>
             )}
 
-            {hold.count > 0 && (
+            {equity.points.length >= 2 && (
+              <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-6">
+                <h2 className="text-sm font-bold text-white mb-4 flex items-center gap-2"><BarChart3 className="w-4 h-4 text-[var(--accent)]" /> Equity Curve</h2>
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-5">
+                  <div className="bg-black/20 rounded-lg p-3">
+                    <p className="text-caption text-[var(--text-muted)] uppercase">Net P&L</p>
+                    <p className={`text-lg font-bold ${equity.totalPnl >= 0 ? "text-[var(--green)]" : "text-[var(--red)]"}`}><SignedCurrencyStat value={equity.totalPnl} /></p>
+                  </div>
+                  <div className="bg-black/20 rounded-lg p-3">
+                    <p className="text-caption text-[var(--text-muted)] uppercase">Peak</p>
+                    <p className="text-lg font-bold text-[var(--green)]"><SignedCurrencyStat value={equity.peakPnl} /></p>
+                  </div>
+                  <div className="bg-black/20 rounded-lg p-3">
+                    <p className="text-caption text-[var(--text-muted)] uppercase">Max Drawdown</p>
+                    <p className="text-lg font-bold text-[var(--red)]">{equity.maxDrawdownPct.toFixed(1)}%</p>
+                  </div>
+                  <div className="bg-black/20 rounded-lg p-3">
+                    <p className="text-caption text-[var(--text-muted)] uppercase">Current DD</p>
+                    <p className={`text-lg font-bold ${equity.currentDrawdownPct > 0 ? "text-[var(--red)]" : "text-[var(--green)]"}`}>{equity.currentDrawdownPct.toFixed(1)}%</p>
+                  </div>
+                </div>
+                {(() => {
+                  const W = 700, H = 160, PAD = 8;
+                  const min = Math.min(0, ...equity.points.map(p => p.pnl));
+                  const max = Math.max(0, ...equity.points.map(p => p.pnl));
+                  const range = max - min || 1;
+                  const x = (i: number) => PAD + (i / (equity.points.length - 1)) * (W - 2 * PAD);
+                  const y = (v: number) => H - PAD - ((v - min) / range) * (H - 2 * PAD);
+                  const d = equity.points.map((p, i) => `${i === 0 ? "M" : "L"}${x(i).toFixed(1)},${y(p.pnl).toFixed(1)}`).join(" ");
+                  const area = `${d} L${x(equity.points.length - 1).toFixed(1)},${(H - PAD).toFixed(1)} L${PAD},${(H - PAD).toFixed(1)} Z`;
+                  const lastPnl = equity.points[equity.points.length - 1].pnl;
+                  return (
+                    <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-40">
+                      <path d={area} fill={lastPnl >= 0 ? "rgba(34,197,94,0.12)" : "rgba(239,68,68,0.12)"} />
+                      <path d={d} fill="none" stroke={lastPnl >= 0 ? "var(--green)" : "var(--red)"} strokeWidth="1.5" strokeLinejoin="round" />
+                    </svg>
+                  );
+                })()}
+              </div>
+            )}
+
+            {calendar.filter((c) => c.trades > 0).length > 0 && (
+              <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-6">
+                <h2 className="text-sm font-bold text-white mb-4 flex items-center gap-2"><Activity className="w-4 h-4 text-[var(--accent)]" /> P&L Calendar · 12 Months</h2>
+                {(() => {
+                  const cols: { date: string; pnl: number; trades: number; intensity: number }[][] = [];
+                  const weeks = Math.ceil(calendar.length / 7);
+                  for (let r = 0; r < weeks; r++) cols.push(calendar.slice(r * 7, r * 7 + 7));
+                  return (
+                    <div className="flex gap-[3px] overflow-x-auto pb-2">
+                      {cols.map((col, ci) => (
+                        <div key={ci} className="flex flex-col gap-[3px]">
+                          {col.map((d, ri) => {
+                            const iso = d.date;
+                            return (
+                              <div
+                                key={`${iso}-${ri}`}
+                                title={`${iso} · ${d.trades} trade${d.trades === 1 ? "" : "s"} · ${d.pnl.toFixed(2)}`}
+                                className={`w-3 h-3 rounded-[2px] ${d.trades === 0 ? "bg-black/30" : d.pnl >= 0 ? "bg-[var(--green)]" : "bg-[var(--red)]"}`}
+                                style={d.trades > 0 ? { opacity: 0.15 + d.intensity * 0.85 } : undefined}
+                              />
+                            );
+                          })}
+                        </div>
+                      ))}
+                    </div>
+                  );
+                })()}
+              </div>
+            )}
+
+{hold.count > 0 && (
               <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-6">
                 <h2 className="text-sm font-bold text-white mb-4 flex items-center gap-2"><Activity className="w-4 h-4 text-[var(--accent)]" /> Time in Trade</h2>
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-5">

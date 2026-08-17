@@ -1165,20 +1165,68 @@ export async function getTradeById(tradeId: number): Promise<Trade | undefined> 
   }
 }
 
-export async function getTradesByUserId(userId: number, limit: number = 50, offset: number = 0): Promise<Trade[]> {
+export interface TradeFilters {
+  symbol?: string;
+  result?: string;
+  dateFrom?: Date;
+  dateTo?: Date;
+}
+
+export async function getTradesByUserId(userId: number, limit: number = 50, offset: number = 0, filters?: TradeFilters): Promise<Trade[]> {
+  const db = await getDb();
+  if (!db) return [];
+  const conds = [eq(trades.userId, userId)];
+  if (filters) {
+    if (filters.symbol) conds.push(eq(trades.symbol, filters.symbol));
+    if (filters.result) conds.push(eq(trades.result, filters.result));
+    if (filters.dateFrom) conds.push(gt(trades.entryTime, filters.dateFrom));
+    if (filters.dateTo) conds.push(lte(trades.entryTime, filters.dateTo));
+  }
+  try {
+    return await db.select().from(trades).where(and(...conds)).orderBy(desc(trades.updatedAt)).limit(limit).offset(offset);
+  } catch {
+    const pool = getRawPool();
+    if (!pool) return [];
+    try {
+      let whereSql = "userId=?";
+      const params: unknown[] = [userId];
+      if (filters) {
+        if (filters.symbol) { whereSql += " AND symbol=?"; params.push(filters.symbol); }
+        if (filters.result) { whereSql += " AND result=?"; params.push(filters.result); }
+        if (filters.dateFrom) { whereSql += " AND entryTime>?"; params.push(filters.dateFrom); }
+        if (filters.dateTo) { whereSql += " AND entryTime<=?"; params.push(filters.dateTo); }
+      }
+      params.push(limit, offset);
+      const [rows] = await pool.execute(
+        `SELECT id, userId, botRunId, strategyId, entryTime, exitTime, entryPrice, exitPrice, stake, profitLoss, contractType, result, contractId, source, discoveredAt, reconciled, updatedAt FROM trades WHERE ${whereSql} ORDER BY updatedAt DESC LIMIT ? OFFSET ?`,
+        params,
+      );
+      return rows as Trade[];
+    } catch {
+      return [];
+    }
+  }
+}
+
+export async function getTradeSymbolsByUserId(userId: number): Promise<string[]> {
   const db = await getDb();
   if (!db) return [];
   try {
-    return await db.select().from(trades).where(eq(trades.userId, userId)).orderBy(desc(trades.updatedAt)).limit(limit).offset(offset);
+    const rows = await db
+      .selectDistinct({ symbol: trades.symbol })
+      .from(trades)
+      .where(eq(trades.userId, userId))
+      .orderBy(asc(trades.symbol));
+    return rows.map((r) => r.symbol ?? "R_100");
   } catch {
     const pool = getRawPool();
     if (!pool) return [];
     try {
       const [rows] = await pool.execute(
-        "SELECT id, userId, botRunId, strategyId, entryTime, exitTime, entryPrice, exitPrice, stake, profitLoss, contractType, result, contractId, source, discoveredAt, reconciled, updatedAt FROM trades WHERE userId=? ORDER BY updatedAt DESC LIMIT ? OFFSET ?",
-        [userId, limit, offset],
+        "SELECT DISTINCT symbol FROM trades WHERE userId=? AND symbol IS NOT NULL ORDER BY symbol ASC",
+        [userId],
       );
-      return rows as Trade[];
+      return (rows as { symbol: string }[]).map((r) => r.symbol || "R_100");
     } catch {
       return [];
     }

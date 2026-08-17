@@ -97,6 +97,7 @@ export default function Dashboard() {
   const signalsQuery = trpc.signals.list.useQuery(void 0, { refetchInterval: 30000 });
   const botRunsQuery = trpc.bot.getRuns.useQuery();
   const tokenQuery = trpc.deriv.getToken.useQuery();
+  const healthQuery = trpc.trades.health.useQuery(void 0, { refetchInterval: 30000 });
   const saveTradeMutation = trpc.trades.save.useMutation();
   const recordFillMutation = trpc.trades.recordFill.useMutation();
   const reconcileMutation = trpc.trades.reconcile.useMutation();
@@ -536,6 +537,9 @@ export default function Dashboard() {
 
   const isMobile = useIsMobile();
 
+  const health = healthQuery.data;
+  const healthDD = health?.overall.currentDrawdownPct ?? 0;
+
   if (!isAuthenticated || !user) {
     return (
       <div className="flex items-center justify-center h-full">
@@ -684,6 +688,28 @@ export default function Dashboard() {
                   <span className={`w-1.5 h-1.5 rounded-full ${derivStatus === "connected" ? "bg-[var(--green)] animate-live-pulse" : "bg-[var(--text-disabled)]"}`} />
                   <span className={`text-[10px] font-bold uppercase ${derivStatus === "connected" ? "text-[var(--green)]" : "text-[var(--text-muted)]"}`}>
                     {derivStatus === "connected" ? "Live" : "Offline"}
+                  </span>
+                </div>
+                {/* Drawdown / Health Monitor */}
+                <div
+                  className={`hidden md:flex items-center gap-1 px-2 py-0.5 rounded shrink-0 cursor-help ${
+                    healthDD > 0 ? "bg-[var(--red)]/10 border border-[var(--red)]/30" : "bg-white/5 border border-[var(--border)]"
+                  }`}
+                  title={
+                    health
+                      ? `Net P&L ${health.overall.totalPnl.toFixed(2)} · Max drawdown ${health.overall.maxDrawdownPct}% · Current ${health.overall.currentDrawdownPct}%\n${
+                          Object.entries(health.bySymbol).slice(0, 5)
+                            .map(([sym, s]) => `${sym}: ${s.trades} trades · DD ${s.currentDrawdownPct}%`)
+                            .join("\n") || "No settled trades yet"
+                        }`
+                      : "Drawdown monitor"
+                  }
+                >
+                  <Activity className={`w-3 h-3 ${healthDD > 0 ? "text-[var(--red)]" : "text-[var(--green)]"}`} />
+                  <span className={`text-[10px] font-bold uppercase ${healthDD > 0 ? "text-[var(--red)]" : "text-[var(--green)]"}`}>
+                    {health && health.overall.points.length >= 2
+                      ? `DD ${health.overall.currentDrawdownPct.toFixed(1)}%`
+                      : "DD —"}
                   </span>
                 </div>
                 {/* Quick Access Popups — single toggle */}

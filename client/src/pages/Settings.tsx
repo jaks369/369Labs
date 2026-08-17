@@ -40,6 +40,7 @@ export default function Settings() {
   const [memStyle, setMemStyle] = useState("");
   const [memNotes, setMemNotes] = useState("");
   const [memDailyLoss, setMemDailyLoss] = useState("");
+  const [memRiskCaps, setMemRiskCaps] = useState({ maxRiskPerTrade: "", maxDailyLoss: "", maxDailyTrades: "", maxConsecutiveLosses: "" });
 
   const saveDerivTokenMutation = trpc.deriv.saveToken.useMutation();
   const saveTelegramMutation = trpc.telegram.saveSettings.useMutation();
@@ -182,6 +183,13 @@ export default function Settings() {
       setMemStyle(m.style || "");
       setMemNotes(m.notes || "");
       setMemDailyLoss(m.dailyLossLimit != null ? String(m.dailyLossLimit) : "");
+      const rc = (m.riskCaps && typeof m.riskCaps === "object" ? m.riskCaps : {}) as Record<string, unknown>;
+      setMemRiskCaps({
+        maxRiskPerTrade: rc.maxRiskPerTrade != null ? String(rc.maxRiskPerTrade) : "",
+        maxDailyLoss: rc.maxDailyLoss != null ? String(rc.maxDailyLoss) : "",
+        maxDailyTrades: rc.maxDailyTrades != null ? String(rc.maxDailyTrades) : "",
+        maxConsecutiveLosses: rc.maxConsecutiveLosses != null ? String(rc.maxConsecutiveLosses) : "",
+      });
       const savedKeys = m.apiKeys && typeof m.apiKeys === "object" ? m.apiKeys : {};
       setExternalKeys((prev) => {
         const next = { ...prev };
@@ -228,6 +236,12 @@ export default function Settings() {
       style: memStyle.trim(),
       notes: memNotes.trim(),
       dailyLossLimit: memDailyLoss ? Number(memDailyLoss) : null,
+      riskCaps: {
+        maxRiskPerTrade: memRiskCaps.maxRiskPerTrade ? Number(memRiskCaps.maxRiskPerTrade) : null,
+        maxDailyLoss: memRiskCaps.maxDailyLoss ? Number(memRiskCaps.maxDailyLoss) : null,
+        maxDailyTrades: memRiskCaps.maxDailyTrades ? Number(memRiskCaps.maxDailyTrades) : null,
+        maxConsecutiveLosses: memRiskCaps.maxConsecutiveLosses ? Number(memRiskCaps.maxConsecutiveLosses) : null,
+      },
     };
     try {
       await saveMemoryMutation.mutateAsync({ memory });
@@ -613,6 +627,17 @@ export default function Settings() {
                 />
               </div>
               <div>
+                <label className="text-sm text-[var(--text-secondary)] block mb-2">Max Stake per Trade ($)</label>
+                <Input
+                  type="number"
+                  placeholder="e.g. 10"
+                  value={memRiskCaps.maxRiskPerTrade}
+                  onChange={(e) => setMemRiskCaps((p) => ({ ...p, maxRiskPerTrade: e.target.value }))}
+                  className="border-[var(--border)] text-[var(--text-primary)]"
+                />
+                <p className="text-caption mt-1">Hard cap on stake — bots can&#39;t exceed this per trade</p>
+              </div>
+              <div>
                 <label className="text-sm text-[var(--text-secondary)] block mb-2">Daily Loss Limit ($)</label>
                 <Input
                   type="number"
@@ -622,6 +647,28 @@ export default function Settings() {
                   className="border-[var(--red)]/40 text-[var(--red)]"
                 />
                 <p className="text-caption mt-1">Trades will be blocked if today&#39;s losses exceed this amount</p>
+              </div>
+              <div>
+                <label className="text-sm text-[var(--text-secondary)] block mb-2">Max Daily Trades</label>
+                <Input
+                  type="number"
+                  placeholder="e.g. 20"
+                  value={memRiskCaps.maxDailyTrades}
+                  onChange={(e) => setMemRiskCaps((p) => ({ ...p, maxDailyTrades: e.target.value }))}
+                  className="border-[var(--border)] text-[var(--text-primary)]"
+                />
+                <p className="text-caption mt-1">Bots stop opening new trades after hitting this per-day count</p>
+              </div>
+              <div>
+                <label className="text-sm text-[var(--text-secondary)] block mb-2">Max Consecutive Losses</label>
+                <Input
+                  type="number"
+                  placeholder="e.g. 3"
+                  value={memRiskCaps.maxConsecutiveLosses}
+                  onChange={(e) => setMemRiskCaps((p) => ({ ...p, maxConsecutiveLosses: e.target.value }))}
+                  className="border-[var(--border)] text-[var(--text-primary)]"
+                />
+                <p className="text-caption mt-1">Bot pauses after this many losses in a row</p>
               </div>
               <div className="flex items-end">
                 <label className="flex items-center gap-2 text-sm text-[var(--text-secondary)] cursor-pointer">
