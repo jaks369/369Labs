@@ -10,6 +10,7 @@ import { PageContainer, PageSection } from "@/components/PageSection";
 import { getSymbolDisplayName } from "@/lib/symbols";
 import { formatMoney, formatNumber } from "@/lib/format";
 import PriceChart from "@/components/PriceChart";
+import { dailyTrend, trendSummary, timeInTradeStats, formatDurationSec } from "@shared/portfolio";
 
 export default function Portfolio() {
   const { isAuthenticated } = useAuth();
@@ -104,6 +105,13 @@ export default function Portfolio() {
     if (t.result === "win") bySymbol[sym].wins++;
     bySymbol[sym].pnl += parseFloat(t.profitLoss?.toString() || "0");
   }
+
+  // Additive insights, computed purely from the already-fetched ledger.
+  const trend = dailyTrend(settledTrades as any, 30);
+  const trend30 = trendSummary(trend);
+  const activeTrend = trend.filter((d) => d.trades > 0);
+  const hold = timeInTradeStats(settledTrades as any);
+  const maxTrendPnl = Math.max(1, ...trend.map((d) => Math.abs(d.pnl)));
 
   return (
     <PageContainer className="page-container">
@@ -321,6 +329,84 @@ export default function Portfolio() {
                       </div>
                     );
                   })}
+                </div>
+              </div>
+            )}
+
+            {activeTrend.length > 0 && (
+              <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-6">
+                <h2 className="text-sm font-bold text-white mb-4 flex items-center gap-2"><TrendingUp className="w-4 h-4 text-[var(--accent)]" /> 30-Day P&L Trend</h2>
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-5">
+                  <div className="bg-black/20 rounded-lg p-3">
+                    <p className="text-caption text-[var(--text-muted)] uppercase">Net · 30d</p>
+                    <p className={`text-lg font-bold ${trend30.pnl >= 0 ? "text-[var(--green)]" : "text-[var(--red)]"}`}><SignedCurrencyStat value={trend30.pnl} currency={balanceInfo?.currency || "USD"} /></p>
+                  </div>
+                  <div className="bg-black/20 rounded-lg p-3">
+                    <p className="text-caption text-[var(--text-muted)] uppercase">Best Day</p>
+                    <p className="text-lg font-bold text-[var(--green)]">
+                      {activeTrend.length
+                        ? <><SignedCurrencyStat value={Math.max(...activeTrend.map(d => d.pnl))} currency={balanceInfo?.currency || "USD"} /> <span className="text-[var(--text-muted)] text-caption">· {activeTrend.reduce((a, b) => (b.pnl > a.pnl ? b : a)).date}</span></>
+                        : "-"}
+                    </p>
+                  </div>
+                  <div className="bg-black/20 rounded-lg p-3">
+                    <p className="text-caption text-[var(--text-muted)] uppercase">Worst Day</p>
+                    <p className="text-lg font-bold text-[var(--red)]">
+                      {activeTrend.length
+                        ? <><SignedCurrencyStat value={Math.min(...activeTrend.map(d => d.pnl))} currency={balanceInfo?.currency || "USD"} /> <span className="text-[var(--text-muted)] text-caption">· {activeTrend.reduce((a, b) => (b.pnl < a.pnl ? b : a)).date}</span></>
+                        : "-"}
+                    </p>
+                  </div>
+                  <div className="bg-black/20 rounded-lg p-3">
+                    <p className="text-caption text-[var(--text-muted)] uppercase">Active Days</p>
+                    <p className="text-lg font-bold text-white"><IntegerStat value={activeTrend.length} variant="always-positive" /></p>
+                  </div>
+                </div>
+                <div className="flex items-end gap-[3px] h-24">
+                  {trend.map((d, i) => (
+                    <div key={i} className="flex-1 max-w-[40px] flex flex-col items-center justify-end" title={`${d.date} · ${d.trades} trade${d.trades === 1 ? "" : "s"} · ${d.pnl.toFixed(2)}`}>
+                      <div
+                        className={`w-full rounded-t ${d.pnl >= 0 ? "bg-[var(--green)]/70" : "bg-[var(--red)]/70"} transition-all`}
+                        style={{ height: `${Math.max(6, (Math.abs(d.pnl) / maxTrendPnl) * 88)}px` }}
+                      />
+                      {i % 5 === 0 && <span className="text-[10px] leading-none mt-1 text-[var(--text-muted)] truncate max-w-full">{d.date.slice(8)}</span>}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {hold.count > 0 && (
+              <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-6">
+                <h2 className="text-sm font-bold text-white mb-4 flex items-center gap-2"><Activity className="w-4 h-4 text-[var(--accent)]" /> Time in Trade</h2>
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-5">
+                  <div className="bg-black/20 rounded-lg p-3">
+                    <p className="text-caption text-[var(--text-muted)] uppercase">Avg Hold</p>
+                    <p className="text-lg font-bold text-white">{formatDurationSec(hold.avgSec)}</p>
+                  </div>
+                  <div className="bg-black/20 rounded-lg p-3">
+                    <p className="text-caption text-[var(--text-muted)] uppercase">Median Hold</p>
+                    <p className="text-lg font-bold text-white">{formatDurationSec(hold.medianSec)}</p>
+                  </div>
+                  <div className="bg-black/20 rounded-lg p-3">
+                    <p className="text-caption text-[var(--text-muted)] uppercase">Shortest</p>
+                    <p className="text-lg font-bold text-[var(--green)]">{formatDurationSec(hold.minSec)}</p>
+                  </div>
+                  <div className="bg-black/20 rounded-lg p-3">
+                    <p className="text-caption text-[var(--text-muted)] uppercase">Longest</p>
+                    <p className="text-lg font-bold text-[var(--red)]">{formatDurationSec(hold.maxSec)}</p>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  {hold.buckets.map((b) => (
+                    <div key={b.label} className="flex items-center gap-3 text-xs">
+                      <span className="w-12 text-[var(--text-muted)] shrink-0">{b.label}</span>
+                      <div className="flex-1 h-3 bg-black/20 rounded overflow-hidden">
+                        <div className="h-full bg-[var(--accent)]/70 rounded" style={{ width: `${b.pct}%` }} />
+                      </div>
+                      <span className="w-16 text-right font-mono tabular-nums text-white">{b.count} <span className="text-[var(--text-muted)]">({b.pct}%)</span></span>
+                    </div>
+                  ))}
                 </div>
               </div>
             )}
