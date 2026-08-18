@@ -40,6 +40,8 @@ export default function MobileTerminal() {
   const [stake, setStake] = usePersistentState<number>("369labs.terminal.stake", 1);
   const [duration, setDuration] = usePersistentState<number>("369labs.terminal.duration", 5);
   const [durationUnit, setDurationUnit] = usePersistentState<DurationUnit>("369labs.terminal.durationUnit", "t");
+  const [stopLoss, setStopLoss] = usePersistentState<number>("369labs.terminal.stopLoss", 0);
+  const [takeProfit, setTakeProfit] = usePersistentState<number>("369labs.terminal.takeProfit", 0);
   const [tradeBusy, setTradeBusy] = useState(false);
   const [showTokenModal, setShowTokenModal] = useState(false);
   const [showSymbolPicker, setShowSymbolPicker] = useState(false);
@@ -226,6 +228,8 @@ export default function MobileTerminal() {
         ...(isAccumulator ? { growthRate: contract.growthRate ?? 1 } : { duration, durationUnit }),
         ...(contract.category === "over_under" && contract.barrier !== undefined ? { barrier: contract.barrier } : {}),
         ...(contract.category === "digits" && contract.digit !== undefined ? { barrier: contract.digit } : {}),
+        ...(stopLoss > 0 ? { stopLoss } : {}),
+        ...(takeProfit > 0 ? { takeProfit } : {}),
       });
       if (typeof purchase.balanceAfter === "number") setBalance(purchase.balanceAfter);
       const entryTime = new Date();
@@ -397,40 +401,26 @@ export default function MobileTerminal() {
                   (marketFilter === "vol" && isVol(s)) ||
                   (marketFilter === "1s" && is1s(s)) ||
                   (marketFilter === "boom" && isBoom(s));
-                const groups: [string, DerivSymbol[]][] = [
-                  ["Volatility 1s Indices", symbols.filter((s) => matches(s) && visible(s) && is1s(s))],
-                  ["Volatility Indices", symbols.filter((s) => matches(s) && visible(s) && isVol(s))],
-                  ["Boom & Crash Indices", symbols.filter((s) => matches(s) && visible(s) && isBoom(s))],
-                ];
-                const hasAny = groups.some(([, list]) => list.length > 0);
-                if (!hasAny) {
+                const list = symbols.filter((s) => matches(s) && visible(s));
+                if (list.length === 0) {
                   return <p className="text-sm text-[var(--text-muted)] text-center py-8">No symbols match "{symbolSearch}"</p>;
                 }
                 return (
-                  <div className="space-y-4">
-                    {groups.map(([title, list]) =>
-                      list.length > 0 ? (
-                        <div key={title}>
-                          <h4 className="section-title mb-2">{title}</h4>
-                          <div className="grid grid-cols-2 gap-1.5">
-                            {list.map((s) => (
-                              <button
-                                key={s.symbol}
-                                onClick={() => {
-                                  setSymbol(s.symbol);
-                                  setShowSymbolPicker(false);
-                                  setSymbolSearch("");
-                                }}
-                                className={`text-left px-2.5 py-3 rounded-lg cursor-pointer min-h-[44px] ${symbol === s.symbol ? "aurora-glow-green text-white" : "bg-white/5 text-[var(--text-secondary)] border border-transparent"}`}
-                              >
-                                <span className="block font-semibold text-xs truncate" title={s.displayName}>{s.displayName}</span>
-                                <span className="text-[9px] font-mono text-[var(--text-muted)]">{s.symbol}</span>
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-                      ) : null,
-                    )}
+                  <div className="grid grid-cols-2 gap-1.5">
+                    {list.map((s) => (
+                      <button
+                        key={s.symbol}
+                        onClick={() => {
+                          setSymbol(s.symbol);
+                          setShowSymbolPicker(false);
+                          setSymbolSearch("");
+                        }}
+                        className={`text-left px-2.5 py-3 rounded-lg cursor-pointer min-h-[44px] ${symbol === s.symbol ? "aurora-glow-green text-white" : "bg-white/5 text-[var(--text-secondary)] border border-transparent"}`}
+                      >
+                        <span className="block font-semibold text-xs truncate" title={s.displayName}>{s.displayName}</span>
+                        <span className="text-[9px] font-mono text-[var(--text-muted)]">{s.symbol}</span>
+                      </button>
+                    ))}
                   </div>
                 );
               })()}
@@ -445,7 +435,7 @@ export default function MobileTerminal() {
       </div>
 
       {/* Balance — near trade controls */}
-      <div className="mx-4 mt-2 flex items-center justify-between px-3 py-2.5 rounded-xl bg-[var(--surface-dim)] border border-[var(--border)] shadow-md">
+      <div className="mx-4 mt-2 flex items-center justify-between px-3 py-2.5 rounded-xl aurora-glass border border-[var(--border)] shadow-md">
         <span className="text-[10px] uppercase tracking-widest text-[var(--text-muted)] font-bold flex items-center gap-1.5">
           <Wallet className="w-3.5 h-3.5 text-[var(--green)]" /> Balance
         </span>
@@ -498,6 +488,32 @@ export default function MobileTerminal() {
               />
             </div>
           )}
+          <div className="grid grid-cols-2 gap-2">
+            <label className="block">
+              <span className="text-[9px] font-bold text-[var(--red)] uppercase">Stop Loss ($)</span>
+              <input
+                type="number"
+                min={0}
+                step="0.01"
+                value={stopLoss || ""}
+                onChange={(e) => setStopLoss(Math.max(0, parseFloat(e.target.value) || 0))}
+                className="w-full bg-white/5 border border-[var(--red)]/30 rounded px-2.5 py-2 text-sm text-[var(--text-primary)] focus:border-[var(--red)] focus:outline-none"
+                placeholder="Optional"
+              />
+            </label>
+            <label className="block">
+              <span className="text-[9px] font-bold text-[var(--green)] uppercase">Take Profit ($)</span>
+              <input
+                type="number"
+                min={0}
+                step="0.01"
+                value={takeProfit || ""}
+                onChange={(e) => setTakeProfit(Math.max(0, parseFloat(e.target.value) || 0))}
+                className="w-full bg-white/5 border border-[var(--green)]/30 rounded px-2.5 py-2 text-sm text-[var(--text-primary)] focus:border-[var(--green)] focus:outline-none"
+                placeholder="Optional"
+              />
+            </label>
+          </div>
           {isRiseFall ? (
             <button
               onClick={() => handleQuickTrade(contract.direction === "fall" ? "fall" : "rise")}
@@ -563,7 +579,6 @@ export default function MobileTerminal() {
                   </b>
                 </span>
               )}
-              <span className="ml-auto">{selectedDisplay}</span>
             </div>
           )}
         </div>
@@ -663,9 +678,7 @@ export default function MobileTerminal() {
                         {dir === "down" && <span className="text-[var(--red)]">▼</span>}
                         <span className="font-mono tabular-nums text-[var(--text-primary)]">{Number(t.price).toFixed(decimalPlaces)}</span>
                       </span>
-                      <span className="font-mono text-[10px] font-bold" style={{ color: t.lastDigit >= 5 ? "var(--green)" : "var(--red)" }}>
-                        {t.lastDigit}
-                      </span>
+                      <span className="font-mono text-[10px] font-bold text-[var(--accent)]">{typeof t.lastDigit === "number" ? t.lastDigit : "·"}</span>
                     </div>
                   );
                 })
