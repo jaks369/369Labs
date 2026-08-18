@@ -52,7 +52,7 @@ export function strengthFor(confidence: number): GuideStrength {
   return "WEAK";
 }
 
-const CANDLE_LOOKBACK = 22; // enough for EMA(9)/EMA(21)
+const CANDLE_LOOKBACK = 40; // enough for EMA(9)/EMA(21) AND MACD EMA(26)+signal(9) to warm
 
 export interface ScanResult {
   signal: GuidingSignalCandidate | null;
@@ -111,7 +111,11 @@ export function scanSignalForSymbol(symbol: string, rawTicks: TickLike[]): ScanR
           votes: confluence.votes,
           plain: explanation,
           details: confluence.details,
+          // First line is the honest vote tally ("2/2 indicators agree") so the
+          // persisted ledger and notifications carry the count, not a scaled
+          // percentage. Everything that follows is the same technical read.
           reasons: [
+            `${Math.max(confluence.votes.up, confluence.votes.down)}/${confluence.votes.total} indicators agree`,
             ...confluence.reasons,
             `Observed over ${candles.length} ${timeframeSec}s candles · ${available.join("+")} · technical read, not a guaranteed edge`,
           ],

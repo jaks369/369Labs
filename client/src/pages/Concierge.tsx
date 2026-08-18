@@ -61,12 +61,19 @@ function Metric({ label, value, accent }: { label: string; value: string | numbe
   );
 }
 
-// Interpret the confluence % honestly: it's how many indicators voted the same
+// Interpret the confluence honestly: it's how many indicators voted the same
 // way (e.g. 3/3 → agreement 1.0 → 50 + 28 = 78), NOT a win probability.
 function agreementText(votes: any): string {
   if (!votes || !votes.total) return "";
   const agree = Math.max(votes.up, votes.down);
   return `${agree}/${votes.total} indicators agree`;
+}
+
+// Persisted signals store the tally as the first reason ("2/2 indicators agree").
+function rowAgreement(s: any): string {
+  const first = s?.reasons?.[0];
+  if (typeof first === "string" && /^\d+\/\d+ indicators agree$/.test(first)) return first;
+  return "—";
 }
 
 // The four questions every signal must answer, in plain language. This is the
@@ -210,16 +217,15 @@ export default function Concierge() {
                   <Metric label="Symbol" value={nm.symbolLabel} />
                   <Metric label="Direction" value={sig.direction === "up" ? "Rise" : "Fall"} accent={sig.direction === "up" ? "text-[var(--green)]" : "text-[var(--red)]"} />
                   <Metric label="Agreement" value={agreementText(sig.votes) || "—"} />
-                  <Metric label="Agreement score" value={`${sig.confidence}/100`} />
                   <Metric label="Suggested stake" value={`$${nm.suggestedStake}`} accent="text-[var(--accent-soft)]" />
                   <Metric label="Max stake" value={`$${nm.maxStake}`} />
                 </div>
                 <p className="text-[11px] text-[var(--text-muted)]">
-                  Suggested stake = {nm.riskPct}% of your account balance — sized from risk management, not from the agreement score above.
+                  Suggested stake = {nm.riskPct}% of your account balance — sized from risk management, not from how many indicators agree. Never risk more than ${nm.maxStake} (3× the recommended {nm.riskPct}%).
                 </p>
                 {acc && acc.total > 0 && (
                   <div className="rounded-lg border border-[var(--border)] bg-[var(--surface-elevated)] p-3 text-[11px] text-[var(--text-secondary)]">
-                    Current signal: <span className="text-white font-semibold">{sig.confidence}% agreement</span> — that's how many indicators agree, not your chance of winning. Your guided-signal history: <span className="text-white font-semibold">{acc.winRatePct}% win rate</span> over {acc.total} resolved signals. Judge performance by the history, not the score.
+                    Current signal: <span className="text-white font-semibold">{agreementText(sig.votes) || "no computable indicators yet"}</span> — that's how many indicators agree, not your chance of winning. Your guided-signal history: <span className="text-white font-semibold">{acc.winRatePct}% win rate</span> over {acc.total} resolved signals. Judge performance by the history, not the score.
                   </div>
                 )}
                 <button
@@ -230,7 +236,7 @@ export default function Concierge() {
                       stake: nm.suggestedStake,
                       duration: 5,
                       durationUnit: "t",
-                      label: `Concierge ${sig.strength} ${sig.confidence}%`,
+                      label: `Concierge ${sig.strength} ${agreementText(sig.votes) || "no agreement yet"}`,
                     });
                     navigate("/dashboard");
                   }}
@@ -349,7 +355,7 @@ export default function Concierge() {
                         <div className="flex items-center gap-2 flex-wrap">
                           <span className="text-sm font-bold text-white">{getSymbolDisplayName(c.symbol)}</span>
                           <span className={`px-1.5 py-0.5 rounded border text-[10px] font-bold ${sc.chip}`}>{c.strength}</span>
-                          <span className="text-xs text-[var(--text-muted)]">{c.confidence}% agreement · {agreementText(c.votes) || c.contractType}</span>
+                          <span className="text-xs text-[var(--text-muted)]">{agreementText(c.votes) || c.contractType}</span>
                         </div>
                         {c.plain?.what && <p className="text-[11px] text-[var(--text-secondary)] mt-1">{c.plain.what}</p>}
                         <div className="mt-1"><DetailDisclosure details={c.details} /></div>
@@ -397,7 +403,7 @@ export default function Concierge() {
                     <tr className="text-left text-[var(--text-muted)]">
                       <th className="pb-2 pr-2 font-medium">Symbol</th>
                       <th className="pb-2 pr-2 font-medium">Dir</th>
-                      <th className="pb-2 pr-2 font-medium">Conf</th>
+                      <th className="pb-2 pr-2 font-medium">Agreement</th>
                       <th className="pb-2 pr-2 font-medium">Stake</th>
                       <th className="pb-2 font-medium">Result</th>
                     </tr>
@@ -407,7 +413,7 @@ export default function Concierge() {
                       <tr key={s.id} className="border-t border-[var(--border)]">
                         <td className="py-2 pr-2 text-white font-medium">{getSymbolDisplayName(s.symbol)}</td>
                         <td className="py-2 pr-2 text-[var(--text-secondary)]">{s.direction === "up" ? "Rise" : "Fall"}</td>
-                        <td className="py-2 pr-2 text-[var(--text-muted)]">{s.confidence}%</td>
+                        <td className="py-2 pr-2 text-[var(--text-muted)]">{rowAgreement(s)}</td>
                         <td className="py-2 pr-2 text-[var(--text-secondary)]">${(Number(s.stake) || 0).toFixed(2)}</td>
                         <td className="py-2">
                           <span className={`px-1.5 py-0.5 rounded border text-[10px] font-bold ${s.status === "win" ? "text-[var(--green)] border-[var(--green)]/40 bg-[var(--green)]/15" : s.status === "loss" ? "text-[var(--red)] border-[var(--red)]/40 bg-[var(--red)]/15" : s.status === "open" ? "text-[var(--amber)] border-[var(--amber)]/40 bg-[var(--amber)]/15" : "text-[var(--text-muted)] border-[var(--border)] bg-white/5"}`}>{resultLabel(s)}</span>

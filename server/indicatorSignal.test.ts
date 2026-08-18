@@ -34,4 +34,17 @@ describe("indicatorSignal", () => {
     expect(res.signal!.confidence).toBeGreaterThanOrEqual(50);
     expect(res.signal!.family).toBe("momentum_confluence");
   });
+
+  it("leads the reasons with an honest indicator tally, not a probability", () => {
+    const ticks: { price: number; epoch: number }[] = [];
+    for (let i = 2000; i >= 0; i--) {
+      ticks.push({ price: 100 + (2000 - i) * 0.025, epoch: 1_600_000_000 + i });
+    }
+    const res = scanSignalForSymbol("1HZ10V", ticks);
+    expect(res.signal).not.toBeNull();
+    const first = res.signal!.reasons[0];
+    expect(first).toMatch(/^\d+\/\d+ indicators agree$/);
+    expect(first).not.toMatch(/%/);
+    expect(res.signal!.votes.total).toBeGreaterThanOrEqual(2);
+  });
 });

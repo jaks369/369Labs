@@ -25,11 +25,18 @@ describe("concierge pure helpers", () => {
     expect(capped.riskPct).toBe(2);
   });
 
+  it("defaults to 2% of the account and caps max at 3× the recommendation", () => {
+    const r = suggestStakeInput(470);
+    expect(r.riskPct).toBe(2);
+    expect(r.stake).toBeCloseTo(9.4, 2); // 2% of 470
+    expect(r.maxStake).toBeCloseTo(28.2, 2); // 3 × the 2% recommendation
+  });
+
   it("suggested stake never exceeds a small % of balance", () => {
     const r = suggestStakeInput(470, 1);
     expect(r.stake).toBeLessThanOrEqual(r.maxStake);
     expect(r.stake / 470).toBeLessThanOrEqual(0.05);
-    expect(r.maxStake).toBeLessThanOrEqual(5000 * 0.05);
+    expect(r.maxStake).toBeCloseTo(r.stake * 3, 2);
   });
 
   it("note makes clear the stake is risk-driven, not confidence-driven", () => {

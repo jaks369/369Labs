@@ -301,7 +301,7 @@ export function explainConfluence(score: ConfluenceScore): ConfluenceExplanation
   const what =
     score.votes.total === 0
       ? "No indicator has enough data to compute a read yet — a flat, low-conviction observation."
-      : `${agree} of ${score.votes.total} computable indicators point ${dirWord} (${Math.round(share * 100)}% agreement).`;
+      : `${agree} of ${score.votes.total} computable indicators point ${dirWord}.`;
 
   let why: string;
   if (agreeing.length === 0) {
@@ -313,9 +313,9 @@ export function explainConfluence(score: ConfluenceScore): ConfluenceExplanation
     why += ".";
   }
 
-  const strength = `A ${scoreLabel.toLowerCase()} read — ${Math.round(share * 100)}% of the computable indicators share it. The ${score.score}/100 score is the agreement strength, nothing more.`;
+  const strength = `A ${scoreLabel.toLowerCase()} read — ${agree} of ${score.votes.total} computable indicators share it. That's the whole read: no win probability is implied, only how many indicators pointed the same way.`;
   const risk =
-    "This score says how many indicators agree, not how likely the trade is to win. Volatility indices are near-random by design — size the trade from your risk budget (e.g. 1% of your account), never from this number.";
+    "This count says how many indicators agree, not how likely the trade is to win. Volatility indices are near-random by design — size the trade from your risk budget (e.g. 1% of your account), never from how many indicators agree.";
 
   return { scoreLabel, what, why, strength, risk };
 }

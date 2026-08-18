@@ -14,7 +14,7 @@
 
 import * as db from "./db";
 import { notifyUser, notifyUserTelegram } from "./_core/notification";
-import { getTickHistory } from "./aitools";
+import { getTickHistory, getTickHistoryDeep } from "./aitools";
 import { getAllSymbols, getSymbolDisplayName } from "@shared/symbols";
 import { PAYOUT_RATE } from "@shared/contractSim";
 import {
@@ -91,7 +91,7 @@ export const DEFAULT_SETTINGS: ConciergeSettings = {
   enabled: true,
   telegramBriefings: false,
   maxPerDay: 10,
-  stakePct: 1,
+  stakePct: 2,
 };
 
 // ---------------------------------------------------------------------------
@@ -102,8 +102,12 @@ export const DEFAULT_SETTINGS: ConciergeSettings = {
  * Suggested stake sized from RISK MANAGEMENT (a fixed % of account per trade),
  * never from signal confidence. Confidence says how many indicators agree; it
  * says nothing about the odds of the next tick, so it has no business sizing a
- * position. Default 1% of balance, hard-capped at 2% per trade and at the 5%
- * max-stake guard, with a $0.35 floor so the number stays tradeable.
+ * position.
+ *   - default 2% of account balance per trade (the user's "Stake %" setting
+ *     drives this; clamped to 0.1–2% so a typo can't blow the account),
+ *   - the max-stake guard is 3× the recommended % (6% of the account at the
+ *     default), the most one trade is ever allowed to put at risk,
+ *   - with a $0.35 floor so the number stays tradeable on small balances.
  */
 export interface StakeSuggestion {
   stake: number;
@@ -112,18 +116,18 @@ export interface StakeSuggestion {
   note: string;
 }
 
-export function suggestStakeInput(balance: number, riskPct = 1): StakeSuggestion {
+export function suggestStakeInput(balance: number, riskPct = 2): StakeSuggestion {
   const safe = Math.max(0, balance || 0);
   const pct = Math.max(0.1, Math.min(riskPct, 2));
   const raw = safe * (pct / 100);
-  const maxStake = Math.max(1, safe * 0.05);
+  const maxStake = Math.max(1, safe * (pct / 100) * 3);
   const stake = Math.min(Math.max(raw, 0.35), maxStake);
   const rounded = Math.round(stake * 100) / 100;
   return {
     stake: rounded,
     maxStake: Math.round(maxStake * 100) / 100,
     riskPct: pct,
-    note: `${pct}% of your account balance ($${rounded.toFixed(2)}) — sized from risk, not from signal confidence.`,
+    note: `${pct}% of your account balance ($${rounded.toFixed(2)}) — sized from risk, not from signal confidence. Never risk more than the ${(pct * 3).toFixed(0).replace(/\.0$/, "")}% cap.`,
   };
 }
 
@@ -457,7 +461,7 @@ export function getScanCache(symbol: string): GuidingSignalCandidate | null {
 
 export async function scanSymbolAndCache(symbol: string): Promise<GuidingSignalCandidate | null> {
   try {
-    const ticks = (await getTickHistory(symbol, 2000)).map((t) => ({ price: Number(t.price), epoch: Math.floor(Number(t.timestamp) / 1000) }));
+    const ticks = (await getTickHistoryDeep(symbol, 5000)).map((t) => ({ price: Number(t.price), epoch: Math.floor(Number(t.timestamp) / 1000) }));
     const res = scanSignalForSymbol(symbol, ticks);
     scanCache.set(symbol, { at: Date.now(), signal: res.signal });
     return res.signal;
@@ -513,15 +517,16 @@ export async function buildBriefing(userId: number, balance?: number): Promise<B
   candidates.sort((a, b) => b.confidence - a.confidence);
   const top = candidates[0] ?? null;
   const budget = balance ?? 500;
-  const stake = top ? suggestStakeInput(budget) : null;
+  const settings = await getSettings(userId);
+  const stake = top ? suggestStakeInput(budget, settings.stakePct) : null;
 
   let verdict = "NO TRADE";
   let headline = "No live candidate right now";
   let summary = "The scanner found no strong confluence across your followed symbols. Doing nothing is the data-driven result.";
   if (top) {
     verdict = top.strength === "STRONG" ? "TRADE" : "WATCH";
-    const agree = top.votes?.total ? `${Math.max(top.votes.up, top.votes.down)}/${top.votes.total} indicators agree` : "";
-    headline = `${getSymbolDisplayName(top.symbol)} · ${top.direction === "up" ? "Rise" : "Fall"} — ${top.confidence}% agreement (${agree})`;
+    const tally = top.votes?.total ? `${Math.max(top.votes.up, top.votes.down)}/${top.votes.total} indicators agree` : "";
+    headline = `${getSymbolDisplayName(top.symbol)} · ${top.direction === "up" ? "Rise" : "Fall"} — ${tally || "no computable indicators yet"}`;
     // Plain-language summary (the four-layer read lives on the signal itself);
     // fall back to the raw reasons only if the explanation is somehow absent.
     summary = top.plain ? `${top.plain.what} ${top.plain.why}` : top.reasons.join(" · ");
@@ -609,7 +614,8 @@ export async function scanAndPersistForUser(userId: number): Promise<ScanAndPers
   }
 
   if (newStrong && settings.maxPerDay > persistedList.length + persisted) {
-    const body = `STRONG ${newStrong.direction === "up" ? "Rise" : "Fall"} read on ${getSymbolDisplayName(newStrong.symbol)} (${newStrong.confidence}% confluence)\n${newStrong.reasons.join("\n")}`;
+    const tally = newStrong.votes?.total ? `${Math.max(newStrong.votes.up, newStrong.votes.down)}/${newStrong.votes.total} indicators agree` : "no computable indicators yet";
+    const body = `STRONG ${newStrong.direction === "up" ? "Rise" : "Fall"} read on ${getSymbolDisplayName(newStrong.symbol)} (${tally})\n${newStrong.reasons.join("\n")}`;
     notifyUser(userId, "signalDetected", "Concierge STRONG signal", body).catch(() => {});
     if (settings.telegramBriefings) await notifyUserTelegram(userId, `🤖 369Labs Concierge\n\n${body}`);
   }
