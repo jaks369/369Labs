@@ -97,10 +97,11 @@ describe("concierge pure helpers", () => {
     expect(alerts.some((a) => a.message.includes("3 straight losses"))).toBe(true);
   });
 
-  it("pre-trade checklist warns when stake exceeds the 5% cap", () => {
+  it("pre-trade checklist uses the 2% risk cap with the 3× max guard", () => {
     const c = computePreTradeChecklist({ symbol: "R_100", stake: 200, balance: 500 });
+    expect(c.suggestedStake).toBeCloseTo(10, 2); // 2% of 500
+    expect(c.maxStake).toBeCloseTo(30, 2); // 3 × the 2% recommendation
     expect(c.warnings.some((w) => w.includes("exceeds"))).toBe(true);
-    expect(c.suggestedStake).toBeLessThanOrEqual(25);
   });
 
   it("calendar returns a bounded list", () => {

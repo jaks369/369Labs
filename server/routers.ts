@@ -3364,7 +3364,7 @@ aiMarket: router({
         enabled: z.boolean().optional(),
         telegramBriefings: z.boolean().optional(),
         maxPerDay: z.number().min(1).max(50).optional(),
-        stakePct: z.number().min(0.1).max(25).optional(),
+        stakePct: z.number().min(0.1).max(2).optional(),
         symbols: z.array(z.string()).max(12).optional(),
       }))
       .mutation(async ({ ctx, input }) => {

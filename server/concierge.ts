@@ -321,18 +321,19 @@ export function computePreTradeChecklist(input: {
   const { symbol, contractType, stake, balance, advisory } = input;
   const warnings: string[] = [];
   const recommendations: string[] = [];
-  const maxStake = Math.round(Math.max(1, balance * 0.05) * 100) / 100;
-  const suggestedStake = Math.round(Math.min(Math.max(balance * 0.01, 0.35), maxStake) * 100) / 100;
+  const sizing = suggestStakeInput(balance);
+  const maxStake = sizing.maxStake; // 3× the recommended % (6% of balance at the 2% default)
+  const suggestedStake = sizing.stake;
 
   const riskScore = advisory?.score ?? 50;
   const riskLevel: "low" | "medium" | "high" = riskScore >= 75 ? "high" : riskScore >= 55 ? "medium" : "low";
   if (advisory) recommendations.push(`Market advisory for ${getSymbolDisplayName(symbol)} (${riskLevel}): ${advisory.recommendation}`);
   if (contractType) recommendations.push(`Contract type ${contractType} — confirm the barrier/digit matches the recent digit distribution.`);
-  if (stake && stake > maxStake) warnings.push(`Stake $${stake} exceeds the 5%-of-balance cap ($${maxStake}).`);
+  if (stake && stake > maxStake) warnings.push(`Stake $${stake} exceeds the ${sizing.riskPct * 3}%-of-balance risk cap ($${maxStake}).`);
   if (stake && stake > balance) warnings.push("Stake exceeds current balance.");
   if (riskLevel === "high") warnings.push("High market risk right now — a demo test or sitting out is genuinely smarter.");
   if (recommendations.length === 0) recommendations.push("Check the digit distribution and recent trend before committing.");
-  recommendations.push(`Never risk more than 1-2% per trade. Suggested stake here: $${suggestedStake}.`);
+  recommendations.push(`Never risk more than ${sizing.riskPct}% of your balance per trade (hard cap ${sizing.riskPct * 3}%). Suggested stake here: $${suggestedStake}.`);
 
   return {
     symbol,
@@ -543,7 +544,7 @@ export async function buildBriefing(userId: number, balance?: number): Promise<B
           symbolLabel: getSymbolDisplayName(top.symbol),
           suggestedStake: stake?.stake ?? 1,
           maxStake: stake?.maxStake ?? 50,
-          riskPct: stake?.riskPct ?? 1,
+          riskPct: stake?.riskPct ?? 2,
           provenance: "technical",
         }
       : null,

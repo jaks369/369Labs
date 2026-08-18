@@ -315,7 +315,7 @@ export function explainConfluence(score: ConfluenceScore): ConfluenceExplanation
 
   const strength = `A ${scoreLabel.toLowerCase()} read — ${agree} of ${score.votes.total} computable indicators share it. That's the whole read: no win probability is implied, only how many indicators pointed the same way.`;
   const risk =
-    "This count says how many indicators agree, not how likely the trade is to win. Volatility indices are near-random by design — size the trade from your risk budget (e.g. 1% of your account), never from how many indicators agree.";
+    "This count says how many indicators agree, not how likely the trade is to win. Volatility indices are near-random by design — size the trade from your risk budget (e.g. 2% of your account), never from how many indicators agree.";
 
   return { scoreLabel, what, why, strength, risk };
 }

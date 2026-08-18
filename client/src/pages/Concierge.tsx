@@ -456,8 +456,8 @@ export default function Concierge() {
                     <input type="number" min={1} max={50} value={settings.maxPerDay} onChange={(e) => patchSettings.mutate({ maxPerDay: Number(e.target.value) }, { onSuccess: refresh })} className="mt-1 w-full bg-[var(--surface-elevated)] border border-[var(--border)] rounded-lg px-3 py-1.5 text-sm text-white" />
                   </label>
                   <label className="block">
-                    <span className="text-[11px] text-[var(--text-muted)]">Stake %</span>
-                    <input type="number" min={0.1} max={25} value={settings.stakePct} onChange={(e) => patchSettings.mutate({ stakePct: Number(e.target.value) }, { onSuccess: refresh })} className="mt-1 w-full bg-[var(--surface-elevated)] border border-[var(--border)] rounded-lg px-3 py-1.5 text-sm text-white" />
+                    <span className="text-[11px] text-[var(--text-muted)]">Stake % (0.1–2% of balance)</span>
+                    <input type="number" min={0.1} max={2} step={0.5} value={settings.stakePct} onChange={(e) => patchSettings.mutate({ stakePct: Number(e.target.value) }, { onSuccess: refresh })} className="mt-1 w-full bg-[var(--surface-elevated)] border border-[var(--border)] rounded-lg px-3 py-1.5 text-sm text-white" />
                   </label>
                 </div>
                 <label className="block">
