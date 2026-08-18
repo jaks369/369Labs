@@ -61,6 +61,14 @@ function Metric({ label, value, accent }: { label: string; value: string | numbe
   );
 }
 
+// Interpret the confluence % honestly: it's how many indicators voted the same
+// way (e.g. 3/3 → agreement 1.0 → 50 + 28 = 78), NOT a win probability.
+function agreementText(votes: any): string {
+  if (!votes || !votes.total) return "";
+  const agree = Math.max(votes.up, votes.down);
+  return `${agree}/${votes.total} indicators agree`;
+}
+
 export default function Concierge() {
   const { isAuthenticated } = useAuth();
   const [, navigate] = useLocation();
@@ -128,6 +136,7 @@ export default function Concierge() {
                   <Metric label="Symbol" value={brief.nextMove.symbolLabel} />
                   <Metric label="Direction" value={brief.nextMove.signal.direction === "up" ? "Rise" : "Fall"} accent={brief.nextMove.signal.direction === "up" ? "text-[var(--green)]" : "text-[var(--red)]"} />
                   <Metric label="Confidence" value={`${brief.nextMove.signal.confidence}%`} />
+                  <Metric label="Agreement" value={agreementText(brief.nextMove.signal.votes) || "—"} />
                   <Metric label="Suggested stake" value={`$${brief.nextMove.suggestedStake}`} accent="text-[var(--accent-soft)]" />
                   <Metric label="Max stake" value={`$${brief.nextMove.maxStake}`} />
                 </div>
@@ -256,7 +265,7 @@ export default function Concierge() {
                         <div className="flex items-center gap-2 flex-wrap">
                           <span className="text-sm font-bold text-white">{getSymbolDisplayName(c.symbol)}</span>
                           <span className={`px-1.5 py-0.5 rounded border text-[10px] font-bold ${sc.chip}`}>{c.strength}</span>
-                          <span className="text-xs text-[var(--text-muted)]">{c.confidence}% · {c.contractType}</span>
+                          <span className="text-xs text-[var(--text-muted)]">{c.confidence}% · {agreementText(c.votes) || c.contractType}</span>
                         </div>
                         <p className="text-[11px] text-[var(--text-secondary)] mt-1 line-clamp-2">{(c.reasons || []).slice(0, 2).join(" · ")}</p>
                       </div>

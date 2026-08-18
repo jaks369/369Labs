@@ -144,10 +144,20 @@ export function medianTickGapSec(ticks: TickLike[]): number | null {
   return gaps[Math.floor(gaps.length / 2)];
 }
 
+export interface ConfluenceVotes {
+  up: number;
+  down: number;
+  total: number;
+  /** |up-down| / total, 0..1 — the raw agreement fraction behind the score. */
+  agreement: number;
+}
+
 export interface ConfluenceScore {
   score: number; // 0-100 — agreement-weighted, never audience applause
   direction: "up" | "down";
   reasons: string[];
+  /** The vote tally that produced `score` (see scoreForAgreement derivation). */
+  votes: ConfluenceVotes;
 }
 
 /**
@@ -194,6 +204,10 @@ export function scoreConfluence(
   const agreement = Math.abs(net) / Math.max(1, total);
   // Base 50, +28 at full agreement, scaled by how much agrees relative to
   // available indicators. Never goes past ~86 so it can't read as a certainty.
+  // 3/3 agree → agreement 1.0 → 50 + 28 = 78 (an agreement score, NOT a
+  // probability: full agreement just means all available indicators point the
+  // same way, it says nothing about the odds of the next tick).
   const score = Math.min(86, 50 + Math.round(agreement * 28));
-  return { score, direction, reasons: reasons.length ? reasons : ["No indicator agreement — neutral observation"] };
+  const votes: ConfluenceVotes = { up, down, total, agreement };
+  return { score, direction, votes, reasons: reasons.length ? reasons : ["No indicator agreement — neutral observation"] };
 }

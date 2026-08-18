@@ -30,6 +30,8 @@ export interface GuidingSignalCandidate {
   entryPrice: number;
   entryEpoch: number;
   windowTicks: number;
+  /** Vote tally behind `confidence` — e.g. 3/3 indicators agree → 78. */
+  votes: { up: number; down: number; total: number; agreement: number };
 }
 
 /** Pick a horizon in ticks for outcome resolution given the tick cadence. */
@@ -101,6 +103,7 @@ export function scanSignalForSymbol(symbol: string, rawTicks: TickLike[]): ScanR
           contractType: confluence.direction === "up" ? "CALL" : "PUT",
           confidence: confluence.score,
           strength,
+          votes: confluence.votes,
           reasons: [
             ...confluence.reasons,
             `Observed over ${candles.length} ${timeframeSec}s candles · ${available.join("+")} · technical read, not a guaranteed edge`,

@@ -483,7 +483,8 @@ export async function buildBriefing(userId: number, balance?: number): Promise<B
   let summary = "The scanner found no strong confluence across your followed symbols. Doing nothing is the data-driven result.";
   if (top) {
     verdict = top.strength === "STRONG" ? "TRADE" : "WATCH";
-    headline = `${getSymbolDisplayName(top.symbol)} · ${top.direction === "up" ? "Rise" : "Fall"} — ${top.confidence}% confluence`;
+    const agree = top.votes?.total ? `${Math.max(top.votes.up, top.votes.down)}/${top.votes.total} indicators agree` : "";
+    headline = `${getSymbolDisplayName(top.symbol)} · ${top.direction === "up" ? "Rise" : "Fall"} — ${top.confidence}% confluence (${agree})`;
     summary = top.reasons.join(" · ");
   }
 

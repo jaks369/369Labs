@@ -56,6 +56,23 @@ describe("indicators", () => {
     expect(res.score).toBeGreaterThanOrEqual(60);
   });
 
+  it("full agreement maps votes to the interpreted score (3/3 agree → 78, not a probability)", () => {
+    // All four voting indicators agree up: EMA, RSI, MACD, 3-candle momentum.
+    const res = scoreConfluence(true, 70, 1, [1, 2, 3, 4]);
+    expect(res.votes).toEqual({ up: 4, down: 0, total: 4, agreement: 1 });
+    expect(res.score).toBe(78);
+    // The score is ONLY the agreement-weighted read: 50 + round(1.0 * 28).
+    expect(res.score).toBe(50 + Math.round(res.votes.agreement * 28));
+  });
+
+  it("mixed votes lower the agreement and thus the score", () => {
+    // Three up (EMA, MACD, 3-candle momentum) vs one down (RSI):
+    // agreement |3-1|/4 = 0.5 → 50 + round(0.5*28) = 64.
+    const res = scoreConfluence(true, 30, 1, [1, 2, 3, 4]);
+    expect(res.votes).toEqual({ up: 3, down: 1, total: 4, agreement: 0.5 });
+    expect(res.score).toBe(50 + Math.round(res.votes.agreement * 28));
+  });
+
   it("full down-agreement yields a down confluence", () => {
     const res = scoreConfluence(false, 30, -1, [4, 3, 2, 1]);
     expect(res.direction).toBe("down");
