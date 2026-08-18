@@ -22,7 +22,7 @@ function exportCsv(report: any) {
     `Win Rate,${report.summary?.winRate}%`,
     `Total P&L,$${report.summary?.totalPnl}`,
     `Max Drawdown,$${report.summary?.maxDrawdown}`,
-    ...(report.bySymbol || []).map((s: any) => `${s.symbol},${s.pnl >= 0 ? "+" : ""}$${s.pnl} (${s.wins}W/${s.losses}L)`),
+    ...(report.bySymbol || []).map((s: any) => `${getSymbolDisplayName(s.symbol)},${s.pnl >= 0 ? "+" : ""}$${s.pnl} (${s.wins}W/${s.losses}L)`),
   ];
   const blob = new Blob([`${header}\n${rows.join("\n")}`], { type: "text/csv" });
   const url = URL.createObjectURL(blob);

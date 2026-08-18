@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { pushTradeIntent } from "@/lib/tradeIntent";
+import { getSymbolDisplayName } from "@/lib/symbols";
 
 function badge(level: string) {
   const map: Record<string, string> = {
@@ -253,7 +254,7 @@ export default function Concierge() {
                       </span>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
-                          <span className="text-sm font-bold text-white">{c.symbol}</span>
+                          <span className="text-sm font-bold text-white">{getSymbolDisplayName(c.symbol)}</span>
                           <span className={`px-1.5 py-0.5 rounded border text-[10px] font-bold ${sc.chip}`}>{c.strength}</span>
                           <span className="text-xs text-[var(--text-muted)]">{c.confidence}% · {c.contractType}</span>
                         </div>
@@ -306,7 +307,7 @@ export default function Concierge() {
                   <tbody>
                     {(history.data || []).map((s: any) => (
                       <tr key={s.id} className="border-t border-[var(--border)]">
-                        <td className="py-2 pr-2 text-white font-medium">{s.symbol}</td>
+                        <td className="py-2 pr-2 text-white font-medium">{getSymbolDisplayName(s.symbol)}</td>
                         <td className="py-2 pr-2 text-[var(--text-secondary)]">{s.direction === "up" ? "Rise" : "Fall"}</td>
                         <td className="py-2 pr-2 text-[var(--text-muted)]">{s.confidence}%</td>
                         <td className="py-2">

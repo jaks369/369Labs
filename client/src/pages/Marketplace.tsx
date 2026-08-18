@@ -385,7 +385,7 @@ export default function Marketplace() {
             {scanning
               ? "Scanning all markets…"
               : beingWatched
-                ? `Always watching ${watchStatus?.symbols?.length ?? getValidSymbols().length} markets · last ${lastScanLabel} · next ${nextScanLabel}`
+                ? `Scheduled sweep every ${Math.round((watchStatus?.intervalMs ?? 180000) / 60000)}m · ${watchStatus?.symbols?.length ?? getValidSymbols().length} markets · last ${lastScanLabel} · next ${nextScanLabel}`
                 : "Watch starting…"}
           </span>
           <Button onClick={() => runFullScan(true, "all")} disabled={scanning} className="bg-[var(--accent)] hover:brightness-110 text-black text-xs px-4 py-2 rounded-lg flex items-center gap-1">
@@ -422,7 +422,7 @@ export default function Marketplace() {
             <p className="text-sm text-[var(--text-muted)] mt-1 max-w-md mx-auto">
               {hasSymbol
                   ? "The engine validated the full fixed pattern library for this symbol and found no rule that beat its fair baseline with FDR + walk-forward confirmation. Try another symbol or a longer window."
-                  : `The scanner is continuously watching ${beingWatched ? `${watchStatus?.symbols?.length ?? getValidSymbols().length} markets` : "all markets"} and re-validates every ${(watchStatus?.intervalMs ?? 180000) / 60000} minutes. It tests Matches/Differs, Even/Odd, Over/Under and Repeat/Change against their real fair baselines. New conditions appear here automatically — this page refreshes on its own — so no manual scan is needed. "No edge found" is a valid, honest result: doing nothing is intelligence.`}
+                  : `The scanner re-validates ${beingWatched ? `${watchStatus?.symbols?.length ?? getValidSymbols().length} markets` : "all markets"} every ${(watchStatus?.intervalMs ?? 180000) / 60000} minutes on a background schedule. It tests Matches/Differs, Even/Odd, Over/Under and Repeat/Change against their real fair baselines. New conditions appear here automatically — this page refreshes on its own — so the button only jumps the queue. "No edge found" is a valid, honest result: doing nothing is intelligence.`}
             </p>
             <p className="text-xs text-[var(--text-muted)] mt-2 flex items-center justify-center gap-1.5">
               <Activity className="w-3.5 h-3.5 text-[var(--accent)]" />

@@ -314,11 +314,6 @@ export default function Settings() {
   const selectSection = (id: string) => {
     setActiveSection(id);
     navigate(`/settings/${id}`);
-    const el = sectionRef.current;
-    if (el) {
-      const target = el.querySelector(`[data-section="${id}"]`);
-      if (target) target.scrollIntoView({ behavior: "smooth", block: "start" });
-    }
   };
 
   const settingsError = derivTokenQuery.isError || telegramQuery.isError || notificationsQuery.isError || memoryQuery.isError;
@@ -354,7 +349,7 @@ export default function Settings() {
 
           {/* Content — max 640px */}
           <div className="flex-1 min-w-0 max-w-[640px]" ref={sectionRef}>
-            <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5 md:p-6 space-y-6">
+            <div key={activeSection} className="animate-page-fade bg-[var(--card)] border border-[var(--border)] rounded-xl p-5 md:p-6 space-y-6">
 
         {settingsError && (
           <div className="mb-6 p-4 rounded-lg border border-[var(--red)]/30 bg-[var(--red)]/10 flex items-center gap-3">

@@ -4,6 +4,7 @@ import { trpc } from "@/lib/trpc";
 import { useLocation } from "wouter";
 import { toast } from "@/components/Toast";
 import { pushTradeIntent, digitReadToContract } from "@/lib/tradeIntent";
+import { getSymbolDisplayName } from "@/lib/symbols";
 import {
   Hash,
   Loader2,
@@ -280,7 +281,7 @@ export default function DigitTrader() {
                   <tbody>
                     {(history.data || []).map((r: any) => (
                       <tr key={r.id} className="border-t border-[var(--border)]">
-                        <td className="py-2 pr-2 text-white font-medium">{r.symbol}</td>
+                        <td className="py-2 pr-2 text-white font-medium">{getSymbolDisplayName(r.symbol)}</td>
                         <td className="py-2 pr-2 text-[var(--text-secondary)]">{r.label}</td>
                         <td className="py-2 pr-2 text-[var(--text-muted)]">{r.confidence}%</td>
                         <td className="py-2 pr-2 text-[var(--text-muted)]">{r.deltaPp > 0 ? "+" : ""}{r.deltaPp}pp</td>

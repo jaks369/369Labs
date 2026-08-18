@@ -196,6 +196,7 @@ export default function Dashboard() {
   // Live tick buffer: stream ticks from the Deriv WS so the header price and
   // Price History table update in real time (newest on top).
   const [liveTicks, setLiveTicks] = useState<any[]>([]);
+  const liveTicksRef = useRef<any[]>([]);
   useEffect(() => {
     derivWS.markBackground(selectedSymbol);
     const subId = derivWS.subscribe(selectedSymbol);
@@ -205,6 +206,8 @@ export default function Dashboard() {
         const price = Number(tick.price);
         const decimals = derivWS.decimalPlacesFor(selectedSymbol);
         const lastDigit = lastDigitOf(price, decimals);
+        const entry = { symbol: tick.symbol, price, lastDigit, epoch: Math.floor(tick.timestamp / 1000) };
+        liveTicksRef.current = [entry, ...liveTicksRef.current].slice(0, 50);
         setLiveTicks((prev) => [{ symbol: tick.symbol, price, lastDigit, epoch: Math.floor(tick.timestamp / 1000) }, ...prev].slice(0, 50));
       },
       onError: () => {},
@@ -367,6 +370,14 @@ export default function Dashboard() {
       addTradeLog("ok", `Trade placed — contract #${purchase.contractId} on ${selectedSymbol}${entrySuffix}`);
       if (typeof purchase.balanceAfter === "number") setBalance(purchase.balanceAfter);
 
+      // Debug aid: log the tick window around entry so a loss/win can be matched
+      // to the exact tick Deriv settled. The heading shows the barrier digit (for
+      // OVER/UNDER) or direction, then the newest→oldest last-digits seen around
+      // the purchase. The deciding tick for a tick-contract is the NEXT tick.
+      const entryEpoch = Math.floor(Date.now() / 1000);
+      const dbgBarrier = contract.category === "over_under" ? `Over/Under barrier ${contract.barrier ?? "?"}` : contract.category;
+      addTradeLog("ok", `Tick window #${purchase.contractId} (${dbgBarrier}, entry≈${entrySpot}): ${liveTicksRef.current.slice(0, 12).map((t: any) => `${t.lastDigit}@${Number(t.price).toFixed(getDecimalPlaces(selectedSymbol))}`).join(" → ") || "no ticks yet"}`);
+
       // Ledger-first: the DB row is part of the success contract. recordFill
       // bypasses the stake clamp (G2) — the contract already exists on Deriv,
       // and a rejected save can only create a real-money trade with no ledger
@@ -394,6 +405,18 @@ export default function Dashboard() {
           const profit = parseFloat(c.profit || c.profit_loss || "0");
           const resultLabel = profit >= 0 ? "WIN" : "LOSS";
           addTradeLog(profit >= 0 ? "ok" : "err", `Contract #${purchase.contractId} settled — ${resultLabel} ${formatSignedMoney(profit)}`);
+          // Debug aid: which tick/epoch actually settled this contract. Exit/entry
+          // ticks come straight from Deriv's proposal_open_contract payload.
+          if (c.exit_tick !== undefined || c.entry_tick !== undefined) {
+            const settleEpoch = Number(c.exit_tick ?? c.entry_tick ?? 0);
+            const winByDigit = profit >= 0;
+            const settleTick = liveTicksRef.current.find((t: any) => Number(t.epoch) === settleEpoch);
+            addTradeLog(
+              "ok",
+              `Tick check #${purchase.contractId}: ${winByDigit ? "WIN" : "LOSS"} — entry_tick ${c.entry_tick ?? "?"}, exit_tick ${c.exit_tick ?? "?"}` +
+                (settleTick ? `, settling digit ${settleTick.lastDigit} (price ${Number(settleTick.price).toFixed(getDecimalPlaces(selectedSymbol))})` : `, settling epoch ${settleEpoch} not in local window (${liveTicksRef.current.slice(0, 4).map((t: any) => `${t.epoch}=${t.lastDigit}`).join(" ")})`),
+            );
+          }
           persistTrade(
             {
               result: (profit >= 0 ? "win" : "loss") as any,

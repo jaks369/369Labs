@@ -126,6 +126,7 @@ function Router() {
       <Route path={"/telegram"}><AppLayout><Telegram /></AppLayout></Route>
       <Route path={"/notifications"}><AppLayout><Notifications /></AppLayout></Route>
       <Route path={"/settings"}><AppLayout><Settings /></AppLayout></Route>
+      <Route path={"/settings/:section"}><AppLayout><Settings /></AppLayout></Route>
       <Route path={"/admin"}><AppLayout><Admin /></AppLayout></Route>
       <Route path={"/marketplace"}><AppLayout><Marketplace /></AppLayout></Route>
       <Route path={"/backtesting"}><AppLayout><LazyLoad><LazyBacktesting /></LazyLoad></AppLayout></Route>

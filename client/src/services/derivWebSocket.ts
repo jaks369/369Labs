@@ -215,9 +215,19 @@ class DerivWebSocketService {
           console.error("[Deriv WS] Parse error:", error);
         }
       };
-      this.ws.onerror = () => console.warn("[Deriv WS] Connection error");
-      this.ws.onclose = () => {
-        console.log("[Deriv WS] Disconnected");
+      this.ws.onerror = (event) => {
+        // Browser WebSocket errors carry no status text, but the underlying
+        // CloseEvent (code/reason) arrives on `close` and tells us WHY Deriv
+        // rejected the handshake (e.g. 1006 abnormal, 4001 auth, 4408 timeout).
+        const err = event as Event & { message?: string; error?: Error };
+        console.warn("[Deriv WS] Connection error", {
+          message: err?.message || (err?.error?.message ?? ""),
+        });
+      };
+      this.ws.onclose = (event) => {
+        console.log(
+          `[Deriv WS] Disconnected (code=${event.code}, reason=${JSON.stringify(event.reason)}, wasClean=${event.wasClean})`
+        );
         this.authorized = false;
         // Keep subscribedSymbols/pendingSubscriptionSymbols intact so the
         // reconnect's onopen can restore live tick feeds (charts/bots would
@@ -436,8 +446,16 @@ class DerivWebSocketService {
           }
         } catch {}
       };
-      this.tickWs.onerror = () => {};
-      this.tickWs.onclose = () => {
+      this.tickWs.onerror = (event) => {
+        const err = event as Event & { message?: string; error?: Error };
+        console.warn("[Deriv WS] Tick feed connection error", {
+          message: err?.message || (err?.error?.message ?? ""),
+        });
+      };
+      this.tickWs.onclose = (event) => {
+        console.log(
+          `[Deriv WS] Tick feed disconnected (code=${event.code}, reason=${JSON.stringify(event.reason)})`
+        );
         this.tickWsReady = false;
         this.tickWs = null;
         // The tick feed is what keeps charts/prices alive. If it drops, the
@@ -814,16 +832,13 @@ class DerivWebSocketService {
         // backoff timer was pending — otherwise we'd silently reconnect after
         // an explicit disconnect().
         if (this.intentionallyDisconnected) return;
-        // Cheap fast path: the OTP URL is still valid for a while, so reopen
-        // the authenticated socket directly instead of re-running the two REST
-        // calls (fetchAccounts + fetchOtpUrl) that make recovery slow.
+        // Deriv's OTP URLs are single-use: the socket that first opens consumes
+        // the OTP, so reopening the cached URL always fails the WS handshake
+        // (seen as `WebSocket connection to '...?otp=...' failed:` in the
+        // console). Always re-run the REST accounts+otp flow to mint a fresh
+        // single-use URL on every reconnect.
         if (this.apiToken) {
-          if (this.cachedOtpUrl) {
-            this.authorized = false;
-            this.connectWs(this.cachedOtpUrl, true);
-          } else {
-            this.connectWithOtp(this.apiToken).catch(() => this.connectPublic());
-          }
+          this.connectWithOtp(this.apiToken).catch(() => this.connectPublic());
         } else {
           this.connectPublic();
         }

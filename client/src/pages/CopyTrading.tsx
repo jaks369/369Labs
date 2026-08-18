@@ -13,6 +13,7 @@ import {
   AlertCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { getSymbolDisplayName } from "@/lib/symbols";
 
 export default function CopyTrading() {
   const { isAuthenticated } = useAuth();
@@ -146,7 +147,7 @@ export default function CopyTrading() {
                   {(mirrors.data || []).map((m: any) => (
                     <tr key={m.id} className="border-t border-[var(--border)]">
                       <td className="px-3 py-2 text-[var(--text-muted)] whitespace-nowrap">{new Date(m.createdAt).toLocaleString()}</td>
-                      <td className="px-3 py-2 text-white font-medium">{m.symbol}</td>
+                      <td className="px-3 py-2 text-white font-medium">{getSymbolDisplayName(m.symbol)}</td>
                       <td className="px-3 py-2 text-[var(--text-secondary)]">{m.contractType}</td>
                       <td className="px-3 py-2 text-[var(--text-secondary)] font-mono">${Number(m.stake).toFixed(2)}</td>
                       <td className="px-3 py-2">

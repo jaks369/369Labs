@@ -127,7 +127,7 @@ export default function AIAssistant() {
           barrier: a.params.barrier !== undefined ? Number(a.params.barrier) : undefined,
         });
         const entrySuffix = r.entrySpot !== undefined ? ` at ${Number(r.entrySpot).toFixed(2)}` : "";
-        setMessages(prev => [...prev, { role: "ai", content: `Order filled: ${a.params.symbol} ${a.params.contractType} (contract ${r.contractId})${entrySuffix}.` }]);
+        setMessages(prev => [...prev, { role: "ai", content: `Order filled: ${getSymbolDisplayName(a.params.symbol)} ${a.params.contractType} (contract ${r.contractId})${entrySuffix}.` }]);
       } else if (a.action === "deployBot") {
         try {
           const saved = await saveStrategyMutation.mutateAsync({
@@ -138,7 +138,7 @@ export default function AIAssistant() {
           setMessages(prev => [...prev, { role: "ai", content: `Bot "${saved.name}" deployed for ${a.params.symbol || "default symbol"} @ stake $${a.params.stake || 1}. Open Bots to monitor.` }]);
         } catch { setMessages(prev => [...prev, { role: "ai", content: "Failed to deploy bot. Check your strategy configuration." }]); }
       } else if (a.action === "runBacktest") {
-        setMessages(prev => [...prev, { role: "ai", content: `Spinning up backtest: strategy ${a.params.strategyId} on ${a.params.symbol}...` }]);
+        setMessages(prev => [...prev, { role: "ai", content: `Spinning up backtest: strategy ${a.params.strategyId} on ${getSymbolDisplayName(a.params.symbol)}...` }]);
         navigate("/backtesting");
       }
     } catch (e: any) {

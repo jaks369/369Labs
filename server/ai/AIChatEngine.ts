@@ -149,6 +149,7 @@ function isPatternObservation(m: string): boolean {
 function detectIntent(message: string): string {
   const m = message.toLowerCase();
   if (extractSymbol(message) && isPatternObservation(m)) return "market";
+  if (/\b(ticks?|latest|recent).*(ticks?|digits?|prices?|read)\b|\blast\s+\d+\s*ticks?\b|\bshow\s+me\b.*\bticks?\b/.test(m)) return "ticks";
   if (/\b(trade|lost|losing|loss|won|winning|win|pnl|profit|result|outcome)\b/.test(m)) return "trades";
   if (/\b(how do i|how to|what is|what does)\b/.test(m) && /\b(signal|scanner|strategy|backtest|bot|market intelligence|journal|paper trading|deriv|feature|app)\b/.test(m)) return "app";
   if (/\b(strategy|strategies|review|score|rating|strength|weakness)\b/.test(m)) return "strategies";
@@ -181,7 +182,7 @@ async function handleTrades(userId: number, message: string): Promise<ChatRespon
   if (/\b(last|recent|latest)\b/.test(m) && /\b(loss|lose|losing)\b/.test(m)) {
     const recentLoss = losses[0];
     if (recentLoss) {
-      evidence.push(`Trade ID ${recentLoss.id}: ${recentLoss.symbol} ${recentLoss.contractType || ""}, loss of ${Number(recentLoss.profitLoss || 0).toFixed(2)} on ${new Date(recentLoss.entryTime).toLocaleDateString()}`);
+      evidence.push(`Trade ID ${recentLoss.id}: ${getSymbolDisplayName(recentLoss.symbol) || recentLoss.symbol} ${recentLoss.contractType || ""}, loss of ${Number(recentLoss.profitLoss || 0).toFixed(2)} on ${new Date(recentLoss.entryTime).toLocaleDateString()}`);
       const review = reviews.find((r) => r.relatedTradeId === recentLoss.id || r.symbol === recentLoss.symbol);
       if (review) {
         const d = review.data as any;
@@ -197,8 +198,8 @@ async function handleTrades(userId: number, message: string): Promise<ChatRespon
       }
       const topReason = Object.entries(allLossReasons).sort((a, b) => b[1] - a[1])[0];
       const answer = topReason
-        ? `Your last loss on ${recentLoss.symbol} lost ${Math.abs(Number(recentLoss.profitLoss)).toFixed(2)}. The most common reason across your losses is: "${topReason[0]}" (${topReason[1]} occurrences).`
-        : `Your last loss was on ${recentLoss.symbol} for ${Math.abs(Number(recentLoss.profitLoss)).toFixed(2)}. No detailed review was saved for this trade.`;
+        ? `Your last loss on ${getSymbolDisplayName(recentLoss.symbol) || recentLoss.symbol} lost ${Math.abs(Number(recentLoss.profitLoss)).toFixed(2)}. The most common reason across your losses is: "${topReason[0]}" (${topReason[1]} occurrences).`
+        : `Your last loss was on ${getSymbolDisplayName(recentLoss.symbol) || recentLoss.symbol} for ${Math.abs(Number(recentLoss.profitLoss)).toFixed(2)}. No detailed review was saved for this trade.`;
       return { answer, confidence: 80, evidence, enginesUsed: engines, timestamp: Date.now() };
     }
     return { answer: "You don't have any losing trades in your recent history.", confidence: 90, evidence, enginesUsed: engines, timestamp: Date.now() };
@@ -207,9 +208,9 @@ async function handleTrades(userId: number, message: string): Promise<ChatRespon
   if (/\b(best|top|biggest|largest)\b/.test(m) || /\b(profit|won|win)\b/.test(m)) {
     const best = [...trades].sort((a, b) => Number(b.profitLoss || 0) - Number(a.profitLoss || 0))[0];
     if (best && Number(best.profitLoss) > 0) {
-      evidence.push(`Best trade: ${best.symbol} ${best.contractType || ""}, +${Number(best.profitLoss).toFixed(2)} on ${new Date(best.entryTime).toLocaleDateString()}`);
+      evidence.push(`Best trade: ${getSymbolDisplayName(best.symbol) || best.symbol} ${best.contractType || ""}, +${Number(best.profitLoss).toFixed(2)} on ${new Date(best.entryTime).toLocaleDateString()}`);
       return {
-        answer: `Your best trade was ${best.symbol} ${best.contractType || ""} for +${Number(best.profitLoss).toFixed(2)} on ${new Date(best.entryTime).toLocaleDateString()}.`,
+        answer: `Your best trade was ${getSymbolDisplayName(best.symbol) || best.symbol} ${best.contractType || ""} for +${Number(best.profitLoss).toFixed(2)} on ${new Date(best.entryTime).toLocaleDateString()}.`,
         confidence: 95,
         evidence,
         enginesUsed: engines,
@@ -446,6 +447,61 @@ async function handlePattern(userId: number, symbol: string, message: string): P
   return { answer, confidence: 85, evidence, enginesUsed: engines, timestamp: Date.now() };
 }
 
+/* = Live tick read intent = */
+
+// Pick the symbol(s) the user is most likely asking about: the one named in the
+// message, else their preferred symbols from memory, else the healthiest market.
+async function resolveContextSymbols(userId: number, message: string, limit = 1): Promise<string[]> {
+  const named = extractSymbol(message);
+  if (named) return [named];
+  try {
+    const mem = await db.getUserMemory(userId);
+    const prefs: string[] = (mem as any)?.symbols || [];
+    const valid = prefs.filter((s) => KNOWN_SYMBOLS.includes(s));
+    if (valid.length > 0) return valid.slice(0, limit);
+  } catch {}
+  return ["R_100"];
+}
+
+async function handleTicks(userId: number, message: string): Promise<ChatResponse> {
+  const engines: string[] = ["LiveTickReader"];
+  const evidence: string[] = [];
+
+  const symbols = await resolveContextSymbols(userId, message, 3);
+  const pieces: string[] = [];
+  const countMatch = message.toLowerCase().match(/last\s+(\d+)\s*ticks?/);
+  const n = Math.min(20, Math.max(1, countMatch ? parseInt(countMatch[1], 10) : 5));
+
+  for (const symbol of symbols) {
+    let ticks: { price: string; epoch: number }[] = [];
+    try {
+      ticks = await db.getTickHistory(symbol, n);
+    } catch {
+      /* skip */
+    }
+    if (!ticks || ticks.length === 0) {
+      pieces.push(`${getSymbolDisplayName(symbol) || symbol}: no recent ticks available in the app yet.`);
+      continue;
+    }
+    const decimals = getDecimalPlaces(symbol);
+    const rows = ticks.slice(-n).map((t) => {
+      const price = Number(t.price);
+      const digit = lastDigitOf(price, decimals);
+      return `${price.toFixed(decimals)} → digit ${digit}`;
+    });
+    const lastDigit = lastDigitOf(Number(ticks[ticks.length - 1].price), decimals);
+    evidence.push(`${symbol}: ${rows.join(" · ")}`);
+    pieces.push(`${getSymbolDisplayName(symbol) || symbol}: ${rows.join(" · ")}. Latest digit: ${lastDigit}.`);
+  }
+
+  let answer = pieces.join("\n");
+  if (symbols.length === 1) {
+    answer += ` Remember: each tick's digit is independent — a past digit doesn't change the odds of the next one.`;
+  }
+
+  return { answer, confidence: 85, evidence, enginesUsed: engines, timestamp: Date.now() };
+}
+
 async function handleMarket(userId: number, message: string): Promise<ChatResponse> {
   const engines: string[] = ["MarketHealthEngine", "PredictionEngine", "RiskIntelligence"];
   const evidence: string[] = [];
@@ -510,9 +566,9 @@ async function handleMarket(userId: number, message: string): Promise<ChatRespon
     const allHealth = aiOrchestrator.getHealth();
     const sorted = [...allHealth].sort((a, b) => b.score - a.score);
     const top = sorted.slice(0, 3);
-    top.forEach((h) => evidence.push(`${h.symbol}: score ${h.score}, trend ${h.trend}, volatility ${h.volatility}`));
+    top.forEach((h) => evidence.push(`${getSymbolDisplayName(h.symbol) || h.symbol}: score ${h.score}, trend ${h.trend}, volatility ${h.volatility}`));
     return {
-      answer: `Strongest symbols: ${top.map((h) => `${h.symbol} (${h.score})`).join(", ")}.`,
+      answer: `Strongest symbols: ${top.map((h) => `${getSymbolDisplayName(h.symbol) || h.symbol} (${h.score})`).join(", ")}.`,
       confidence: 85,
       evidence,
       enginesUsed: engines,
@@ -525,10 +581,10 @@ async function handleMarket(userId: number, message: string): Promise<ChatRespon
     if (hot.length === 0) {
       return { answer: "No recent trading activity recorded yet. Once trades settle, I'll rank the hottest markets.", confidence: 80, evidence, enginesUsed: engines, timestamp: Date.now() };
     }
-    hot.forEach((h) => evidence.push(`${h.symbol}: ${h.tradeCount} trades in last 24h, ${h.winRate}% win rate`));
+    hot.forEach((h) => evidence.push(`${getSymbolDisplayName(h.symbol) || h.symbol}: ${h.tradeCount} trades in last 24h, ${h.winRate}% win rate`));
     const top = hot[0];
     return {
-      answer: `Hottest markets right now: ${hot.map((h) => `${h.symbol} (${h.tradeCount} trades)`).join(", ")}. Most traded is ${top.symbol} with ${top.tradeCount} trades and a ${top.winRate}% win rate in the last 24h.`,
+      answer: `Hottest markets right now: ${hot.map((h) => `${getSymbolDisplayName(h.symbol) || h.symbol} (${h.tradeCount} trades)`).join(", ")}. Most traded is ${getSymbolDisplayName(top.symbol) || top.symbol} with ${top.tradeCount} trades and a ${top.winRate}% win rate in the last 24h.`,
       confidence: 90,
       evidence,
       enginesUsed: engines,
@@ -542,9 +598,9 @@ async function handleMarket(userId: number, message: string): Promise<ChatRespon
     if (highVol.length === 0) {
       return { answer: "No symbols currently showing high volatility.", confidence: 85, evidence, enginesUsed: engines, timestamp: Date.now() };
     }
-    highVol.forEach((h) => evidence.push(`${h.symbol}: score ${h.score}, volatility High`));
+    highVol.forEach((h) => evidence.push(`${getSymbolDisplayName(h.symbol) || h.symbol}: score ${h.score}, volatility High`));
     return {
-      answer: `${highVol.length} symbol(s) with high volatility: ${highVol.map((h) => h.symbol).join(", ")}. Consider reducing exposure on volatile markets.`,
+      answer: `${highVol.length} symbol(s) with high volatility: ${highVol.map((h) => `${getSymbolDisplayName(h.symbol) || h.symbol}`).join(", ")}. Consider reducing exposure on volatile markets.`,
       confidence: 80,
       evidence,
       enginesUsed: engines,
@@ -968,6 +1024,7 @@ async function handleGeneral(userId: number, message: string): Promise<ChatRespo
 function buildIntentResponse(intent: string, userId: number, message: string): Promise<ChatResponse> {
   switch (intent) {
     case "trades": return handleTrades(userId, message);
+    case "ticks": return handleTicks(userId, message);
     case "strategies": return handleStrategies(userId, message);
     case "market": return handleMarket(userId, message);
     case "ai": return handleAI(userId, message);
@@ -1019,7 +1076,7 @@ async function llmChatCompletion(client: any, params: any): Promise<string> {
 }
 
 // Build a compact trading-context summary for the system prompt.
-async function buildContextSummary(userId: number): Promise<string> {
+async function buildContextSummary(userId: number, message = ""): Promise<string> {
   const parts: string[] = [];
   try {
     const trades = await db.getTradesByUserId(userId, 20);
@@ -1052,7 +1109,7 @@ async function buildContextSummary(userId: number): Promise<string> {
     const ws = getWatchStatus();
     if (ws?.enabled) {
       const mins = Math.round((ws.intervalMs || 0) / 60000);
-      parts.push(`Scanner: always-on, sweeping ${ws.symbols?.length || 0} markets every ~${mins} min; last scan ${ws.lastScanAt ? new Date(ws.lastScanAt).toISOString() : "n/a"}, next ${ws.nextScanAt ? new Date(ws.nextScanAt).toISOString() : "n/a"}${ws.lastCycle ? ` (last cycle ${ws.lastCycle.scans} scans in ${(ws.lastCycle.durationMs / 1000).toFixed(0)}s)` : ""}.`);
+      parts.push(`Scanner: scheduled sweep every ~${mins} min over ${ws.symbols?.length || 0} markets; last scan ${ws.lastScanAt ? new Date(ws.lastScanAt).toISOString() : "n/a"}, next ${ws.nextScanAt ? new Date(ws.nextScanAt).toISOString() : "n/a"}${ws.lastCycle ? ` (last cycle ${ws.lastCycle.scans} scans in ${(ws.lastCycle.durationMs / 1000).toFixed(0)}s)` : ""}.`);
     } else {
       parts.push("Scanner: currently off.");
     }
@@ -1061,7 +1118,7 @@ async function buildContextSummary(userId: number): Promise<string> {
   try {
     const signals = await db.getSignalsByUserId(userId, 5);
     if (signals.length > 0) {
-      parts.push(`Live signals: ${signals.map((s: any) => `${s.symbol} "${s.title}" (winRate ${s.winRate}%)`).join("; ")}.`);
+      parts.push(`Live signals: ${signals.map((s: any) => `${getSymbolDisplayName(s.symbol) || s.symbol} "${s.title}" (winRate ${s.winRate}%)`).join("; ")}.`);
     }
   } catch {}
   // Live market health snapshot (top few by score).
@@ -1070,7 +1127,22 @@ async function buildContextSummary(userId: number): Promise<string> {
     const health = aiOrchestrator.getHealth();
     if (health.length > 0) {
       const top = [...health].sort((a, b) => b.score - a.score).slice(0, 5);
-      parts.push(`Market health: ${top.map((h) => `${h.symbol} score ${h.score} (${h.volatility} vol)`).join(", ")}.`);
+      parts.push(`Market health: ${top.map((h) => `${getSymbolDisplayName(h.symbol) || h.symbol} score ${h.score} (${h.volatility} vol)`).join(", ")}.`);
+    }
+  } catch {}
+  // Live recent ticks for the symbol(s) the user is asking about, newest first.
+  try {
+    const ctxSymbols = await resolveContextSymbols(userId, message, 3);
+    for (const symbol of ctxSymbols) {
+      try {
+        const ticks = await db.getTickHistory(symbol, 8);
+        if (!ticks || ticks.length === 0) continue;
+        const decimals = getDecimalPlaces(symbol);
+        const digits = ticks.map((t) => lastDigitOf(Number(t.price), decimals)).filter((d) => !isNaN(d));
+        const lastDigit = digits[digits.length - 1];
+        const prevDigit = digits[digits.length - 2];
+        parts.push(`Recent ticks (${getSymbolDisplayName(symbol) || symbol}): ${digits.join(" ")} — last digit ${lastDigit}${prevDigit !== undefined ? `, previous ${prevDigit}` : ""}.`);
+      } catch {}
     }
   } catch {}
   return parts.join("\n");
@@ -1091,7 +1163,7 @@ async function tryLLMResponse(userId: number, message: string): Promise<ChatResp
     } catch {}
     const effectiveClient = baseUrl && baseUrl !== (process.env.AI_API_BASE_URL || "") ? await getAIClient(apiKey, baseUrl) : client;
     const history = conversations.get(userId) || [];
-    const context = await buildContextSummary(userId);
+    const context = await buildContextSummary(userId, message);
     const messages: any[] = [
       { role: "system", content: buildSystemPrompt(context) },
       ...history.slice(-10).map((m) => ({ role: m.role, content: m.content })),
