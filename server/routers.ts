@@ -1611,6 +1611,42 @@ save: protectedProcedure
       const counts = await reconcileUser(ctx.user.id, false);
       return { ok: true, ...counts };
     }),
+
+    // Client-driven reconcile: the browser's own authorized Deriv WS pulls the
+    // portfolio (the server-side Deriv connection may be down — OTP handshake —
+    // while the WS that placed the trades is usually alive), then this settles /
+    // reconstructs rows against that portfolio. Same idempotent logic as the
+    // server-side reconciler, just fed a portfolio from the client.
+    reconcileFromPortfolio: protectedProcedure
+      .input(z.object({
+        contracts: z.array(z.object({
+          contractId: z.union([z.number(), z.string()]),
+          contractType: z.string().optional(),
+          symbol: z.string().optional(),
+          stake: z.number().optional(),
+          entryPrice: z.number().optional(),
+          purchasedAt: z.number().nullish(),
+          isSold: z.boolean().optional(),
+          profit: z.number().optional(),
+          soldAt: z.number().nullish(),
+        })),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const { reconcileFromPortfolio } = await import("./reconciliation");
+        const contracts = input.contracts.map((c) => ({
+          contractId: Number(c.contractId),
+          contractType: c.contractType ?? "",
+          symbol: c.symbol ?? "",
+          stake: c.stake ?? 0,
+          entryPrice: c.entryPrice ?? 0,
+          purchasedAt: c.purchasedAt ?? null,
+          isSold: c.isSold ?? false,
+          profit: c.profit ?? 0,
+          soldAt: c.soldAt ?? null,
+        }));
+        const counts = await reconcileFromPortfolio(ctx.user.id, contracts, false);
+        return { ok: true, ...counts };
+      }),
   }),
 
   // Price Alerts

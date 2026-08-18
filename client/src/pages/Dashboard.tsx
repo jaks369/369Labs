@@ -101,15 +101,51 @@ export default function Dashboard() {
   const saveTradeMutation = trpc.trades.save.useMutation();
   const recordFillMutation = trpc.trades.recordFill.useMutation();
   const reconcileMutation = trpc.trades.reconcile.useMutation();
+  const reconcileFromPortfolioMutation = trpc.trades.reconcileFromPortfolio.useMutation();
   const [pendingRecords, setPendingRecords] = useState<{ contractId: string; symbol: string; contractType?: string; stake?: string; entryPrice?: string; entryTime: Date }[]>([]);
   const [recordFillPending, setRecordFillPending] = useState(false);
+  const [reconciling, setReconciling] = useState(false);
+  const [lastRecordError, setLastRecordError] = useState("");
+  const reconcileBusyRef = useRef(false);
 
   // M3 ledger hardening: a Deriv fill MUST have a DB row. recordFill is called
   // immediately after purchaseContract (bypasses the stake clamp — the contract
   // already exists on Deriv). If it fails we keep the contract in `pendingRecords`
-  // (visible banner) and auto-run the server reconciler so the row still appears
+  // (visible banner) and auto-run the reconciler so the row still appears
   // without the user doing anything. The server ledger is authoritative: once a
   // row exists for a contract (retry, reconciler, or settle save), the banner clears.
+  //
+  // Reconcile runs against the browser's OWN authorized Deriv WS first: the
+  // server-side Deriv connection (OTP handshake) can be down, which turns the
+  // server `reconcile` into a silent no-op — while the WS that placed the trades
+  // is usually alive. Coalesced (busy ref) so a run of failed fills doesn't
+  // pile requests onto a broken path.
+  const runReconcile = async (opts?: { source?: string }) => {
+    if (reconcileBusyRef.current) return;
+    reconcileBusyRef.current = true;
+    setReconciling(true);
+    try {
+      let res: any;
+      if (derivWS.isAuthorized()) {
+        const contracts = (await derivWS.fetchPortfolio()).map((c: any) => ({ ...c, contractId: String(c.contractId) }));
+        res = await reconcileFromPortfolioMutation.mutateAsync({ contracts });
+        addTradeLog("ok", `Reconcile (${opts?.source === "auto" ? "auto" : "browser"}): ${res.reconstructed} reconstructed · ${res.settled} settled · ${res.stuck} stuck · ${res.errors} errors`);
+      } else {
+        res = await reconcileMutation.mutateAsync();
+        addTradeLog("ok", `Reconcile (server): ${res.reconstructed} reconstructed · ${res.settled} settled · ${res.skippedNoToken} no-Deriv-connection · ${res.errors} errors`);
+      }
+      if (res.reconstructed > 0 || res.settled > 0) setLastRecordError("");
+      tradesQuery.refetch();
+    } catch (e: any) {
+      const msg = `${e?.message || String(e || "")}`.slice(0, 120);
+      setLastRecordError(msg);
+      addTradeLog("err", `Reconcile failed: ${msg}`);
+    } finally {
+      setReconciling(false);
+      reconcileBusyRef.current = false;
+    }
+  };
+
   const addPendingRecord = (r: any) => {
     setPendingRecords((prev) => (prev.some((p) => String(p.contractId) === String(r.contractId)) ? prev : [...prev, r]));
   };
@@ -120,11 +156,10 @@ export default function Dashboard() {
       return true;
     } catch (e: any) {
       const msg = `${e?.message || String(e || "")}`;
+      setLastRecordError(msg.slice(0, 200));
       addPendingRecord(payload);
       addTradeLog("err", `Contract #${payload.contractId} placed — record pending (${msg.slice(0, 120)}); reconciling…`);
-      reconcileMutation.mutate(undefined, {
-        onError: (e2: any) => addTradeLog("err", `Auto-reconcile failed: ${`${e2?.message || String(e2 || "")}`.slice(0, 120)}`),
-      });
+      runReconcile({ source: "auto" });
       return false;
     }
   };
@@ -136,9 +171,12 @@ export default function Dashboard() {
       for (const r of batch) {
         await recordFillMutation.mutateAsync(r);
       }
+      setLastRecordError("");
       tradesQuery.refetch();
     } catch (e: any) {
-      addTradeLog("err", `Retry record failed: ${`${e?.message || String(e || "")}`.slice(0, 120)}`);
+      const msg = `${e?.message || String(e || "")}`.slice(0, 120);
+      setLastRecordError(msg);
+      addTradeLog("err", `Retry record failed: ${msg}`);
     } finally {
       setRecordFillPending(false);
     }
@@ -758,30 +796,37 @@ export default function Dashboard() {
 
             {/* Trade Type Pill Row — always visible above chart */}
             {pendingRecords.length > 0 && (
-              <div className="flex items-center justify-between gap-3 px-3 py-1.5 border-b border-[rgba(255,255,255,0.12)] shrink-0" style={{ background: "rgba(255,120,40,0.14)" }}>
-                <div className="flex items-center gap-2 min-w-0">
-                  <Loader2 className={`w-3 h-3 shrink-0 ${recordFillPending ? "animate-spin" : ""} text-[#ffb56b]`} />
-                  <span className="text-[11px] font-semibold text-white truncate">
-                    {pendingRecords.length} contract{pendingRecords.length > 1 ? "s" : ""} placed but not yet recorded
-                  </span>
+              <div className="border-b border-[rgba(255,255,255,0.12)] shrink-0" style={{ background: "rgba(255,120,40,0.14)" }}>
+                <div className="flex items-center justify-between gap-3 px-3 py-1.5">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <Loader2 className={`w-3 h-3 shrink-0 ${recordFillPending || reconciling ? "animate-spin" : ""} text-[#ffb56b]`} />
+                    <span className="text-[11px] font-semibold text-white truncate">
+                      {pendingRecords.length} contract{pendingRecords.length > 1 ? "s" : ""} placed but not yet recorded
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <button
+                      onClick={retryPendingRecords}
+                      disabled={recordFillPending || reconciling}
+                      className="px-2 py-1 rounded text-[10px] font-bold text-black hover:brightness-110 transition-all disabled:opacity-50"
+                      style={{ background: "linear-gradient(135deg, var(--aurora-teal), var(--aurora-purple))" }}
+                    >
+                      {recordFillPending ? "Recording…" : "Retry record"}
+                    </button>
+                    <button
+                      onClick={() => runReconcile()}
+                      disabled={recordFillPending || reconciling}
+                      className="px-2 py-1 rounded text-[10px] font-bold border border-[rgba(255,255,255,0.15)] text-white hover:bg-white/5 transition-all disabled:opacity-50"
+                    >
+                      {reconciling ? "Reconciling…" : "Reconcile"}
+                    </button>
+                  </div>
                 </div>
-                <div className="flex items-center gap-1.5 shrink-0">
-                  <button
-                    onClick={retryPendingRecords}
-                    disabled={recordFillPending || reconcileMutation.isPending}
-                    className="px-2 py-1 rounded text-[10px] font-bold text-black hover:brightness-110 transition-all disabled:opacity-50"
-                    style={{ background: "linear-gradient(135deg, var(--aurora-teal), var(--aurora-purple))" }}
-                  >
-                    Retry record
-                  </button>
-                  <button
-                    onClick={() => reconcileMutation.mutate()}
-                    disabled={recordFillPending || reconcileMutation.isPending}
-                    className="px-2 py-1 rounded text-[10px] font-bold border border-[rgba(255,255,255,0.15)] text-white hover:bg-white/5 transition-all disabled:opacity-50"
-                  >
-                    Reconcile
-                  </button>
-                </div>
+                {lastRecordError && (
+                  <p className="px-3 pb-1.5 text-[10px] text-[#ffb56b] truncate" title={lastRecordError}>
+                    Recording failed: {lastRecordError}
+                  </p>
+                )}
               </div>
             )}
             <div className="flex items-center gap-1 px-3 py-1.5 border-b border-[rgba(255,255,255,0.08)] shrink-0 overflow-x-auto scrollbar-none" style={{ background: 'transparent' }}>

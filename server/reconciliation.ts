@@ -51,8 +51,21 @@ export async function reconcileUser(userId: number, dryRun = true): Promise<Reco
     counts.errors++;
     return { ...counts, errors: counts.errors };
   }
+  return reconcileFromPortfolio(userId, portfolio, dryRun);
+}
+
+/**
+ * Classify + (in write mode) repair a user's pending rows against a Deriv
+ * portfolio supplied by the caller. The portfolio can come from the server-side
+ * connection (`reconcileUser`) OR from the browser's own authenticated WS via
+ * `trades.reconcileFromPortfolio` — the server-side Deriv connection (OTP
+ * handshake) is not always up, while the browser socket that places trades
+ * usually is, so reconciliation must not be bound to the server connection.
+ */
+export async function reconcileFromPortfolio(userId: number, contracts: PortfolioContract[], dryRun = true): Promise<ReconcileCounts> {
+  const counts: ReconcileCounts = { reconstructed: 0, settled: 0, stuck: 0, skippedNoToken: 0, errors: 0, pendingMatched: 0 };
   const byId = new Map<number, PortfolioContract>();
-  for (const p of portfolio) byId.set(p.contractId, p);
+  for (const p of contracts) byId.set(p.contractId, p);
 
   // DB rows still awaiting settlement for this user.
   let pending: any[] = [];

@@ -33,6 +33,17 @@ export interface PurchaseResult {
   entrySpot?: number;
   entryTime?: number;
 }
+export interface ClientPortfolioContract {
+  contractId: number;
+  contractType: string;
+  symbol: string;
+  stake: number;
+  entryPrice: number;
+  purchasedAt: number | null;
+  isSold: boolean;
+  profit: number;
+  soldAt: number | null;
+}
 export interface ContractUpdate {
   contract_id: number;
   is_sold: 0 | 1;
@@ -636,6 +647,33 @@ class DerivWebSocketService {
         reject(error instanceof Error ? error : new Error(String(error)));
       }
     });
+  }
+
+  /**
+   * Pull the account's real portfolio (open + recently sold contracts) over the
+   * browser's own authorized socket. Used for client-driven reconciliation: the
+   * server-side Deriv connection can be down (OTP handshake) while this socket —
+   * the one that places trades — is still authorized, so recovering unrecorded
+   * contracts must not depend on the server connection.
+   */
+  public async fetchPortfolio(): Promise<ClientPortfolioContract[]> {
+    if (!this.authorized || !this.ws || this.ws.readyState !== WebSocket.OPEN) {
+      throw new Error("Not connected or authorized yet");
+    }
+    const res = await this.sendRequest({ portfolio: 1 }, 15000);
+    if (res?.error) throw new Error(res.error.message);
+    const contracts: any[] = res?.portfolio?.contracts || [];
+    return contracts.map((c: any) => ({
+      contractId: Number(c.contract_id),
+      contractType: String(c.contract_type ?? ""),
+      symbol: String(c.underlying ?? ""),
+      stake: Number(c.buy_price) || 0,
+      entryPrice: Number(c.entry_tick) || 0,
+      purchasedAt: c.purchase_time != null ? Number(c.purchase_time) : null,
+      isSold: Number(c.is_sold) === 1,
+      profit: Number(c.profit) || 0,
+      soldAt: c.selling_time != null ? Number(c.selling_time) : null,
+    }));
   }
 
   public async purchaseContract(params: PurchaseParams): Promise<PurchaseResult> {
