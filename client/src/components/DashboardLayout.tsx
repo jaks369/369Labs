@@ -243,8 +243,8 @@ function NavDrawer({
 
   return (
     <div className="fixed inset-0 z-50">
-      <div className="animate-modal-backdrop absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
-      <div className="absolute inset-y-0 left-0 w-[300px] max-w-[85vw] flex flex-col shadow-2xl animate-slideInLeft aurora-glass-panel" style={{ background: "rgba(10,14,23,0.86)", borderRadius: 0 }}>
+      <div className="animate-modal-backdrop absolute inset-0 bg-[#0A0C10]/80 backdrop-blur-md" onClick={onClose} />
+      <div className="absolute inset-y-0 left-0 w-[280px] max-w-[82vw] flex flex-col shadow-2xl animate-slideInLeft bg-[#0A0C10] border-r border-[var(--border)]" style={{ borderRadius: 0 }}>
         {/* Aurora glow bleeding through the glass */}
         <div className="pointer-events-none absolute -top-16 -left-16 w-56 h-56 rounded-full opacity-40" style={{ background: "radial-gradient(circle, rgba(45,212,191,0.55) 0%, rgba(167,139,250,0.35) 45%, transparent 70%)", filter: "blur(28px)" }} />
         <div className="pointer-events-none absolute -bottom-20 -right-12 w-56 h-56 rounded-full opacity-30" style={{ background: "radial-gradient(circle, rgba(232,121,249,0.5) 0%, rgba(167,139,250,0.3) 45%, transparent 70%)", filter: "blur(28px)" }} />
@@ -487,7 +487,7 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
         </div>
       )}
 
-      <main className={`flex-1 overflow-y-auto min-h-0 flex flex-col ${isMobile ? "pb-24" : ""}`}>
+      <main className={`flex-1 overflow-y-auto overflow-x-hidden min-h-0 flex flex-col ${isMobile ? "pb-32" : ""}`}>
         {!riskDismissed && (
           <div className="flex items-center gap-3 aurora-glass border-b border-[rgba(255,255,255,0.08)] px-4 py-1.5 text-micro leading-snug text-[var(--text-muted)] rounded-none shrink-0">
             <span className="font-semibold uppercase tracking-wider text-[var(--text-muted)]/60 shrink-0 text-[9px]">Risk</span>
