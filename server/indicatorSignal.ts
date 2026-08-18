@@ -14,7 +14,7 @@
  *    "nothing to do" state instead of inventing trades.
  */
 
-import { scoreConfluence, ema, rsi, macd, buildCandles, medianTickGapSec, TickLike, Candle } from "@shared/indicators";
+import { scoreConfluence, explainConfluence, ema, rsi, macd, buildCandles, medianTickGapSec, TickLike, Candle, IndicatorDetail } from "@shared/indicators";
 
 export type GuideStrength = "STRONG" | "MEDIUM" | "WEAK";
 export type GuideDirection = "up" | "down";
@@ -32,6 +32,10 @@ export interface GuidingSignalCandidate {
   windowTicks: number;
   /** Vote tally behind `confidence` — e.g. 3/3 indicators agree → 78. */
   votes: { up: number; down: number; total: number; agreement: number };
+  /** Plain-English four-layer read (what / why / strength / risk) for the top layer. */
+  plain: { scoreLabel: string; what: string; why: string; strength: string; risk: string };
+  /** Per-indicator technical reads for the expandable "Technical details" layer. */
+  details: IndicatorDetail[];
 }
 
 /** Pick a horizon in ticks for outcome resolution given the tick cadence. */
@@ -88,6 +92,7 @@ export function scanSignalForSymbol(symbol: string, rawTicks: TickLike[]): ScanR
   diagnostics.available = available;
 
   const confluence = scoreConfluence(emaUp, rsiValue, macdHist, closes);
+  const explanation = explainConfluence(confluence);
   const strength = strengthFor(confluence.score);
   const last = candles[candles.length - 1];
 
@@ -104,6 +109,8 @@ export function scanSignalForSymbol(symbol: string, rawTicks: TickLike[]): ScanR
           confidence: confluence.score,
           strength,
           votes: confluence.votes,
+          plain: explanation,
+          details: confluence.details,
           reasons: [
             ...confluence.reasons,
             `Observed over ${candles.length} ${timeframeSec}s candles · ${available.join("+")} · technical read, not a guaranteed edge`,

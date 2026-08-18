@@ -69,6 +69,62 @@ function agreementText(votes: any): string {
   return `${agree}/${votes.total} indicators agree`;
 }
 
+// The four questions every signal must answer, in plain language. This is the
+// top layer; the raw reasons/indicators live behind the "Technical details" toggle.
+function PlainBlock({ plain, fallback }: { plain?: any; fallback?: string }) {
+  const what = plain?.what;
+  const why = plain?.why;
+  const strength = plain?.strength;
+  const risk = plain?.risk;
+  if (!what || !why || !strength || !risk) {
+    return <p className="text-sm text-[var(--text-secondary)]">{fallback}</p>;
+  }
+  return (
+    <div className="space-y-1.5 text-sm">
+      <p className="text-[var(--text-secondary)]"><span className="font-bold text-white">What's happening: </span>{what}</p>
+      <p className="text-[var(--text-secondary)]"><span className="font-bold text-white">Why the AI thinks that: </span>{why}</p>
+      <p className="text-[var(--text-secondary)]"><span className="font-bold text-white">How strong is the evidence: </span>{strength}</p>
+      <p className="text-[var(--text-secondary)]"><span className="font-bold text-white">What's the risk: </span>{risk}</p>
+    </div>
+  );
+}
+
+function verdictChip(v: string) {
+  if (v === "up") return "text-[var(--green)] border-[var(--green)]/40 bg-[var(--green)]/15";
+  if (v === "down") return "text-[var(--red)] border-[var(--red)]/40 bg-[var(--red)]/15";
+  return "text-[var(--text-muted)] border-[var(--border)] bg-white/5";
+}
+
+// Expandable "Technical details ▾" layer — keeps trader-facing reads out of the
+// top-of-the-fold summary without hiding them.
+function DetailDisclosure({ details }: { details?: any[] }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div>
+      <button
+        onClick={() => setOpen(!open)}
+        className="text-[11px] font-bold text-[var(--accent-soft)] hover:underline"
+      >
+        {open ? "Technical details ▴" : "Technical details ▾"}
+      </button>
+      {open && (
+        <div className="mt-2 space-y-1.5 rounded-lg border border-[var(--border)] bg-[var(--surface-elevated)] p-3">
+          {(details || []).map((d: any, i: number) => (
+            <div key={i} className="flex items-center justify-between gap-3 text-[11px]">
+              <span className="text-[var(--text-secondary)]">{d.name}</span>
+              <span className="flex items-center gap-2 text-right">
+                <span className="text-[var(--text-muted)]">{d.value}</span>
+                <span className={`px-1.5 py-0.5 rounded border text-[10px] font-bold shrink-0 ${verdictChip(d.verdict)}`}>{d.verdict}</span>
+              </span>
+            </div>
+          ))}
+          {(details || []).length === 0 && <p className="text-[11px] text-[var(--text-muted)]">No indicator details available for this read.</p>}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // Signal-history P&L is the would-have result of the recorded recommended
 // stake under the repo's documented CALL/PUT model (win = +stake × payout,
 // loss = −stake, flat-tick refund = $0) — never an executed-trade figure.
@@ -119,6 +175,8 @@ export default function Concierge() {
   const settings = settingsQ.data;
   const acc = accuracy.data;
   const brief = briefing.data;
+  const nm = brief?.nextMove ?? null;
+  const sig = nm?.signal;
 
   return (
     <div className="h-full p-6">
@@ -127,7 +185,7 @@ export default function Concierge() {
           <Radar className="w-7 h-7 text-[var(--accent)]" />
           <div className="flex-1">
             <h1 className="text-2xl font-bold text-white">Signals &amp; Concierge</h1>
-            <p className="text-xs text-[var(--text-muted)]">Active, guiding layer — deterministic scans, honest outcome tracking, live coaching</p>
+            <p className="text-xs text-[var(--text-muted)]">Plain-language reads on what the market is doing and why — agreement scores, risk-based stakes, honest outcome tracking</p>
           </div>
           <Button onClick={() => { scanNow.mutate(undefined, { onSuccess: refresh }); }} className="btn btn-outline gap-2" size="sm">
             <ScanSearch className="w-4 h-4" />{scanNow.isPending ? "Scanning…" : "Scan now"}
@@ -144,35 +202,45 @@ export default function Concierge() {
               <h2 className="text-lg font-bold text-white">{brief.headline}</h2>
               <span className="text-xs text-[var(--text-muted)]">generated {new Date(brief.generatedAt).toLocaleTimeString()}</span>
             </div>
-            <p className="text-sm text-[var(--text-secondary)] mt-3">{brief.summary}</p>
-            {brief.nextMove && (
-              <>
-                <div className="mt-4 grid grid-cols-2 md:grid-cols-5 gap-3">
-                  <Metric label="Symbol" value={brief.nextMove.symbolLabel} />
-                  <Metric label="Direction" value={brief.nextMove.signal.direction === "up" ? "Rise" : "Fall"} accent={brief.nextMove.signal.direction === "up" ? "text-[var(--green)]" : "text-[var(--red)]"} />
-                  <Metric label="Confidence" value={`${brief.nextMove.signal.confidence}%`} />
-                  <Metric label="Agreement" value={agreementText(brief.nextMove.signal.votes) || "—"} />
-                  <Metric label="Suggested stake" value={`$${brief.nextMove.suggestedStake}`} accent="text-[var(--accent-soft)]" />
-                  <Metric label="Max stake" value={`$${brief.nextMove.maxStake}`} />
+            {nm && sig ? (
+              <div className="mt-3 space-y-4">
+                <PlainBlock plain={sig.plain} fallback={brief.summary} />
+                <DetailDisclosure details={sig.details} />
+                <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+                  <Metric label="Symbol" value={nm.symbolLabel} />
+                  <Metric label="Direction" value={sig.direction === "up" ? "Rise" : "Fall"} accent={sig.direction === "up" ? "text-[var(--green)]" : "text-[var(--red)]"} />
+                  <Metric label="Agreement" value={agreementText(sig.votes) || "—"} />
+                  <Metric label="Agreement score" value={`${sig.confidence}/100`} />
+                  <Metric label="Suggested stake" value={`$${nm.suggestedStake}`} accent="text-[var(--accent-soft)]" />
+                  <Metric label="Max stake" value={`$${nm.maxStake}`} />
                 </div>
+                <p className="text-[11px] text-[var(--text-muted)]">
+                  Suggested stake = {nm.riskPct}% of your account balance — sized from risk management, not from the agreement score above.
+                </p>
+                {acc && acc.total > 0 && (
+                  <div className="rounded-lg border border-[var(--border)] bg-[var(--surface-elevated)] p-3 text-[11px] text-[var(--text-secondary)]">
+                    Current signal: <span className="text-white font-semibold">{sig.confidence}% agreement</span> — that's how many indicators agree, not your chance of winning. Your guided-signal history: <span className="text-white font-semibold">{acc.winRatePct}% win rate</span> over {acc.total} resolved signals. Judge performance by the history, not the score.
+                  </div>
+                )}
                 <button
                   onClick={() => {
-                    const sig = brief.nextMove!.signal;
                     pushTradeIntent({
                       symbol: sig.symbol,
                       contract: { category: "rise_fall", direction: sig.direction === "up" ? "rise" : "fall" },
-                      stake: brief.nextMove!.suggestedStake,
+                      stake: nm.suggestedStake,
                       duration: 5,
                       durationUnit: "t",
                       label: `Concierge ${sig.strength} ${sig.confidence}%`,
                     });
                     navigate("/dashboard");
                   }}
-                  className="mt-4 inline-flex items-center gap-2 px-3 py-1.5 rounded-lg border border-[var(--accent)]/40 bg-[var(--accent)]/10 text-[var(--accent-soft)] text-xs font-bold hover:bg-[var(--accent)]/20 transition-colors"
+                  className="mt-1 inline-flex items-center gap-2 px-3 py-1.5 rounded-lg border border-[var(--accent)]/40 bg-[var(--accent)]/10 text-[var(--accent-soft)] text-xs font-bold hover:bg-[var(--accent)]/20 transition-colors"
                 >
                   Trade this → <span className="text-[10px] font-medium opacity-70">prefills the terminal · you confirm</span>
                 </button>
-              </>
+              </div>
+            ) : (
+              <p className="text-sm text-[var(--text-secondary)] mt-3">{brief.summary}</p>
             )}
             <p className="text-[11px] text-[var(--text-disabled)] mt-3">{brief.disclaimer}</p>
           </div>
@@ -186,10 +254,11 @@ export default function Concierge() {
                 <div className="grid grid-cols-2 gap-2">
                   <Metric label="Wins" value={coach.data?.wins ?? 0} accent="text-[var(--green)]" />
                   <Metric label="Losses" value={coach.data?.losses ?? 0} accent="text-[var(--red)]" />
-                  <Metric label="Accuracy" value={`${coach.data?.sessionAccuracy ?? 0}%`} />
+                  <Metric label="Win rate" value={`${coach.data?.sessionAccuracy ?? 0}%`} />
                   <Metric label="Exposure" value={`$${coach.data?.totalExposure ?? 0}`} />
                 </div>
                 <p className="text-xs text-[var(--text-muted)]">Duration {coach.data?.sessionDuration} · Streak: {coach.data?.streakCount ? `${coach.data.streakCount} ${coach.data.currentStreak}` : "none"}</p>
+                <p className="text-[10px] text-[var(--text-disabled)]">The coach interprets these numbers — losing more than you win, streaks, and oversized stakes all trigger plain-language advice below.</p>
                 <ul className="space-y-2">
                   {(coach.data?.coachingMessages || []).map((m: any, i: number) => (
                     <li key={i} className="flex items-start gap-2 text-xs text-[var(--text-secondary)]">
@@ -280,9 +349,10 @@ export default function Concierge() {
                         <div className="flex items-center gap-2 flex-wrap">
                           <span className="text-sm font-bold text-white">{getSymbolDisplayName(c.symbol)}</span>
                           <span className={`px-1.5 py-0.5 rounded border text-[10px] font-bold ${sc.chip}`}>{c.strength}</span>
-                          <span className="text-xs text-[var(--text-muted)]">{c.confidence}% · {agreementText(c.votes) || c.contractType}</span>
+                          <span className="text-xs text-[var(--text-muted)]">{c.confidence}% agreement · {agreementText(c.votes) || c.contractType}</span>
                         </div>
-                        <p className="text-[11px] text-[var(--text-secondary)] mt-1 line-clamp-2">{(c.reasons || []).slice(0, 2).join(" · ")}</p>
+                        {c.plain?.what && <p className="text-[11px] text-[var(--text-secondary)] mt-1">{c.plain.what}</p>}
+                        <div className="mt-1"><DetailDisclosure details={c.details} /></div>
                       </div>
                     </div>
                   );
@@ -295,13 +365,13 @@ export default function Concierge() {
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Accuracy */}
-          <Card title="Signal outcome ledger" icon={<Target className="w-4 h-4 text-[var(--accent)]" />}>
+          <Card title="Guided-signal performance" icon={<Target className="w-4 h-4 text-[var(--accent)]" />}>
             {accuracy.isLoading ? <Loader2 className="w-5 h-5 animate-spin text-[var(--accent)]" /> : acc && (
               <div className="space-y-4">
                 <div className="grid grid-cols-3 gap-2">
-                  <Metric label="Total" value={acc.total} />
+                  <Metric label="Resolved signals" value={acc.total} />
                   <Metric label="Wins" value={acc.wins} accent="text-[var(--green)]" />
-                  <Metric label="Win rate" value={`${acc.winRatePct}%`} />
+                  <Metric label="Historical win rate" value={`${acc.winRatePct}%`} />
                 </div>
                 <div className="space-y-2">
                   {Object.entries(acc.byStrength || {}).map(([strength, s]: any) => (
@@ -311,6 +381,9 @@ export default function Concierge() {
                     </div>
                   ))}
                 </div>
+                <p className="text-[10px] text-[var(--text-disabled)] leading-relaxed">
+                  Every signal's score is an agreement read (how many indicators pointed the same way), not a predicted win rate. The only performance measure here is the historical win rate above.
+                </p>
               </div>
             )}
           </Card>

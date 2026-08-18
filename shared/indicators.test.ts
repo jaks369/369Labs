@@ -8,6 +8,7 @@ import {
   bollinger,
   medianTickGapSec,
   scoreConfluence,
+  explainConfluence,
 } from "./indicators";
 
 describe("indicators", () => {
@@ -112,5 +113,36 @@ describe("indicators", () => {
   it("null indicators do not fabricate agreement", () => {
     const res = scoreConfluence(null, null, null, []);
     expect(res.score).toBeLessThanOrEqual(50);
+  });
+
+  it("exposes per-indicator details with verdicts", () => {
+    const res = scoreConfluence(true, 70, 1, [1, 2, 3, 4]);
+    expect(res.details).toHaveLength(4);
+    expect(res.details.map((d) => d.verdict)).toEqual(["up", "up", "up", "up"]);
+    expect(res.details[0].name).toContain("Trend");
+  });
+
+  it("explains a full agreement in plain language without calling it a probability", () => {
+    const res = scoreConfluence(true, 70, 1, [1, 2, 3, 4]);
+    const ex = explainConfluence(res);
+    expect(ex.scoreLabel).toBe("Strong agreement");
+    expect(ex.what).toContain("4 of 4");
+    expect(ex.why).toContain("upward");
+    expect(ex.risk).toContain("not how likely");
+  });
+
+  it("explains a diluted read as moderate, not strong", () => {
+    // EMA up, RSI 50 (neutral), MACD up, flat momentum: 2 of 4 computable agree → 0.5.
+    const res = scoreConfluence(true, 50, 1, [1, 1, 1, 1]);
+    const ex = explainConfluence(res);
+    expect(ex.scoreLabel).toBe("Moderate agreement");
+    expect(ex.what).toContain("2 of 4");
+  });
+
+  it("names a dissent explicitly in the why layer", () => {
+    const res = scoreConfluence(true, 30, 1, [1, 2, 3, 4]);
+    const ex = explainConfluence(res);
+    expect(ex.scoreLabel).toBe("Strong agreement"); // 3 of 4 agree → 0.75
+    expect(ex.why).toContain("Momentum (RSI)");
   });
 });

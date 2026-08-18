@@ -98,15 +98,32 @@ export const DEFAULT_SETTINGS: ConciergeSettings = {
 // Pure helpers (exported for tests)
 // ---------------------------------------------------------------------------
 
-export function suggestStakeInput(balance: number, confidence: number): { stake: number; maxStake: number; note: string } {
-  const safeBalance = Math.max(0, balance || 0);
-  const pct = (confidence / 100) * 4; // 0.04 -> 0.348 at conf 100
-  const stake = Math.min(Math.max(safeBalance * 0.01 * (0.6 + pct), 0.35), Math.max(1, safeBalance * 0.03));
+/**
+ * Suggested stake sized from RISK MANAGEMENT (a fixed % of account per trade),
+ * never from signal confidence. Confidence says how many indicators agree; it
+ * says nothing about the odds of the next tick, so it has no business sizing a
+ * position. Default 1% of balance, hard-capped at 2% per trade and at the 5%
+ * max-stake guard, with a $0.35 floor so the number stays tradeable.
+ */
+export interface StakeSuggestion {
+  stake: number;
+  maxStake: number;
+  riskPct: number;
+  note: string;
+}
+
+export function suggestStakeInput(balance: number, riskPct = 1): StakeSuggestion {
+  const safe = Math.max(0, balance || 0);
+  const pct = Math.max(0.1, Math.min(riskPct, 2));
+  const raw = safe * (pct / 100);
+  const maxStake = Math.max(1, safe * 0.05);
+  const stake = Math.min(Math.max(raw, 0.35), maxStake);
   const rounded = Math.round(stake * 100) / 100;
   return {
     stake: rounded,
-    maxStake: Math.round(Math.max(1, safeBalance * 0.05) * 100) / 100,
-    note: `Sized at ~${Math.min(3, Math.max(0.5, 0.6 + pct)).toFixed(1).replace(/\.0$/, "")}% of your balance, scaled by the ${confidence}% confidence.`,
+    maxStake: Math.round(maxStake * 100) / 100,
+    riskPct: pct,
+    note: `${pct}% of your account balance ($${rounded.toFixed(2)}) — sized from risk, not from signal confidence.`,
   };
 }
 
@@ -197,6 +214,9 @@ export function computeSessionCoach(inp: CoachInput): SessionCoachResult {
     messages.push({ level: "critical", message: `${streakCount}-loss streak. The smartest move is to stop or halve size — a streak like this is how martingale blowups start.` });
   } else if (streakCount >= 3 && currentStreak === "Wins") {
     messages.push({ level: "praise", message: `${streakCount}-win stretch — good discipline. Lock in by keeping the same small size; winners don't justify doubling.` });
+  }
+  if (settled.length >= 3 && losses > wins && !(streakCount >= 3 && currentStreak === "Losses")) {
+    messages.push({ level: "warning", message: `Your session is struggling (${wins}W / ${losses}L) — consider cutting your stake in half until it turns around.` });
   }
   const avgStake = settled.length ? totalExposure / settled.length : 0;
   if (balance > 0 && avgStake > balance * 0.05) {
@@ -466,6 +486,8 @@ export interface NextMove {
   symbolLabel: string;
   suggestedStake: number;
   maxStake: number;
+  /** The account % this stake risks per trade (risk-managed, not confidence-derived). */
+  riskPct: number;
   provenance: "technical";
 }
 
@@ -491,7 +513,7 @@ export async function buildBriefing(userId: number, balance?: number): Promise<B
   candidates.sort((a, b) => b.confidence - a.confidence);
   const top = candidates[0] ?? null;
   const budget = balance ?? 500;
-  const stake = top ? suggestStakeInput(budget, top.confidence) : null;
+  const stake = top ? suggestStakeInput(budget) : null;
 
   let verdict = "NO TRADE";
   let headline = "No live candidate right now";
@@ -499,8 +521,10 @@ export async function buildBriefing(userId: number, balance?: number): Promise<B
   if (top) {
     verdict = top.strength === "STRONG" ? "TRADE" : "WATCH";
     const agree = top.votes?.total ? `${Math.max(top.votes.up, top.votes.down)}/${top.votes.total} indicators agree` : "";
-    headline = `${getSymbolDisplayName(top.symbol)} · ${top.direction === "up" ? "Rise" : "Fall"} — ${top.confidence}% confluence (${agree})`;
-    summary = top.reasons.join(" · ");
+    headline = `${getSymbolDisplayName(top.symbol)} · ${top.direction === "up" ? "Rise" : "Fall"} — ${top.confidence}% agreement (${agree})`;
+    // Plain-language summary (the four-layer read lives on the signal itself);
+    // fall back to the raw reasons only if the explanation is somehow absent.
+    summary = top.plain ? `${top.plain.what} ${top.plain.why}` : top.reasons.join(" · ");
   }
 
   return {
@@ -514,6 +538,7 @@ export async function buildBriefing(userId: number, balance?: number): Promise<B
           symbolLabel: getSymbolDisplayName(top.symbol),
           suggestedStake: stake?.stake ?? 1,
           maxStake: stake?.maxStake ?? 50,
+          riskPct: stake?.riskPct ?? 1,
           provenance: "technical",
         }
       : null,

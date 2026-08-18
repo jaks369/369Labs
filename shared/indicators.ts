@@ -158,6 +158,15 @@ export interface ConfluenceScore {
   reasons: string[];
   /** The vote tally that produced `score` (see scoreForAgreement derivation). */
   votes: ConfluenceVotes;
+  /** Per-indicator reads in evaluation order — drives the "Technical details" layer. */
+  details: IndicatorDetail[];
+}
+
+/** One indicator's human-readable read, in evaluation order. */
+export interface IndicatorDetail {
+  name: string;
+  value: string;
+  verdict: "up" | "down" | "neutral";
 }
 
 /**
@@ -179,34 +188,69 @@ export function scoreConfluence(
   closes: number[],
 ): ConfluenceScore {
   const reasons: string[] = [];
+  const details: IndicatorDetail[] = [];
   let up = 0;
   let down = 0;
   let computable = 0;
 
   if (emaUp !== null) {
     computable++;
-    if (emaUp) { up++; reasons.push("EMA trend is up"); }
-    else { down++; reasons.push("EMA trend is down"); }
+    if (emaUp) {
+      up++;
+      reasons.push("EMA trend is up");
+      details.push({ name: "Trend (EMA 9 vs 21)", value: "9-period average sits above the 21-period average — rising", verdict: "up" });
+    } else {
+      down++;
+      reasons.push("EMA trend is down");
+      details.push({ name: "Trend (EMA 9 vs 21)", value: "9-period average sits below the 21-period average — falling", verdict: "down" });
+    }
   }
   if (rsiValue !== null) {
     computable++;
-    if (rsiValue > 55) { up++; reasons.push(`RSI ${rsiValue.toFixed(1)} — bullish-ish momentum`); }
-    else if (rsiValue < 45) { down++; reasons.push(`RSI ${rsiValue.toFixed(1)} — bearish-ish momentum`); }
-    else reasons.push(`RSI ${rsiValue.toFixed(1)} — neutral vote`);
+    if (rsiValue > 55) {
+      up++;
+      reasons.push(`RSI ${rsiValue.toFixed(1)} — bullish-ish momentum`);
+      details.push({ name: "Momentum (RSI)", value: `${rsiValue.toFixed(1)} — above 55, leaning up`, verdict: "up" });
+    } else if (rsiValue < 45) {
+      down++;
+      reasons.push(`RSI ${rsiValue.toFixed(1)} — bearish-ish momentum`);
+      details.push({ name: "Momentum (RSI)", value: `${rsiValue.toFixed(1)} — below 45, leaning down`, verdict: "down" });
+    } else {
+      reasons.push(`RSI ${rsiValue.toFixed(1)} — neutral vote`);
+      details.push({ name: "Momentum (RSI)", value: `${rsiValue.toFixed(1)} — mid-range, no lean`, verdict: "neutral" });
+    }
   }
   if (macdHist !== null) {
     computable++;
-    if (macdHist > 0) { up++; reasons.push("MACD histogram positive"); }
-    else if (macdHist < 0) { down++; reasons.push("MACD histogram negative"); }
-    else reasons.push("MACD histogram flat — neutral vote");
+    if (macdHist > 0) {
+      up++;
+      reasons.push("MACD histogram positive");
+      details.push({ name: "MACD histogram", value: "positive — momentum building up", verdict: "up" });
+    } else if (macdHist < 0) {
+      down++;
+      reasons.push("MACD histogram negative");
+      details.push({ name: "MACD histogram", value: "negative — momentum building down", verdict: "down" });
+    } else {
+      reasons.push("MACD histogram flat — neutral vote");
+      details.push({ name: "MACD histogram", value: "flat — no momentum either way", verdict: "neutral" });
+    }
   }
   if (closes.length >= 4) {
     computable++;
     const last = closes[closes.length - 1];
     const threeBack = closes[closes.length - 4];
-    if (last > threeBack) { up++; reasons.push("3-candle momentum up"); }
-    else if (last < threeBack) { down++; reasons.push("3-candle momentum down"); }
-    else reasons.push("3-candle momentum flat — neutral vote");
+    if (last > threeBack) {
+      up++;
+      reasons.push("3-candle momentum up");
+      details.push({ name: "Short-term momentum", value: "last 3 candles net higher", verdict: "up" });
+    } else if (last < threeBack) {
+      down++;
+      reasons.push("3-candle momentum down");
+      details.push({ name: "Short-term momentum", value: "last 3 candles net lower", verdict: "down" });
+    } else {
+      reasons.push("3-candle momentum flat — neutral vote");
+      details.push({ name: "Short-term momentum", value: "last 3 candles flat", verdict: "neutral" });
+    }
   }
 
   const total = computable;
@@ -224,5 +268,54 @@ export function scoreConfluence(
   // same way, it says nothing about the odds of the next tick).
   const score = Math.min(86, 50 + Math.round(agreement * 28));
   const votes: ConfluenceVotes = { up, down, total, agreement };
-  return { score, direction, votes, reasons: reasons.length ? reasons : ["No indicator agreement — neutral observation"] };
+  return { score, direction, votes, details, reasons: reasons.length ? reasons : ["No indicator agreement — neutral observation"] };
+}
+
+/**
+ * Plain-English reading of a confluence score for non-traders. Answers the four
+ * questions the UI must answer for every signal:
+ *   what is happening → why the AI thinks that → how strong the evidence is →
+ *   what the risk is. `score` is deliberately framed as an AGREEMENT score
+ *   (how many indicators share the read), never a win probability.
+ */
+export interface ConfluenceExplanation {
+  scoreLabel: string;
+  what: string;
+  why: string;
+  strength: string;
+  risk: string;
+}
+
+export function explainConfluence(score: ConfluenceScore): ConfluenceExplanation {
+  const dirWord = score.direction === "up" ? "upward" : "downward";
+  const agree = Math.max(score.votes.up, score.votes.down);
+  const share = score.votes.total > 0 ? agree / score.votes.total : 0;
+  const scoreLabel = share >= 0.75 ? "Strong agreement" : share >= 0.5 ? "Moderate agreement" : "Weak agreement";
+
+  const list = (a: string[]) => (a.length === 1 ? a[0] : `${a.slice(0, -1).join(", ")} and ${a[a.length - 1]}`);
+
+  const agreeing = score.details.filter((d) => d.verdict === score.direction);
+  const dissenting = score.details.filter((d) => d.verdict !== "neutral" && d.verdict !== score.direction);
+  const neutral = score.details.filter((d) => d.verdict === "neutral");
+
+  const what =
+    score.votes.total === 0
+      ? "No indicator has enough data to compute a read yet — a flat, low-conviction observation."
+      : `${agree} of ${score.votes.total} computable indicators point ${dirWord} (${Math.round(share * 100)}% agreement).`;
+
+  let why: string;
+  if (agreeing.length === 0) {
+    why = "No indicator clearly agrees on a direction — the read is choppy, not trending.";
+  } else {
+    why = `${list(agreeing.map((d) => d.name))} point${agreeing.length === 1 ? "s" : ""} ${dirWord}`;
+    if (dissenting.length) why += `, while ${list(dissenting.map((d) => d.name))} point${dissenting.length === 1 ? "s" : ""} the other way`;
+    if (neutral.length) why += `, and ${list(neutral.map((d) => d.name))} sit${neutral.length === 1 ? "s" : ""} in a neutral zone`;
+    why += ".";
+  }
+
+  const strength = `A ${scoreLabel.toLowerCase()} read — ${Math.round(share * 100)}% of the computable indicators share it. The ${score.score}/100 score is the agreement strength, nothing more.`;
+  const risk =
+    "This score says how many indicators agree, not how likely the trade is to win. Volatility indices are near-random by design — size the trade from your risk budget (e.g. 1% of your account), never from this number.";
+
+  return { scoreLabel, what, why, strength, risk };
 }

@@ -11,19 +11,30 @@ import {
 
 describe("concierge pure helpers", () => {
   it("never suggests a stake below the platform minimum", () => {
-    expect(suggestStakeInput(0, 90).stake).toBeGreaterThanOrEqual(0.35);
+    expect(suggestStakeInput(0).stake).toBeGreaterThanOrEqual(0.35);
   });
 
-  it("caps suggested stake at a small % of balance", () => {
-    const r = suggestStakeInput(5000, 100);
+  it("sizes the stake from risk %, not signal confidence", () => {
+    const base = suggestStakeInput(470, 1);
+    const half = suggestStakeInput(470, 0.5);
+    const capped = suggestStakeInput(470, 100); // riskPct clamps to 2%
+    expect(base.stake).toBeCloseTo(4.7, 2);
+    expect(base.riskPct).toBe(1);
+    expect(half.stake).toBeCloseTo(2.35, 2);
+    expect(capped.stake).toBeCloseTo(9.4, 2);
+    expect(capped.riskPct).toBe(2);
+  });
+
+  it("suggested stake never exceeds a small % of balance", () => {
+    const r = suggestStakeInput(470, 1);
     expect(r.stake).toBeLessThanOrEqual(r.maxStake);
-    expect(r.maxStake).toBeLessThanOrEqual(250);
+    expect(r.stake / 470).toBeLessThanOrEqual(0.05);
+    expect(r.maxStake).toBeLessThanOrEqual(5000 * 0.05);
   });
 
-  it("scales the stake up with confidence (below the cap)", () => {
-    const low = suggestStakeInput(1000, 20).stake;
-    const high = suggestStakeInput(1000, 50).stake;
-    expect(high).toBeGreaterThan(low);
+  it("note makes clear the stake is risk-driven, not confidence-driven", () => {
+    const r = suggestStakeInput(470, 1);
+    expect(r.note.toLowerCase()).toContain("risk");
   });
 
   it("computes win rate from settled trades only", () => {
@@ -47,6 +58,21 @@ describe("concierge pure helpers", () => {
     expect(res.currentStreak).toBe("Losses");
     expect(res.streakCount).toBe(4);
     expect(res.coachingMessages.some((m) => m.level === "critical")).toBe(true);
+  });
+
+  it("coach tells a losing session to cut stake", () => {
+    // 2W / 3L, no streak long enough for the critical message, losses > wins.
+    const trades = [
+      { symbol: "R_100", result: "win", stake: "1", profitLoss: "0.95" },
+      { symbol: "R_100", result: "loss", stake: "1", profitLoss: "-1" },
+      { symbol: "R_100", result: "loss", stake: "1", profitLoss: "-1" },
+      { symbol: "R_100", result: "win", stake: "1", profitLoss: "0.95" },
+      { symbol: "R_100", result: "loss", stake: "1", profitLoss: "-1" },
+    ];
+    const res = computeSessionCoach({ trades, sessionStartMs: 0, balance: 100, volatilityBySymbol: {} });
+    const joined = res.coachingMessages.map((m) => m.message).join(" ");
+    expect(joined.toLowerCase()).toContain("struggling");
+    expect(joined.toLowerCase()).toContain("stake");
   });
 
   it("flags critical advisories as critical alerts", () => {
