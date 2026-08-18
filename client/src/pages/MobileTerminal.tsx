@@ -287,9 +287,9 @@ export default function MobileTerminal() {
   })();
 
   return (
-    <div className="h-full bg-[var(--bg-base)] pb-28 lg:hidden">
+    <div className="min-h-full bg-[#0A0C10] text-white pb-32 lg:hidden">
       {/* Header: symbol · live price · LIVE */}
-      <div className="sticky top-0 z-30 aurora-glass border-b border-[rgba(255,255,255,0.08)] px-4 pt-3 pb-2">
+      <div className="sticky top-0 z-30 bg-[#0A0C10] border-b border-[rgba(255,255,255,0.08)] px-4 pt-3 pb-2 shadow-lg">
         <div className="flex items-center justify-between gap-3">
           <button onClick={() => setShowSymbolPicker((v) => !v)} className="flex items-center gap-2 min-w-0 cursor-pointer">
             <span className="font-bold text-lg text-white truncate">{selectedDisplay}</span>
@@ -445,7 +445,7 @@ export default function MobileTerminal() {
       </div>
 
       {/* Balance — near trade controls */}
-      <div className="mx-4 mt-2 flex items-center justify-between px-3 py-2 rounded-lg aurora-glass">
+      <div className="mx-4 mt-2 flex items-center justify-between px-3 py-2.5 rounded-xl bg-[#10131A] border border-[var(--border)] shadow-md">
         <span className="text-[10px] uppercase tracking-widest text-[var(--text-muted)] font-bold flex items-center gap-1.5">
           <Wallet className="w-3.5 h-3.5 text-[var(--green)]" /> Balance
         </span>
