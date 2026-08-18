@@ -16,6 +16,7 @@ import * as db from "./db";
 import { notifyUser, notifyUserTelegram } from "./_core/notification";
 import { getTickHistory } from "./aitools";
 import { getAllSymbols, getSymbolDisplayName } from "@shared/symbols";
+import { PAYOUT_RATE } from "@shared/contractSim";
 import {
   scanSignalForSymbol,
   GuidingSignalCandidate,
@@ -119,6 +120,20 @@ export function durationLabel(startMs: number): string {
 
 export function winRateOf(wins: number, losses: number): number {
   return wins + losses > 0 ? Math.round((wins / (wins + losses)) * 100) : 0;
+}
+
+/**
+ * Would-have P&L for a resolved guiding signal (a CALL/PUT recommendation at
+ * the recorded stake, NOT an executed trade). Uses the same simulation model
+ * as the rest of the repo: a win pays stake × PAYOUT_RATE, a loss loses the
+ * stake, and a flat-tick "expired" is a refund of $0. Open signals have no P&L.
+ */
+export function guidingSignalPnl(status: string | null | undefined, stake: string | number | null | undefined): number | null {
+  const s = Math.round((Number(stake) || 0) * 100) / 100;
+  if (status === "win") return Math.round(s * PAYOUT_RATE * 100) / 100;
+  if (status === "loss") return -s;
+  if (status === "expired") return 0;
+  return null;
 }
 
 export interface TradeLike {

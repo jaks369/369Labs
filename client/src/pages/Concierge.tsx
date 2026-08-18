@@ -69,6 +69,21 @@ function agreementText(votes: any): string {
   return `${agree}/${votes.total} indicators agree`;
 }
 
+// Signal-history P&L is the would-have result of the recorded recommended
+// stake under the repo's documented CALL/PUT model (win = +stake × payout,
+// loss = −stake, flat-tick refund = $0) — never an executed-trade figure.
+function formatPnl(pnl: number | null | undefined): string {
+  if (pnl === null || pnl === undefined) return "";
+  return pnl > 0 ? `+$${pnl.toFixed(2)}` : `-$${Math.abs(pnl).toFixed(2)}`;
+}
+
+function resultLabel(s: any): string {
+  if (s.status === "win") return `Win ${formatPnl(s.pnl)}`;
+  if (s.status === "loss") return `Loss ${formatPnl(s.pnl)}`;
+  if (s.status === "expired") return `Refund $0.00`;
+  return "Open";
+}
+
 export default function Concierge() {
   const { isAuthenticated } = useAuth();
   const [, navigate] = useLocation();
@@ -310,7 +325,8 @@ export default function Concierge() {
                       <th className="pb-2 pr-2 font-medium">Symbol</th>
                       <th className="pb-2 pr-2 font-medium">Dir</th>
                       <th className="pb-2 pr-2 font-medium">Conf</th>
-                      <th className="pb-2 font-medium">Status</th>
+                      <th className="pb-2 pr-2 font-medium">Stake</th>
+                      <th className="pb-2 font-medium">Result</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -319,14 +335,20 @@ export default function Concierge() {
                         <td className="py-2 pr-2 text-white font-medium">{getSymbolDisplayName(s.symbol)}</td>
                         <td className="py-2 pr-2 text-[var(--text-secondary)]">{s.direction === "up" ? "Rise" : "Fall"}</td>
                         <td className="py-2 pr-2 text-[var(--text-muted)]">{s.confidence}%</td>
+                        <td className="py-2 pr-2 text-[var(--text-secondary)]">${(Number(s.stake) || 0).toFixed(2)}</td>
                         <td className="py-2">
-                          <span className={`px-1.5 py-0.5 rounded border text-[10px] font-bold ${s.status === "win" ? "text-[var(--green)] border-[var(--green)]/40 bg-[var(--green)]/15" : s.status === "loss" ? "text-[var(--red)] border-[var(--red)]/40 bg-[var(--red)]/15" : s.status === "open" ? "text-[var(--amber)] border-[var(--amber)]/40 bg-[var(--amber)]/15" : "text-[var(--text-muted)] border-[var(--border)] bg-white/5"}`}>{s.status}</span>
+                          <span className={`px-1.5 py-0.5 rounded border text-[10px] font-bold ${s.status === "win" ? "text-[var(--green)] border-[var(--green)]/40 bg-[var(--green)]/15" : s.status === "loss" ? "text-[var(--red)] border-[var(--red)]/40 bg-[var(--red)]/15" : s.status === "open" ? "text-[var(--amber)] border-[var(--amber)]/40 bg-[var(--amber)]/15" : "text-[var(--text-muted)] border-[var(--border)] bg-white/5"}`}>{resultLabel(s)}</span>
                         </td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
                 {(history.data || []).length === 0 && <p className="text-xs text-[var(--text-muted)] py-4">No guiding signals yet — scan now to seed the ledger.</p>}
+                {(history.data || []).length > 0 && (
+                  <p className="text-[10px] text-[var(--text-disabled)] mt-3 leading-relaxed">
+                    Stake is the recorded recommended stake; P&amp;L is the would-have CALL/PUT result (win +95% of stake, loss −100%, flat-tick refund $0) — guiding signals are reads, not executed trades.
+                  </p>
+                )}
               </div>
             )}
           </Card>

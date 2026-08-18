@@ -3300,7 +3300,9 @@ aiMarket: router({
     history: protectedProcedure
       .input(z.object({ limit: z.number().default(50) }))
       .query(async ({ ctx, input }) => {
-        return db.listGuidingSignals(ctx.user.id, input.limit);
+        const { guidingSignalPnl } = await import("./concierge");
+        const rows = await db.listGuidingSignals(ctx.user.id, input.limit);
+        return rows.map((r) => ({ ...r, pnl: guidingSignalPnl(r.status, r.stake) }));
       }),
     accuracy: protectedProcedure.query(async ({ ctx }) => {
       return db.guidingSignalAccuracy(ctx.user.id);

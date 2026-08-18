@@ -6,6 +6,7 @@ import {
   computeSmartAlerts,
   computePreTradeChecklist,
   upcomingCalendarEvents,
+  guidingSignalPnl,
 } from "./concierge";
 
 describe("concierge pure helpers", () => {
@@ -72,5 +73,19 @@ describe("concierge pure helpers", () => {
   it("calendar returns a bounded list", () => {
     const cal = upcomingCalendarEvents(4);
     expect(cal.length).toBeLessThanOrEqual(6);
+  });
+
+  it("signal P&L pays the documented payout on a win", () => {
+    expect(guidingSignalPnl("win", "2")).toBeCloseTo(1.9, 2);
+  });
+
+  it("signal P&L loses the full stake on a loss and refunds a flat tick", () => {
+    expect(guidingSignalPnl("loss", "2")).toBe(-2);
+    expect(guidingSignalPnl("expired", "2")).toBe(0);
+  });
+
+  it("open signals have no P&L until resolved", () => {
+    expect(guidingSignalPnl("open", "1")).toBeNull();
+    expect(guidingSignalPnl(null, "1")).toBeNull();
   });
 });

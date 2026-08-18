@@ -287,18 +287,18 @@ export default function MobileTerminal() {
   })();
 
   return (
-    <div className="min-h-full bg-[#0A0C10] text-white pb-32 lg:hidden">
+    <div className="min-h-full bg-[var(--bg)] text-[var(--text-primary)] lg:hidden">
       {/* Header: symbol · live price · LIVE */}
-      <div className="sticky top-0 z-30 bg-[#0A0C10] border-b border-[rgba(255,255,255,0.08)] px-4 pt-3 pb-2 shadow-lg">
+      <div className="sticky top-0 z-30 bg-[var(--bg)] border-b border-[var(--border)] px-4 pt-3 pb-2 shadow-lg">
         <div className="flex items-center justify-between gap-3">
           <button onClick={() => setShowSymbolPicker((v) => !v)} className="flex items-center gap-2 min-w-0 cursor-pointer">
-            <span className="font-bold text-lg text-white truncate">{selectedDisplay}</span>
+            <span className="font-bold text-lg text-[var(--text-primary)] truncate">{selectedDisplay}</span>
             <ChevronDown className={`w-4 h-4 text-[var(--text-muted)] transition-transform shrink-0 ${showSymbolPicker ? "rotate-180" : ""}`} />
           </button>
           <div className="flex items-center gap-3 shrink-0">
             <div className="text-right">
               <div
-                className={`text-xl font-bold font-mono tabular-nums leading-none ${up === null ? "text-white" : up ? "text-[var(--green)]" : "text-[var(--red)]"}`}
+                className={`text-xl font-bold font-mono tabular-nums leading-none ${up === null ? "text-[var(--text-primary)]" : up ? "text-[var(--green)]" : "text-[var(--red)]"}`}
               >
                 {price !== undefined ? Number(price).toFixed(decimalPlaces) : "—"}
                 {up !== null && <span className="text-sm ml-0.5">{up ? "▲" : "▼"}</span>}
@@ -313,7 +313,7 @@ export default function MobileTerminal() {
             </span>
             <button
               onClick={() => setShowPriceHistory((v) => !v)}
-              className="p-2 rounded-md aurora-glass text-[var(--text-muted)] hover:text-white transition-colors shrink-0"
+              className="p-2 rounded-md aurora-glass text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors shrink-0"
               title="Price History"
             >
               <History className="w-4 h-4" />
@@ -330,9 +330,9 @@ export default function MobileTerminal() {
               ["Low", low],
             ] as [string, number | undefined][]
           ).map(([label, v]) => (
-            <div key={label} className="text-center rounded-md bg-black/20 border border-[var(--border)] py-1">
+            <div key={label} className="text-center rounded-md bg-[var(--surface-dim)] border border-[var(--border)] py-1">
               <div className="text-[9px] uppercase tracking-widest text-[var(--text-muted)] font-bold">{label}</div>
-              <div className="text-xs font-mono tabular-nums font-bold text-white">{v !== undefined ? Number(v).toFixed(decimalPlaces) : "—"}</div>
+              <div className="text-xs font-mono tabular-nums font-bold text-[var(--text-primary)]">{v !== undefined ? Number(v).toFixed(decimalPlaces) : "—"}</div>
             </div>
           ))}
         </div>
@@ -351,14 +351,14 @@ export default function MobileTerminal() {
       </div>
 
       {showSymbolPicker && (
-        <div className="fixed inset-0 z-[100] bg-[#0A0C10] flex flex-col animate-modal-backdrop" onClick={() => setShowSymbolPicker(false)}>
+        <div className="fixed inset-0 z-[100] bg-[var(--bg)] flex flex-col animate-modal-backdrop" onClick={() => setShowSymbolPicker(false)}>
           <div
-            className="w-full flex-1 flex flex-col bg-[#0A0C10] overflow-y-auto animate-sheet-up"
+            className="w-full flex-1 flex flex-col bg-[var(--bg)] overflow-y-auto animate-sheet-up"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="px-4 py-3 border-b border-[rgba(255,255,255,0.08)] flex items-center justify-between sticky top-0 bg-[#0A0C10] z-10">
-              <h3 className="text-base font-bold text-white">Select Market</h3>
-              <button onClick={() => setShowSymbolPicker(false)} className="text-[var(--text-muted)] hover:text-white p-2">
+            <div className="px-4 py-3 border-b border-[var(--border)] flex items-center justify-between sticky top-0 bg-[var(--bg)] z-10">
+              <h3 className="text-base font-bold text-[var(--text-primary)]">Select Market</h3>
+              <button onClick={() => setShowSymbolPicker(false)} className="text-[var(--text-muted)] hover:text-[var(--text-primary)] p-2">
                 <X className="w-5 h-5" />
               </button>
             </div>
@@ -445,11 +445,11 @@ export default function MobileTerminal() {
       </div>
 
       {/* Balance — near trade controls */}
-      <div className="mx-4 mt-2 flex items-center justify-between px-3 py-2.5 rounded-xl bg-[#10131A] border border-[var(--border)] shadow-md">
+      <div className="mx-4 mt-2 flex items-center justify-between px-3 py-2.5 rounded-xl bg-[var(--surface-dim)] border border-[var(--border)] shadow-md">
         <span className="text-[10px] uppercase tracking-widest text-[var(--text-muted)] font-bold flex items-center gap-1.5">
           <Wallet className="w-3.5 h-3.5 text-[var(--green)]" /> Balance
         </span>
-        <span className="text-sm font-bold font-mono tabular-nums text-white">
+        <span className="text-sm font-bold font-mono tabular-nums text-[var(--text-primary)]">
           {formatMoney(balance, balanceInfo?.currency || "USD")} <span className="text-[10px] text-[var(--text-muted)]">{balanceInfo?.currency || "USD"}</span>
         </span>
       </div>
@@ -467,7 +467,7 @@ export default function MobileTerminal() {
             </button>
             <div className="flex-1 text-center">
               <div className="text-[9px] uppercase tracking-widest text-[var(--text-muted)] font-bold">Stake ($)</div>
-              <div className="text-lg font-bold font-mono tabular-nums text-white">{formatNumber(stake)}</div>
+              <div className="text-lg font-bold font-mono tabular-nums text-[var(--text-primary)]">{formatNumber(stake)}</div>
               <div className="text-[10px] text-[var(--green)] font-mono">≈ {formatMoney(stake * 1.95)} est.</div>
             </div>
             <button
@@ -584,7 +584,7 @@ export default function MobileTerminal() {
       >
         <div className="flex items-center gap-2">
           <ShieldCheck className="w-4 h-4 text-[var(--accent)]" />
-          <span className="text-sm font-bold text-white">
+          <span className="text-sm font-bold text-[var(--text-primary)]">
             Positions {openPositions.length > 0 && <span className="text-[var(--accent)]">({openPositions.length})</span>}
           </span>
         </div>
@@ -595,12 +595,12 @@ export default function MobileTerminal() {
       {showPositions && (
         <div className="fixed inset-0 z-[95] bg-black/60 flex items-end animate-modal-backdrop" onClick={() => setShowPositions(false)}>
           <div
-            className="w-full aurora-glass border-t border-[rgba(255,255,255,0.08)] rounded-t-2xl max-h-[70vh] overflow-y-auto pb-6 animate-sheet-up"
+            className="w-full aurora-glass border-t border-[var(--border)] rounded-t-2xl max-h-[70vh] overflow-y-auto pb-6 animate-sheet-up"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="sticky top-0 aurora-glass px-4 py-3 border-b border-[rgba(255,255,255,0.08)] flex items-center justify-between">
-              <h3 className="text-sm font-bold text-white">Open Positions</h3>
-              <button onClick={() => setShowPositions(false)} className="text-[var(--text-muted)] hover:text-white">
+            <div className="sticky top-0 aurora-glass px-4 py-3 border-b border-[var(--border)] flex items-center justify-between">
+              <h3 className="text-sm font-bold text-[var(--text-primary)]">Open Positions</h3>
+              <button onClick={() => setShowPositions(false)} className="text-[var(--text-muted)] hover:text-[var(--text-primary)]">
                 <X className="w-4 h-4" />
               </button>
             </div>
@@ -613,7 +613,7 @@ export default function MobileTerminal() {
                     <div className="flex items-center gap-3 min-w-0">
                       <span className="w-1.5 h-1.5 rounded-full bg-[var(--accent)] animate-live-pulse shrink-0" />
                       <div className="min-w-0">
-                        <p className="text-sm font-bold text-white truncate">
+                        <p className="text-sm font-bold text-[var(--text-primary)] truncate">
                           {getSymbolDisplayName(t.symbol)} <span className="text-[var(--text-muted)] font-medium">{t.contractType}</span>
                         </p>
                         <p className="text-xs text-[var(--text-muted)]">
@@ -639,12 +639,12 @@ export default function MobileTerminal() {
       {showPriceHistory && (
         <div className="fixed inset-0 z-[95] bg-black/60 flex items-end animate-modal-backdrop" onClick={() => setShowPriceHistory(false)}>
           <div
-            className="w-full aurora-glass border-t border-[rgba(255,255,255,0.08)] rounded-t-2xl max-h-[70vh] overflow-y-auto pb-6 animate-sheet-up"
+            className="w-full aurora-glass border-t border-[var(--border)] rounded-t-2xl max-h-[70vh] overflow-y-auto pb-6 animate-sheet-up"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="sticky top-0 aurora-glass px-4 py-3 border-b border-[rgba(255,255,255,0.08)] flex items-center justify-between">
-              <h3 className="text-sm font-bold text-white">Price History · {selectedDisplay}</h3>
-              <button onClick={() => setShowPriceHistory(false)} className="text-[var(--text-muted)] hover:text-white">
+            <div className="sticky top-0 aurora-glass px-4 py-3 border-b border-[var(--border)] flex items-center justify-between">
+              <h3 className="text-sm font-bold text-[var(--text-primary)]">Price History · {selectedDisplay}</h3>
+              <button onClick={() => setShowPriceHistory(false)} className="text-[var(--text-muted)] hover:text-[var(--text-primary)]">
                 <X className="w-4 h-4" />
               </button>
             </div>
@@ -661,7 +661,7 @@ export default function MobileTerminal() {
                       <span className="flex items-center gap-1">
                         {dir === "up" && <span className="text-[var(--green)]">▲</span>}
                         {dir === "down" && <span className="text-[var(--red)]">▼</span>}
-                        <span className="font-mono tabular-nums text-white">{Number(t.price).toFixed(decimalPlaces)}</span>
+                        <span className="font-mono tabular-nums text-[var(--text-primary)]">{Number(t.price).toFixed(decimalPlaces)}</span>
                       </span>
                       <span className="font-mono text-[10px] font-bold" style={{ color: t.lastDigit >= 5 ? "var(--green)" : "var(--red)" }}>
                         {t.lastDigit}

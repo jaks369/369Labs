@@ -148,7 +148,7 @@ export interface ConfluenceVotes {
   up: number;
   down: number;
   total: number;
-  /** |up-down| / total, 0..1 — the raw agreement fraction behind the score. */
+  /** max(up,down) / total, 0..1 — the agreement fraction shown as "N/M agree" and the same one behind the score. */
   agreement: number;
 }
 
@@ -165,8 +165,12 @@ export interface ConfluenceScore {
  *   + EMA9>EMA21 trend agree, + RSI>55 (up) / <45 (down), + MACD histogram
  *   sign agree, + close within upper/lower Bollinger half agree, + momentum
  *   of last 3 closes agree.
- * Confidence is capped by how many signals agree; zero agreement yields "up"
- * with score 50 (a coin-flip-ish observation, not a lean).
+ * The denominator is every indicator with a COMPUTABLE read — a missing EMA/
+ * MACD or a mid-range RSI still counts as a "no agreement" vote instead of
+ * vanishing, so a thin 2/2 or 1/1 agreement can no longer saturate at the cap.
+ * Confidence is the agreement fraction (max(up,down)/total — the same "N/M
+ * indicators agree" the UI renders) scaled into 50..86; zero agreement yields
+ * "up" with score 50 (a coin-flip-ish observation, not a lean).
  */
 export function scoreConfluence(
   emaUp: boolean | null,
@@ -177,34 +181,45 @@ export function scoreConfluence(
   const reasons: string[] = [];
   let up = 0;
   let down = 0;
+  let computable = 0;
 
   if (emaUp !== null) {
+    computable++;
     if (emaUp) { up++; reasons.push("EMA trend is up"); }
     else { down++; reasons.push("EMA trend is down"); }
   }
   if (rsiValue !== null) {
+    computable++;
     if (rsiValue > 55) { up++; reasons.push(`RSI ${rsiValue.toFixed(1)} — bullish-ish momentum`); }
     else if (rsiValue < 45) { down++; reasons.push(`RSI ${rsiValue.toFixed(1)} — bearish-ish momentum`); }
-    else reasons.push("RSI mid-range — no edge");
+    else reasons.push(`RSI ${rsiValue.toFixed(1)} — neutral vote`);
   }
   if (macdHist !== null) {
+    computable++;
     if (macdHist > 0) { up++; reasons.push("MACD histogram positive"); }
     else if (macdHist < 0) { down++; reasons.push("MACD histogram negative"); }
+    else reasons.push("MACD histogram flat — neutral vote");
   }
   if (closes.length >= 4) {
+    computable++;
     const last = closes[closes.length - 1];
     const threeBack = closes[closes.length - 4];
     if (last > threeBack) { up++; reasons.push("3-candle momentum up"); }
     else if (last < threeBack) { down++; reasons.push("3-candle momentum down"); }
+    else reasons.push("3-candle momentum flat — neutral vote");
   }
 
-  const total = up + down;
+  const total = computable;
   const net = up - down;
   const direction: "up" | "down" = net >= 0 ? "up" : "down";
-  const agreement = Math.abs(net) / Math.max(1, total);
+  // Same fraction the UI renders ("N/M indicators agree"): how many of the
+  // computable indicators point the signal's way. A neutral RSI or a missing
+  // indicator lowers N/M instead of disappearing from the denominator, so a
+  // 2-of-4 read scores ~64, not the 78 cap.
+  const agreement = total > 0 ? Math.max(up, down) / total : 0;
   // Base 50, +28 at full agreement, scaled by how much agrees relative to
   // available indicators. Never goes past ~86 so it can't read as a certainty.
-  // 3/3 agree → agreement 1.0 → 50 + 28 = 78 (an agreement score, NOT a
+  // 4/4 agree → agreement 1.0 → 50 + 28 = 78 (an agreement score, NOT a
   // probability: full agreement just means all available indicators point the
   // same way, it says nothing about the odds of the next tick).
   const score = Math.min(86, 50 + Math.round(agreement * 28));
