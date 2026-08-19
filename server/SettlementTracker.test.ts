@@ -8,6 +8,15 @@ const mockGetContractStatus = vi.fn();
 vi.mock("./db", () => ({
   getPendingTrades: () => mockGetPendingTrades(),
   settleTrade: (...args: any[]) => mockSettleTrade(...args),
+  // SettlementTracker also reaches for notifications, the AI hub and webhooks
+  // on settlement; short-circuit all of them so the module under test is the
+  // only thing exercised.
+  getNotificationSettingsByUserId: async () => null,
+  getUserById: async () => null,
+  getTelegramSettingsByUserId: async () => null,
+  sendTelegramMessage: async () => {},
+  saveAiKnowledge: async () => {},
+  getActiveWebhooksForEvent: async () => [],
 }));
 
 vi.mock("./derivConnection", () => ({

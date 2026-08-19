@@ -457,7 +457,7 @@ export default function DigitTrader() {
                 </div>
                 <p className="text-[11px] text-[var(--text-muted)]">
                   {acc.expired > 0 ? `${acc.expired} barrier-touch refunds (excluded from win rate). ` : ""}
-                  Virtual P&L uses your stake at $1: +95% on a win, −100% on a loss. The ledger honestly lands near the ~50% fair baseline.
+                  Virtual P&L is sized at your current stake (${stake >= 0 ? "$" + stake.toFixed(2) : "$1.00"}): +95% on a win, −100% on a loss. The ledger honestly lands near the ~50% fair baseline.
                 </p>
                 <div className="space-y-2">
                   {Object.entries(acc.bySymbol || {}).map(([sym, s]: any) => (

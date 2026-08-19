@@ -237,7 +237,6 @@ export default function Concierge() {
   const removeFollowSymbol = (sym: string) => {
     const current = settings?.symbols ?? [];
     const rest = current.filter((s) => s !== sym);
-    if (rest.length === 0) return;
     patchSettings.mutate(
       { symbols: rest },
       {
@@ -617,15 +616,20 @@ export default function Concierge() {
                 <div>
                   <p className="text-[11px] text-[var(--text-muted)] mb-2">Followed symbols — scanned for signals (max 12):</p>
                   <div className="flex items-center gap-2 flex-wrap">
-                    {settings.symbols?.map((sym) => (
+                    {(settings.symbols ?? []).map((sym) => (
                       <span key={sym} className="inline-flex items-center gap-1.5 px-2 py-1 rounded-lg border border-[var(--border)] bg-[var(--surface-elevated)] text-xs text-white">
                         <ShieldCheck className="w-3 h-3 text-[var(--accent)]" />
                         {getSymbolDisplayName(sym) || sym}
-                        <button onClick={() => removeFollowSymbol(sym)} className="text-[var(--text-muted)] hover:text-[var(--red)]" title={`Stop watching ${getSymbolDisplayName(sym)}`}>
-                          <X className="w-3 h-3" />
-                        </button>
+                        {(settings.symbols?.length ?? 0) > 0 && (
+                          <button onClick={() => removeFollowSymbol(sym)} className="text-[var(--text-muted)] hover:text-[var(--red)]" title={`Stop watching ${getSymbolDisplayName(sym)}`}>
+                            <X className="w-3 h-3" />
+                          </button>
+                        )}
                       </span>
                     ))}
+                    {(settings.symbols?.length ?? 0) === 0 && (
+                      <p className="text-[11px] text-[var(--text-disabled)]">Default scan pool — add symbols below (or pick new ones) to pin your set.</p>
+                    )}
                   </div>
                   <div className="flex items-center gap-2 mt-2">
                     <input

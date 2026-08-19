@@ -743,7 +743,13 @@ export async function updateSettings(userId: number, patch: Partial<ConciergeSet
 }
 
 export async function getSettingsFor(userId: number): Promise<ConciergeSettings> {
-  return getSettings(userId);
+  const settings = await getSettings(userId);
+  // If the user never picked symbols, resolve to the effective set the loop
+  // actually scans (prefs → traded symbols → sane default) so the UI never
+  // shows an empty "Followed symbols" row while the loop is live.
+  if (Array.isArray(settings.symbols) && settings.symbols.length > 0) return settings;
+  const trades = await db.getTradesByUserId(userId, 200);
+  return { ...settings, symbols: await followedSymbols(userId, trades) };
 }
 
 export type MarketHealthRef = MarketHealth;
