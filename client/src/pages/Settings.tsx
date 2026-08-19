@@ -22,10 +22,12 @@ export default function Settings() {
   const [chatId, setChatId] = useState("");
   const [externalKeys, setExternalKeys] = useState<Record<string, string>>({});
   const [notificationSettings, setNotificationSettings] = useState({
+    emailEnabled: true,
     tradeExecuted: true,
     takeProfitHit: true,
     stopLossHit: true,
     botError: true,
+    signalDetected: true,
   });
 
   const derivTokenQuery = trpc.deriv.getToken.useQuery();
@@ -166,10 +168,12 @@ export default function Settings() {
   useEffect(() => {
     if (notificationsQuery.data) {
       setNotificationSettings({
+        emailEnabled: notificationsQuery.data.emailEnabled !== false,
         tradeExecuted: notificationsQuery.data.tradeExecuted,
         takeProfitHit: notificationsQuery.data.takeProfitHit,
         stopLossHit: notificationsQuery.data.stopLossHit,
         botError: notificationsQuery.data.botError,
+        signalDetected: notificationsQuery.data.signalDetected !== false,
       });
     }
   }, [notificationsQuery.data]);
@@ -559,7 +563,7 @@ export default function Settings() {
                 }
               />
             </div>
-            <div className="flex items-center justify-between">
+<div className="flex items-center justify-between">
               <label className="text-sm text-[var(--text-secondary)]">Bot Error</label>
               <UISwitch
                 checked={notificationSettings.botError}
@@ -567,6 +571,18 @@ export default function Settings() {
                   setNotificationSettings({
                     ...notificationSettings,
                     botError: checked,
+                  })
+                }
+              />
+            </div>
+            <div className="flex items-center justify-between">
+              <label className="text-sm text-[var(--text-secondary)]">Signal Detected</label>
+              <UISwitch
+                checked={notificationSettings.signalDetected}
+                onCheckedChange={(checked) =>
+                  setNotificationSettings({
+                    ...notificationSettings,
+                    signalDetected: checked,
                   })
                 }
               />

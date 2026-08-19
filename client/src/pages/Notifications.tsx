@@ -14,6 +14,7 @@ export default function Notifications() {
   const [takeProfitHit, setTakeProfitHit] = useState(true);
   const [stopLossHit, setStopLossHit] = useState(true);
   const [botError, setBotError] = useState(true);
+  const [signalDetected, setSignalDetected] = useState(true);
   const [saved, setSaved] = useState(false);
   const [saveError, setSaveError] = useState("");
 
@@ -27,6 +28,7 @@ export default function Notifications() {
       setTakeProfitHit(settingsQuery.data.takeProfitHit);
       setStopLossHit(settingsQuery.data.stopLossHit);
       setBotError(settingsQuery.data.botError);
+      setSignalDetected(settingsQuery.data.signalDetected !== false);
     }
   }, [settingsQuery.data]);
 
@@ -35,7 +37,7 @@ export default function Notifications() {
   const handleSave = async () => {
     setSaveError("");
     try {
-      await saveMutation.mutateAsync({ emailEnabled, tradeExecuted, takeProfitHit, stopLossHit, botError });
+      await saveMutation.mutateAsync({ emailEnabled, tradeExecuted, takeProfitHit, stopLossHit, botError, signalDetected });
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);
     } catch (err) {
@@ -52,6 +54,7 @@ export default function Notifications() {
     { label: "Take Profit Hit", desc: "Notify when a trade reaches your take profit target", value: takeProfitHit, set: setTakeProfitHit },
     { label: "Stop Loss Hit", desc: "Notify when a trade hits the stop loss", value: stopLossHit, set: setStopLossHit },
     { label: "Bot Error", desc: "Notify when a bot encounters an error or stops unexpectedly", value: botError, set: setBotError },
+    { label: "Signal Detected", desc: "Notify when a concierge or copy-trade signal is found", value: signalDetected, set: setSignalDetected },
   ];
 
   return (

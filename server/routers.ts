@@ -1917,6 +1917,7 @@ save: protectedProcedure
         takeProfitHit: z.boolean().default(true),
         stopLossHit: z.boolean().default(true),
         botError: z.boolean().default(true),
+        signalDetected: z.boolean().default(true),
       }))
       .mutation(async ({ ctx, input }) => {
         try {
@@ -1937,7 +1938,7 @@ save: protectedProcedure
     getSettings: protectedProcedure.query(async ({ ctx }) => {
       try {
         const settings = await db.getNotificationSettingsByUserId(ctx.user.id);
-        return settings || { id: 0, userId: ctx.user.id, emailEnabled: true, tradeExecuted: true, takeProfitHit: true, stopLossHit: true, botError: true, createdAt: new Date(), updatedAt: new Date() };
+        return settings || { id: 0, userId: ctx.user.id, emailEnabled: true, tradeExecuted: true, takeProfitHit: true, stopLossHit: true, botError: true, signalDetected: true, createdAt: new Date(), updatedAt: new Date() };
       } catch (error) {
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
