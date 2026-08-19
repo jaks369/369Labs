@@ -1,4 +1,4 @@
-import { eq, and, asc, desc, gt, inArray, lte, sql } from "drizzle-orm";
+import { eq, and, asc, desc, gt, gte, inArray, lte, sql } from "drizzle-orm";
 import * as mysql from "mysql2/promise";
 import { drizzle } from "drizzle-orm/mysql2";
 import { randomBytes } from "crypto";
@@ -1234,6 +1234,67 @@ export async function getDigitTraderTradesByUserId(userId: number, limit: number
   }
 }
 
+/**
+ * Daily placed-trade count and realized P&L for a user's Digit Trader
+ * auto-execute (source=digitTrader) since startOfDay. Derived from the trade
+ * ledger rather than process-level counters so the maxDailyLoss /
+ * maxDailyTrades safety caps can't drift from what the DB actually recorded.
+ * Pending rows count toward the trade count (they were placed today) but their
+ * outcome isn't known, so P&L only includes settled win/loss/stuck rows.
+ */
+export async function getDigitTraderDailyUsage(userId: number, startOfDay: Date): Promise<{ trades: number; pnl: number }> {
+  const db = await getDb();
+  if (!db) return { trades: 0, pnl: 0 };
+  try {
+    const rows = await db
+      .select({
+        trades: sql<number>`COUNT(*)`,
+        pnl: sql<number>`COALESCE(SUM(CASE WHEN result IN ('win','loss','stuck') AND profitLoss IS NOT NULL THEN profitLoss ELSE 0 END), 0)`,
+      })
+      .from(trades)
+      .where(and(eq(trades.userId, userId), eq(trades.source, "digitTrader"), gte(trades.entryTime, startOfDay)));
+    return { trades: Number(rows[0]?.trades || 0), pnl: Number(rows[0]?.pnl || 0) };
+  } catch {
+    const pool = getRawPool();
+    if (!pool) return { trades: 0, pnl: 0 };
+    try {
+      const [resultRows] = await pool.execute(
+        `SELECT COUNT(*) AS trades, COALESCE(SUM(CASE WHEN result IN ('win','loss','stuck') AND profitLoss IS NOT NULL THEN profitLoss ELSE 0 END), 0) AS pnl FROM trades WHERE userId=? AND source='digitTrader' AND entryTime>=?`,
+        [userId, startOfDay],
+      );
+      const row = (resultRows as any[])[0] || {};
+      return { trades: Number(row.trades || 0), pnl: Number(row.pnl || 0) };
+    } catch {
+      return { trades: 0, pnl: 0 };
+    }
+  }
+}
+
+/** Count of still-open (pending) Digit Trader contracts for a user — the per-user concurrency cap reads this each cycle. */
+export async function countOpenDigitTraderTrades(userId: number): Promise<number> {
+  const db = await getDb();
+  if (!db) return 0;
+  try {
+    const rows = await db
+      .select({ n: sql<number>`COUNT(*)` })
+      .from(trades)
+      .where(and(eq(trades.userId, userId), eq(trades.source, "digitTrader"), eq(trades.result, "pending")));
+    return Number(rows[0]?.n || 0);
+  } catch {
+    const pool = getRawPool();
+    if (!pool) return 0;
+    try {
+      const [resultRows] = await pool.execute(
+        "SELECT COUNT(*) AS n FROM trades WHERE userId=? AND source='digitTrader' AND result='pending'",
+        [userId],
+      );
+      return Number((resultRows as any[])[0]?.n || 0);
+    } catch {
+      return 0;
+    }
+  }
+}
+
 export async function getTradeSymbolsByUserId(userId: number): Promise<string[]> {
   const db = await getDb();
   if (!db) return [];
@@ -1525,7 +1586,7 @@ export async function getBotRunById(id: number, userId: number): Promise<BotRun 
 export async function updateBotRun(
   id: number,
   userId: number,
-  updates: Partial<Pick<InsertBotRun, "status" | "endTime" | "totalTrades" | "totalProfitLoss" | "errorMessage" | "safety" | "lossStreak" | "hasOpenTrade" | "lastError" | "lastDailyReset">>,
+  updates: Partial<Pick<InsertBotRun, "status" | "endTime" | "totalTrades" | "totalProfitLoss" | "dailyTrades" | "dailyPnl" | "errorMessage" | "safety" | "lossStreak" | "hasOpenTrade" | "lastError" | "lastDailyReset">>,
 ): Promise<BotRun | undefined> {
   const db = await getDb();
   if (!db) return undefined;
@@ -2776,6 +2837,8 @@ export async function ensureBotRunsTable(): Promise<void> {
       status enum('running','stopped','error','paused','restarting') NOT NULL DEFAULT 'running',
       totalTrades int NOT NULL DEFAULT 0,
       totalProfitLoss decimal(18,8) NOT NULL DEFAULT 0,
+      dailyTrades int NOT NULL DEFAULT 0,
+      dailyPnl decimal(18,8) NOT NULL DEFAULT 0,
       errorMessage text,
       safety json,
       lossStreak int NOT NULL DEFAULT 0,
@@ -2795,6 +2858,8 @@ export async function ensureBotRunsTable(): Promise<void> {
       "ADD COLUMN lastError text",
       "ADD COLUMN lastDailyReset timestamp",
       "ADD COLUMN status enum('running','stopped','error','paused','restarting') NOT NULL DEFAULT 'running'",
+      "ADD COLUMN dailyTrades int NOT NULL DEFAULT 0",
+      "ADD COLUMN dailyPnl decimal(18,8) NOT NULL DEFAULT 0",
     ]) {
       try {
         await pool.execute(`ALTER TABLE botRuns ${col}`);

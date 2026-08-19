@@ -40,6 +40,8 @@ export interface DigitTraderSettings {
   stopLoss: number;
   takeProfit: number;
   symbols: string[]; // followed symbols the auto loop watches
+  maxDailyLoss?: number; // realized loss cap per UTC day (0 = off)
+  maxDailyTrades?: number; // placed-trade cap per UTC day (0 = off)
 }
 
 export const DEFAULT_DT_SETTINGS: DigitTraderSettings = {
@@ -48,6 +50,8 @@ export const DEFAULT_DT_SETTINGS: DigitTraderSettings = {
   stopLoss: 0,
   takeProfit: 0,
   symbols: ["R_100"],
+  maxDailyLoss: 0,
+  maxDailyTrades: 0,
 };
 
 async function readSettings(userId: number): Promise<DigitTraderSettings> {
@@ -60,6 +64,8 @@ async function readSettings(userId: number): Promise<DigitTraderSettings> {
     stopLoss: Math.max(0, Number(out.stopLoss) || 0),
     takeProfit: Math.max(0, Number(out.takeProfit) || 0),
     symbols: Array.isArray(out.symbols) && out.symbols.length ? out.symbols.map((s: any) => String(s).toUpperCase()).filter(Boolean).slice(0, 12) : DEFAULT_DT_SETTINGS.symbols,
+    maxDailyLoss: Math.max(0, Number(out.maxDailyLoss) || 0),
+    maxDailyTrades: Math.max(0, Math.floor(Number(out.maxDailyTrades) || 0)),
   };
 }
 
@@ -82,6 +88,8 @@ export async function saveDTPSettings(userId: number, patch: Partial<DigitTrader
       .map((s: any) => String(s).toUpperCase())
       .filter(Boolean)
       .slice(0, 12),
+    maxDailyLoss: Math.max(0, Number(next.maxDailyLoss) || 0),
+    maxDailyTrades: Math.max(0, Math.floor(Number(next.maxDailyTrades) || 0)),
   };
   if (cleaned.symbols.length === 0) cleaned.symbols = ["R_100"];
   await db.setUserMemory(userId, { ...mem, digitTrader: cleaned });
@@ -96,6 +104,7 @@ const AUTO_EXEC_INTERVAL_MS = 5000; // near-live digit auto trading
 const TRADE_COOLDOWN_MS = 60_000; // at most one auto trade per symbol per minute
 const MAX_AUTO_SYMBOLS = 8;
 const ENABLED_RESCAN_MS = 30_000; // how often to re-derive the enabled-user set
+const MAX_OPEN_CONTRACTS_PER_USER = 6; // hard cap on concurrently open (pending) auto contracts per user
 
 export interface DigitAutoStatus {
   enabled: boolean;
@@ -159,6 +168,13 @@ function readToContract(read: DigitRead): { contractType: string; barrier?: stri
 async function placeAutoTrade(userId: number, conn: any, symbol: string, read: DigitRead, settings: DigitTraderSettings, entryPrice: number): Promise<boolean> {
   const account = (conn as any)?.getSnapshot?.()?.account;
   const currency = account?.currency || "USD";
+  // Skip cleanly when the connected account can't cover the stake (e.g. an
+  // empty soft/demo account) instead of burning a proposal that Deriv rejects.
+  const balance = typeof account?.balance === "number" ? account.balance : 0;
+  if (balance > 0 && settings.stake > balance) {
+    console.warn(`[digitTrader] User ${userId}: balance $${balance.toFixed(2)} below stake $${settings.stake}. Skipping placement on ${symbol}.`);
+    return false;
+  }
   const { contractType, barrier } = readToContract(read);
 
   const proposalPayload: Record<string, any> = {
@@ -219,7 +235,58 @@ async function placeAutoTrade(userId: number, conn: any, symbol: string, read: D
   return true;
 }
 
-/** One auto-exec cycle: every enabled user trades the strongest live tilt per followed symbol. */
+/** Start of the current UTC day — the reset boundary for the daily caps. */
+function startOfUtcDay(): Date {
+  const d = new Date();
+  d.setUTCHours(0, 0, 0, 0);
+  d.setUTCMinutes(0);
+  d.setUTCSeconds(0);
+  d.setUTCMilliseconds(0);
+  return d;
+}
+
+export interface DigitDailyUsage {
+  trades: number;
+  pnl: number;
+  dayStart: string; // ISO — when the current daily window began
+  maxDailyLoss: number;
+  maxDailyTrades: number;
+  lossHalted: boolean;
+  tradesHalted: boolean;
+}
+
+/** Whether the daily caps pause auto-exec: realized loss ≤ -maxDailyLoss, or placed trades ≥ maxDailyTrades. */
+export function computeDailyHalt(usage: { trades: number; pnl: number }, settings: Pick<DigitTraderSettings, "maxDailyLoss" | "maxDailyTrades">): { lossHalted: boolean; tradesHalted: boolean } {
+  return {
+    lossHalted: !!(settings.maxDailyLoss && usage.pnl <= -settings.maxDailyLoss),
+    tradesHalted: !!(settings.maxDailyTrades && usage.trades >= settings.maxDailyTrades),
+  };
+}
+
+/**
+ * Per-user daily usage from the ledger (source=digitTrader trades) plus whether
+ * the configured caps make the auto loop pause. Read by the panel to explain
+ * why auto-exec is idle.
+ */
+export async function getDailyUsageFor(userId: number): Promise<DigitDailyUsage> {
+  const dayStart = startOfUtcDay();
+  const settings = await readSettings(userId);
+  const usage = await db.getDigitTraderDailyUsage(userId, dayStart);
+  const { lossHalted, tradesHalted } = computeDailyHalt(usage, settings);
+  return {
+    trades: usage.trades,
+    pnl: usage.pnl,
+    dayStart: dayStart.toISOString(),
+    maxDailyLoss: settings.maxDailyLoss || 0,
+    maxDailyTrades: settings.maxDailyTrades || 0,
+    lossHalted,
+    tradesHalted,
+  };
+}
+
+/**
+ * One auto-exec cycle: every enabled user trades the strongest live tilt per followed symbol.
+ */
 async function autoCycle(): Promise<void> {
   if (autoInProgress) return;
   autoInProgress = true;
@@ -232,10 +299,17 @@ async function autoCycle(): Promise<void> {
       for (const [k, at] of recentTradeAt) if (at < cutoff) recentTradeAt.delete(k);
     }
     const now = Date.now();
+    const dayStart = startOfUtcDay();
     for (const userId of enabledUsers) {
       const settings = await readSettings(userId);
       if (!settings.autoExec) {
         enabledUsers.delete(userId);
+        continue;
+      }
+      const usage = await db.getDigitTraderDailyUsage(userId, dayStart);
+      let placedToday = usage.trades;
+      if (settings.maxDailyLoss && usage.pnl <= -settings.maxDailyLoss) {
+        fireWebhookEvent(userId, "digitTrader.paused", { reason: "maxDailyLoss", pnl: usage.pnl, limit: settings.maxDailyLoss }).catch(() => {});
         continue;
       }
       const conn = await derivManager.ensureConnected(userId);
@@ -243,7 +317,13 @@ async function autoCycle(): Promise<void> {
         console.warn(`[digitTrader] No Deriv connection/token for user ${userId}. Auto-exec idle for this user.`);
         continue;
       }
+      const openContracts = await db.countOpenDigitTraderTrades(userId);
+      if (openContracts >= MAX_OPEN_CONTRACTS_PER_USER) {
+        console.warn(`[digitTrader] User ${userId}: ${openContracts} open auto contracts at the ${MAX_OPEN_CONTRACTS_PER_USER} cap. Skipping this cycle.`);
+        continue;
+      }
       for (const symbol of settings.symbols.slice(0, MAX_AUTO_SYMBOLS)) {
+        if (settings.maxDailyTrades && placedToday >= settings.maxDailyTrades) break;
         const key = `${userId}:${symbol}`;
         if ((recentTradeAt.get(key) || 0) + TRADE_COOLDOWN_MS > now) continue;
         const ticks = getRecentTicks(symbol, 200);
@@ -258,6 +338,7 @@ async function autoCycle(): Promise<void> {
         if (ok) {
           recentTradeAt.set(key, Date.now());
           placed++;
+          placedToday++;
         }
       }
     }

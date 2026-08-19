@@ -148,6 +148,8 @@ export const botRuns = mysqlTable("botRuns", {
   status: mysqlEnum("status", ["running", "stopped", "error", "paused", "restarting"]).default("running").notNull(),
   totalTrades: int("totalTrades").default(0).notNull(),
   totalProfitLoss: decimal("totalProfitLoss", { precision: 18, scale: 8 }).default("0").notNull(),
+  dailyTrades: int("dailyTrades").default(0).notNull(),
+  dailyPnl: decimal("dailyPnl", { precision: 18, scale: 8 }).default("0").notNull(),
   errorMessage: text("errorMessage"),
   safety: json("safety"), // BotSafety config persisted with the run
   lossStreak: int("lossStreak").default(0).notNull(),

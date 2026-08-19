@@ -69,15 +69,20 @@ async function executeBotCycleInner(): Promise<void> {
 
   const allBots = botRunner.listAll();
 
-  // Reset daily counters at midnight
+  // Reset daily counters at midnight. Only dailyTrades/dailyPnl (the numbers the
+  // safety limits read) reset — totalTrades/totalProfitLoss are LIFETIME counters
+  // and must survive across days (they're what the UI shows as all-time stats).
   const now = Date.now();
   const midnight = new Date().setHours(0, 0, 0, 0);
   for (const bot of allBots) {
     if (!bot.lastDailyReset || bot.lastDailyReset < midnight) {
-      bot.totalTrades = 0;
-      bot.totalProfitLoss = 0;
+      bot.dailyTrades = 0;
+      bot.dailyPnl = 0;
       bot.lossStreak = 0;
       bot.lastDailyReset = now;
+      botRunner.persistSummary(bot.def.id, bot.def.userId).catch((e: any) =>
+        console.warn(`[ExecutionEngine] failed to persist daily reset for bot ${bot.def.id}`, e?.message || e),
+      );
     }
   }
 
@@ -115,13 +120,13 @@ async function executeBotCycleInner(): Promise<void> {
     }
     
     // maxDailyTrades - daily trade limit (reset at midnight)
-    if (safety.maxDailyTrades && bot.totalTrades >= safety.maxDailyTrades) continue;
+    if (safety.maxDailyTrades && bot.dailyTrades >= safety.maxDailyTrades) continue;
     
     // maxConsecutiveLosses - consecutive loss limit
     if (safety.maxConsecutiveLosses && bot.lossStreak >= safety.maxConsecutiveLosses) continue;
     
     // maxDailyLoss - daily loss limit (reset at midnight)
-    if (safety.maxDailyLoss && bot.totalProfitLoss <= -safety.maxDailyLoss) continue;
+    if (safety.maxDailyLoss && bot.dailyPnl <= -safety.maxDailyLoss) continue;
     
     // confidenceThreshold - minimum confidence to trade (placeholder for future)
     // Would require strategy evaluation to return confidence score

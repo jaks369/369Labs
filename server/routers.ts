@@ -3415,12 +3415,18 @@ aiMarket: router({
         stake: z.number().min(0.35).max(500).optional(),
         stopLoss: z.number().min(0).max(10000).optional(),
         takeProfit: z.number().min(0).max(10000).optional(),
+        maxDailyLoss: z.number().min(0).max(1000000).optional(),
+        maxDailyTrades: z.number().int().min(0).max(10000).optional(),
         symbols: z.array(z.string().min(1)).max(12).optional(),
       }))
       .mutation(async ({ ctx, input }) => {
         const { saveDTPSettings } = await import("./digitTrader");
         return saveDTPSettings(ctx.user.id, input);
       }),
+    dailyUsage: protectedProcedure.query(async ({ ctx }) => {
+      const { getDailyUsageFor } = await import("./digitTrader");
+      return getDailyUsageFor(ctx.user.id);
+    }),
     trades: protectedProcedure
       .input(z.object({ limit: z.number().default(50) }))
       .query(async ({ ctx, input }) => {

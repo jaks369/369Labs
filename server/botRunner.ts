@@ -55,6 +55,8 @@ interface BotRuntime {
   status: "running" | "paused" | "stopped" | "error" | "restarting";
   totalTrades: number;
   totalProfitLoss: number;
+  dailyTrades: number;
+  dailyPnl: number;
   lossStreak: number;
   hasOpenTrade: boolean;
   lastError?: string;
@@ -84,6 +86,8 @@ class BotRunner {
         status: "running",
         totalTrades: existing?.totalTrades || 0,
         totalProfitLoss: existing?.totalProfitLoss || 0,
+        dailyTrades: existing?.dailyTrades || 0,
+        dailyPnl: existing?.dailyPnl || 0,
         lossStreak: existing?.lossStreak || 0,
         hasOpenTrade: false,
         lastError: existing?.lastError,
@@ -116,6 +120,8 @@ class BotRunner {
           endTime: new Date(),
           totalTrades: bot.totalTrades,
           totalProfitLoss: bot.totalProfitLoss.toString(),
+          dailyTrades: bot.dailyTrades,
+          dailyPnl: bot.dailyPnl.toString(),
           errorMessage: reason,
           safety: bot.def.safety,
           lossStreak: bot.lossStreak,
@@ -173,6 +179,8 @@ class BotRunner {
     if (!bot || bot.def.userId !== userId) return;
     bot.totalTrades++;
     bot.totalProfitLoss += pnl;
+    bot.dailyTrades++;
+    bot.dailyPnl += pnl;
     // A draw (pnl === 0) is neutral: it must NOT reset the loss streak as if it
     // were a win (that let bots dodge maxConsecutiveLosses by drawing) nor count
     // as a loss. Only strictly positive PnL resets the streak.
@@ -184,6 +192,8 @@ class BotRunner {
       await db.updateBotRun(parseInt(id), userId, { 
         totalTrades: bot.totalTrades,
         totalProfitLoss: bot.totalProfitLoss.toString(),
+        dailyTrades: bot.dailyTrades,
+        dailyPnl: bot.dailyPnl.toString(),
         safety: bot.def.safety,
         lossStreak: bot.lossStreak,
         hasOpenTrade: bot.hasOpenTrade,
@@ -207,6 +217,29 @@ class BotRunner {
       });
     } catch (e) {
       console.error("[botRunner] Failed to update open trade state:", e);
+    }
+  }
+
+  // Persist the runtime summary (totals, daily counters, safety, streak) — used
+  // when daily counters reset at midnight so a later server restart keeps the
+  // correct daily numbers the safety limits read.
+  async persistSummary(id: string, userId: number): Promise<void> {
+    const bot = this.bots.get(id);
+    if (!bot || bot.def.userId !== userId) return;
+    try {
+      await db.updateBotRun(parseInt(id), userId, {
+        totalTrades: bot.totalTrades,
+        totalProfitLoss: bot.totalProfitLoss.toString(),
+        dailyTrades: bot.dailyTrades,
+        dailyPnl: bot.dailyPnl.toString(),
+        safety: bot.def.safety,
+        lossStreak: bot.lossStreak,
+        hasOpenTrade: bot.hasOpenTrade,
+        lastError: bot.lastError,
+        lastDailyReset: bot.lastDailyReset ? new Date(bot.lastDailyReset) : undefined,
+      });
+    } catch (e) {
+      console.error("[botRunner] Failed to persist bot summary:", e);
     }
   }
 
@@ -251,6 +284,8 @@ class BotRunner {
           status: "running",
           totalTrades: run.totalTrades,
           totalProfitLoss: parseFloat(run.totalProfitLoss?.toString() || "0"),
+          dailyTrades: run.dailyTrades || 0,
+          dailyPnl: parseFloat(run.dailyPnl?.toString() || "0"),
           lossStreak: run.lossStreak || 0,
           hasOpenTrade: run.hasOpenTrade || false,
           lastError: run.lastError || undefined,

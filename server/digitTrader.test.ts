@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import * as db from "./db";
 import { getTickHistory } from "./aitools";
-import { scanAndPersistForUser, settleOpenDigitReads, READ_WINDOW_TICKS, FETCH_COUNT } from "./digitTrader";
+import { scanAndPersistForUser, settleOpenDigitReads, computeDailyHalt, READ_WINDOW_TICKS, FETCH_COUNT } from "./digitTrader";
 
 vi.mock("./db", () => ({
   listOpenDigitReads: vi.fn().mockResolvedValue([]),
@@ -77,5 +77,37 @@ describe("digitTrader scan + settle", () => {
     const settled = await settleOpenDigitReads(1);
     expect(settled.settled).toBe(1);
     expect(vi.mocked(db.setDigitReadOutcome)).toHaveBeenCalledWith(10, "win", nowSec - 10);
+  });
+});
+
+describe("digitTrader daily safety caps", () => {
+  it("stays live when caps are off", () => {
+    const halt = computeDailyHalt({ trades: 99, pnl: -500 }, { maxDailyLoss: 0, maxDailyTrades: 0 });
+    expect(halt.lossHalted).toBe(false);
+    expect(halt.tradesHalted).toBe(false);
+  });
+
+  it("halts on maxDailyLoss once realized P&L reaches the negative limit", () => {
+    const off = computeDailyHalt({ trades: 3, pnl: -49.99 }, { maxDailyLoss: 50, maxDailyTrades: 0 });
+    expect(off.lossHalted).toBe(false);
+    const on = computeDailyHalt({ trades: 4, pnl: -50 }, { maxDailyLoss: 50, maxDailyTrades: 0 });
+    expect(on.lossHalted).toBe(true);
+    // A winning day must never trip the loss cap.
+    const win = computeDailyHalt({ trades: 5, pnl: 120 }, { maxDailyLoss: 50, maxDailyTrades: 0 });
+    expect(win.lossHalted).toBe(false);
+  });
+
+  it("halts on maxDailyTrades once the placed count reaches the cap", () => {
+    const off = computeDailyHalt({ trades: 9, pnl: -2 }, { maxDailyLoss: 0, maxDailyTrades: 10 });
+    expect(off.tradesHalted).toBe(false);
+    const on = computeDailyHalt({ trades: 10, pnl: -2 }, { maxDailyLoss: 0, maxDailyTrades: 10 });
+    expect(on.tradesHalted).toBe(true);
+  });
+
+  it("treats pending trades' count as placed but not their (unknown) P&L", () => {
+    // P&L of 0 pending trades never trips a loss cap; only settled P&L does.
+    const pending = computeDailyHalt({ trades: 10, pnl: 0 }, { maxDailyLoss: 1, maxDailyTrades: 10 });
+    expect(pending.lossHalted).toBe(false);
+    expect(pending.tradesHalted).toBe(true);
   });
 });

@@ -68,6 +68,8 @@ export default function DigitTrader() {
   const [stake, setStake] = useState(1);
   const [stopLoss, setStopLoss] = useState(0);
   const [takeProfit, setTakeProfit] = useState(0);
+  const [maxDailyLoss, setMaxDailyLoss] = useState(0);
+  const [maxDailyTrades, setMaxDailyTrades] = useState(0);
   const [followed, setFollowed] = useState<string[]>(["R_100"]);
   const [autoExec, setAutoExec] = useState(false);
 
@@ -76,6 +78,8 @@ export default function DigitTrader() {
     setStake(settingsQ.data.stake);
     setStopLoss(settingsQ.data.stopLoss);
     setTakeProfit(settingsQ.data.takeProfit);
+    setMaxDailyLoss(settingsQ.data.maxDailyLoss || 0);
+    setMaxDailyTrades(settingsQ.data.maxDailyTrades || 0);
     setFollowed(settingsQ.data.symbols);
     setAutoExec(settingsQ.data.autoExec);
   }, [settingsQ.data]);
@@ -85,6 +89,7 @@ export default function DigitTrader() {
   const accuracy = trpc.digitTrader.accuracy.useQuery(undefined, { enabled: isAuthenticated });
   const autoTrades = trpc.digitTrader.trades.useQuery({ limit: 30 }, { enabled: isAuthenticated, refetchInterval: 10000 });
   const autoStatusQ = trpc.digitTrader.autoStatus.useQuery(undefined, { enabled: isAuthenticated, refetchInterval: 5000 });
+  const dailyUsageQ = trpc.digitTrader.dailyUsage.useQuery(undefined, { enabled: isAuthenticated, refetchInterval: 5000 });
   const scan = trpc.digitTrader.scan.useMutation();
   const settle = trpc.digitTrader.settle.useMutation();
 
@@ -93,6 +98,7 @@ export default function DigitTrader() {
     history.refetch();
     accuracy.refetch();
     autoTrades.refetch();
+    dailyUsageQ.refetch();
   };
 
   const runScan = () => {
@@ -108,12 +114,14 @@ export default function DigitTrader() {
     }
   }, [scan.isSuccess, scan.error]);
 
-  const saveConfig = (next: { stake?: number; stopLoss?: number; takeProfit?: number; symbols?: string[] }) => {
+  const saveConfig = (next: { stake?: number; stopLoss?: number; takeProfit?: number; maxDailyLoss?: number; maxDailyTrades?: number; symbols?: string[] }) => {
     patchSettings.mutate(next as any, {
       onSuccess: (saved) => {
         setStake(saved.stake);
         setStopLoss(saved.stopLoss);
         setTakeProfit(saved.takeProfit);
+        setMaxDailyLoss(saved.maxDailyLoss || 0);
+        setMaxDailyTrades(saved.maxDailyTrades || 0);
         setFollowed(saved.symbols);
         toast("Auto-execute settings saved", "success");
       },
@@ -261,12 +269,49 @@ export default function DigitTrader() {
             </div>
           </div>
 
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-3">
+            <div>
+              <label className="text-[11px] text-[var(--text-muted)] mb-1 block">Max daily loss ($ · 0 = off)</label>
+              <input
+                type="number" min={0} step={1} value={maxDailyLoss}
+                onChange={(e) => setMaxDailyLoss(parseFloat(e.target.value) || 0)}
+                className="w-full bg-[var(--surface-elevated)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-white font-mono"
+              />
+            </div>
+            <div>
+              <label className="text-[11px] text-[var(--text-muted)] mb-1 block">Max trades / day (0 = off)</label>
+              <input
+                type="number" min={0} step={1} value={maxDailyTrades}
+                onChange={(e) => setMaxDailyTrades(Math.max(0, Math.floor(parseFloat(e.target.value) || 0)))}
+                className="w-full bg-[var(--surface-elevated)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-white font-mono"
+              />
+            </div>
+          </div>
+
           <div className="flex items-center gap-3 mt-4">
-            <Button onClick={() => saveConfig({ stake, stopLoss, takeProfit })} className="btn btn-outline gap-2" size="sm" disabled={patchSettings.isPending}>
-              <RefreshCw className="w-3.5 h-3.5" />{patchSettings.isPending ? "Saving…" : "Save stake / SL / TP"}
+            <Button onClick={() => saveConfig({ stake, stopLoss, takeProfit, maxDailyLoss, maxDailyTrades })} className="btn btn-outline gap-2" size="sm" disabled={patchSettings.isPending}>
+              <RefreshCw className="w-3.5 h-3.5" />{patchSettings.isPending ? "Saving…" : "Save stake / SL / TP / daily limits"}
             </Button>
             <p className="text-[11px] text-[var(--text-muted)]">Last cycle: {autoStatus?.lastCycleAt ? new Date(autoStatus.lastCycleAt).toLocaleTimeString() : "never"} · {autoStatus?.lastCycleTrades ?? 0} trade(s) placed.</p>
           </div>
+
+          {(dailyUsageQ.data?.maxDailyLoss || dailyUsageQ.data?.maxDailyTrades) && (
+            <div className="mt-3 flex items-center gap-3 flex-wrap text-[11px]">
+              <span className="text-[var(--text-muted)]">Today:</span>
+              <span className={`px-2 py-1 rounded border ${dailyUsageQ.data?.lossHalted ? "border-[var(--red)]/50 text-[var(--red)] bg-[var(--red)]/10" : "border-[var(--border)] bg-white/5 text-[var(--text-secondary)]"}`}>
+                P&L ${(dailyUsageQ.data?.pnl ?? 0).toFixed(2)}{dailyUsageQ.data?.maxDailyLoss ? ` / -$${dailyUsageQ.data.maxDailyLoss} limit` : ""}
+              </span>
+              {dailyUsageQ.data?.maxDailyTrades ? (
+                <span className={`px-2 py-1 rounded border ${dailyUsageQ.data?.tradesHalted ? "border-[var(--red)]/50 text-[var(--red)] bg-[var(--red)]/10" : "border-[var(--border)] bg-white/5 text-[var(--text-secondary)]"}`}>
+                  {dailyUsageQ.data.trades} / {dailyUsageQ.data.maxDailyTrades} trades
+                </span>
+              ) : (
+                <span className="px-2 py-1 rounded border border-[var(--border)] bg-white/5 text-[var(--text-secondary)]">{dailyUsageQ.data?.trades ?? 0} trades today</span>
+              )}
+              {dailyUsageQ.data?.lossHalted && <span className="px-2 py-1 rounded border border-[var(--red)]/50 text-[var(--red)] bg-[var(--red)]/10 font-bold">DAILY LOSS LIMIT HIT</span>}
+              {dailyUsageQ.data?.tradesHalted && <span className="px-2 py-1 rounded border border-[var(--red)]/50 text-[var(--red)] bg-[var(--red)]/10 font-bold">DAILY TRADE LIMIT HIT</span>}
+            </div>
+          )}
 
           <div className="mt-4">
             <p className="text-[11px] text-[var(--text-muted)] mb-2">Followed symbols — the auto loop trades the strongest tilt on each (max 12):</p>
