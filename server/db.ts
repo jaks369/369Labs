@@ -3259,9 +3259,9 @@ export async function setDigitReadOutcome(id: number, status: "win" | "loss" | "
   }
 }
 
-export async function digitReadAccuracy(userId: number, limit = 250): Promise<{ total: number; wins: number; losses: number; expired: number; winRatePct: number; byStrength: Record<string, { total: number; wins: number; winRatePct: number }> }> {
+export async function digitReadAccuracy(userId: number, limit = 250): Promise<{ total: number; wins: number; losses: number; expired: number; winRatePct: number; byStrength: Record<string, { total: number; wins: number; winRatePct: number }>; bySymbol: Record<string, { symbol: string; total: number; wins: number; winRatePct: number }> }> {
   const db = await getDb();
-  if (!db) return { total: 0, wins: 0, losses: 0, expired: 0, winRatePct: 0, byStrength: {} };
+  if (!db) return { total: 0, wins: 0, losses: 0, expired: 0, winRatePct: 0, byStrength: {}, bySymbol: {} };
   try {
     const pooled = await listDigitReads(userId, limit);
     const settled = pooled.filter((s) => s.status === "win" || s.status === "loss");
@@ -3269,14 +3269,22 @@ export async function digitReadAccuracy(userId: number, limit = 250): Promise<{ 
     const losses = settled.length - wins;
     const expired = pooled.filter((s) => s.status === "expired").length;
     const byStrength: Record<string, { total: number; wins: number; winRatePct: number }> = {};
+    const bySymbol: Record<string, { symbol: string; total: number; wins: number; winRatePct: number }> = {};
     for (const s of settled) {
       const key = s.strength;
       byStrength[key] = byStrength[key] || { total: 0, wins: 0, winRatePct: 0 };
       byStrength[key].total++;
       if (s.status === "win") byStrength[key].wins++;
+      const sym = s.symbol || "?";
+      bySymbol[sym] = bySymbol[sym] || { symbol: sym, total: 0, wins: 0, winRatePct: 0 };
+      bySymbol[sym].total++;
+      if (s.status === "win") bySymbol[sym].wins++;
     }
     for (const k of Object.keys(byStrength)) {
       byStrength[k].winRatePct = byStrength[k].total > 0 ? Math.round((byStrength[k].wins / byStrength[k].total) * 100) : 0;
+    }
+    for (const k of Object.keys(bySymbol)) {
+      bySymbol[k].winRatePct = bySymbol[k].total > 0 ? Math.round((bySymbol[k].wins / bySymbol[k].total) * 100) : 0;
     }
     return {
       total: settled.length,
@@ -3285,9 +3293,10 @@ export async function digitReadAccuracy(userId: number, limit = 250): Promise<{ 
       expired,
       winRatePct: settled.length > 0 ? Math.round((wins / settled.length) * 100) : 0,
       byStrength,
+      bySymbol,
     };
   } catch {
-    return { total: 0, wins: 0, losses: 0, expired: 0, winRatePct: 0, byStrength: {} };
+    return { total: 0, wins: 0, losses: 0, expired: 0, winRatePct: 0, byStrength: {}, bySymbol: {} };
   }
 }
 

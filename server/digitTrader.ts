@@ -1,14 +1,14 @@
 /**
- * Digit Trader — the honest OVER/UNDER/EVEN/ODD setup layer.
+ * Digit Trader — prediction layer + optional real execution.
  *
- * Pure-digit direction built on the repo's existing digit conventions
- * (shared/digits.ts reuses lastDigitOf/getDecimalPlaces and the fair baselines
- * documented in server/signalEngine.ts). No LLM, no forecasting: it observes
- * the recent digit stream, emits reads whose confidence is capped near 58 so a
- * tilt can never be sold as an edge, persists them to the digitReads ledger,
- * and resolves every open read against the NEXT tick so the ledger trend stays
- * truthful (~50%). Deliberately self-contained: it does not piggyback on the
- * concierge loop or the bot loops, so scanning is driven by the panel.
+ * The page runs continuously: it observes the recent digit stream, emits
+ * OVER/UNDER/EVEN/ODD predictions whose confidence is capped near 58 (a tilt is
+ * never sold as an edge), records each prediction with the user's stake, and
+ * settles every prediction against the NEXT real tick so the ledger trend is
+ * truthful (~50%). Auto-predict is ON by default so the ledger is always real;
+ * Auto-exec places the same prediction as a REAL Deriv contract with the user's
+ * balance. Deliberately self-contained: it does not piggyback on the concierge
+ * loop or the bot loops.
  */
 
 import * as db from "./db";
@@ -25,20 +25,23 @@ export const READ_DEDUP_MS = 4 * 3600 * 1000; // same symbol+read kept open 4h
 export const FETCH_COUNT = 200; // tick history depth for window + settle margin
 
 /**
- * Auto-execute settings (persisted per user via userMemory, additive like the
- * Concierge settings). The master toggle STAYS ON until the user turns it off.
+ * Auto settings (persisted per user via userMemory, additive like the Concierge
+ * settings). Auto-predict is ON by default so the prediction ledger is always
+ * populated with real outcomes; Auto-exec additionally places REAL trades.
  */
 export interface DigitTraderSettings {
+  autoPredict: boolean;
   autoExec: boolean;
   stake: number;
   stopLoss: number;
   takeProfit: number;
   symbols: string[]; // followed symbols the auto loop watches
   maxDailyLoss?: number; // realized loss cap per UTC day (0 = off)
-  maxDailyTrades?: number; // placed-trade cap per UTC day (0 = off)
+  maxDailyTrades?: number; // prediction/trade cap per UTC day (0 = off)
 }
 
 export const DEFAULT_DT_SETTINGS: DigitTraderSettings = {
+  autoPredict: true,
   autoExec: false,
   stake: 1,
   stopLoss: 0,
@@ -53,6 +56,7 @@ async function readSettings(userId: number): Promise<DigitTraderSettings> {
   const raw = (mem?.digitTrader as any) || {};
   const out = { ...DEFAULT_DT_SETTINGS, ...raw };
   return {
+    autoPredict: out.autoPredict !== false,
     autoExec: !!out.autoExec,
     stake: Math.max(0.35, Number(out.stake) || DEFAULT_DT_SETTINGS.stake),
     stopLoss: Math.max(0, Number(out.stopLoss) || 0),
@@ -71,7 +75,7 @@ async function readSettings(userId: number): Promise<DigitTraderSettings> {
 
 export async function getDTPSettingsFor(userId: number): Promise<DigitTraderSettings> {
   const s = await readSettings(userId);
-  touchEnabledUser(userId, s.autoExec);
+  touchEnabledUser(userId, s.autoPredict || s.autoExec);
   return s;
 }
 
@@ -80,6 +84,7 @@ export async function saveDTPSettings(userId: number, patch: Partial<DigitTrader
   const mem = (await db.getUserMemory(userId)) || {};
   const next = { ...DEFAULT_DT_SETTINGS, ...((mem.digitTrader as any) || {}), ...patch };
   const cleaned = {
+    autoPredict: next.autoPredict !== false,
     autoExec: !!next.autoExec,
     stake: Math.max(0.35, Number(next.stake) || DEFAULT_DT_SETTINGS.stake),
     stopLoss: Math.max(0, Number(next.stopLoss) || 0),
@@ -93,7 +98,7 @@ export async function saveDTPSettings(userId: number, patch: Partial<DigitTrader
   };
   if (cleaned.symbols.length === 0) cleaned.symbols = ["R_100"];
   await db.setUserMemory(userId, { ...mem, digitTrader: cleaned });
-  touchEnabledUser(userId, cleaned.autoExec);
+  touchEnabledUser(userId, cleaned.autoPredict || cleaned.autoExec);
   return cleaned;
 }
 
@@ -112,6 +117,7 @@ export interface DigitAutoStatus {
   inProgress: boolean;
   lastCycleAt: number | null;
   lastCycleTrades: number;
+  lastCyclePredictions: number;
   intervalMs: number;
 }
 
@@ -123,12 +129,15 @@ const autoStatus: DigitAutoStatus = {
   inProgress: false,
   lastCycleAt: null,
   lastCycleTrades: 0,
+  lastCyclePredictions: 0,
   intervalMs: AUTO_EXEC_INTERVAL_MS,
 };
 const recentTradeAt = new Map<string, number>(); // `${userId}:${symbol}` → epoch ms
-// Only users with autoExec=on are polled every cycle (efficiency): hydrated from
-// getSettings/patchSettings calls and reconciled against the whole user list
-// periodically so toggles made from other clients still get picked up.
+// Users with autoPredict=on and/or autoExec=on are polled every cycle
+// (efficiency): hydrated from getSettings/patchSettings calls and reconciled
+// against the whole user list periodically so toggles made from other clients
+// still get picked up. Auto-predict is ON by default so the prediction ledger
+// is continuously real; auto-exec additionally places REAL trades.
 const enabledUsers = new Set<number>();
 
 export function getDigitAutoExecStatus(): DigitAutoStatus {
@@ -145,7 +154,7 @@ async function reconcileEnabledUsers(): Promise<void> {
     const users = await db.listAllUsers();
     for (const u of users) {
       const s = await readSettings(u.id);
-      touchEnabledUser(u.id, s.autoExec);
+      touchEnabledUser(u.id, s.autoPredict || s.autoExec);
     }
   } catch (e) {
     console.warn("[digitTrader] reconcileEnabledUsers failed:", (e as any)?.message || e);
@@ -316,13 +325,78 @@ export async function getDailyUsageFor(userId: number): Promise<DigitDailyUsage>
 }
 
 /**
- * One auto-exec cycle: every enabled user trades the strongest live tilt per followed symbol.
+ * Build, dedup, and persist the live reads for one symbol from ready tick data.
+ * Shared by the manual scan (network ticks) and the auto prediction loop
+ * (in-memory ticks) so both write the same truthful ledger.
+ */
+async function persistReadsForTicks(
+  userId: number,
+  symbol: string,
+  ticks: TickLike[],
+  nowEpoch: number,
+): Promise<{ snapshot: DigitSnapshot; persisted: number; emitted: DigitRead[] }> {
+  const snapshot = buildDigitSnapshot(symbol, ticks);
+  const reads = snapshot.reads.filter((r) => r.strength !== "WEAK");
+  const since = nowEpoch * 1000 - READ_DEDUP_MS; // generatedAt is ms in the schema
+  const open = await db.listOpenDigitReads(userId, symbol, since);
+  const recentKeys = new Set(open.map((r) => `${r.readType}:${r.barrier ?? ""}`));
+
+  let persisted = 0;
+  for (const read of reads) {
+    const key = `${read.type}:${read.barrier ?? ""}`;
+    if (recentKeys.has(key)) continue;
+    recentKeys.add(key);
+    const ok = await db.saveDigitRead({
+      userId,
+      symbol,
+      readType: read.type,
+      barrier: read.barrier,
+      label: read.label,
+      confidence: read.confidence,
+      strength: read.strength,
+      sample: read.sample,
+      freq: String(read.freq),
+      baseline: String(read.baseline),
+      deltaPp: String(read.deltaPp),
+      reasons: read.reasons,
+      decisionEpoch: ticks.length ? Number(ticks[ticks.length - 1].epoch) : nowEpoch,
+      status: "open",
+      generatedAt: nowEpoch * 1000,
+    });
+    if (ok) persisted++;
+  }
+
+  return { snapshot, persisted, emitted: reads };
+}
+
+/**
+ * Compute reads for a symbol, persist any non-duplicate STRONG/MEDIUM ones
+ * into the ledger, and settle every open read whose decision tick has passed.
+ */
+export async function scanAndPersistForUser(userId: number, symbol: string): Promise<DigitScanResult> {
+  const ticks = await getTickHistory(symbol, FETCH_COUNT);
+  const nowEpoch = Math.floor(Date.now() / 1000);
+  const { snapshot, persisted, emitted } = await persistReadsForTicks(userId, symbol, digitsToEpochs(ticks), nowEpoch);
+  const settled = await settleOpenDigitReads(userId);
+  return { snapshot, persisted, emitted, settled };
+}
+
+// Settle scans are throttled inside the auto loop (they fetch fresh tick
+// history per symbol) — never more often than every 10s per user.
+const lastAutoSettle = new Map<number, number>();
+const AUTO_SETTLE_INTERVAL_MS = 10_000;
+
+/**
+ * One auto cycle: for every enrolled user, run the prediction pass on each
+ * followed symbol (always-on, fresh data, no real trades) and, when auto-exec
+ * is on, additionally place REAL Deriv contracts using the daily caps.
  */
 async function autoCycle(): Promise<void> {
   if (autoInProgress) return;
   autoInProgress = true;
   autoStatus.running = true;
   let placed = 0;
+  let predicted = 0;
   try {
     if (isFeedStale()) return;
     if (recentTradeAt.size > 5000) {
@@ -334,10 +408,33 @@ async function autoCycle(): Promise<void> {
     for (const userId of enabledUsers) {
       try {
         const settings = await readSettings(userId);
-        if (!settings.autoExec) {
+        if (!settings.autoPredict && !settings.autoExec) {
           enabledUsers.delete(userId);
           continue;
         }
+        for (const symbol of settings.symbols.slice(0, MAX_AUTO_SYMBOLS)) {
+          if (!settings.autoPredict) break;
+          try {
+            const ticks = getRecentTicks(symbol, 200);
+            if (ticks.length < 16) continue;
+            const lastEpoch = ticks[ticks.length - 1].epoch;
+            if (!lastEpoch || now / 1000 - lastEpoch > 60) continue; // stale feed for this symbol
+            const res = await persistReadsForTicks(userId, symbol, ticks, Math.floor(now / 1000));
+            predicted += res.persisted;
+          } catch (e) {
+            console.warn(`[digitTrader] prediction error for user ${userId} symbol ${symbol}:`, (e as any)?.message || e);
+          }
+        }
+        const lastSettle = lastAutoSettle.get(userId) || 0;
+        if (now - lastSettle > AUTO_SETTLE_INTERVAL_MS) {
+          try {
+            await settleOpenDigitReads(userId);
+            lastAutoSettle.set(userId, Date.now());
+          } catch (e) {
+            console.warn(`[digitTrader] auto settle error for user ${userId}:`, (e as any)?.message || e);
+          }
+        }
+        if (!settings.autoExec) continue;
         const usage = await db.getDigitTraderDailyUsage(userId, dayStart);
         let placedToday = usage.trades;
         if (settings.maxDailyLoss && usage.pnl <= -settings.maxDailyLoss) {
@@ -379,13 +476,14 @@ async function autoCycle(): Promise<void> {
           }
         }
       } catch (e) {
-        console.warn(`[digitTrader] auto-exec error for user ${userId}:`, (e as any)?.message || e);
+        console.warn(`[digitTrader] auto cycle error for user ${userId}:`, (e as any)?.message || e);
       }
     }
     autoStatus.lastCycleTrades = placed;
+    autoStatus.lastCyclePredictions = predicted;
     autoStatus.lastCycleAt = Date.now();
   } catch (e: any) {
-    console.warn("[digitTrader] auto-exec cycle error:", e?.message || e);
+    console.warn("[digitTrader] auto cycle error:", e?.message || e);
   } finally {
     autoInProgress = false;
     autoStatus.running = false;
@@ -395,7 +493,7 @@ async function autoCycle(): Promise<void> {
 export function startDigitTraderAutoExec(): void {
   if (autoInterval) return;
   autoStatus.enabled = true;
-  console.log("[digitTrader] Auto-exec loop starting — polling every 5s for users with autoExec=on");
+  console.log("[digitTrader] Auto loop starting — predicting every 5s, auto-exec only for users with autoExec=on");
   reconcileEnabledUsers().catch(() => {});
   const reconcile = setInterval(() => reconcileEnabledUsers().catch(() => {}), ENABLED_RESCAN_MS);
   autoInterval = setInterval(() => {
@@ -427,54 +525,6 @@ export interface DigitScanResult {
   persisted: number;
   emitted: DigitRead[]; // reads shown to the user (before dedup)
   settled: { settled: number; wins: number; losses: number };
-}
-
-/**
- * Compute reads for a symbol, persist any non-duplicate STRONG/MEDIUM ones
- * into the ledger, and settle every open read whose decision tick has passed.
- */
-export async function scanAndPersistForUser(userId: number, symbol: string): Promise<DigitScanResult> {
-  const ticks = await getTickHistory(symbol, FETCH_COUNT);
-  const snapshot = buildDigitSnapshot(symbol, digitsToEpochs(ticks));
-  const reads = snapshot.reads.filter((r) => r.strength !== "WEAK");
-  const nowEpoch = Math.floor(Date.now() / 1000);
-  const since = nowEpoch * 1000 - READ_DEDUP_MS; // generatedAt is ms in the schema
-  const open = await db.listOpenDigitReads(userId, symbol, since);
-  const recentKeys = new Set(open.map((r) => `${r.readType}:${r.barrier ?? ""}`));
-
-  let persisted = 0;
-  for (const read of reads) {
-    const key = `${read.type}:${read.barrier ?? ""}`;
-    if (recentKeys.has(key)) continue;
-    recentKeys.add(key);
-    const ok = await db.saveDigitRead({
-      userId,
-      symbol,
-      readType: read.type,
-      barrier: read.barrier,
-      label: read.label,
-      confidence: read.confidence,
-      strength: read.strength,
-      sample: read.sample,
-      freq: String(read.freq),
-      baseline: String(read.baseline),
-      deltaPp: String(read.deltaPp),
-      reasons: read.reasons,
-      decisionEpoch: lastDecisionEpoch(ticks),
-      status: "open",
-      generatedAt: nowEpoch * 1000,
-    });
-    if (ok) persisted++;
-  }
-
-  const settled = await settleOpenDigitReads(userId);
-  return { snapshot, persisted, emitted: reads, settled };
-}
-
-/** Epoch (seconds) of the newest tick — the decision point for the next tick. */
-function lastDecisionEpoch(ticks: Array<{ price: number; timestamp: number }>): number {
-  if (ticks.length === 0) return Math.floor(Date.now() / 1000);
-  return Math.floor(Number(ticks[ticks.length - 1].timestamp) / 1000);
 }
 
 /** Resolve every open read against the first tick strictly after its decision tick. */

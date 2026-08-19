@@ -3391,6 +3391,7 @@ aiMarket: router({
     }),
     patchSettings: protectedProcedure
       .input(z.object({
+        autoPredict: z.boolean().optional(),
         autoExec: z.boolean().optional(),
         stake: z.number().min(0.35).max(500).optional(),
         stopLoss: z.number().min(0).max(10000).optional(),

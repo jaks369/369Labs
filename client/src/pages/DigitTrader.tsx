@@ -5,6 +5,7 @@ import { useLocation } from "wouter";
 import { toast } from "@/components/Toast";
 import { pushTradeIntent, digitReadToContract } from "@/lib/tradeIntent";
 import { getSymbolDisplayName, getSymbolOptions, normalizeSymbol } from "@/lib/symbols";
+import { PAYOUT_RATE } from "@shared/contractSim";
 import { useDerivStatus } from "@/hooks/useDerivStatus";
 import {
   Hash,
@@ -62,7 +63,8 @@ export default function DigitTrader() {
   const [symbol, setSymbol] = useState(getSymbolDisplayName("R_100"));
   const [activeSymbol, setActiveSymbol] = useState("R_100");
 
-  // Auto-execute settings (persisted server-side; the toggle stays on until turned off).
+  // Automation settings (persisted server-side; auto-predict runs the honest
+  // ledger 24/7, auto-exec places real contracts on top).
   const settingsQ = trpc.digitTrader.getSettings.useQuery(undefined, { enabled: isAuthenticated });
   const patchSettings = trpc.digitTrader.patchSettings.useMutation();
   const [stake, setStake] = useState(1);
@@ -71,6 +73,7 @@ export default function DigitTrader() {
   const [maxDailyLoss, setMaxDailyLoss] = useState(0);
   const [maxDailyTrades, setMaxDailyTrades] = useState(0);
   const [followed, setFollowed] = useState<string[]>(["R_100"]);
+  const [autoPredict, setAutoPredict] = useState(true);
   const [autoExec, setAutoExec] = useState(false);
 
   useEffect(() => {
@@ -81,6 +84,7 @@ export default function DigitTrader() {
     setMaxDailyLoss(settingsQ.data.maxDailyLoss || 0);
     setMaxDailyTrades(settingsQ.data.maxDailyTrades || 0);
     setFollowed(settingsQ.data.symbols);
+    setAutoPredict(settingsQ.data.autoPredict);
     setAutoExec(settingsQ.data.autoExec);
   }, [settingsQ.data]);
 
@@ -123,9 +127,19 @@ export default function DigitTrader() {
         setMaxDailyLoss(saved.maxDailyLoss || 0);
         setMaxDailyTrades(saved.maxDailyTrades || 0);
         setFollowed(saved.symbols);
-        toast("Auto-execute settings saved", "success");
+        toast("Settings saved", "success");
       },
       onError: (e: any) => toast(e?.message || "Failed to save settings", "error"),
+    });
+  };
+
+  const toggleAutoPredict = (next: boolean) => {
+    patchSettings.mutate({ autoPredict: next } as any, {
+      onSuccess: (saved) => {
+        setAutoPredict(saved.autoPredict);
+        toast(saved.autoPredict ? "Auto-predict ON — logging and settling predictions continuously." : "Auto-predict OFF — ledger stops growing.", saved.autoPredict ? "success" : "info");
+      },
+      onError: (e: any) => toast(e?.message || "Failed to update auto-predict", "error"),
     });
   };
 
@@ -137,7 +151,7 @@ export default function DigitTrader() {
     patchSettings.mutate({ autoExec: next } as any, {
       onSuccess: (saved) => {
         setAutoExec(saved.autoExec);
-        toast(saved.autoExec ? "Auto-execute ON — trading the strongest live tilt every symbol." : "Auto-execute OFF", saved.autoExec ? "success" : "info");
+        toast(saved.autoExec ? "Auto-execute ON — placing REAL contracts on the strongest live tilt." : "Auto-execute OFF — predictions only.", saved.autoExec ? "success" : "info");
       },
       onError: (e: any) => toast(e?.message || "Failed to update auto-execute", "error"),
     });
@@ -171,12 +185,12 @@ export default function DigitTrader() {
     pushTradeIntent({
       symbol: activeSymbol,
       contract: digitReadToContract(read),
-      stake: 1,
+      stake,
       duration: 1,
       durationUnit: "t",
       label: `Digit Trader · ${read.label}`,
     });
-    toast(`Prefilled terminal with ${activeSymbol} ${read.label} (1 tick, $1)`, "success");
+    toast(`Prefilled terminal with ${activeSymbol} ${read.label} (1 tick, $${stake})`, "success");
     navigate("/dashboard");
   };
 
@@ -187,10 +201,10 @@ export default function DigitTrader() {
           <Hash className="w-7 h-7 text-[var(--accent)]" />
           <div className="flex-1">
             <h1 className="text-2xl font-bold text-white">Digit Trader</h1>
-            <p className="text-xs text-[var(--text-muted)]">Honest OVER / UNDER / EVEN / ODD reads — observed tilts, never forecast edges</p>
+            <p className="text-xs text-[var(--text-muted)]">Continuous OVER / UNDER / EVEN / ODD predictions on the live digit stream — every call settled against the next real tick</p>
           </div>
           <Button onClick={runScan} className="btn btn-outline gap-2" size="sm" disabled={scan.isPending}>
-            <ScanSearch className="w-4 h-4" />{scan.isPending ? "Scanning…" : "Scan & log reads"}
+            <ScanSearch className="w-4 h-4" />{scan.isPending ? "Scanning…" : "Scan now"}
           </Button>
           <Button onClick={() => { settle.mutate(undefined, { onSuccess: refresh }); }} className="btn btn-outline gap-2" size="sm" disabled={settle.isPending}>
             <RefreshCw className="w-4 h-4" />{settle.isPending ? "Settling…" : "Settle outcomes"}
@@ -229,25 +243,46 @@ export default function DigitTrader() {
           <span className="text-xs text-[var(--text-muted)]">Viewing <span className="text-white font-semibold">{getSymbolDisplayName(activeSymbol) || activeSymbol}</span></span>
         </div>
 
-        {/* Auto-execute */}
-        <Card title="Auto-execute" icon={<Zap className="w-4 h-4 text-[var(--accent)]" />}>
-          <div className="flex items-center justify-between gap-4 flex-wrap">
-            <div className="flex items-center gap-3">
-              <button
-                onClick={() => toggleAutoExec(!autoExec)}
-                className={`relative w-11 h-6 rounded-full transition-colors ${autoExec ? "bg-[var(--green)]" : "bg-[var(--surface-elevated)] border border-[var(--border)]"}`}
-                title={autoExec ? "Tap to turn off" : "Tap to turn on"}
-              >
-                <span className={`absolute top-0.5 w-5 h-5 rounded-full bg-white transition-all ${autoExec ? "left-[22px]" : "left-0.5"}`} />
-              </button>
-              <div>
-                <p className="text-sm font-bold text-white">{autoExec ? "Auto-execute is ON" : "Auto-execute is OFF"}</p>
-                <p className="text-[11px] text-[var(--text-muted)]">{autoExec ? "Stays on until you turn it off — trades the strongest live tilt per followed symbol." : "Turned off — nothing is placed automatically."}</p>
+        {/* Automation — predictions always run; real trades are optional */}
+        <Card title="Automation" icon={<Zap className="w-4 h-4 text-[var(--accent)]" />}>
+          <div className="space-y-4">
+            <div className="flex items-center justify-between gap-4 flex-wrap">
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => toggleAutoPredict(!autoPredict)}
+                  className={`relative w-11 h-6 rounded-full transition-colors ${autoPredict ? "bg-[var(--green)]" : "bg-[var(--surface-elevated)] border border-[var(--border)]"}`}
+                  title={autoPredict ? "Tap to turn off" : "Tap to turn on"}
+                >
+                  <span className={`absolute top-0.5 w-5 h-5 rounded-full bg-white transition-all ${autoPredict ? "left-[22px]" : "left-0.5"}`} />
+                </button>
+                <div>
+                  <p className="text-sm font-bold text-white">{autoPredict ? "Auto-predict is ON" : "Auto-predict is OFF"}</p>
+                  <p className="text-[11px] text-[var(--text-muted)]">Logs the strongest live call per followed symbol and settles it against the next tick. This is how the ledger below stays real.</p>
+                </div>
               </div>
+              <span className={`px-2 py-1 rounded border text-[10px] font-bold ${autoPredict && autoStatus?.running ? "text-[var(--green)] border-[var(--green)]/40 bg-[var(--green)]/15" : "text-[var(--text-muted)] border-[var(--border)] bg-white/5"}`}>
+                {autoPredict && autoStatus?.running ? "PREDICTING" : autoPredict ? "LOOP SCHEDULED" : "IDLE"}
+              </span>
             </div>
-            <span className={`px-2 py-1 rounded border text-[10px] font-bold ${autoExec ? "text-[var(--green)] border-[var(--green)]/40 bg-[var(--green)]/15" : "text-[var(--text-muted)] border-[var(--border)] bg-white/5"}`}>
-              {autoStatus?.running && autoExec ? "LOOP ACTIVE" : autoExec ? "LOOP SCHEDULED" : "IDLE"}
-            </span>
+
+            <div className="flex items-center justify-between gap-4 flex-wrap border-t border-[var(--border)] pt-4">
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => toggleAutoExec(!autoExec)}
+                  className={`relative w-11 h-6 rounded-full transition-colors ${autoExec ? "bg-[var(--green)]" : "bg-[var(--surface-elevated)] border border-[var(--border)]"}`}
+                  title={autoExec ? "Tap to turn off" : "Tap to turn on"}
+                >
+                  <span className={`absolute top-0.5 w-5 h-5 rounded-full bg-white transition-all ${autoExec ? "left-[22px]" : "left-0.5"}`} />
+                </button>
+                <div>
+                  <p className="text-sm font-bold text-white">{autoExec ? "Auto-execute is ON" : "Auto-execute is OFF"}</p>
+                  <p className="text-[11px] text-[var(--text-muted)]">{autoExec ? "Stays on until you turn it off — places REAL 1-tick contracts on the strongest live call per followed symbol." : "Turned off — nothing is placed automatically."}</p>
+                </div>
+              </div>
+              <span className={`px-2 py-1 rounded border text-[10px] font-bold ${autoExec ? "text-[var(--amber)] border-[var(--amber)]/40 bg-[var(--amber)]/10" : "text-[var(--text-muted)] border-[var(--border)] bg-white/5"}`}>
+                {autoExec && autoStatus?.running ? "LOOP ACTIVE" : autoExec ? "LOOP SCHEDULED" : "IDLE"}
+              </span>
+            </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mt-4">
@@ -300,7 +335,7 @@ export default function DigitTrader() {
             <Button onClick={() => saveConfig({ stake, stopLoss, takeProfit, maxDailyLoss, maxDailyTrades })} className="btn btn-outline gap-2" size="sm" disabled={patchSettings.isPending}>
               <RefreshCw className="w-3.5 h-3.5" />{patchSettings.isPending ? "Saving…" : "Save stake / SL / TP / daily limits"}
             </Button>
-            <p className="text-[11px] text-[var(--text-muted)]">Last cycle: {autoStatus?.lastCycleAt ? new Date(autoStatus.lastCycleAt).toLocaleTimeString() : "never"} · {autoStatus?.lastCycleTrades ?? 0} trade(s) placed.</p>
+            <p className="text-[11px] text-[var(--text-muted)]">Last cycle: {autoStatus?.lastCycleAt ? new Date(autoStatus.lastCycleAt).toLocaleTimeString() : "never"} · {autoStatus?.lastCyclePredictions ?? 0} prediction(s) logged<span className="text-[var(--text-secondary)]"> · {autoStatus?.lastCycleTrades ?? 0} trade(s) real-placed</span>.</p>
           </div>
 
           {(dailyUsageQ.data?.maxDailyLoss || dailyUsageQ.data?.maxDailyTrades) && (
@@ -322,7 +357,7 @@ export default function DigitTrader() {
           )}
 
           <div className="mt-4">
-            <p className="text-[11px] text-[var(--text-muted)] mb-2">Followed symbols — the auto loop trades the strongest tilt on each (max 12):</p>
+            <p className="text-[11px] text-[var(--text-muted)] mb-2">Followed symbols — the auto loop makes and settles a prediction on each (max 12):</p>
             <div className="flex items-center gap-2 flex-wrap">
               {followed.map((s) => (
                 <span key={s} className="inline-flex items-center gap-1.5 px-2 py-1 rounded-lg border border-[var(--border)] bg-[var(--surface-elevated)] text-xs text-white">
@@ -346,9 +381,9 @@ export default function DigitTrader() {
 
         <div className="rounded-xl border border-[var(--amber)]/30 bg-[var(--amber)]/5 p-4 text-xs text-[var(--text-secondary)]">
           <AlertTriangle className="w-3.5 h-3.5 text-[var(--amber)] inline mr-1.5" />
-          These are <b className="text-white">observed tilts in the digit stream — not predictions</b>. Volatility indices are near-random by design, and every read is settled honestly against the <b>next tick</b> so the ledger stays truthful (~50%). {autoExec
-            ? <span className="text-[var(--text-secondary)]">With auto-execute ON, the loop places real 1-tick contracts on the strongest live tilt with your stake / SL / TP.</span>
-            : <span className="text-[var(--text-secondary)]">The trade is executed by you in the terminal — or switched on above for automatic placement.</span>}
+          Every prediction is <b className="text-white">settled against the next real tick</b> and recorded as a win or loss. Volatility indices are near-random by design, so expect the ledger to hover around 50%. The <b className="text-white">stake, SL and TP above size the real contracts</b> placed only when auto-execute is on. {autoExec
+            ? <span className="text-[var(--text-secondary)]">Auto-execute is ON — the loop places real 1-tick contracts on the strongest live call with your stake / SL / TP.</span>
+            : <span className="text-[var(--text-secondary)]">Trade manually from any call below — or switch auto-execute on above for automatic placement.</span>}
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -407,8 +442,8 @@ export default function DigitTrader() {
             )}
           </Card>
 
-          {/* Accuracy ledger */}
-          <Card title="Read ledger accuracy" icon={<Target className="w-4 h-4 text-[var(--accent)]" />}>
+          {/* Prediction ledger */}
+          <Card title="Prediction ledger" icon={<Target className="w-4 h-4 text-[var(--accent)]" />}>
             {accuracy.isLoading ? <Loader2 className="w-5 h-5 animate-spin text-[var(--accent)]" /> : acc && (
               <div className="space-y-4">
                 <div className="grid grid-cols-3 gap-2">
@@ -416,15 +451,19 @@ export default function DigitTrader() {
                   <Metric label="Wins" value={acc.wins} accent="text-[var(--green)]" />
                   <Metric label="Win rate" value={`${acc.winRatePct}%`} />
                 </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <Metric label="Losses" value={acc.losses} accent="text-[var(--red)]" />
+                  <Metric label="Ledger P&L" value={`$${(((acc.wins * PAYOUT_RATE) - acc.losses) * stake).toFixed(2)}`} accent={acc.wins * PAYOUT_RATE - acc.losses >= 0 ? "text-[var(--green)]" : "text-[var(--red)]"} />
+                </div>
                 <p className="text-[11px] text-[var(--text-muted)]">
                   {acc.expired > 0 ? `${acc.expired} barrier-touch refunds (excluded from win rate). ` : ""}
-                  The ledger converges on the ~50% fair baseline — reads are tilts, not edges.
+                  Virtual P&L uses your stake at $1: +95% on a win, −100% on a loss. The ledger honestly lands near the ~50% fair baseline.
                 </p>
                 <div className="space-y-2">
-                  {Object.entries(acc.byStrength || {}).map(([strength, s]: any) => (
-                    <div key={strength} className="flex items-center justify-between text-xs">
-                      <span className={`px-1.5 py-0.5 rounded border text-[10px] font-bold ${strengthChip(strength)}`}>{strength}</span>
-                      <span className="text-[var(--text-muted)]">{s.total} reads · {s.winRatePct}% win rate</span>
+                  {Object.entries(acc.bySymbol || {}).map(([sym, s]: any) => (
+                    <div key={sym} className="flex items-center justify-between text-xs">
+                      <span className="text-white font-medium">{getSymbolDisplayName(sym) || sym}</span>
+                      <span className="text-[var(--text-muted)]">{s.total} predictions · {s.winRatePct}%</span>
                     </div>
                   ))}
                 </div>
@@ -469,42 +508,48 @@ export default function DigitTrader() {
                     </div>
                   );
                 })}
-                {(snap as any)?.reads.length && <p className="text-[11px] text-[var(--text-muted)] pt-1">Reads auto-settle on the next tick — the ledger logs the honest outcome.</p>}
+                {(snap as any)?.reads.length && <p className="text-[11px] text-[var(--text-muted)] pt-1">Auto-predict logs the strongest call and settles it against the next tick — wins and losses land in the ledger above.</p>}
               </div>
             ) : (
-              <p className="text-xs text-[var(--text-muted)]">No tilt ≥5pp in the last {snap ? Math.max(30, snap.digits.length) : 100} digits — doing nothing is the honest result.</p>
+              <p className="text-xs text-[var(--text-muted)]">No tilt ≥5pp in the last {snap ? Math.max(30, snap.digits.length) : 100} digits — standing aside is the honest call right now.</p>
             )}
           </Card>
 
-          {/* Read history */}
-          <Card title="Read history" icon={<History className="w-4 h-4 text-[var(--accent)]" />}>
+          {/* Prediction history */}
+          <Card title="Prediction history" icon={<History className="w-4 h-4 text-[var(--accent)]" />}>
             {history.isLoading ? <Loader2 className="w-5 h-5 animate-spin text-[var(--accent)]" /> : (
               <div className="max-h-80 overflow-y-auto">
                 <table className="w-full text-xs">
                   <thead>
                     <tr className="text-left text-[var(--text-muted)]">
                       <th className="pb-2 pr-2 font-medium">Symbol</th>
-                      <th className="pb-2 pr-2 font-medium">Read</th>
+                      <th className="pb-2 pr-2 font-medium">Call</th>
                       <th className="pb-2 pr-2 font-medium">Conf</th>
                       <th className="pb-2 pr-2 font-medium">Delta</th>
+                      <th className="pb-2 pr-2 font-medium">P&L (virtual)</th>
                       <th className="pb-2 font-medium">Status</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {(history.data || []).map((r: any) => (
+                    {(history.data || []).map((r: any) => {
+                      const done = r.status === "win" || r.status === "loss";
+                      const pnl = done ? (r.status === "win" ? stake * PAYOUT_RATE : -stake) : 0;
+                      return (
                       <tr key={r.id} className="border-t border-[var(--border)]">
                         <td className="py-2 pr-2 text-white font-medium">{getSymbolDisplayName(r.symbol)}</td>
                         <td className="py-2 pr-2 text-[var(--text-secondary)]">{r.label}</td>
                         <td className="py-2 pr-2 text-[var(--text-muted)]">{r.confidence}%</td>
                         <td className="py-2 pr-2 text-[var(--text-muted)]">{r.deltaPp > 0 ? "+" : ""}{r.deltaPp}pp</td>
+                        <td className={`py-2 pr-2 font-mono ${done ? (pnl >= 0 ? "text-[var(--green)]" : "text-[var(--red)]") : "text-[var(--text-muted)]"}`}>{done ? `${pnl >= 0 ? "+" : ""}$${pnl.toFixed(2)}` : "—"}</td>
                         <td className="py-2">
                           <span className={`px-1.5 py-0.5 rounded border text-[10px] font-bold ${r.status === "win" ? "text-[var(--green)] border-[var(--green)]/40 bg-[var(--green)]/15" : r.status === "loss" ? "text-[var(--red)] border-[var(--red)]/40 bg-[var(--red)]/15" : r.status === "open" ? "text-[var(--amber)] border-[var(--amber)]/40 bg-[var(--amber)]/15" : "text-[var(--text-muted)] border-[var(--border)] bg-white/5"}`}>{r.status}</span>
                         </td>
                       </tr>
-                    ))}
+                      );
+                    })}
                   </tbody>
                 </table>
-                {(history.data || []).length === 0 && <p className="text-xs text-[var(--text-muted)] py-4">No reads yet — scan to seed the honest ledger.</p>}
+                {(history.data || []).length === 0 && <p className="text-xs text-[var(--text-muted)] py-4">No predictions yet — scan or turn on auto-predict to seed the ledger.</p>}
               </div>
             )}
           </Card>
