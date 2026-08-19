@@ -22,7 +22,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { pushTradeIntent } from "@/lib/tradeIntent";
-import { getSymbolDisplayName } from "@/lib/symbols";
+import { getSymbolDisplayName, normalizeSymbol, filterValidSymbols } from "@/lib/symbols";
 
 function badge(level: string) {
   const map: Record<string, string> = {
@@ -153,6 +153,7 @@ export default function Concierge() {
   const [ctxSymbol, setCtxSymbol] = useState("R_100");
   const [symbolsInput, setSymbolsInput] = useState("");
   const [symbolsDirty, setSymbolsDirty] = useState(false);
+  const [symbolsNote, setSymbolsNote] = useState("");
 
   const briefing = trpc.concierge.briefing.useQuery(undefined, { enabled: isAuthenticated });
   const coach = trpc.concierge.sessionCoach.useQuery(undefined, { enabled: isAuthenticated });
@@ -175,6 +176,36 @@ export default function Concierge() {
     candidates.refetch();
     history.refetch();
     accuracy.refetch();
+  };
+
+  // Persist the followed-symbols list, then visibly apply it: refresh every
+  // live view AND point the "Market context" price card at the first followed
+  // symbol, so naming symbols actually selects and changes the price shown.
+  const saveSymbols = () => {
+    const raw = symbolsDirty ? symbolsInput : (settings?.symbols?.join(", ") ?? "");
+    const parsed = raw.split(",").map((s) => normalizeSymbol(s)).filter(Boolean);
+    const valid = Array.from(new Set(filterValidSymbols(parsed))).slice(0, 12);
+    if (valid.length === 0) {
+      setSymbolsNote("No recognised symbols. Use codes like R_100, 1HZ10V, BOOM500.");
+      return;
+    }
+    const dropped = Array.from(new Set(parsed)).length - valid.length;
+    patchSettings.mutate(
+      { symbols: valid },
+      {
+        onSuccess: () => {
+          setSymbolsDirty(false);
+          setSymbolsInput("");
+          setSymbolsNote(dropped > 0 ? `Saved — watching ${valid.length} symbols (${dropped} unrecognised skipped).` : `Saved — watching ${valid.length} symbols.`);
+          refresh();
+          settingsQ.refetch();
+          if (ctxSymbol !== valid[0]) {
+            setCtxSymbol(valid[0]);
+            setTimeout(() => marketContext.refetch(), 0);
+          }
+        },
+      },
+    );
   };
 
   if (!isAuthenticated) { navigate("/login"); return null; }
@@ -464,19 +495,13 @@ export default function Concierge() {
                   <span className="text-[11px] text-[var(--text-muted)]">Followed symbols (comma separated)</span>
                   <input
                     value={symbolsDirty ? symbolsInput : (settings.symbols?.join(", ") ?? "")}
-                    onChange={(e) => { setSymbolsDirty(true); setSymbolsInput(e.target.value); }}
-                    onBlur={() => {
-                      const symbols = (symbolsDirty ? symbolsInput : settings.symbols?.join(", ") ?? "")
-                        .split(",").map((s) => s.trim().toUpperCase()).filter(Boolean).slice(0, 12);
-                      if (symbols.length) {
-                        patchSettings.mutate({ symbols });
-                        setSymbolsDirty(false);
-                        setSymbolsInput("");
-                      }
-                    }}
+                    onChange={(e) => { setSymbolsDirty(true); setSymbolsInput(e.target.value); setSymbolsNote(""); }}
+                    onBlur={saveSymbols}
+                    onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); saveSymbols(); } }}
                     className="mt-1 w-full bg-[var(--surface-elevated)] border border-[var(--border)] rounded-lg px-3 py-1.5 text-sm text-white"
                     placeholder="R_100, 1HZ10V, BOOM500"
                   />
+                  {symbolsNote && <p className="mt-1 text-[11px] text-[var(--accent-soft)]">{symbolsNote}</p>}
                 </label>
               </div>
             )}
