@@ -545,6 +545,7 @@ export const appRouter = router({
         name: z.string().optional(),
       }))
       .mutation(async ({ ctx, input }) => {
+        checkRateLimit(ctx.req.ip || "unknown");
         const existing = await db.getUserByEmail(input.email);
         if (existing) {
           throw new TRPCError({ code: "CONFLICT", message: "An account with this email already exists" });
@@ -650,6 +651,7 @@ export const appRouter = router({
     forgotPassword: publicProcedure
       .input(z.object({ email: z.string().email() }))
       .mutation(async ({ ctx, input }) => {
+        checkRateLimit(ctx.req.ip || "unknown");
         try {
           const user = await db.getUserByEmail(input.email);
           // Always return a generic success to prevent email enumeration.
@@ -711,6 +713,7 @@ export const appRouter = router({
     resendVerification: publicProcedure
       .input(z.object({ email: z.string().email() }))
       .mutation(async ({ ctx, input }) => {
+        checkRateLimit(ctx.req.ip || "unknown");
         try {
           const user = await db.getUserByEmail(input.email);
           if (!user) return { success: true, emailSent: false };
