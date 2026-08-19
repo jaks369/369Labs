@@ -17,6 +17,7 @@ import { notifyUser, notifyUserTelegram } from "./_core/notification";
 import { getTickHistory, getTickHistoryDeep } from "./aitools";
 import { getAllSymbols, getSymbolDisplayName } from "@shared/symbols";
 import { PAYOUT_RATE } from "@shared/contractSim";
+import { getPortfolioSnapshot } from "./tradingService";
 import {
   scanSignalForSymbol,
   GuidingSignalCandidate,
@@ -84,6 +85,8 @@ export interface ConciergeSettings {
   telegramBriefings: boolean;
   maxPerDay: number;
   stakePct: number;
+  /** Absolute USD stake the user wants the concierge to recommend (0.35+). */
+  stake: number;
   stopLoss: number;
   takeProfit: number;
   symbols?: string[];
@@ -94,6 +97,7 @@ export const DEFAULT_SETTINGS: ConciergeSettings = {
   telegramBriefings: false,
   maxPerDay: 10,
   stakePct: 2,
+  stake: 1,
   stopLoss: 0,
   takeProfit: 0,
 };
@@ -132,6 +136,21 @@ export function suggestStakeInput(balance: number, riskPct = 2): StakeSuggestion
     maxStake: Math.round(maxStake * 100) / 100,
     riskPct: pct,
     note: `${pct}% of your account balance ($${rounded.toFixed(2)}) — sized from risk, not from signal confidence. Never risk more than the ${(pct * 3).toFixed(0).replace(/\.0$/, "")}% cap.`,
+  };
+}
+
+/** Suggested stake from the user's concierge settings: an explicit absolute
+ *  stake wins if set, otherwise it falls back to the risk-adjusted % of the
+ *  account balance. Either way the risk guard (3× the % baseline) caps the
+ *  number so a typo can't recommend a reckless size. */
+export function suggestStakeForSettings(balance: number, settings: Pick<ConciergeSettings, "stakePct" | "stake">): StakeSuggestion {
+  const base = suggestStakeInput(balance, settings.stakePct);
+  const desired = Number(settings.stake) > 0 ? Number(settings.stake) : base.stake;
+  const stake = Math.round(Math.min(Math.max(desired, 0.35), base.maxStake) * 100) / 100;
+  return {
+    ...base,
+    stake,
+    note: `${base.riskPct}% of account = $${base.stake.toFixed(2)}; your set stake $${desired.toFixed(2)}${desired > base.maxStake ? ` was capped to the risk guard $${base.maxStake.toFixed(2)}` : ""}`,
   };
 }
 
@@ -523,7 +542,7 @@ export async function buildBriefing(userId: number, balance?: number): Promise<B
   const top = candidates[0] ?? null;
   const budget = balance ?? 500;
   const settings = await getSettings(userId);
-  const stake = top ? suggestStakeInput(budget, settings.stakePct) : null;
+  const stake = top ? suggestStakeForSettings(budget, settings) : null;
 
   let verdict = "NO TRADE";
   let headline = "No live candidate right now";
@@ -585,12 +604,28 @@ export async function scanAndPersistForUser(userId: number): Promise<ScanAndPers
   let persisted = 0;
   let newStrong: GuidingSignalCandidate | null = null;
 
+  // Balance is read once per cycle (and only when a signal is about to be
+  // recorded) so the persisted stake is the user's real risk number, never a
+  // hardcoded stand-in.
+  let balance: number | null = null;
+  const userBalance = async (): Promise<number> => {
+    if (balance !== null) return balance;
+    try {
+      const snap = await getPortfolioSnapshot(userId);
+      balance = snap?.balance > 0 ? snap.balance : 500;
+    } catch {
+      balance = 500;
+    }
+    return balance;
+  };
+
   for (const sym of symbols) {
     try {
       const sig = await scanSymbolAndCache(sym);
       perSymbol.push({ symbol: sym, strength: sig?.strength ?? null, confidence: sig?.confidence ?? null });
       if (!sig || sig.strength === "WEAK") continue;
       if (recentKeys.has(`${sym}:${sig.direction}`)) continue;
+      const stake = suggestStakeForSettings(await userBalance(), settings).stake;
       const ok = await db.saveGuidingSignal({
         userId,
         symbol: sym,
@@ -604,7 +639,7 @@ export async function scanAndPersistForUser(userId: number): Promise<ScanAndPers
         entryPrice: String(sig.entryPrice),
         entryEpoch: sig.entryEpoch,
         windowTicks: sig.windowTicks,
-        stake: String(sig.strength === "STRONG" ? 2 : 1),
+        stake: String(stake),
         status: "open",
         generatedAt: Math.floor(Date.now() / 1000),
       });

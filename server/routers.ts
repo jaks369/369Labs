@@ -3345,6 +3345,7 @@ aiMarket: router({
         telegramBriefings: z.boolean().optional(),
         maxPerDay: z.number().min(1).max(50).optional(),
         stakePct: z.number().min(0.1).max(2).optional(),
+        stake: z.number().min(0.35).max(10000).optional(),
         stopLoss: z.number().min(0).max(10000).optional(),
         takeProfit: z.number().min(0).max(10000).optional(),
         symbols: z.array(z.string()).max(12).optional(),

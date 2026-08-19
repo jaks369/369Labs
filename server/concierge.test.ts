@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
   suggestStakeInput,
+  suggestStakeForSettings,
   winRateOf,
   computeSessionCoach,
   computeSmartAlerts,
@@ -42,6 +43,28 @@ describe("concierge pure helpers", () => {
   it("note makes clear the stake is risk-driven, not confidence-driven", () => {
     const r = suggestStakeInput(470, 1);
     expect(r.note.toLowerCase()).toContain("risk");
+  });
+
+  it("absolute stake setting wins over the % baseline when within the risk guard", () => {
+    const r = suggestStakeForSettings(1000, { stakePct: 2, stake: 3 });
+    expect(r.stake).toBe(3); // user's explicit $3
+    expect(r.maxStake).toBe(60); // 3 × 2% of 1000
+  });
+
+  it("caps an oversized absolute stake at the risk guard instead of recommending it", () => {
+    const r = suggestStakeForSettings(1000, { stakePct: 2, stake: 200 });
+    expect(r.stake).toBe(60); // 3 × 2% of 1000
+    expect(r.note).toContain("capped");
+  });
+
+  it("falls back to the % baseline when no absolute stake is set", () => {
+    const r = suggestStakeForSettings(1000, { stakePct: 2, stake: 0 });
+    expect(r.stake).toBeCloseTo(20, 2);
+  });
+
+  it("never lets a typo drop the stake below the platform minimum", () => {
+    const r = suggestStakeForSettings(1000, { stakePct: 2, stake: 0.01 });
+    expect(r.stake).toBeGreaterThanOrEqual(0.35);
   });
 
   it("computes win rate from settled trades only", () => {

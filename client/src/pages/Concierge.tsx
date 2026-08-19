@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { trpc } from "@/lib/trpc";
 import { useLocation } from "wouter";
@@ -19,8 +19,13 @@ import {
   ShieldCheck,
   History,
   BarChart3,
+  Zap,
+  Plus,
+  X,
+  Save,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { toast } from "@/components/Toast";
 import { pushTradeIntent } from "@/lib/tradeIntent";
 import { getSymbolDisplayName, normalizeSymbol, filterValidSymbols } from "@/lib/symbols";
 
@@ -58,52 +63,6 @@ function Metric({ label, value, accent }: { label: string; value: string | numbe
       <p className="text-[11px] text-[var(--text-muted)] mb-1 capitalize">{label}</p>
       <p className={`text-lg font-bold font-mono tabular-nums ${accent || "text-white"}`}>{value}</p>
     </div>
-  );
-}
-
-// Number inputs commit on blur/Enter instead of on every keystroke, so typing
-// intermediate states (empty field, "0.", "1e") doesn't fire mutations that
-// the server's min/max schema rejects and bounces back.
-function CommitOnBlurNumberField({ label, value, min, max, step, onChange }: {
-  label: string;
-  value: number;
-  min: number;
-  max: number;
-  step?: number;
-  onChange: (n: number) => void;
-}) {
-  const [draft, setDraft] = useState("");
-  const [dirty, setDirty] = useState(false);
-  const [note, setNote] = useState("");
-  const commit = () => {
-    const raw = dirty ? draft : String(value);
-    const parsed = Number(raw);
-    if (!raw.trim() || Number.isNaN(parsed) || parsed < min || parsed > max) {
-      setDirty(false);
-      setNote(`Enter a number between ${min} and ${max}.`);
-      return;
-    }
-    const rounded = Math.round(parsed * 100) / 100;
-    setDirty(false);
-    setNote("");
-    if (rounded !== value) onChange(rounded);
-  };
-  return (
-    <label className="block">
-      <span className="text-[11px] text-[var(--text-muted)]">{label}</span>
-      <input
-        type="number"
-        min={min}
-        max={max}
-        step={step ?? 1}
-        value={dirty ? draft : value}
-        onChange={(e) => { setDirty(true); setDraft(e.target.value); setNote(""); }}
-        onBlur={commit}
-        onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); commit(); } }}
-        className="mt-1 w-full bg-[var(--surface-elevated)] border border-[var(--border)] rounded-lg px-3 py-1.5 text-sm text-white"
-      />
-      {note && <p className="mt-1 text-[11px] text-[var(--red)]">{note}</p>}
-    </label>
   );
 }
 
@@ -197,9 +156,13 @@ export default function Concierge() {
   const { isAuthenticated } = useAuth();
   const [, navigate] = useLocation();
   const [ctxSymbol, setCtxSymbol] = useState("R_100");
-  const [symbolsInput, setSymbolsInput] = useState("");
-  const [symbolsDirty, setSymbolsDirty] = useState(false);
-  const [symbolsNote, setSymbolsNote] = useState("");
+  const [followInput, setFollowInput] = useState("");
+  const [followNote, setFollowNote] = useState("");
+  const [draftMaxPerDay, setDraftMaxPerDay] = useState(10);
+  const [draftStake, setDraftStake] = useState(1);
+  const [draftStopLoss, setDraftStopLoss] = useState(0);
+  const [draftTakeProfit, setDraftTakeProfit] = useState(0);
+  const [saveNote, setSaveNote] = useState("");
 
   const briefing = trpc.concierge.briefing.useQuery(undefined, { enabled: isAuthenticated });
   const coach = trpc.concierge.sessionCoach.useQuery(undefined, { enabled: isAuthenticated });
@@ -209,6 +172,7 @@ export default function Concierge() {
   const history = trpc.concierge.history.useQuery({ limit: 30 }, { enabled: isAuthenticated });
   const accuracy = trpc.concierge.accuracy.useQuery(undefined, { enabled: isAuthenticated });
   const settingsQ = trpc.concierge.getSettings.useQuery(undefined, { enabled: isAuthenticated });
+  const loopStatus = trpc.concierge.loopStatus.useQuery(undefined, { enabled: isAuthenticated, refetchInterval: 5000 });
   const marketContext = trpc.concierge.marketContext.useQuery({ symbol: ctxSymbol }, { enabled: isAuthenticated });
 
   const scanNow = trpc.concierge.scanNow.useMutation();
@@ -224,39 +188,55 @@ export default function Concierge() {
     accuracy.refetch();
   };
 
-  // Persist the followed-symbols list, then visibly apply it: refresh every
-  // live view AND point the "Market context" price card at the first followed
-  // symbol, so naming symbols actually selects and changes the price shown.
-  const saveSymbols = () => {
-    const raw = symbolsDirty ? symbolsInput : (settings?.symbols?.join(", ") ?? "");
-    const parsed = raw.split(",").map((s) => normalizeSymbol(s)).filter(Boolean);
-    const valid = Array.from(new Set(filterValidSymbols(parsed))).slice(0, 12);
+  useEffect(() => {
+    if (!settingsQ.data) return;
+    setDraftMaxPerDay(settingsQ.data.maxPerDay);
+    setDraftStake(settingsQ.data.stake);
+    setDraftStopLoss(settingsQ.data.stopLoss);
+    setDraftTakeProfit(settingsQ.data.takeProfit);
+  }, [settingsQ.data]);
+
+  const syncSymbol = (sym: string) => {
+    if (ctxSymbol !== sym) {
+      setCtxSymbol(sym);
+      setTimeout(() => marketContext.refetch(), 0);
+    }
+  };
+
+  // Add one or more followed symbols (comma/space separated friendly names or
+  // codes). Unknown tokens are skipped and reported; valid ones are saved as
+  // chips and become the pool the concierge scans.
+  const addFollowSymbol = () => {
+    const raw = followInput;
+    if (!raw.trim()) return;
+    const tokens = raw.split(/[\s,]+/).map((t) => t.trim()).filter(Boolean);
+    const normalized = tokens.map(normalizeSymbol).filter(Boolean);
+    const valid = Array.from(new Set(filterValidSymbols(normalized))).slice(0, 12);
     if (valid.length === 0) {
-      setSymbolsNote("No recognised symbols. Use codes like R_100, 1HZ10V, BOOM500.");
+      setFollowNote(`No recognised symbols. Try names like "Volatility 100 Index" or codes like R_100, 1HZ10V, BOOM500.`);
       return;
     }
-    const dropped = Array.from(new Set(parsed)).length - valid.length;
+    const dropped = tokens.length - valid.length;
+    const next = Array.from(new Set([...(settings?.symbols ?? []), ...valid])).slice(0, 12);
     patchSettings.mutate(
-      { symbols: valid },
+      { symbols: next },
       {
         onSuccess: () => {
-          setSymbolsDirty(false);
-          setSymbolsInput("");
-          setSymbolsNote(dropped > 0 ? `Saved — watching ${valid.length} symbols (${dropped} unrecognised skipped).` : `Saved — watching ${valid.length} symbols.`);
+          setFollowInput("");
+          setFollowNote(dropped > 0 ? `Added ${valid.length} — ${dropped} unrecognised skipped.` : `Added ${valid.map(getSymbolDisplayName).join(", ")}.`);
           refresh();
           settingsQ.refetch();
-          if (ctxSymbol !== valid[0]) {
-            setCtxSymbol(valid[0]);
-            setTimeout(() => marketContext.refetch(), 0);
-          }
+          syncSymbol(next[0]);
         },
+        onError: (e: any) => setFollowNote(e?.message || "Failed to save symbols"),
       },
     );
   };
 
   // Remove a followed symbol from the chips row and persist the remainder.
-  const removeSymbol = (sym: string) => {
-    const rest = (settingsQ.data?.symbols ?? []).filter((s) => s !== sym);
+  const removeFollowSymbol = (sym: string) => {
+    const current = settings?.symbols ?? [];
+    const rest = current.filter((s) => s !== sym);
     if (rest.length === 0) return;
     patchSettings.mutate(
       { symbols: rest },
@@ -264,13 +244,55 @@ export default function Concierge() {
         onSuccess: () => {
           refresh();
           settingsQ.refetch();
-          if (ctxSymbol === sym && rest[0]) {
-            setCtxSymbol(rest[0]);
-            setTimeout(() => marketContext.refetch(), 0);
-          }
+          if (ctxSymbol === sym && rest[0]) syncSymbol(rest[0]);
         },
+        onError: (e: any) => setFollowNote(e?.message || "Failed to remove symbol"),
       },
     );
+  };
+
+  const saveNumeric = () => {
+    patchSettings.mutate(
+      { maxPerDay: draftMaxPerDay, stake: draftStake, stopLoss: draftStopLoss, takeProfit: draftTakeProfit },
+      {
+        onSuccess: () => {
+          setSaveNote("Settings saved.");
+          setTimeout(() => setSaveNote(""), 3000);
+          refresh();
+          settingsQ.refetch();
+        },
+        onError: (e: any) => setSaveNote(e?.message || "Failed to save settings"),
+      },
+    );
+  };
+
+  const toggleEnabled = (next: boolean) => {
+    patchSettings.mutate(
+      { enabled: next },
+      {
+        onSuccess: (saved) => {
+          toast(saved.enabled ? "Signal scan ON — scanning your followed symbols." : "Signal scan OFF — stopped.", saved.enabled ? "success" : "info");
+          refresh();
+        },
+        onError: (e: any) => toast(e?.message || "Failed to update settings", "error"),
+      },
+    );
+  };
+
+  const tradeThis = (c: any) => {
+    const stake = settings?.stake || 1;
+    pushTradeIntent({
+      symbol: c.symbol,
+      contract: { category: "rise_fall", direction: c.direction === "up" ? "rise" : "fall" },
+      stake,
+      duration: 5,
+      durationUnit: "t",
+      label: `Concierge ${c.strength} ${agreementText(c.votes) || "no agreement yet"}`,
+      ...(settings?.stopLoss ? { stopLoss: settings.stopLoss } : {}),
+      ...(settings?.takeProfit ? { takeProfit: settings.takeProfit } : {}),
+    });
+    toast(`Prefilled the terminal with ${getSymbolDisplayName(c.symbol)} at $${stake}`, "success");
+    navigate("/dashboard");
   };
 
   if (!isAuthenticated) { navigate("/login"); return null; }
@@ -325,19 +347,7 @@ export default function Concierge() {
                   </div>
                 )}
                 <button
-                  onClick={() => {
-                    pushTradeIntent({
-                      symbol: sig.symbol,
-                      contract: { category: "rise_fall", direction: sig.direction === "up" ? "rise" : "fall" },
-                      stake: nm.suggestedStake,
-                      duration: 5,
-                      durationUnit: "t",
-                      label: `Concierge ${sig.strength} ${agreementText(sig.votes) || "no agreement yet"}`,
-                      ...(settings?.stopLoss ? { stopLoss: settings.stopLoss } : {}),
-                      ...(settings?.takeProfit ? { takeProfit: settings.takeProfit } : {}),
-                    });
-                    navigate("/dashboard");
-                  }}
+                  onClick={() => tradeThis(sig)}
                   className="mt-1 inline-flex items-center gap-2 px-3 py-1.5 rounded-lg border border-[var(--accent)]/40 bg-[var(--accent)]/10 text-[var(--accent-soft)] text-xs font-bold hover:bg-[var(--accent)]/20 transition-colors"
                 >
                   Trade this → <span className="text-[10px] font-medium opacity-70">prefills the terminal · you confirm</span>
@@ -458,6 +468,12 @@ export default function Concierge() {
                         </div>
                         {c.plain?.what && <p className="text-[11px] text-[var(--text-secondary)] mt-1">{c.plain.what}</p>}
                         <div className="mt-1"><DetailDisclosure details={c.details} /></div>
+                        <button
+                          onClick={() => tradeThis(c)}
+                          className="mt-2 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-[var(--accent)]/40 bg-[var(--accent)]/10 text-[var(--accent-soft)] text-[11px] font-bold hover:bg-[var(--accent)]/20 transition-colors"
+                        >
+                          Trade this → <span className="text-[10px] font-medium opacity-70">prefills terminal · you confirm</span>
+                        </button>
                       </div>
                     </div>
                   );
@@ -535,54 +551,100 @@ export default function Concierge() {
           <Card title="Concierge settings" icon={<Settings2 className="w-4 h-4 text-[var(--accent)]" />}>
             {settings && (
               <div className="space-y-4">
-                <div className="flex flex-wrap gap-2">
-                  <button
-                    onClick={() => patchSettings.mutate({ enabled: !settings.enabled }, { onSuccess: refresh })}
-                    className={`px-3 py-1.5 rounded-lg border text-xs font-semibold ${settings.enabled ? "text-[var(--green)] border-[var(--green)]/40 bg-[var(--green)]/10" : "text-[var(--text-muted)] border-[var(--border)] bg-white/5"}`}
-                  >
-                    {settings.enabled ? "Enabled" : "Disabled"}
-                  </button>
+                {/* Signal scan toggle */}
+                <div className="flex items-center justify-between gap-4 flex-wrap">
+                  <div className="flex items-center gap-3">
+                    <button
+                      onClick={() => toggleEnabled(!settings.enabled)}
+                      className={`relative w-11 h-6 rounded-full transition-colors ${settings.enabled ? "bg-[var(--green)]" : "bg-[var(--surface-elevated)] border border-[var(--border)]"}`}
+                      title={settings.enabled ? "Tap to turn off" : "Tap to turn on"}
+                    >
+                      <span className={`absolute top-0.5 w-5 h-5 rounded-full bg-white transition-all ${settings.enabled ? "left-[22px]" : "left-0.5"}`} />
+                    </button>
+                    <div>
+                      <p className="text-sm font-bold text-white">Signal scan is {settings.enabled ? "ON" : "OFF"}</p>
+                      <p className="text-[11px] text-[var(--text-muted)]">{settings.enabled ? "Scans your followed symbols and records STRONG reads every few minutes." : "Turned off — nothing is scanned or recorded."}</p>
+                    </div>
+                  </div>
+                  <span className={`px-2 py-1 rounded border text-[10px] font-bold ${settings.enabled && loopStatus.data?.enabled ? "text-[var(--green)] border-[var(--green)]/40 bg-[var(--green)]/15" : "text-[var(--text-muted)] border-[var(--border)] bg-white/5"}`}>
+                    {settings.enabled && loopStatus.data?.enabled ? "LOOP ACTIVE" : settings.enabled ? "LOOP SCHEDULED" : "IDLE"}
+                  </span>
+                </div>
+
+                {/* Telegram toggle */}
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <p className="text-sm font-semibold text-white">Telegram briefings</p>
+                    <p className="text-[11px] text-[var(--text-muted)]">Forward STRONG signals to your Telegram</p>
+                  </div>
                   <button
                     onClick={() => patchSettings.mutate({ telegramBriefings: !settings.telegramBriefings }, { onSuccess: refresh })}
-                    className={`px-3 py-1.5 rounded-lg border text-xs font-semibold ${settings.telegramBriefings ? "text-[var(--accent-soft)] border-[var(--accent)]/40 bg-[var(--accent)]/10" : "text-[var(--text-muted)] border-[var(--border)] bg-white/5"}`}
+                    className={`relative w-11 h-6 rounded-full transition-colors ${settings.telegramBriefings ? "bg-[var(--accent)]" : "bg-[var(--surface-elevated)] border border-[var(--border)]"}`}
+                    title={settings.telegramBriefings ? "Tap to turn off" : "Tap to turn on"}
                   >
-                    Telegram briefings {settings.telegramBriefings ? "on" : "off"}
+                    <span className={`absolute top-0.5 w-5 h-5 rounded-full bg-white transition-all ${settings.telegramBriefings ? "left-[22px]" : "left-0.5"}`} />
                   </button>
                 </div>
-                <div className="grid grid-cols-2 gap-2">
-                  <CommitOnBlurNumberField label="Max signals/day" value={settings.maxPerDay} min={1} max={50} onChange={(n) => patchSettings.mutate({ maxPerDay: n }, { onSuccess: refresh })} />
-                  <CommitOnBlurNumberField label="Stake % (0.1–2 of balance)" value={settings.stakePct} min={0.1} max={2} step={0.5} onChange={(n) => patchSettings.mutate({ stakePct: n }, { onSuccess: refresh })} />
-                  <CommitOnBlurNumberField label="Stop loss (pts, 0 = off)" value={settings.stopLoss} min={0} max={10000} onChange={(n) => patchSettings.mutate({ stopLoss: n }, { onSuccess: refresh })} />
-                  <CommitOnBlurNumberField label="Take profit (pts, 0 = off)" value={settings.takeProfit} min={0} max={10000} onChange={(n) => patchSettings.mutate({ takeProfit: n }, { onSuccess: refresh })} />
+
+                {/* Numeric fields: draft locally, persist on Save */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-[11px] text-[var(--text-muted)] mb-1 block">Max signals/day</label>
+                    <input type="number" min={1} max={50} value={draftMaxPerDay} onChange={(e) => setDraftMaxPerDay(parseFloat(e.target.value) || 1)} className="w-full bg-[var(--surface-elevated)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-white font-mono" />
+                  </div>
+                  <div>
+                    <label className="text-[11px] text-[var(--text-muted)] mb-1 block">Stake ($ · min 0.35)</label>
+                    <input type="number" min={0.35} step={0.1} value={draftStake} onChange={(e) => setDraftStake(parseFloat(e.target.value) || 0.35)} className="w-full bg-[var(--surface-elevated)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-white font-mono" />
+                  </div>
+                  <div>
+                    <label className="text-[11px] text-[var(--text-muted)] mb-1 block">Stop loss ($ · 0 = off)</label>
+                    <input type="number" min={0} step={0.1} value={draftStopLoss} onChange={(e) => setDraftStopLoss(parseFloat(e.target.value) || 0)} className="w-full bg-[var(--surface-elevated)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-white font-mono" />
+                  </div>
+                  <div>
+                    <label className="text-[11px] text-[var(--text-muted)] mb-1 block">Take profit ($ · 0 = off)</label>
+                    <input type="number" min={0} step={0.1} value={draftTakeProfit} onChange={(e) => setDraftTakeProfit(parseFloat(e.target.value) || 0)} className="w-full bg-[var(--surface-elevated)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-white font-mono" />
+                  </div>
                 </div>
-                <label className="block">
-                  <span className="text-[11px] text-[var(--text-muted)]">Followed symbols (comma separated)</span>
-                  <input
-                    value={symbolsDirty ? symbolsInput : (settings.symbols?.join(", ") ?? "")}
-                    onChange={(e) => { setSymbolsDirty(true); setSymbolsInput(e.target.value); setSymbolsNote(""); }}
-                    onBlur={saveSymbols}
-                    onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); saveSymbols(); } }}
-                    className="mt-1 w-full bg-[var(--surface-elevated)] border border-[var(--border)] rounded-lg px-3 py-1.5 text-sm text-white"
-                    placeholder="R_100, 1HZ10V, BOOM500"
-                  />
-                  {symbolsNote && <p className="mt-1 text-[11px] text-[var(--accent-soft)]">{symbolsNote}</p>}
-                </label>
-                {(settings.symbols?.length || 0) > 0 && (
-                  <div className="mt-2 flex flex-wrap gap-1.5">
-                    {settings.symbols!.map((sym) => (
-                      <span key={sym} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full border border-[var(--border)] bg-[var(--surface-elevated)] text-[11px] text-[var(--text-secondary)]">
-                        {getSymbolDisplayName(sym)}
-                        <button
-                          onClick={() => removeSymbol(sym)}
-                          className="text-[var(--text-muted)] hover:text-[var(--red)] leading-none"
-                          title={`Stop watching ${getSymbolDisplayName(sym)}`}
-                        >
-                          ×
+
+                <div className="flex items-center gap-3">
+                  <Button onClick={saveNumeric} className="btn btn-outline gap-2" size="sm" disabled={patchSettings.isPending}>
+                    <Save className="w-3.5 h-3.5" />{patchSettings.isPending ? "Saving…" : "Save settings"}
+                  </Button>
+                  {saveNote && <p className="text-[11px] text-[var(--accent-soft)]">{saveNote}</p>}
+                </div>
+
+                {/* Followed symbols */}
+                <div>
+                  <p className="text-[11px] text-[var(--text-muted)] mb-2">Followed symbols — scanned for signals (max 12):</p>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    {settings.symbols?.map((sym) => (
+                      <span key={sym} className="inline-flex items-center gap-1.5 px-2 py-1 rounded-lg border border-[var(--border)] bg-[var(--surface-elevated)] text-xs text-white">
+                        <ShieldCheck className="w-3 h-3 text-[var(--accent)]" />
+                        {getSymbolDisplayName(sym) || sym}
+                        <button onClick={() => removeFollowSymbol(sym)} className="text-[var(--text-muted)] hover:text-[var(--red)]" title={`Stop watching ${getSymbolDisplayName(sym)}`}>
+                          <X className="w-3 h-3" />
                         </button>
                       </span>
                     ))}
                   </div>
-                )}
+                  <div className="flex items-center gap-2 mt-2">
+                    <input
+                      value={followInput}
+                      onChange={(e) => { setFollowInput(e.target.value); setFollowNote(""); }}
+                      onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addFollowSymbol(); } }}
+                      className="flex-1 bg-[var(--surface-elevated)] border border-[var(--border)] rounded-lg px-3 py-1.5 text-sm text-white"
+                      placeholder="Name or code, e.g. Volatility 100 Index, 1HZ10V, Boom 500 Index"
+                    />
+                    <Button onClick={addFollowSymbol} className="btn btn-outline gap-1.5" size="sm">
+                      <Plus className="w-3.5 h-3.5" />Add
+                    </Button>
+                  </div>
+                  {followNote && <p className="mt-1 text-[11px] text-[var(--accent-soft)]">{followNote}</p>}
+                </div>
+
+                <p className="text-[11px] text-[var(--text-disabled)] leading-relaxed">
+                  These settings are saved to your account. "Trade this" prefills the terminal with your stake / SL / TP — signals are reads, not executed trades.
+                </p>
               </div>
             )}
           </Card>

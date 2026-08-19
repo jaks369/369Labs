@@ -53,26 +53,44 @@ export function getAllSymbols(): string[] {
   return VOLATILITY_SYMBOLS.map(s => s.symbol);
 }
 
-// Normalize a user-entered symbol string to a known symbol
+// Normalize a user-entered symbol string to a known symbol. Accepts raw codes
+// (R_100, 1HZ10V, BOOM500), compact display forms (VOLATILITY100, BOOM500),
+// and the full friendly names shown in the UI ("Volatility 100 Index",
+// "Volatility 10 (1s) Index", "Boom 500 Index"). Unknown input is returned
+// as-is so callers can surface a clear "unrecognised" message.
 export function normalizeSymbol(input: string): string {
   if (!input) return input;
-  let s = input.trim().toUpperCase().replace(/\s+/g, "");
+  let s = input.trim().toUpperCase().replace(/[\s()\-]/g, "");
+
+  // Full friendly names first — longest match wins.
+  for (const info of VOLATILITY_SYMBOLS) {
+    const compactName = info.displayName.toUpperCase().replace(/[\s()\-]/g, "");
+    if (s === compactName || s === compactName.replace(/INDEX$/, "")) return info.symbol;
+  }
+
   // "R50" -> "R_50"
   const rMatch = s.match(/^R(\d+)$/);
   if (rMatch) {
     const candidate = "R_" + rMatch[1];
     if (VOLATILITY_SYMBOLS.some(v => v.symbol === candidate)) return candidate;
   }
-  // "1HZ50" -> "1HZ50V"
-  const hzMatch = s.match(/^1HZ(\d+)$/);
+  // "1HZ50" -> "1HZ50V", "HZ50V" -> "1HZ50V"
+  const hzMatch = s.match(/^(?:1HZ|HZ)(\d+)V?$/);
   if (hzMatch) {
     const candidate = "1HZ" + hzMatch[1] + "V";
     if (VOLATILITY_SYMBOLS.some(v => v.symbol === candidate)) return candidate;
   }
-  // "VOLATILITY 50" -> "R_50"
-  const volMatch = s.match(/^VOLATILITY\s*(\d+)$/);
+  // "VOLATILITY50" / "VOLATILITY50(1S)" -> R_50 / 1HZ50V
+  const volMatch = s.match(/^VOLATILITY(\d+)(?:\s*\(?1S\)?)?$/);
   if (volMatch) {
-    const candidate = "R_" + volMatch[1];
+    const candidate = volMatch[2] ? "1HZ" + volMatch[1] + "V" : "R_" + volMatch[1];
+    if (VOLATILITY_SYMBOLS.some(v => v.symbol === candidate)) return candidate;
+  }
+  // "BOOM500" / "CRASH500" are already canonical codes, and BOOM/CRASH + number
+  // forms ("BOOM 500", "CRASH1000") normalize the same way.
+  const boomCrash = s.match(/^(BOOM|CRASH)(\d{3})$/);
+  if (boomCrash) {
+    const candidate = boomCrash[1] + boomCrash[2];
     if (VOLATILITY_SYMBOLS.some(v => v.symbol === candidate)) return candidate;
   }
   return s;

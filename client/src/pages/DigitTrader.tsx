@@ -4,7 +4,7 @@ import { trpc } from "@/lib/trpc";
 import { useLocation } from "wouter";
 import { toast } from "@/components/Toast";
 import { pushTradeIntent, digitReadToContract } from "@/lib/tradeIntent";
-import { getSymbolDisplayName, getSymbolOptions } from "@/lib/symbols";
+import { getSymbolDisplayName, getSymbolOptions, normalizeSymbol } from "@/lib/symbols";
 import { useDerivStatus } from "@/hooks/useDerivStatus";
 import {
   Hash,
@@ -59,7 +59,7 @@ export default function DigitTrader() {
   const { isAuthenticated } = useAuth();
   const [, navigate] = useLocation();
   const { accountType } = useDerivStatus();
-  const [symbol, setSymbol] = useState("R_100");
+  const [symbol, setSymbol] = useState(getSymbolDisplayName("R_100"));
   const [activeSymbol, setActiveSymbol] = useState("R_100");
 
   // Auto-execute settings (persisted server-side; the toggle stays on until turned off).
@@ -197,25 +197,33 @@ export default function DigitTrader() {
           </Button>
         </div>
 
-        {/* Symbol picker — full list with display names */}
+        {/* Symbol picker — friendly names only, codes stay internal */}
         <div className="flex items-center gap-2 flex-wrap">
           <input
             value={symbol}
-            onChange={(e) => setSymbol(e.target.value.toUpperCase())}
-            onKeyDown={(e) => { if (e.key === "Enter" && symbol.trim()) { setActiveSymbol(symbol.trim()); } }}
-            className="bg-[var(--surface-elevated)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-white w-40"
-            placeholder="Symbol e.g. R_100"
+            onChange={(e) => setSymbol(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && symbol.trim()) {
+                const normalized = normalizeSymbol(symbol);
+                if (normalized) { setActiveSymbol(normalized); setSymbol(getSymbolDisplayName(normalized)); }
+                else setSymbol(getSymbolDisplayName(activeSymbol));
+              }
+            }}
+            className="bg-[var(--surface-elevated)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-white w-64"
+            placeholder={`e.g. ${getSymbolDisplayName("R_100")}`}
           />
-          <Button onClick={() => { if (symbol.trim()) setActiveSymbol(symbol.trim()); }} className="btn btn-outline gap-2" size="sm"><ArrowUpRight className="w-3.5 h-3.5" />Load</Button>
+          <Button onClick={() => { if (symbol.trim()) { const normalized = normalizeSymbol(symbol); if (normalized) { setActiveSymbol(normalized); setSymbol(getSymbolDisplayName(normalized)); } } }} className="btn btn-outline gap-2" size="sm">
+            <ArrowUpRight className="w-3.5 h-3.5" />Load
+          </Button>
           <select
             value={symbolOptions.some((o) => o.value === activeSymbol) ? activeSymbol : ""}
-            onChange={(e) => { const v = e.target.value; if (v) { setSymbol(v); setActiveSymbol(v); } }}
+            onChange={(e) => { const v = e.target.value; if (v) { setActiveSymbol(v); setSymbol(getSymbolDisplayName(v)); } }}
             className="bg-[var(--surface-elevated)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-white flex-1 min-w-[220px] max-w-md cursor-pointer"
             title={`Current: ${getSymbolDisplayName(activeSymbol) || activeSymbol}`}
           >
             <option value="" disabled>Pick a volatility index…</option>
             {symbolOptions.map((o) => (
-              <option key={o.value} value={o.value}>{o.label} — {o.value}</option>
+              <option key={o.value} value={o.value}>{o.label}</option>
             ))}
           </select>
           <span className="text-xs text-[var(--text-muted)]">Viewing <span className="text-white font-semibold">{getSymbolDisplayName(activeSymbol) || activeSymbol}</span></span>
