@@ -421,8 +421,9 @@ const RATE = (limit: number, windowMs: number) => async (req: any, res: any, nex
       try { await ensureStrategyStatsTable(); } catch (e) { logger.error("[startup] ensureStrategyStatsTable failed", { error: String(e) }); }
       try { await ensureCopyRelationsTable(); } catch (e) { logger.error("[startup] ensureCopyRelationsTable failed", { error: String(e) }); }
       try { await ensureCopyMirrorsTable(); } catch (e) { logger.error("[startup] ensureCopyMirrorsTable failed", { error: String(e) }); }
-      try { await ensureDigitReadsTable(); } catch (e) { logger.error("[startup] ensureDigitReadsTable failed", { error: String(e) }); }try { await ensureTradesQueryIndexes(); } catch (e) { logger.error("[startup] ensureTradesQueryIndexes failed", { error: String(e) }); }
-try { await ensureBotRunsTable(); } catch (e) { logger.error("[startup] ensureBotRunsTable failed", { error: String(e) }); }
+      try { await ensureDigitReadsTable(); } catch (e) { logger.error("[startup] ensureDigitReadsTable failed", { error: String(e) }); }
+      try { await ensureTradesQueryIndexes(); } catch (e) { logger.error("[startup] ensureTradesQueryIndexes failed", { error: String(e) }); }
+      try { await ensureBotRunsTable(); } catch (e) { logger.error("[startup] ensureBotRunsTable failed", { error: String(e) }); }
       try {
         const { aiOrchestrator } = await import("../ai/AIOrchestrator");
         aiOrchestrator.start();
