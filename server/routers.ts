@@ -223,11 +223,11 @@ async function runTool(name: string, args: any, ctxUser?: any) {
         const prevRule = (existing.config as any)?.rule || {};
         const rule = nlToStrategy({
           symbol: args.symbol ?? prevRule.symbol,
-          indicator: args.indicator ?? prevRule.indicator,
-          comparison: args.comparison ?? prevRule.comparison,
-          count: args.count ?? prevRule.count,
-          barrier: args.barrier ?? prevRule.barrier,
-          tradeType: args.tradeType ?? prevRule.tradeType,
+          indicator: args.indicator ?? prevRule.condition?.indicator,
+          comparison: args.comparison ?? prevRule.condition?.comparison,
+          count: args.count ?? prevRule.condition?.count,
+          barrier: args.barrier ?? prevRule.condition?.barrier,
+          tradeType: args.tradeType ?? prevRule.action?.tradeType,
           stake: args.stake ?? prevRule.params?.stake,
           stopLoss: args.stopLoss ?? prevRule.params?.stopLoss,
           takeProfit: args.takeProfit ?? prevRule.params?.takeProfit,
