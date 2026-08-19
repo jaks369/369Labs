@@ -2201,6 +2201,27 @@ export async function ensureTradesContractIndex(): Promise<void> {
   }
 }
 
+/**
+ * Indexes that keep the hot ledger queries (per-user history, daily caps,
+ * settlement sweep) on small row scans instead of full table scans. Runs after
+ * the baseline tables exist and ignores duplicate-index errors on re-runs.
+ */
+export async function ensureTradesQueryIndexes(): Promise<void> {
+  const pool = getRawPool();
+  if (!pool) return;
+  for (const stmt of [
+    "ALTER TABLE trades ADD INDEX idx_trades_user_source_entry (userId, source, entryTime)",
+    "ALTER TABLE trades ADD INDEX idx_trades_result_entry (result, entryTime)",
+  ]) {
+    try {
+      await pool.execute(stmt);
+    } catch (e: any) {
+      if (e?.errno === 1061 || /Duplicate key name/i.test(e?.message || "")) continue;
+      console.warn("[ensureTradesQueryIndexes] index note (non-fatal):", e?.message || e);
+    }
+  }
+}
+
 // Backup-guarded dedup of duplicate (userId, contractId) rows. These rows are
 // literal double-recordings of ONE real Deriv contract (dual-path settlement
 // both wrote a row), so removing the surplus and keeping the earliest row only
