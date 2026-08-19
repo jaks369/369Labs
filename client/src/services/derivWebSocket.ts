@@ -12,6 +12,22 @@ export interface TickStreamListener {
   onDisconnect?: () => void;
 }
 export type DerivContractType = "CALL" | "PUT" | "DIGITEVEN" | "DIGITODD" | "DIGITOVER" | "DIGITUNDER" | "DIGITMATCH" | "DIGITDIFF" | "ACCU";
+
+/** Deriv only honors stop-loss/take-profit through `limit_order`, and only for
+ *  multiplier (MULTUP/MULTDOWN) and accumulator (ACCU) contracts. Top-level
+ *  `stop_loss`/`take_profit` are not part of the proposal schema — sending them
+ *  for rise/fall or digit contracts rejects (or silently disables) the trade.
+ *  ACCU exposes take_profit only; stop_loss is forwarded for multipliers. */
+export function buildLimitOrder(contractType: string, stopLoss?: number, takeProfit?: number): Record<string, unknown> {
+  const limit: Record<string, number> = {};
+  if (takeProfit !== undefined && takeProfit > 0 && (contractType === "ACCU" || contractType === "MULTUP" || contractType === "MULTDOWN")) {
+    limit.take_profit = takeProfit;
+  }
+  if (stopLoss !== undefined && stopLoss > 0 && (contractType === "MULTUP" || contractType === "MULTDOWN")) {
+    limit.stop_loss = stopLoss;
+  }
+  return Object.keys(limit).length ? { limit_order: limit } : {};
+}
 export interface PurchaseParams {
   symbol: string;
   contractType: DerivContractType;
@@ -571,8 +587,7 @@ class DerivWebSocketService {
       underlying_symbol: params.symbol,
       ...(params.growthRate !== undefined ? { growth_rate: params.growthRate } : { duration: params.duration, duration_unit: params.durationUnit || "t" }),
       ...(params.barrier !== undefined ? { barrier: String(params.barrier) } : {}),
-      ...(params.stopLoss !== undefined ? { stop_loss: String(params.stopLoss) } : {}),
-      ...(params.takeProfit !== undefined ? { take_profit: String(params.takeProfit) } : {}),
+      ...buildLimitOrder(params.contractType, params.stopLoss, params.takeProfit),
     };
     try {
       const res = await this.sendRequest({ proposal: 1, ...contractParams }, 8000);
@@ -693,8 +708,7 @@ class DerivWebSocketService {
         underlying_symbol: params.symbol,
         ...(params.growthRate !== undefined ? { growth_rate: params.growthRate } : { duration: params.duration, duration_unit: params.durationUnit || "t" }),
         ...(params.barrier !== undefined ? { barrier: String(params.barrier) } : {}),
-        ...(params.stopLoss !== undefined ? { stop_loss: String(params.stopLoss) } : {}),
-        ...(params.takeProfit !== undefined ? { take_profit: String(params.takeProfit) } : {}),
+        ...buildLimitOrder(params.contractType, params.stopLoss, params.takeProfit),
       };
       let lastErr: string | null = null;
       for (const format of [
@@ -739,8 +753,8 @@ class DerivWebSocketService {
       proposalPayload.duration_unit = params.durationUnit || "t";
     }
     if (params.barrier !== undefined) proposalPayload.barrier = String(params.barrier);
-    if (params.stopLoss !== undefined) proposalPayload.stop_loss = String(params.stopLoss);
-    if (params.takeProfit !== undefined) proposalPayload.take_profit = String(params.takeProfit);
+    const limitOrder = buildLimitOrder(params.contractType, params.stopLoss, params.takeProfit);
+    if (limitOrder.limit_order) proposalPayload.limit_order = limitOrder.limit_order;
     let lastError: Error | null = null;
     for (const symField of ["symbol", "underlying", "underlying_symbol"]) {
       try {

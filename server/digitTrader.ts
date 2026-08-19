@@ -194,8 +194,15 @@ async function placeAutoTrade(userId: number, conn: any, symbol: string, read: D
     underlying_symbol: symbol,
   };
   if (barrier) proposalPayload.barrier = barrier;
-  if (settings.stopLoss > 0) proposalPayload.stop_loss = String(settings.stopLoss);
-  if (settings.takeProfit > 0) proposalPayload.take_profit = String(settings.takeProfit);
+  // Deriv honors SL/TP only via `limit_order` on multiplier/accumulator
+  // contracts. Digit contracts are 1-tick binaries that settle instantly — no
+  // SL/TP exists server-side, and top-level stop_loss/take_profit are not part
+  // of the proposal schema, so they are never sent here.
+  const isMult = contractType === "MULTUP" || contractType === "MULTDOWN";
+  const limitPayload: Record<string, number> = {};
+  if (settings.takeProfit > 0 && (isMult || contractType === "ACCU")) limitPayload.take_profit = settings.takeProfit;
+  if (settings.stopLoss > 0 && isMult) limitPayload.stop_loss = settings.stopLoss;
+  if (Object.keys(limitPayload).length) proposalPayload.limit_order = limitPayload;
 
   const proposal = await (conn as any).sendRaw(proposalPayload).catch((e: any) => {
     console.warn(`[digitTrader] Deriv proposal failed (${symbol} ${read.label}): ${e?.message || e}`);

@@ -187,12 +187,17 @@ async function executeBotCycleInner(): Promise<void> {
         underlying_symbol: symbol,
       };
       if (isDigit && barrier !== undefined) proposalPayload.barrier = String(barrier);
-      // Enforce the strategy's stop-loss / take-profit on the live contract,
-      // mirroring the manual terminal path.
+      // Deriv only honors SL/TP as a `limit_order` on multiplier/accumulator
+      // contracts. Top-level stop_loss/take_profit are not part of the proposal
+      // schema — sending them for rise/fall or digit contracts rejects the
+      // proposal, so the bot would silently never trade.
+      const isMult = contractType === "MULTUP" || contractType === "MULTDOWN";
+      const limitPayload: Record<string, number> = {};
       const sl = Number(rule.params?.stopLoss);
       const tp = Number(rule.params?.takeProfit);
-      if (sl > 0) proposalPayload.stop_loss = String(sl);
-      if (tp > 0) proposalPayload.take_profit = String(tp);
+      if (tp > 0 && (isMult || contractType === "ACCU")) limitPayload.take_profit = tp;
+      if (sl > 0 && isMult) limitPayload.stop_loss = sl;
+      if (Object.keys(limitPayload).length) proposalPayload.limit_order = limitPayload;
       const proposal = await (conn as any).sendRaw(proposalPayload).catch((e: any) => {
         console.warn(`[ExecutionEngine] Deriv proposal failed for bot ${bot.def.id}: ${e?.message || e}`);
         return null;
