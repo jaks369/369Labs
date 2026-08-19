@@ -80,6 +80,42 @@ export function getConversationCount(): number {
   return conversations.size;
 }
 
+/* = Per-user LLM cost guard ==================================================
+   Every chat message that isn't answerable by the deterministic template engine
+   burns a provider (Groq/OpenAI) call. Cap per-user spend and rate so one
+   account can't rack up unbounded cost by spamming the chat. When the budget is
+   exhausted the engine transparently falls back to the template responses. */
+const LLM_DAILY_BUDGET = Number(process.env.AI_LLM_DAILY_BUDGET || 40); // LLM calls per user per UTC day
+const LLM_MIN_INTERVAL_MS = Number(process.env.AI_LLM_MIN_INTERVAL_MS || 3000); // min gap between calls per user
+const llmUsage = new Map<number, { day: string; count: number; lastAt: number }>();
+
+/** Reserve one LLM call for the user. Returns false (and never bills) when the
+ *  daily budget or per-user rate limit would be exceeded. */
+function reserveLLMCall(userId: number): { ok: boolean } {
+  const now = Date.now();
+  const day = new Date().toISOString().slice(0, 10);
+  let entry = llmUsage.get(userId);
+  if (entry) {
+    if (entry.day !== day) {
+      entry.day = day;
+      entry.count = 0;
+      entry.lastAt = now;
+    } else {
+      if (entry.count >= LLM_DAILY_BUDGET) return { ok: false };
+      if (now - entry.lastAt < LLM_MIN_INTERVAL_MS) return { ok: false };
+    }
+  } else {
+    llmUsage.set(userId, { day, count: 0, lastAt: now });
+    if (llmUsage.size > 5000) {
+      for (const [k, e] of llmUsage) if (e.day !== day) llmUsage.delete(k);
+    }
+  }
+  entry = llmUsage.get(userId)!;
+  entry.count++;
+  entry.lastAt = now;
+  return { ok: true };
+}
+
 /* = Symbol + pattern extraction = */
 
 const KNOWN_SYMBOLS = getAllSymbols();
@@ -1151,6 +1187,7 @@ async function buildContextSummary(userId: number, message = ""): Promise<string
 async function tryLLMResponse(userId: number, message: string): Promise<ChatResponse | null> {
   const apiKey = await resolveAIKey(userId);
   if (!apiKey) return null;
+  if (!reserveLLMCall(userId).ok) return null;
   try {
     const client = await getAIClient(apiKey);
     let model = process.env.AI_MODEL || "gpt-4o-mini";
