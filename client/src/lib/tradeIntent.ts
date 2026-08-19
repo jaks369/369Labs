@@ -17,6 +17,8 @@ export interface TradeIntent {
   duration: number;
   durationUnit: DurationUnit;
   label: string;
+  stopLoss?: number;
+  takeProfit?: number;
 }
 
 /** Map a shared DigitRead to the terminal's contract shape. */
@@ -45,6 +47,8 @@ export function pushTradeIntent(intent: TradeIntent): void {
     localStorage.setItem("369labs.terminal.duration", JSON.stringify(intent.duration));
     localStorage.setItem("369labs.terminal.durationUnit", JSON.stringify(intent.durationUnit));
     localStorage.setItem("369labs.terminal.intentLabel", JSON.stringify(intent.label));
+    if (intent.stopLoss != null) localStorage.setItem("369labs.terminal.stopLoss", JSON.stringify(intent.stopLoss));
+    if (intent.takeProfit != null) localStorage.setItem("369labs.terminal.takeProfit", JSON.stringify(intent.takeProfit));
   } catch {
     /* storage unavailable — terminal simply keeps its last state */
   }

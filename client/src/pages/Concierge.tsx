@@ -61,6 +61,52 @@ function Metric({ label, value, accent }: { label: string; value: string | numbe
   );
 }
 
+// Number inputs commit on blur/Enter instead of on every keystroke, so typing
+// intermediate states (empty field, "0.", "1e") doesn't fire mutations that
+// the server's min/max schema rejects and bounces back.
+function CommitOnBlurNumberField({ label, value, min, max, step, onChange }: {
+  label: string;
+  value: number;
+  min: number;
+  max: number;
+  step?: number;
+  onChange: (n: number) => void;
+}) {
+  const [draft, setDraft] = useState("");
+  const [dirty, setDirty] = useState(false);
+  const [note, setNote] = useState("");
+  const commit = () => {
+    const raw = dirty ? draft : String(value);
+    const parsed = Number(raw);
+    if (!raw.trim() || Number.isNaN(parsed) || parsed < min || parsed > max) {
+      setDirty(false);
+      setNote(`Enter a number between ${min} and ${max}.`);
+      return;
+    }
+    const rounded = Math.round(parsed * 100) / 100;
+    setDirty(false);
+    setNote("");
+    if (rounded !== value) onChange(rounded);
+  };
+  return (
+    <label className="block">
+      <span className="text-[11px] text-[var(--text-muted)]">{label}</span>
+      <input
+        type="number"
+        min={min}
+        max={max}
+        step={step ?? 1}
+        value={dirty ? draft : value}
+        onChange={(e) => { setDirty(true); setDraft(e.target.value); setNote(""); }}
+        onBlur={commit}
+        onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); commit(); } }}
+        className="mt-1 w-full bg-[var(--surface-elevated)] border border-[var(--border)] rounded-lg px-3 py-1.5 text-sm text-white"
+      />
+      {note && <p className="mt-1 text-[11px] text-[var(--red)]">{note}</p>}
+    </label>
+  );
+}
+
 // Interpret the confluence honestly: it's how many indicators voted the same
 // way (e.g. 3/3 → agreement 1.0 → 50 + 28 = 78), NOT a win probability.
 function agreementText(votes: any): string {
@@ -208,6 +254,25 @@ export default function Concierge() {
     );
   };
 
+  // Remove a followed symbol from the chips row and persist the remainder.
+  const removeSymbol = (sym: string) => {
+    const rest = (settingsQ.data?.symbols ?? []).filter((s) => s !== sym);
+    if (rest.length === 0) return;
+    patchSettings.mutate(
+      { symbols: rest },
+      {
+        onSuccess: () => {
+          refresh();
+          settingsQ.refetch();
+          if (ctxSymbol === sym && rest[0]) {
+            setCtxSymbol(rest[0]);
+            setTimeout(() => marketContext.refetch(), 0);
+          }
+        },
+      },
+    );
+  };
+
   if (!isAuthenticated) { navigate("/login"); return null; }
 
   const settings = settingsQ.data;
@@ -268,6 +333,8 @@ export default function Concierge() {
                       duration: 5,
                       durationUnit: "t",
                       label: `Concierge ${sig.strength} ${agreementText(sig.votes) || "no agreement yet"}`,
+                      ...(settings?.stopLoss ? { stopLoss: settings.stopLoss } : {}),
+                      ...(settings?.takeProfit ? { takeProfit: settings.takeProfit } : {}),
                     });
                     navigate("/dashboard");
                   }}
@@ -341,7 +408,7 @@ export default function Concierge() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Market context */}
           <Card title="Market context" icon={<BarChart3 className="w-4 h-4 text-[var(--accent)]" />}>
-            <div className="flex gap-2 mb-4">
+            <div className="flex gap-2 mb-1">
               <input
                 value={ctxSymbol}
                 onChange={(e) => setCtxSymbol(e.target.value.toUpperCase())}
@@ -350,6 +417,7 @@ export default function Concierge() {
               />
               <Button onClick={() => marketContext.refetch()} className="btn btn-outline gap-2" size="sm"><RefreshCw className="w-3.5 h-3.5" />Refresh</Button>
             </div>
+            <p className="text-[11px] text-[var(--text-muted)] font-medium mb-3">{getSymbolDisplayName(ctxSymbol)}</p>
             {marketContext.isLoading ? <Loader2 className="w-5 h-5 animate-spin text-[var(--accent)]" /> : marketContext.data && (
               <div className="space-y-3">
                 <h3 className="text-sm font-bold text-white">{marketContext.data.displayName}</h3>
@@ -482,14 +550,10 @@ export default function Concierge() {
                   </button>
                 </div>
                 <div className="grid grid-cols-2 gap-2">
-                  <label className="block">
-                    <span className="text-[11px] text-[var(--text-muted)]">Max signals/day</span>
-                    <input type="number" min={1} max={50} value={settings.maxPerDay} onChange={(e) => patchSettings.mutate({ maxPerDay: Number(e.target.value) }, { onSuccess: refresh })} className="mt-1 w-full bg-[var(--surface-elevated)] border border-[var(--border)] rounded-lg px-3 py-1.5 text-sm text-white" />
-                  </label>
-                  <label className="block">
-                    <span className="text-[11px] text-[var(--text-muted)]">Stake % (0.1–2% of balance)</span>
-                    <input type="number" min={0.1} max={2} step={0.5} value={settings.stakePct} onChange={(e) => patchSettings.mutate({ stakePct: Number(e.target.value) }, { onSuccess: refresh })} className="mt-1 w-full bg-[var(--surface-elevated)] border border-[var(--border)] rounded-lg px-3 py-1.5 text-sm text-white" />
-                  </label>
+                  <CommitOnBlurNumberField label="Max signals/day" value={settings.maxPerDay} min={1} max={50} onChange={(n) => patchSettings.mutate({ maxPerDay: n }, { onSuccess: refresh })} />
+                  <CommitOnBlurNumberField label="Stake % (0.1–2 of balance)" value={settings.stakePct} min={0.1} max={2} step={0.5} onChange={(n) => patchSettings.mutate({ stakePct: n }, { onSuccess: refresh })} />
+                  <CommitOnBlurNumberField label="Stop loss (pts, 0 = off)" value={settings.stopLoss} min={0} max={10000} onChange={(n) => patchSettings.mutate({ stopLoss: n }, { onSuccess: refresh })} />
+                  <CommitOnBlurNumberField label="Take profit (pts, 0 = off)" value={settings.takeProfit} min={0} max={10000} onChange={(n) => patchSettings.mutate({ takeProfit: n }, { onSuccess: refresh })} />
                 </div>
                 <label className="block">
                   <span className="text-[11px] text-[var(--text-muted)]">Followed symbols (comma separated)</span>
@@ -503,6 +567,22 @@ export default function Concierge() {
                   />
                   {symbolsNote && <p className="mt-1 text-[11px] text-[var(--accent-soft)]">{symbolsNote}</p>}
                 </label>
+                {(settings.symbols?.length || 0) > 0 && (
+                  <div className="mt-2 flex flex-wrap gap-1.5">
+                    {settings.symbols!.map((sym) => (
+                      <span key={sym} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full border border-[var(--border)] bg-[var(--surface-elevated)] text-[11px] text-[var(--text-secondary)]">
+                        {getSymbolDisplayName(sym)}
+                        <button
+                          onClick={() => removeSymbol(sym)}
+                          className="text-[var(--text-muted)] hover:text-[var(--red)] leading-none"
+                          title={`Stop watching ${getSymbolDisplayName(sym)}`}
+                        >
+                          ×
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
           </Card>

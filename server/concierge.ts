@@ -84,6 +84,8 @@ export interface ConciergeSettings {
   telegramBriefings: boolean;
   maxPerDay: number;
   stakePct: number;
+  stopLoss: number;
+  takeProfit: number;
   symbols?: string[];
 }
 
@@ -92,6 +94,8 @@ export const DEFAULT_SETTINGS: ConciergeSettings = {
   telegramBriefings: false,
   maxPerDay: 10,
   stakePct: 2,
+  stopLoss: 0,
+  takeProfit: 0,
 };
 
 // ---------------------------------------------------------------------------
