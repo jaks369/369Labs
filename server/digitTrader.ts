@@ -13,14 +13,7 @@
 
 import * as db from "./db";
 import { getTickHistory } from "./aitools";
-import {
-  buildDigitSnapshot,
-  settleDigitRead,
-  digitsFromTicks,
-  DigitRead,
-  DigitSnapshot,
-  TickLike,
-} from "@shared/digits";
+import { buildDigitSnapshot, settleDigitRead, digitsFromTicks, DigitRead, DigitSnapshot, TickLike } from "@shared/digits";
 import { getDecimalPlaces } from "@shared/lastDigit";
 import { derivManager } from "./derivConnection";
 import { getRecentTicks, isFeedStale } from "./tickCollector";
@@ -63,7 +56,13 @@ async function readSettings(userId: number): Promise<DigitTraderSettings> {
     stake: Math.max(0.35, Number(out.stake) || DEFAULT_DT_SETTINGS.stake),
     stopLoss: Math.max(0, Number(out.stopLoss) || 0),
     takeProfit: Math.max(0, Number(out.takeProfit) || 0),
-    symbols: Array.isArray(out.symbols) && out.symbols.length ? out.symbols.map((s: any) => String(s).toUpperCase()).filter(Boolean).slice(0, 12) : DEFAULT_DT_SETTINGS.symbols,
+    symbols:
+      Array.isArray(out.symbols) && out.symbols.length
+        ? out.symbols
+            .map((s: any) => String(s).toUpperCase())
+            .filter(Boolean)
+            .slice(0, 12)
+        : DEFAULT_DT_SETTINGS.symbols,
     maxDailyLoss: Math.max(0, Number(out.maxDailyLoss) || 0),
     maxDailyTrades: Math.max(0, Math.floor(Number(out.maxDailyTrades) || 0)),
   };
@@ -117,7 +116,14 @@ export interface DigitAutoStatus {
 
 let autoInterval: ReturnType<typeof setInterval> | null = null;
 let autoInProgress = false;
-const autoStatus: DigitAutoStatus = { enabled: false, running: false, inProgress: false, lastCycleAt: null, lastCycleTrades: 0, intervalMs: AUTO_EXEC_INTERVAL_MS };
+const autoStatus: DigitAutoStatus = {
+  enabled: false,
+  running: false,
+  inProgress: false,
+  lastCycleAt: null,
+  lastCycleTrades: 0,
+  intervalMs: AUTO_EXEC_INTERVAL_MS,
+};
 const recentTradeAt = new Map<string, number>(); // `${userId}:${symbol}` → epoch ms
 // Only users with autoExec=on are polled every cycle (efficiency): hydrated from
 // getSettings/patchSettings calls and reconciled against the whole user list
@@ -200,15 +206,15 @@ async function placeAutoTrade(userId: number, conn: any, symbol: string, read: D
     return false;
   }
 
-  const buy = await (conn as any)
-    .sendRaw({ buy: proposal.proposal.id, price: proposal.proposal.ask_price })
-    .catch((e: any) => {
-      console.warn(`[digitTrader] Deriv buy failed (${symbol} ${read.label}): ${e?.message || e}`);
-      return null;
-    });
+  const buy = await (conn as any).sendRaw({ buy: proposal.proposal.id, price: proposal.proposal.ask_price }).catch((e: any) => {
+    console.warn(`[digitTrader] Deriv buy failed (${symbol} ${read.label}): ${e?.message || e}`);
+    return null;
+  });
   if (!buy?.buy?.contract_id) {
     console.warn(`[digitTrader] Deriv buy failed (${symbol} ${read.label}). Trade not recorded.`);
-    fireWebhookEvent(userId, "trade.error", { source: DIGIT_TRADER_SOURCE, symbol, stake: settings.stake, read: read.label, reason: "buy_failed" }).catch(() => {});
+    fireWebhookEvent(userId, "trade.error", { source: DIGIT_TRADER_SOURCE, symbol, stake: settings.stake, read: read.label, reason: "buy_failed" }).catch(
+      () => {},
+    );
     return false;
   }
 
@@ -225,13 +231,30 @@ async function placeAutoTrade(userId: number, conn: any, symbol: string, read: D
       source: DIGIT_TRADER_SOURCE,
     });
   } catch (e: any) {
-    console.error(`[digitTrader] CRITICAL: contract ${buy.buy.contract_id} was bought on Deriv but the DB save failed for user ${userId}. Not re-arming.`, e?.message || e);
-    fireWebhookEvent(userId, "trade.error", { source: DIGIT_TRADER_SOURCE, symbol, stake: settings.stake, contractId: buy.buy.contract_id, read: read.label, reason: "db_save_failed" }).catch(() => {});
+    console.error(
+      `[digitTrader] CRITICAL: contract ${buy.buy.contract_id} was bought on Deriv but the DB save failed for user ${userId}. Not re-arming.`,
+      e?.message || e,
+    );
+    fireWebhookEvent(userId, "trade.error", {
+      source: DIGIT_TRADER_SOURCE,
+      symbol,
+      stake: settings.stake,
+      contractId: buy.buy.contract_id,
+      read: read.label,
+      reason: "db_save_failed",
+    }).catch(() => {});
     return false;
   }
 
   console.log(`[digitTrader] Auto trade placed — #${buy.buy.contract_id} ${symbol} ${read.label} (${contractType}) @ $${settings.stake}`);
-  fireWebhookEvent(userId, "digitTrader.trade", { source: DIGIT_TRADER_SOURCE, contractId: buy.buy.contract_id, symbol, read: read.label, contractType, stake: settings.stake }).catch(() => {});
+  fireWebhookEvent(userId, "digitTrader.trade", {
+    source: DIGIT_TRADER_SOURCE,
+    contractId: buy.buy.contract_id,
+    symbol,
+    read: read.label,
+    contractType,
+    stake: settings.stake,
+  }).catch(() => {});
   return true;
 }
 
@@ -256,7 +279,10 @@ export interface DigitDailyUsage {
 }
 
 /** Whether the daily caps pause auto-exec: realized loss ≤ -maxDailyLoss, or placed trades ≥ maxDailyTrades. */
-export function computeDailyHalt(usage: { trades: number; pnl: number }, settings: Pick<DigitTraderSettings, "maxDailyLoss" | "maxDailyTrades">): { lossHalted: boolean; tradesHalted: boolean } {
+export function computeDailyHalt(
+  usage: { trades: number; pnl: number },
+  settings: Pick<DigitTraderSettings, "maxDailyLoss" | "maxDailyTrades">,
+): { lossHalted: boolean; tradesHalted: boolean } {
   return {
     lossHalted: !!(settings.maxDailyLoss && usage.pnl <= -settings.maxDailyLoss),
     tradesHalted: !!(settings.maxDailyTrades && usage.trades >= settings.maxDailyTrades),
@@ -301,45 +327,54 @@ async function autoCycle(): Promise<void> {
     const now = Date.now();
     const dayStart = startOfUtcDay();
     for (const userId of enabledUsers) {
-      const settings = await readSettings(userId);
-      if (!settings.autoExec) {
-        enabledUsers.delete(userId);
-        continue;
-      }
-      const usage = await db.getDigitTraderDailyUsage(userId, dayStart);
-      let placedToday = usage.trades;
-      if (settings.maxDailyLoss && usage.pnl <= -settings.maxDailyLoss) {
-        fireWebhookEvent(userId, "digitTrader.paused", { reason: "maxDailyLoss", pnl: usage.pnl, limit: settings.maxDailyLoss }).catch(() => {});
-        continue;
-      }
-      const conn = await derivManager.ensureConnected(userId);
-      if (!conn) {
-        console.warn(`[digitTrader] No Deriv connection/token for user ${userId}. Auto-exec idle for this user.`);
-        continue;
-      }
-      const openContracts = await db.countOpenDigitTraderTrades(userId);
-      if (openContracts >= MAX_OPEN_CONTRACTS_PER_USER) {
-        console.warn(`[digitTrader] User ${userId}: ${openContracts} open auto contracts at the ${MAX_OPEN_CONTRACTS_PER_USER} cap. Skipping this cycle.`);
-        continue;
-      }
-      for (const symbol of settings.symbols.slice(0, MAX_AUTO_SYMBOLS)) {
-        if (settings.maxDailyTrades && placedToday >= settings.maxDailyTrades) break;
-        const key = `${userId}:${symbol}`;
-        if ((recentTradeAt.get(key) || 0) + TRADE_COOLDOWN_MS > now) continue;
-        const ticks = getRecentTicks(symbol, 200);
-        if (ticks.length < 30) continue;
-        const lastEpoch = ticks[ticks.length - 1].epoch;
-        if (!lastEpoch || now / 1000 - lastEpoch > 60) continue; // stale feed for this symbol
-        const snapshot = buildDigitSnapshot(symbol, ticks as TickLike[]);
-        const reads = snapshot.reads.filter((r) => r.strength !== "WEAK");
-        if (reads.length === 0) continue;
-        const read = [...reads].sort((a, b) => Math.abs(b.deltaPp) - Math.abs(a.deltaPp))[0];
-        const ok = await placeAutoTrade(userId, conn, symbol, read, settings, ticks[ticks.length - 1].price);
-        if (ok) {
-          recentTradeAt.set(key, Date.now());
-          placed++;
-          placedToday++;
+      try {
+        const settings = await readSettings(userId);
+        if (!settings.autoExec) {
+          enabledUsers.delete(userId);
+          continue;
         }
+        const usage = await db.getDigitTraderDailyUsage(userId, dayStart);
+        let placedToday = usage.trades;
+        if (settings.maxDailyLoss && usage.pnl <= -settings.maxDailyLoss) {
+          fireWebhookEvent(userId, "digitTrader.paused", { reason: "maxDailyLoss", pnl: usage.pnl, limit: settings.maxDailyLoss }).catch(() => {});
+          continue;
+        }
+        const conn = await derivManager.ensureConnected(userId);
+        if (!conn) {
+          console.warn(`[digitTrader] No Deriv connection/token for user ${userId}. Auto-exec idle for this user.`);
+          continue;
+        }
+        const openContracts = await db.countOpenDigitTraderTrades(userId);
+        if (openContracts >= MAX_OPEN_CONTRACTS_PER_USER) {
+          console.warn(`[digitTrader] User ${userId}: ${openContracts} open auto contracts at the ${MAX_OPEN_CONTRACTS_PER_USER} cap. Skipping this cycle.`);
+          continue;
+        }
+        for (const symbol of settings.symbols.slice(0, MAX_AUTO_SYMBOLS)) {
+          if (settings.maxDailyTrades && placedToday >= settings.maxDailyTrades) break;
+          const key = `${userId}:${symbol}`;
+          if ((recentTradeAt.get(key) || 0) + TRADE_COOLDOWN_MS > now) continue;
+          try {
+            const ticks = getRecentTicks(symbol, 200);
+            if (ticks.length < 30) continue;
+            const lastEpoch = ticks[ticks.length - 1].epoch;
+            if (!lastEpoch || now / 1000 - lastEpoch > 60) continue; // stale feed for this symbol
+            const snapshot = buildDigitSnapshot(symbol, ticks as TickLike[]);
+            const reads = snapshot.reads.filter((r) => r.strength !== "WEAK");
+            if (reads.length === 0) continue;
+            const read = [...reads].sort((a, b) => Math.abs(b.deltaPp) - Math.abs(a.deltaPp))[0];
+            const ok = await placeAutoTrade(userId, conn, symbol, read, settings, ticks[ticks.length - 1].price);
+            if (ok) {
+              recentTradeAt.set(key, Date.now());
+              placed++;
+              placedToday++;
+            }
+          } catch (e) {
+            // One bad symbol must never abort the user's other placements.
+            console.warn(`[digitTrader] symbol ${symbol} placement error for user ${userId}:`, (e as any)?.message || e);
+          }
+        }
+      } catch (e) {
+        console.warn(`[digitTrader] auto-exec error for user ${userId}:`, (e as any)?.message || e);
       }
     }
     autoStatus.lastCycleTrades = placed;
