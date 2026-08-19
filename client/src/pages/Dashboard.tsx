@@ -600,6 +600,11 @@ export default function Dashboard() {
 
   const health = healthQuery.data;
   const healthDD = health?.overall.currentDrawdownPct ?? 0;
+  // All-time ledger performance (server-side over up to your last 5,000 trades),
+  // so the header always shows the real P&L instead of a "today-only $0.00".
+  const healthPnl = health?.overall.totalPnl ?? 0;
+  const healthSettled = health?.settled ?? 0;
+  const healthWinRate = healthSettled ? Math.round(((health?.wins ?? 0) / healthSettled) * 100) : 0;
 
   if (!isAuthenticated || !user) {
     return (
@@ -732,10 +737,10 @@ export default function Dashboard() {
               </div>
               <div className="flex items-center gap-2 flex-shrink-0">
                 {/* Session Stats (compact inline) */}
-                <div className="hidden lg:flex items-center gap-2 text-[11px] shrink-0">
-                  <span className="text-[var(--text-muted)]">P&L <span className={`font-mono font-bold ${todayPnl >= 0 ? "text-[var(--green)]" : "text-[var(--red)]"}`}>{formatSignedMoney(todayPnl)}</span></span>
-                  <span className="text-[var(--text-muted)]">WR <span className="font-mono font-bold text-white">{todaySettled.length ? `${todayWinRate}%` : "—"}</span></span>
-                  <span className="text-[var(--text-muted)]">N <span className="font-mono font-bold text-white">{todayTrades.length}</span></span>
+                <div className="hidden lg:flex items-center gap-2 text-[11px] shrink-0" title="All-time ledger performance — P&L / win rate / settled trades across your recorded trade history">
+                  <span className="text-[var(--text-muted)]">P&L <span className={`font-mono font-bold ${healthPnl >= 0 ? "text-[var(--green)]" : "text-[var(--red)]"}`}>{formatSignedMoney(healthPnl)}</span></span>
+                  <span className="text-[var(--text-muted)]">WR <span className="font-mono font-bold text-white">{healthSettled ? `${healthWinRate}%` : "—"}</span></span>
+                  <span className="text-[var(--text-muted)]">N <span className="font-mono font-bold text-white">{healthSettled}</span></span>
                 </div>
                 {/* Balance */}
                 <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-white/5 border border-[var(--border)] shrink-0">

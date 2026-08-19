@@ -116,6 +116,28 @@ describe("equityCurve", () => {
     ]);
     expect(eq.points.map((p) => p.pnl)).toEqual([-5, 0]);
   });
+
+  it("caps drawdown % at 100 so a tiny peak + deep loss can't read as 515%", () => {
+    const eq = equityCurve([
+      t("2026-01-01T00:00:00Z", 1, "win"),
+      t("2026-01-01T00:05:00Z", -20, "loss"),
+    ]);
+    expect(eq.points.map((p) => p.pnl)).toEqual([1, -19]);
+    expect(eq.peakPnl).toBe(1);
+    expect(eq.maxDrawdownPct).toBe(100);
+    expect(eq.currentDrawdownPct).toBe(100);
+  });
+
+  it("reports 0 drawdown when the net pnl never goes positive", () => {
+    const eq = equityCurve([
+      t("2026-01-01T00:00:00Z", -5, "loss"),
+      t("2026-01-01T00:05:00Z", -3, "loss"),
+    ]);
+    expect(eq.points.map((p) => p.pnl)).toEqual([-5, -8]);
+    expect(eq.peakPnl).toBe(0);
+    expect(eq.maxDrawdownPct).toBe(0);
+    expect(eq.currentDrawdownPct).toBe(0);
+  });
 });
 
 describe("calendarHeatmap", () => {

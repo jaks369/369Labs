@@ -162,7 +162,13 @@ export interface EquityStats {
   currentDrawdownPct: number; // % from peak to last point
 }
 
-/** Cumulative equity curve from settled trades (chronological). */
+/**
+ * Cumulative equity curve from settled trades (chronological).
+ * Drawdown is measured against cumulative NET P&L (peak of the P&L curve), not
+ * against deposited capital, so the % saturates at 100 and never reports
+ * impossible values like "DD 515%" (which happened when peak P&L was tiny and
+ * the net then went negative) — the underlying dollars are still exact.
+ */
 export function equityCurve(trades: TradeLike[]): EquityStats {
   const settled = trades
     .map((t) => ({ time: toMs(t.entryTime), pnl: Number(t.profitLoss ?? 0) }))
@@ -180,12 +186,14 @@ export function equityCurve(trades: TradeLike[]): EquityStats {
   });
   const last = points.length ? points[points.length - 1].pnl : 0;
   const peakPnl = peak;
-  const currentDrawdownPct = peak > 0 && last < peak ? ((peak - last) / peak) * 100 : 0;
+  const cdPct = peak > 0 && last < peak ? ((peak - last) / peak) * 100 : 0;
+  const currentDrawdownPct = Math.min(100, cdPct);
+  const maxDrawdownPct = Math.min(100, Math.round(maxDD * 10) / 10);
   return {
     points,
     totalPnl: last,
     peakPnl: Math.round(peakPnl * 100) / 100,
-    maxDrawdownPct: Math.round(maxDD * 10) / 10,
+    maxDrawdownPct,
     currentDrawdownPct: Math.round(currentDrawdownPct * 10) / 10,
   };
 }

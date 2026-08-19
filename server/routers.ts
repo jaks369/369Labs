@@ -1401,10 +1401,11 @@ export const appRouter = router({
             trades: perSymbol.length,
           };
         }
-        return { overall, bySymbol };
+        const settled = all.filter((t) => t.result === "win" || t.result === "loss");
+        return { overall, bySymbol, wins: settled.filter((t) => t.result === "win").length, settled: settled.length };
       } catch (error) {
         console.error("[trades.health] Error:", error);
-        return { overall: equityCurve([]), bySymbol: {} };
+        return { overall: equityCurve([]), bySymbol: {}, wins: 0, settled: 0 };
       }
     }),
 
