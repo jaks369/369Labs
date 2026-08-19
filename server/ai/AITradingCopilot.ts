@@ -139,23 +139,89 @@ class AITradingCopilot {
   }
 
   async livePositionAssistant(userId: number, positionId: number): Promise<LivePositionAssist> {
+    const trade = await db.getTradeById(positionId);
+    if (!trade || trade.userId !== userId) {
+      return {
+        positionId,
+        currentPnl: 0,
+        riskAlerts: ["Position not found or not owned by this account."],
+        suggestions: [],
+        shouldClose: false,
+      };
+    }
+    const pnl = Number(trade.profitLoss || 0);
+    if (trade.result !== "pending" && trade.result !== "open") {
+      return {
+        positionId,
+        currentPnl: pnl,
+        riskAlerts: [],
+        suggestions: [`Position already settled as ${trade.result} (${pnl.toFixed(2)} P&L).`],
+        shouldClose: false,
+      };
+    }
+    const advisory = aiOrchestrator.getRiskAdvisoryFor(trade.symbol);
+    const riskAlerts: string[] = [];
+    if (advisory) {
+      riskAlerts.push(
+        advisory.riskLevel === "HIGH" || advisory.riskLevel === "CRITICAL"
+          ? `Market risk for ${trade.symbol}: ${advisory.riskLevel} — ${advisory.recommendation}`
+          : `Market risk for ${trade.symbol}: ${advisory.riskLevel}.`,
+      );
+    } else {
+      riskAlerts.push(`No AI risk advisory for ${trade.symbol} yet — the model is still warming up.`);
+    }
+    const suggestions = [
+      "Let the position run to its scheduled expiry.",
+      "Review the market risk reading before re-entering a similar setup.",
+    ];
     return {
       positionId,
-      currentPnl: 0,
-      riskAlerts: [],
-      suggestions: ["Monitor price movement", "Set stop-loss if not already set"],
-      shouldClose: false,
+      currentPnl: pnl,
+      riskAlerts,
+      suggestions,
+      shouldClose: advisory?.riskLevel === "CRITICAL",
     };
   }
 
   async decisionComparison(userId: number, tradeId: number): Promise<DecisionComparison> {
+    const trade = await db.getTradeById(tradeId);
+    if (!trade || trade.userId !== userId) {
+      return {
+        tradeId,
+        actualDecision: "unknown",
+        aiRecommendation: "n/a",
+        wasOptimal: false,
+        analysis: "Trade not found or not owned by this account.",
+        lessons: [],
+      };
+    }
+    const result = trade.result || "pending";
+    const pnl = Number(trade.profitLoss || 0);
+    const risk = aiOrchestrator.getRiskAdvisoryFor(trade.symbol);
+    const riskNote = risk ? `AI rated ${trade.symbol} risk ${risk.riskLevel}.` : `No AI risk advisory available for ${trade.symbol} yet.`;
+    const avoidance = !!risk && /wait|avoid|hold off|extreme|reduce/i.test(risk.recommendation);
+    let recommendationText: string;
+    let wasOptimal = false;
+    if (result === "pending" || result === "open") {
+      recommendationText = "Position still open — evaluate after settlement.";
+    } else {
+      recommendationText = avoidance
+        ? risk.recommendation
+        : risk?.recommendation ?? "No recommendation available — the AI risk model is still warming up.";
+      // Only pass a verdict when the direction is actually determinable: a win
+      // against no avoidance signal was a sound call; a loss against a clear
+      // avoid/wait signal was not. Everything else is honestly "cannot determine".
+      if (result === "win" && !avoidance) wasOptimal = true;
+    }
+    const analysis = `Actual result: ${result} (${pnl.toFixed(2)} P&L). ${riskNote} ${recommendationText}`;
+    const lessons = result === "loss" ? ["Review this loss against the AI's risk guidance before taking the same setup again."] : [];
     return {
       tradeId,
-      actualDecision: "executed",
-      aiRecommendation: "executed",
-      wasOptimal: true,
-      analysis: "Insufficient data for detailed comparison.",
-      lessons: [],
+      actualDecision: result,
+      aiRecommendation: recommendationText,
+      wasOptimal,
+      analysis,
+      lessons,
     };
   }
 

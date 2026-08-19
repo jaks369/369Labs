@@ -116,6 +116,7 @@ class DerivWebSocketService {
   private lastBalance: any = null;
   private lastAccountType: string = "";
   private accountId: string = "";
+  private accountCurrency: string = "USD";
   private apiMode: "v1" | "v3" = "v3";
   private balanceListeners: Set<(b: any) => void> = new Set();
   private _activeSymbols: DerivSymbol[] = [];
@@ -312,6 +313,8 @@ class DerivWebSocketService {
     if (data.msg_type === "balance") {
       this.lastBalance = data.balance;
       const arr = Array.isArray(data.balance) ? data.balance : [data.balance];
+      const cur = arr[0]?.currency || data.balance?.currency;
+      if (typeof cur === "string" && cur) this.accountCurrency = cur.toUpperCase();
       const at = arr[0]?.account_type || data.account_type || "";
       this.lastAccountType = typeof at === "string" ? at.toLowerCase() : "";
       this.notifyBalance(data.balance);
@@ -583,7 +586,7 @@ class DerivWebSocketService {
       amount: params.amount,
       basis: "stake",
       contract_type: params.contractType,
-      currency: "USD",
+      currency: this.accountCurrency,
       underlying_symbol: params.symbol,
       ...(params.growthRate !== undefined ? { growth_rate: params.growthRate } : { duration: params.duration, duration_unit: params.durationUnit || "t" }),
       ...(params.barrier !== undefined ? { barrier: String(params.barrier) } : {}),
@@ -704,7 +707,7 @@ class DerivWebSocketService {
         amount: params.amount,
         basis: "stake",
         contract_type: params.contractType,
-        currency: "USD",
+        currency: this.accountCurrency,
         underlying_symbol: params.symbol,
         ...(params.growthRate !== undefined ? { growth_rate: params.growthRate } : { duration: params.duration, duration_unit: params.durationUnit || "t" }),
         ...(params.barrier !== undefined ? { barrier: String(params.barrier) } : {}),
@@ -746,7 +749,7 @@ class DerivWebSocketService {
       throw new Error(lastErr || "All trading methods failed");
     }
     if (!this.ws || this.ws.readyState !== WebSocket.OPEN) throw new Error("WebSocket not connected");
-    let proposalPayload: Record<string, any> = { proposal: 1, amount: params.amount, basis: "stake", contract_type: params.contractType, currency: "USD" };
+    let proposalPayload: Record<string, any> = { proposal: 1, amount: params.amount, basis: "stake", contract_type: params.contractType, currency: this.accountCurrency };
     if (params.growthRate !== undefined) proposalPayload.growth_rate = params.growthRate;
     else {
       proposalPayload.duration = params.duration;

@@ -1251,29 +1251,29 @@ export const appRouter = router({
     templates: protectedProcedure.query(async () => {
       return [
         {
-          name: "RSI Mean Reversion",
-          description: "Buy when RSI is oversold (≤30), sell when overbought (≥70). Uses 14-period RSI on 1-minute candles.",
-          config: { rule: { symbol: "R_100", condition: { indicator: "rsi", comparison: "crosses_above", value: 30, period: 14 }, action: { tradeType: "CALL" }, params: { stake: 1, duration: 5, durationUnit: "m" } } },
-        },
-        {
-          name: "MA Crossover",
-          description: "Buy when 9-period MA crosses above 21-period MA. Standard trend-following on 5-minute candles.",
-          config: { rule: { symbol: "R_100", condition: { indicator: "ma_crossover", fast: 9, slow: 21 }, action: { tradeType: "CALL" }, params: { stake: 1, duration: 5, durationUnit: "m" } } },
-        },
-        {
-          name: "Bollinger Squeeze",
-          description: "Trade when Bollinger Bands contract (squeeze) then expand. 20-period, 2 standard deviations.",
-          config: { rule: { symbol: "R_100", condition: { indicator: "bollinger", comparison: "squeeze", period: 20, stdDev: 2 }, action: { tradeType: "CALL" }, params: { stake: 1, duration: 5, durationUnit: "m" } } },
-        },
-        {
           name: "Digit Parity",
-          description: "Trade based on last-digit parity. Simple statistical edge on even/odd digit distribution.",
-          config: { rule: { symbol: "R_100", condition: { indicator: "last_digit", comparison: "parity", parity: "even" }, action: { tradeType: "CALL" }, params: { stake: 1, duration: 3, durationUnit: "m" } } },
+          description: "Buy even when the last digit just landed even. Statistical edge on parity distribution.",
+          config: { rule: { symbol: "R_100", condition: { indicator: "parity", barrier: 0 }, action: { tradeType: "buy_even" }, params: { stake: 1, duration: 1, durationUnit: "t" } } },
         },
         {
-          name: "Trend Following",
-          description: "Follow short-term momentum. Uses 3-period EMA slope to determine direction.",
-          config: { rule: { symbol: "R_100", condition: { indicator: "ema", comparison: "rising", period: 3 }, action: { tradeType: "CALL" }, params: { stake: 1, duration: 3, durationUnit: "m" } } },
+          name: "Digit Over Momentum",
+          description: "Buy over 5 after three consecutive over-5 digits. Momentum on high digits.",
+          config: { rule: { symbol: "R_100", condition: { indicator: "digit_over", barrier: 5, comparison: "appears_consecutively", count: 3 }, action: { tradeType: "buy_over" }, params: { stake: 1, duration: 1, durationUnit: "t" } } },
+        },
+        {
+          name: "Last-Digit Equal",
+          description: "Buy odd when the last digit equaled 7. Plays a single-digit pullback.",
+          config: { rule: { symbol: "R_100", condition: { indicator: "last_digit", comparison: "equals", barrier: 7 }, action: { tradeType: "buy_odd" }, params: { stake: 1, duration: 1, durationUnit: "t" } } },
+        },
+        {
+          name: "Consecutive Rise",
+          description: "Buy rise after three consecutive rising ticks. Simple short-term momentum.",
+          config: { rule: { symbol: "R_100", condition: { indicator: "consecutive_rise", comparison: "appears_consecutively", count: 3 }, action: { tradeType: "buy_rise" }, params: { stake: 1, duration: 1, durationUnit: "t" } } },
+        },
+        {
+          name: "Even Streak",
+          description: "Buy even after two consecutive even digits. Follows run persistence in digit patterns.",
+          config: { rule: { symbol: "R_100", condition: { indicator: "digit_even", comparison: "appears_consecutively", count: 2 }, action: { tradeType: "buy_even" }, params: { stake: 1, duration: 1, durationUnit: "t" } } },
         },
       ];
     }),
