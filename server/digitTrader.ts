@@ -15,6 +15,7 @@ import * as db from "./db";
 import { getTickHistory } from "./aitools";
 import { buildDigitSnapshot, settleDigitRead, digitsFromTicks, DigitRead, DigitSnapshot, TickLike } from "@shared/digits";
 import { getDecimalPlaces } from "@shared/lastDigit";
+import { buildLimitOrder } from "@shared/slTp";
 import { derivManager } from "./derivConnection";
 import { getRecentTicks, isFeedStale } from "./tickCollector";
 import { fireWebhookEvent } from "./webhookExecutor";
@@ -195,14 +196,11 @@ async function placeAutoTrade(userId: number, conn: any, symbol: string, read: D
   };
   if (barrier) proposalPayload.barrier = barrier;
   // Deriv honors SL/TP only via `limit_order` on multiplier/accumulator
-  // contracts. Digit contracts are 1-tick binaries that settle instantly — no
-  // SL/TP exists server-side, and top-level stop_loss/take_profit are not part
-  // of the proposal schema, so they are never sent here.
-  const isMult = contractType === "MULTUP" || contractType === "MULTDOWN";
-  const limitPayload: Record<string, number> = {};
-  if (settings.takeProfit > 0 && (isMult || contractType === "ACCU")) limitPayload.take_profit = settings.takeProfit;
-  if (settings.stopLoss > 0 && isMult) limitPayload.stop_loss = settings.stopLoss;
-  if (Object.keys(limitPayload).length) proposalPayload.limit_order = limitPayload;
+  // contracts (top-level stop_loss/take_profit are not part of the proposal
+  // schema). Digit contracts settle instantly, so buildLimitOrder emits nothing
+  // for them.
+  const limitOrder = buildLimitOrder(contractType, settings.stopLoss, settings.takeProfit);
+  if (limitOrder.limit_order) proposalPayload.limit_order = limitOrder.limit_order;
 
   const proposal = await (conn as any).sendRaw(proposalPayload).catch((e: any) => {
     console.warn(`[digitTrader] Deriv proposal failed (${symbol} ${read.label}): ${e?.message || e}`);

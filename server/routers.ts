@@ -13,6 +13,7 @@ import type { PatternType } from "./signalScanner";
 import { lastDigitOf, getDecimalPlaces } from "@shared/lastDigit";
 import { equityCurve, type TradeLike } from "@shared/portfolio";
 import { createHmac, timingSafeEqual, randomBytes } from "crypto";
+import { STRATEGY_TEMPLATES } from "./strategyTemplates";
 
 function hexToBase32(hex: string): string {
   const base32Chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
@@ -1249,33 +1250,7 @@ export const appRouter = router({
       }),
 
     templates: protectedProcedure.query(async () => {
-      return [
-        {
-          name: "Digit Parity",
-          description: "Buy even when the last digit just landed even. Statistical edge on parity distribution.",
-          config: { rule: { symbol: "R_100", condition: { indicator: "parity", barrier: 0 }, action: { tradeType: "buy_even" }, params: { stake: 1, duration: 1, durationUnit: "t" } } },
-        },
-        {
-          name: "Digit Over Momentum",
-          description: "Buy over 5 after three consecutive over-5 digits. Momentum on high digits.",
-          config: { rule: { symbol: "R_100", condition: { indicator: "digit_over", barrier: 5, comparison: "appears_consecutively", count: 3 }, action: { tradeType: "buy_over" }, params: { stake: 1, duration: 1, durationUnit: "t" } } },
-        },
-        {
-          name: "Last-Digit Equal",
-          description: "Buy odd when the last digit equaled 7. Plays a single-digit pullback.",
-          config: { rule: { symbol: "R_100", condition: { indicator: "last_digit", comparison: "equals", barrier: 7 }, action: { tradeType: "buy_odd" }, params: { stake: 1, duration: 1, durationUnit: "t" } } },
-        },
-        {
-          name: "Consecutive Rise",
-          description: "Buy rise after three consecutive rising ticks. Simple short-term momentum.",
-          config: { rule: { symbol: "R_100", condition: { indicator: "consecutive_rise", comparison: "appears_consecutively", count: 3 }, action: { tradeType: "buy_rise" }, params: { stake: 1, duration: 1, durationUnit: "t" } } },
-        },
-        {
-          name: "Even Streak",
-          description: "Buy even after two consecutive even digits. Follows run persistence in digit patterns.",
-          config: { rule: { symbol: "R_100", condition: { indicator: "digit_even", comparison: "appears_consecutively", count: 2 }, action: { tradeType: "buy_even" }, params: { stake: 1, duration: 1, durationUnit: "t" } } },
-        },
-      ];
+      return STRATEGY_TEMPLATES;
     }),
 
     exportRule: protectedProcedure

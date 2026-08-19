@@ -1,3 +1,5 @@
+import { buildLimitOrder } from "@shared/slTp";
+
 export interface Tick {
   symbol: string;
   price: number;
@@ -13,21 +15,6 @@ export interface TickStreamListener {
 }
 export type DerivContractType = "CALL" | "PUT" | "DIGITEVEN" | "DIGITODD" | "DIGITOVER" | "DIGITUNDER" | "DIGITMATCH" | "DIGITDIFF" | "ACCU";
 
-/** Deriv only honors stop-loss/take-profit through `limit_order`, and only for
- *  multiplier (MULTUP/MULTDOWN) and accumulator (ACCU) contracts. Top-level
- *  `stop_loss`/`take_profit` are not part of the proposal schema — sending them
- *  for rise/fall or digit contracts rejects (or silently disables) the trade.
- *  ACCU exposes take_profit only; stop_loss is forwarded for multipliers. */
-export function buildLimitOrder(contractType: string, stopLoss?: number, takeProfit?: number): Record<string, unknown> {
-  const limit: Record<string, number> = {};
-  if (takeProfit !== undefined && takeProfit > 0 && (contractType === "ACCU" || contractType === "MULTUP" || contractType === "MULTDOWN")) {
-    limit.take_profit = takeProfit;
-  }
-  if (stopLoss !== undefined && stopLoss > 0 && (contractType === "MULTUP" || contractType === "MULTDOWN")) {
-    limit.stop_loss = stopLoss;
-  }
-  return Object.keys(limit).length ? { limit_order: limit } : {};
-}
 export interface PurchaseParams {
   symbol: string;
   contractType: DerivContractType;

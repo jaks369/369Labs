@@ -4,6 +4,7 @@ import { derivManager } from "./derivConnection";
 import { getRecentTicks, isFeedStale } from "./tickCollector";
 import { fireWebhookEvent } from "./webhookExecutor";
 import { actionToContractType, isDigitContract } from "@shared/contractSim";
+import { buildLimitOrder } from "@shared/slTp";
 
 const POLL_INTERVAL = 500; // 500ms — near-live bot evaluation
 const MAX_PIPELINE_TRADES = 50; // max trades in one cycle globally
@@ -191,13 +192,8 @@ async function executeBotCycleInner(): Promise<void> {
       // contracts. Top-level stop_loss/take_profit are not part of the proposal
       // schema — sending them for rise/fall or digit contracts rejects the
       // proposal, so the bot would silently never trade.
-      const isMult = contractType === "MULTUP" || contractType === "MULTDOWN";
-      const limitPayload: Record<string, number> = {};
-      const sl = Number(rule.params?.stopLoss);
-      const tp = Number(rule.params?.takeProfit);
-      if (tp > 0 && (isMult || contractType === "ACCU")) limitPayload.take_profit = tp;
-      if (sl > 0 && isMult) limitPayload.stop_loss = sl;
-      if (Object.keys(limitPayload).length) proposalPayload.limit_order = limitPayload;
+      const limitOrder = buildLimitOrder(contractType, Number(rule.params?.stopLoss), Number(rule.params?.takeProfit));
+      if (limitOrder.limit_order) proposalPayload.limit_order = limitOrder.limit_order;
       const proposal = await (conn as any).sendRaw(proposalPayload).catch((e: any) => {
         console.warn(`[ExecutionEngine] Deriv proposal failed for bot ${bot.def.id}: ${e?.message || e}`);
         return null;
