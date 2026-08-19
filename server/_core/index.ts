@@ -483,6 +483,11 @@ try { await ensureBotRunsTable(); } catch (e) { logger.error("[startup] ensureBo
         startConciergeScanner();
         logger.info("[startup] Concierge scanner started");
       } catch (e) { logger.error("[startup] Concierge scanner failed", { error: String(e) }); }
+      try {
+        const { startDigitTraderAutoExec } = await import("../digitTrader");
+        startDigitTraderAutoExec();
+        logger.info("[startup] Digit Trader auto-exec loop started");
+      } catch (e) { logger.error("[startup] Digit Trader auto-exec failed", { error: String(e) }); }
     })();
   }
 

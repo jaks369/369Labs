@@ -1208,6 +1208,32 @@ export async function getTradesByUserId(userId: number, limit: number = 50, offs
   }
 }
 
+/** Real trades placed by Digit Trader auto-execute (tagged source=digitTrader). */
+export async function getDigitTraderTradesByUserId(userId: number, limit: number = 50): Promise<Trade[]> {
+  const db = await getDb();
+  if (!db) return [];
+  try {
+    return await db
+      .select()
+      .from(trades)
+      .where(and(eq(trades.userId, userId), eq(trades.source, "digitTrader")))
+      .orderBy(desc(trades.entryTime))
+      .limit(limit);
+  } catch {
+    const pool = getRawPool();
+    if (!pool) return [];
+    try {
+      const [rows] = await pool.execute(
+        "SELECT id, userId, botRunId, strategyId, entryTime, exitTime, entryPrice, exitPrice, stake, profitLoss, contractType, result, contractId, source, discoveredAt, reconciled, updatedAt FROM trades WHERE userId=? AND source='digitTrader' ORDER BY entryTime DESC LIMIT ?",
+        [userId, limit],
+      );
+      return rows as Trade[];
+    } catch {
+      return [];
+    }
+  }
+}
+
 export async function getTradeSymbolsByUserId(userId: number): Promise<string[]> {
   const db = await getDb();
   if (!db) return [];

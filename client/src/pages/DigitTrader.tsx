@@ -4,7 +4,8 @@ import { trpc } from "@/lib/trpc";
 import { useLocation } from "wouter";
 import { toast } from "@/components/Toast";
 import { pushTradeIntent, digitReadToContract } from "@/lib/tradeIntent";
-import { getSymbolDisplayName } from "@/lib/symbols";
+import { getSymbolDisplayName, getSymbolOptions } from "@/lib/symbols";
+import { useDerivStatus } from "@/hooks/useDerivStatus";
 import {
   Hash,
   Loader2,
@@ -16,6 +17,10 @@ import {
   AlertTriangle,
   TrendingUp,
   TrendingDown,
+  Zap,
+  Plus,
+  X,
+  ShieldCheck,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -43,17 +48,43 @@ function Metric({ label, value, accent }: { label: string; value: string | numbe
   );
 }
 
-const QUICK_SYMBOLS = ["R_100", "R_50", "R_10", "1HZ10V", "1HZ75V", "BOOM500"];
+const CONTRACT_LABELS: Record<string, string> = {
+  DIGITOVER: "Over",
+  DIGITUNDER: "Under",
+  DIGITEVEN: "Even",
+  DIGITODD: "Odd",
+};
 
 export default function DigitTrader() {
   const { isAuthenticated } = useAuth();
   const [, navigate] = useLocation();
+  const { accountType } = useDerivStatus();
   const [symbol, setSymbol] = useState("R_100");
   const [activeSymbol, setActiveSymbol] = useState("R_100");
+
+  // Auto-execute settings (persisted server-side; the toggle stays on until turned off).
+  const settingsQ = trpc.digitTrader.getSettings.useQuery(undefined, { enabled: isAuthenticated });
+  const patchSettings = trpc.digitTrader.patchSettings.useMutation();
+  const [stake, setStake] = useState(1);
+  const [stopLoss, setStopLoss] = useState(0);
+  const [takeProfit, setTakeProfit] = useState(0);
+  const [followed, setFollowed] = useState<string[]>(["R_100"]);
+  const [autoExec, setAutoExec] = useState(false);
+
+  useEffect(() => {
+    if (!settingsQ.data) return;
+    setStake(settingsQ.data.stake);
+    setStopLoss(settingsQ.data.stopLoss);
+    setTakeProfit(settingsQ.data.takeProfit);
+    setFollowed(settingsQ.data.symbols);
+    setAutoExec(settingsQ.data.autoExec);
+  }, [settingsQ.data]);
 
   const snapshot = trpc.digitTrader.snapshot.useQuery({ symbol: activeSymbol }, { enabled: isAuthenticated, refetchInterval: 10000 });
   const history = trpc.digitTrader.history.useQuery({ limit: 40 }, { enabled: isAuthenticated });
   const accuracy = trpc.digitTrader.accuracy.useQuery(undefined, { enabled: isAuthenticated });
+  const autoTrades = trpc.digitTrader.trades.useQuery({ limit: 30 }, { enabled: isAuthenticated, refetchInterval: 10000 });
+  const autoStatusQ = trpc.digitTrader.autoStatus.useQuery(undefined, { enabled: isAuthenticated, refetchInterval: 5000 });
   const scan = trpc.digitTrader.scan.useMutation();
   const settle = trpc.digitTrader.settle.useMutation();
 
@@ -61,6 +92,7 @@ export default function DigitTrader() {
     snapshot.refetch();
     history.refetch();
     accuracy.refetch();
+    autoTrades.refetch();
   };
 
   const runScan = () => {
@@ -76,12 +108,56 @@ export default function DigitTrader() {
     }
   }, [scan.isSuccess, scan.error]);
 
+  const saveConfig = (next: { stake?: number; stopLoss?: number; takeProfit?: number; symbols?: string[] }) => {
+    patchSettings.mutate(next as any, {
+      onSuccess: (saved) => {
+        setStake(saved.stake);
+        setStopLoss(saved.stopLoss);
+        setTakeProfit(saved.takeProfit);
+        setFollowed(saved.symbols);
+        toast("Auto-execute settings saved", "success");
+      },
+      onError: (e: any) => toast(e?.message || "Failed to save settings", "error"),
+    });
+  };
+
+  const toggleAutoExec = (next: boolean) => {
+    if (next && accountType === "real") {
+      const ok = window.confirm("You are connected to a REAL account. Auto-execute places real 1-tick digit contracts with your stake. Continue?");
+      if (!ok) return;
+    }
+    patchSettings.mutate({ autoExec: next } as any, {
+      onSuccess: (saved) => {
+        setAutoExec(saved.autoExec);
+        toast(saved.autoExec ? "Auto-execute ON — trading the strongest live tilt every symbol." : "Auto-execute OFF", saved.autoExec ? "success" : "info");
+      },
+      onError: (e: any) => toast(e?.message || "Failed to update auto-execute", "error"),
+    });
+  };
+
+  const followSymbol = (sym: string) => {
+    const s = sym.trim().toUpperCase();
+    if (!s) return;
+    if (followed.includes(s)) return;
+    const next = [...followed, s].slice(0, 12);
+    setFollowed(next);
+    saveConfig({ symbols: next });
+  };
+
+  const unfollowSymbol = (sym: string) => {
+    const next = followed.filter((x) => x !== sym);
+    setFollowed(next);
+    saveConfig({ symbols: next.length ? next : ["R_100"] });
+  };
+
   if (!isAuthenticated) { navigate("/login"); return null; }
 
   const snap = snapshot.data;
   const acc = accuracy.data;
+  const autoStatus = autoStatusQ.data;
   const lastDigits = snap?.digits.slice(-16) ?? [];
   const maxCount = Math.max(1, ...Object.values(snap?.counts ?? {}));
+  const symbolOptions = getSymbolOptions();
 
   const trade = (read: any) => {
     pushTradeIntent({
@@ -113,7 +189,7 @@ export default function DigitTrader() {
           </Button>
         </div>
 
-        {/* Symbol picker */}
+        {/* Symbol picker — full list with display names */}
         <div className="flex items-center gap-2 flex-wrap">
           <input
             value={symbol}
@@ -123,20 +199,103 @@ export default function DigitTrader() {
             placeholder="Symbol e.g. R_100"
           />
           <Button onClick={() => { if (symbol.trim()) setActiveSymbol(symbol.trim()); }} className="btn btn-outline gap-2" size="sm"><ArrowUpRight className="w-3.5 h-3.5" />Load</Button>
-          {QUICK_SYMBOLS.map((s) => (
-            <button
-              key={s}
-              onClick={() => { setSymbol(s); setActiveSymbol(s); }}
-              className={`px-3 py-1.5 rounded-lg border text-xs font-semibold ${activeSymbol === s ? "bg-[var(--accent)]/15 text-[var(--accent-soft)] border-[var(--accent)]/40" : "bg-white/5 text-[var(--text-muted)] border-[var(--border)] hover:text-white"}`}
-            >
-              {s}
-            </button>
-          ))}
+          <select
+            value={symbolOptions.some((o) => o.value === activeSymbol) ? activeSymbol : ""}
+            onChange={(e) => { const v = e.target.value; if (v) { setSymbol(v); setActiveSymbol(v); } }}
+            className="bg-[var(--surface-elevated)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-white flex-1 min-w-[220px] max-w-md cursor-pointer"
+            title={`Current: ${getSymbolDisplayName(activeSymbol) || activeSymbol}`}
+          >
+            <option value="" disabled>Pick a volatility index…</option>
+            {symbolOptions.map((o) => (
+              <option key={o.value} value={o.value}>{o.label} — {o.value}</option>
+            ))}
+          </select>
+          <span className="text-xs text-[var(--text-muted)]">Viewing <span className="text-white font-semibold">{getSymbolDisplayName(activeSymbol) || activeSymbol}</span></span>
         </div>
+
+        {/* Auto-execute */}
+        <Card title="Auto-execute" icon={<Zap className="w-4 h-4 text-[var(--accent)]" />}>
+          <div className="flex items-center justify-between gap-4 flex-wrap">
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => toggleAutoExec(!autoExec)}
+                className={`relative w-11 h-6 rounded-full transition-colors ${autoExec ? "bg-[var(--green)]" : "bg-[var(--surface-elevated)] border border-[var(--border)]"}`}
+                title={autoExec ? "Tap to turn off" : "Tap to turn on"}
+              >
+                <span className={`absolute top-0.5 w-5 h-5 rounded-full bg-white transition-all ${autoExec ? "left-[22px]" : "left-0.5"}`} />
+              </button>
+              <div>
+                <p className="text-sm font-bold text-white">{autoExec ? "Auto-execute is ON" : "Auto-execute is OFF"}</p>
+                <p className="text-[11px] text-[var(--text-muted)]">{autoExec ? "Stays on until you turn it off — trades the strongest live tilt per followed symbol." : "Turned off — nothing is placed automatically."}</p>
+              </div>
+            </div>
+            <span className={`px-2 py-1 rounded border text-[10px] font-bold ${autoExec ? "text-[var(--green)] border-[var(--green)]/40 bg-[var(--green)]/15" : "text-[var(--text-muted)] border-[var(--border)] bg-white/5"}`}>
+              {autoStatus?.running && autoExec ? "LOOP ACTIVE" : autoExec ? "LOOP SCHEDULED" : "IDLE"}
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mt-4">
+            <div>
+              <label className="text-[11px] text-[var(--text-muted)] mb-1 block">Stake ($)</label>
+              <input
+                type="number" min={0.35} step={0.1} value={stake}
+                onChange={(e) => setStake(parseFloat(e.target.value) || 0.35)}
+                className="w-full bg-[var(--surface-elevated)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-white font-mono"
+              />
+            </div>
+            <div>
+              <label className="text-[11px] text-[var(--text-muted)] mb-1 block">Stop loss ($ · 0 = off)</label>
+              <input
+                type="number" min={0} step={0.1} value={stopLoss}
+                onChange={(e) => setStopLoss(parseFloat(e.target.value) || 0)}
+                className="w-full bg-[var(--surface-elevated)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-white font-mono"
+              />
+            </div>
+            <div>
+              <label className="text-[11px] text-[var(--text-muted)] mb-1 block">Take profit ($ · 0 = off)</label>
+              <input
+                type="number" min={0} step={0.1} value={takeProfit}
+                onChange={(e) => setTakeProfit(parseFloat(e.target.value) || 0)}
+                className="w-full bg-[var(--surface-elevated)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-white font-mono"
+              />
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3 mt-4">
+            <Button onClick={() => saveConfig({ stake, stopLoss, takeProfit })} className="btn btn-outline gap-2" size="sm" disabled={patchSettings.isPending}>
+              <RefreshCw className="w-3.5 h-3.5" />{patchSettings.isPending ? "Saving…" : "Save stake / SL / TP"}
+            </Button>
+            <p className="text-[11px] text-[var(--text-muted)]">Last cycle: {autoStatus?.lastCycleAt ? new Date(autoStatus.lastCycleAt).toLocaleTimeString() : "never"} · {autoStatus?.lastCycleTrades ?? 0} trade(s) placed.</p>
+          </div>
+
+          <div className="mt-4">
+            <p className="text-[11px] text-[var(--text-muted)] mb-2">Followed symbols — the auto loop trades the strongest tilt on each (max 12):</p>
+            <div className="flex items-center gap-2 flex-wrap">
+              {followed.map((s) => (
+                <span key={s} className="inline-flex items-center gap-1.5 px-2 py-1 rounded-lg border border-[var(--border)] bg-[var(--surface-elevated)] text-xs text-white">
+                  <ShieldCheck className="w-3 h-3 text-[var(--accent)]" />
+                  {getSymbolDisplayName(s) || s}
+                  {followed.length > 1 && (
+                    <button onClick={() => unfollowSymbol(s)} className="text-[var(--text-muted)] hover:text-[var(--red)]" title={`Unfollow ${s}`}>
+                      <X className="w-3 h-3" />
+                    </button>
+                  )}
+                </span>
+              ))}
+            </div>
+            {activeSymbol && !followed.includes(activeSymbol) && (
+              <Button onClick={() => followSymbol(activeSymbol)} className="btn mt-2 gap-1.5" size="sm">
+                <Plus className="w-3.5 h-3.5" />Follow {getSymbolDisplayName(activeSymbol) || activeSymbol}
+              </Button>
+            )}
+          </div>
+        </Card>
 
         <div className="rounded-xl border border-[var(--amber)]/30 bg-[var(--amber)]/5 p-4 text-xs text-[var(--text-secondary)]">
           <AlertTriangle className="w-3.5 h-3.5 text-[var(--amber)] inline mr-1.5" />
-          These are <b className="text-white">observed tilts in the digit stream — not predictions</b>. Volatility indices are near-random by design, and every read is settled honestly against the <b>next tick</b> so the ledger stays truthful (~50%). The trade is always executed by you, in the terminal.
+          These are <b className="text-white">observed tilts in the digit stream — not predictions</b>. Volatility indices are near-random by design, and every read is settled honestly against the <b>next tick</b> so the ledger stays truthful (~50%). {autoExec
+            ? <span className="text-[var(--text-secondary)]">With auto-execute ON, the loop places real 1-tick contracts on the strongest live tilt with your stake / SL / TP.</span>
+            : <span className="text-[var(--text-secondary)]">The trade is executed by you in the terminal — or switched on above for automatic placement.</span>}
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -221,7 +380,7 @@ export default function DigitTrader() {
           </Card>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Live reads */}
           <Card title={`Live reads — ${activeSymbol}`} icon={<TrendingUp className="w-4 h-4 text-[var(--accent)]" />}>
             {snapshot.isLoading ? <Loader2 className="w-5 h-5 animate-spin text-[var(--accent)]" /> : (snap?.reads.length || 0) > 0 ? (
@@ -293,6 +452,45 @@ export default function DigitTrader() {
                   </tbody>
                 </table>
                 {(history.data || []).length === 0 && <p className="text-xs text-[var(--text-muted)] py-4">No reads yet — scan to seed the honest ledger.</p>}
+              </div>
+            )}
+          </Card>
+
+          {/* Auto-execute trade history */}
+          <Card title="Auto-execute history" icon={<Zap className="w-4 h-4 text-[var(--accent)]" />}>
+            {autoTrades.isLoading ? <Loader2 className="w-5 h-5 animate-spin text-[var(--accent)]" /> : (
+              <div className="max-h-80 overflow-y-auto">
+                <table className="w-full text-xs">
+                  <thead>
+                    <tr className="text-left text-[var(--text-muted)]">
+                      <th className="pb-2 pr-2 font-medium">Symbol</th>
+                      <th className="pb-2 pr-2 font-medium">Read</th>
+                      <th className="pb-2 pr-2 font-medium">Stake</th>
+                      <th className="pb-2 pr-2 font-medium">Result</th>
+                      <th className="pb-2 font-medium">P&L</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(autoTrades.data || []).map((t: any) => {
+                      const pnl = parseFloat(t.profitLoss?.toString() || "0");
+                      const done = t.result === "win" || t.result === "loss";
+                      return (
+                        <tr key={t.id} className="border-t border-[var(--border)]">
+                          <td className="py-2 pr-2 text-white font-medium">{getSymbolDisplayName(t.symbol)}</td>
+                          <td className="py-2 pr-2 text-[var(--text-secondary)]">{CONTRACT_LABELS[t.contractType] || t.contractType}</td>
+                          <td className="py-2 pr-2 text-[var(--text-muted)] font-mono">${t.stake}</td>
+                          <td className="py-2 pr-2">
+                            <span className={`px-1.5 py-0.5 rounded border text-[10px] font-bold ${t.result === "win" ? "text-[var(--green)] border-[var(--green)]/40 bg-[var(--green)]/15" : t.result === "loss" ? "text-[var(--red)] border-[var(--red)]/40 bg-[var(--red)]/15" : t.result === "stuck" ? "text-[var(--muted)] border-[var(--border)] bg-white/5" : "text-[var(--amber)] border-[var(--amber)]/40 bg-[var(--amber)]/15"}`}>{t.result || "pending"}</span>
+                          </td>
+                          <td className={`py-2 font-mono ${done ? (pnl >= 0 ? "text-[var(--green)]" : "text-[var(--red)]") : "text-[var(--text-muted)]"}`}>
+                            {done ? `${pnl >= 0 ? "+" : ""}$${pnl.toFixed(2)}` : "—"}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+                {(autoTrades.data || []).length === 0 && <p className="text-xs text-[var(--text-muted)] py-4">No auto-executed trades yet — turn auto-execute on to start.</p>}
               </div>
             )}
           </Card>

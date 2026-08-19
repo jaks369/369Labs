@@ -3403,6 +3403,31 @@ aiMarket: router({
       const { settleOpenDigitReads } = await import("./digitTrader");
       return settleOpenDigitReads(ctx.user.id);
     }),
+    getSettings: protectedProcedure.query(async ({ ctx }) => {
+      const { getDTPSettingsFor } = await import("./digitTrader");
+      return getDTPSettingsFor(ctx.user.id);
+    }),
+    patchSettings: protectedProcedure
+      .input(z.object({
+        autoExec: z.boolean().optional(),
+        stake: z.number().min(0.35).max(500).optional(),
+        stopLoss: z.number().min(0).max(10000).optional(),
+        takeProfit: z.number().min(0).max(10000).optional(),
+        symbols: z.array(z.string().min(1)).max(12).optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const { saveDTPSettings } = await import("./digitTrader");
+        return saveDTPSettings(ctx.user.id, input);
+      }),
+    trades: protectedProcedure
+      .input(z.object({ limit: z.number().default(50) }))
+      .query(async ({ ctx, input }) => {
+        return db.getDigitTraderTradesByUserId(ctx.user.id, input.limit);
+      }),
+    autoStatus: protectedProcedure.query(async () => {
+      const { getDigitAutoExecStatus } = await import("./digitTrader");
+      return getDigitAutoExecStatus();
+    }),
   }),
   copy: router({
     list: protectedProcedure.query(async ({ ctx }) => {
