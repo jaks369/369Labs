@@ -346,7 +346,7 @@ export default function MobileTerminal() {
             <button
               key={tf.label}
               onClick={() => setTimeframe(i)}
-              className={`flex-1 py-3 rounded-md text-[11px] font-bold transition-colors cursor-pointer min-h-[44px] ${timeframe === i ? "aurora-glow-green text-black" : "bg-white/5 text-[var(--text-muted)]"}`}
+              className={`flex-1 py-3 rounded-md text-[11px] font-bold transition-colors cursor-pointer min-h-[44px] ${timeframe === i ? "bg-[var(--accent)] text-black" : "bg-white/5 text-[var(--text-muted)]"}`}
             >
               {tf.label}
             </button>
@@ -415,7 +415,7 @@ export default function MobileTerminal() {
                           setShowSymbolPicker(false);
                           setSymbolSearch("");
                         }}
-                        className={`text-left px-2.5 py-3 rounded-lg cursor-pointer min-h-[44px] ${symbol === s.symbol ? "aurora-glow-green text-white" : "bg-white/5 text-[var(--text-secondary)] border border-transparent"}`}
+                        className={`text-left px-2.5 py-3 rounded-lg cursor-pointer min-h-[44px] ${symbol === s.symbol ? "bg-[var(--accent)] text-black border border-transparent" : "bg-white/5 text-[var(--text-secondary)] border border-transparent"}`}
                       >
                         <span className="block font-semibold text-xs truncate" title={s.displayName}>{s.displayName}</span>
                         <span className="text-[9px] font-mono text-[var(--text-muted)]">{s.symbol}</span>
@@ -472,7 +472,7 @@ export default function MobileTerminal() {
               <button
                 key={p}
                 onClick={() => setStake(p)}
-                className={`flex-1 py-3 rounded-md text-caption font-bold cursor-pointer min-h-[44px] ${stake === p ? "aurora-glow-green text-black" : "bg-[var(--surface-secondary)] text-[var(--text-muted)]"}`}
+                className={`flex-1 py-3 rounded-md text-caption font-bold cursor-pointer min-h-[44px] ${stake === p ? "bg-[var(--accent)] text-black" : "bg-[var(--surface-secondary)] text-[var(--text-muted)]"}`}
               >
                 ${p}
               </button>

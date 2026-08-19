@@ -8,7 +8,7 @@ import { toast } from "./Toast";
 const PHRASES: { match: RegExp; run: () => void; label: string }[] = [
   { match: /deploy|start bot/i, run: () => (window.location.href = "/bots"), label: "Go to Bots" },
   { match: /backtest/i, run: () => (window.location.href = "/backtesting"), label: "Go to Backtesting" },
-  { match: /signal|market/i, run: () => (window.location.href = "/marketplace"), label: "Go to AI Signals" },
+  { match: /signal|market/i, run: () => (window.location.href = "/ai-signals"), label: "Go to AI Signals" },
   { match: /dashboard|home/i, run: () => (window.location.href = "/dashboard"), label: "Go to Dashboard" },
   { match: /strateg|build/i, run: () => (window.location.href = "/strategy-builder"), label: "Go to Strategy Builder" },
   { match: /analy|risk/i, run: () => (window.location.href = "/analytics"), label: "Go to Analytics" },

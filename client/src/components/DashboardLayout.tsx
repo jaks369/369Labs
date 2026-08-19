@@ -69,7 +69,7 @@ const navGroups: NavGroup[] = [
     title: "Trade",
     icon: Zap,
     items: [
-      { icon: LayoutDashboard, label: "Terminal", path: "/dashboard" },
+      { icon: LayoutDashboard, label: "Dashboard", path: "/dashboard" },
       { icon: CandlestickChart, label: "Markets", path: "/markets" },
       { icon: Book, label: "Order Book", path: "/order-book" },
       { icon: Radar, label: "Concierge", path: "/concierge" },
@@ -88,7 +88,7 @@ const navGroups: NavGroup[] = [
       { icon: Bot, label: "Bots", path: "/bots" },
       { icon: FlaskConical, label: "Backtesting", path: "/backtesting" },
       { icon: RotateCcw, label: "Replay", path: "/replay" },
-      { icon: Workflow, label: "Workflows", path: "/workflow" },
+      { icon: Workflow, label: "Workflow", path: "/workflow" },
       { icon: Users, label: "Copy Trading", path: "/copy-trading" },
     ],
   },
@@ -97,8 +97,8 @@ const navGroups: NavGroup[] = [
     icon: Brain,
     items: [
       { icon: Brain, label: "369AI", path: "/ai-assistant" },
-      { icon: Activity, label: "Market Intel", path: "/market-intelligence" },
-      { icon: CandlestickChart, label: "AI Signals", path: "/marketplace" },
+      { icon: Activity, label: "Market Intelligence", path: "/market-intelligence" },
+      { icon: CandlestickChart, label: "AI Signals", path: "/ai-signals" },
       { icon: BarChart3, label: "AI Performance", path: "/ai-performance" },
       { icon: Search, label: "AI Explainability", path: "/ai-explainability" },
     ],

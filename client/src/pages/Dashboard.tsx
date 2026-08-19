@@ -1061,7 +1061,7 @@ export default function Dashboard() {
         signals={signalsQuery.data || []}
         ticks={displayTicks}
         trades={(tradesQuery.data || []) as any}
-        onViewSignals={() => navigate("/marketplace")}
+        onViewSignals={() => navigate("/ai-signals")}
         alerts={alertsQuery.data || []}
         alertsLoading={alertsQuery.isLoading}
         alertsOpen={alertsOpen}

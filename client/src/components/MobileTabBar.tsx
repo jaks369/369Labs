@@ -3,7 +3,7 @@ import { CandlestickChart, TrendingUp, GitBranch, Brain, Wallet } from "lucide-r
 
 const tabs = [
   { icon: CandlestickChart, label: "Markets", path: "/markets" },
-  { icon: TrendingUp, label: "Terminal", path: "/dashboard" },
+  { icon: TrendingUp, label: "Dashboard", path: "/dashboard" },
   { icon: GitBranch, label: "Strategies", path: "/strategy-builder" },
   { icon: Brain, label: "AI", path: "/ai-assistant" },
   { icon: Wallet, label: "Portfolio", path: "/portfolio" },

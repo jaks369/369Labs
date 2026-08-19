@@ -128,7 +128,8 @@ function Router() {
       <Route path={"/settings"}><AppLayout><Settings /></AppLayout></Route>
       <Route path={"/settings/:section"}><AppLayout><Settings /></AppLayout></Route>
       <Route path={"/admin"}><AppLayout><Admin /></AppLayout></Route>
-      <Route path={"/marketplace"}><AppLayout><Marketplace /></AppLayout></Route>
+      <Route path={"/marketplace"}><Redirect to={"/ai-signals"} /></Route>
+      <Route path={"/ai-signals"}><AppLayout><Marketplace /></AppLayout></Route>
       <Route path={"/backtesting"}><AppLayout><LazyLoad><LazyBacktesting /></LazyLoad></AppLayout></Route>
       <Route path={"/analytics"}><AppLayout><LazyLoad><LazyAnalytics /></LazyLoad></AppLayout></Route>
       <Route path={"/cloud-bots"}><AppLayout><LazyLoad><LazyCloudBots /></LazyLoad></AppLayout></Route>
