@@ -12,6 +12,7 @@ import DurationSelector from "@/components/DurationSelector";
 import type { DurationUnit } from "@/components/DurationSelector";
 import TickChart from "@/components/TickChart";
 import { usePersistentState } from "@/hooks/usePersistentState";
+import { useTradeExecution } from "@/hooks/useTradeExecution";
 import { VOLATILITY_SYMBOLS, getSymbolDisplayName } from "@/lib/symbols";
 import { getDecimalPlaces, lastDigitOf } from "@shared/lastDigit";
 import { formatMoney, formatNumber } from "@/lib/format";
@@ -42,7 +43,6 @@ export default function MobileTerminal() {
   const [durationUnit, setDurationUnit] = usePersistentState<DurationUnit>("369labs.terminal.durationUnit", "t");
   const [stopLoss, setStopLoss] = usePersistentState<number>("369labs.terminal.stopLoss", 0);
   const [takeProfit, setTakeProfit] = usePersistentState<number>("369labs.terminal.takeProfit", 0);
-  const [tradeBusy, setTradeBusy] = useState(false);
   const [showTokenModal, setShowTokenModal] = useState(false);
   const [showSymbolPicker, setShowSymbolPicker] = useState(false);
   const [symbolSearch, setSymbolSearch] = useState("");
@@ -192,88 +192,55 @@ export default function MobileTerminal() {
     };
   }, [windowTicks]);
 
-  const handleQuickTrade = async (dir?: "rise" | "fall") => {
-    if (!derivWS.isAuthorized()) {
-      setShowTokenModal(true);
-      return;
-    }
-    const direction = dir || contract.direction;
-    const dailyLossLimit = (memoryQuery.data?.memory as any)?.dailyLossLimit;
-    if (dailyLossLimit > 0) {
-      const today = new Date().toDateString();
-      const todayTrades = (tradesQuery.data || []).filter((t: any) => new Date(t.entryTime).toDateString() === today);
-      const todayPnl = todayTrades.reduce((sum, t) => sum + parseFloat(t.profitLoss?.toString() || "0"), 0);
-      if (todayPnl <= -dailyLossLimit) return;
-    }
-    if (accountType === "real") {
-      const ok = window.confirm("You are connected to a REAL account. This trade uses real funds. Continue?");
-      if (!ok) return;
-    }
-    const map: Record<string, string> = {
-      rise_fall: direction === "fall" ? "PUT" : "CALL",
-      over_under: contract.overUnder === "under" ? "DIGITUNDER" : "DIGITOVER",
-      even_odd: contract.digitMatch === "differ" ? "DIGITODD" : "DIGITEVEN",
-      digits: contract.digitMatch === "differ" ? "DIGITDIFF" : "DIGITMATCH",
-      accumulator: "ACCU",
-    };
-    const contractType = map[contract.category];
-    if (!contractType) return;
-    setTradeBusy(true);
-    try {
-      const isAccumulator = contract.category === "accumulator";
-      const purchase = await derivWS.purchaseContract({
-        symbol,
-        contractType: contractType as any,
-        amount: stake,
-        ...(isAccumulator ? { growthRate: contract.growthRate ?? 1 } : { duration, durationUnit }),
-        ...(contract.category === "over_under" && contract.barrier !== undefined ? { barrier: contract.barrier } : {}),
-        ...(contract.category === "digits" && contract.digit !== undefined ? { barrier: contract.digit } : {}),
-        ...(stopLoss > 0 ? { stopLoss } : {}),
-        ...(takeProfit > 0 ? { takeProfit } : {}),
-      });
-      if (typeof purchase.balanceAfter === "number") setBalance(purchase.balanceAfter);
-      const entryTime = new Date();
-      const entryPrice = String(purchase.entrySpot ?? purchase.buyPrice ?? stake);
-      persistTrade(
-        {
-          result: "pending" as any,
-          stake: String(stake),
-          entryPrice,
-          entryTime,
-          symbol,
-          contractType,
-          contractId: String(purchase.contractId),
-        } as any,
-        `Save trade #${purchase.contractId}`,
-      );
-      derivWS.registerContractMeta(purchase.contractId, { stake: String(stake), entryPrice, entryTime: entryTime.toISOString(), symbol, contractType });
-      derivWS.subscribeToContract(purchase.contractId, (c: any) => {
-        if (c.status !== "open") {
-          const profit = parseFloat(c.profit || c.profit_loss || "0");
-          persistTrade(
-            {
-              result: (profit >= 0 ? "win" : "loss") as any,
-              stake: String(stake),
-              entryPrice,
-              profitLoss: profit.toFixed(2),
-              entryTime,
-              exitTime: new Date(),
-              symbol,
-              contractType,
-              contractId: String(purchase.contractId),
-            } as any,
-            `Settle #${purchase.contractId}`,
-          );
-          derivWS.clearContractMeta(purchase.contractId);
-        }
-      });
-      setShowPositions(true);
-    } catch (e: any) {
-      toast(e?.message || "Trade failed", "error");
-    } finally {
-      setTradeBusy(false);
-    }
-  };
+  // Shared execution core (same logic as the desktop Dashboard purchase flow):
+  // type mapping, REAL confirm, daily-loss guard, Deriv buy, settlement subscribe.
+  const { busy: tradeBusy, placeTrade } = useTradeExecution(
+    { symbol, contract, stake, duration, durationUnit, stopLoss, takeProfit },
+    {
+      accountType,
+      onRequireToken: () => setShowTokenModal(true),
+      dailyLossLimit: (() => {
+        const limit = (memoryQuery.data?.memory as any)?.dailyLossLimit || 0;
+        if (limit <= 0) return undefined;
+        const today = new Date().toDateString();
+        const todayPnl = (tradesQuery.data || []).filter((t: any) => new Date(t.entryTime).toDateString() === today).reduce((sum, t) => sum + parseFloat(t.profitLoss?.toString() || "0"), 0);
+        return { limit, todayPnl };
+      })(),
+      onError: (msg) => toast(msg || "Trade failed", "error"),
+      onFill: async (fill) => {
+        if (typeof fill.balanceAfter === "number") setBalance(fill.balanceAfter);
+        persistTrade(
+          {
+            result: "pending" as any,
+            stake: String(fill.stake),
+            entryPrice: fill.entryPrice,
+            entryTime: fill.entryTime,
+            symbol: fill.symbol,
+            contractType: fill.contractType,
+            contractId: fill.contractId,
+          } as any,
+          `Save trade #${fill.contractId}`,
+        );
+      },
+      onSettle: (fill, profit) => {
+        persistTrade(
+          {
+            result: (profit >= 0 ? "win" : "loss") as any,
+            stake: String(fill.stake),
+            entryPrice: fill.entryPrice,
+            profitLoss: profit.toFixed(2),
+            entryTime: fill.entryTime,
+            exitTime: new Date(),
+            symbol: fill.symbol,
+            contractType: fill.contractType,
+            contractId: fill.contractId,
+          } as any,
+          `Settle #${fill.contractId}`,
+        );
+      },
+      onOpenPositions: () => setShowPositions(true),
+    },
+  );
 
   const selectedDisplay = symbols.find((s) => s.symbol === symbol)?.displayName || symbol;
   const isRiseFall = contract.category === "rise_fall";
@@ -516,7 +483,7 @@ export default function MobileTerminal() {
           </div>
           {isRiseFall ? (
             <button
-              onClick={() => handleQuickTrade(contract.direction === "fall" ? "fall" : "rise")}
+              onClick={() => placeTrade(contract.direction === "fall" ? "fall" : "rise")}
               disabled={tradeBusy}
               className={`w-full h-[56px] rounded-xl flex items-center justify-center gap-2 text-sm font-bold text-white transition-all disabled:opacity-60 ${
                 contract.direction === "fall" ? "bg-[var(--red)]" : "bg-[var(--green)]"
@@ -533,7 +500,7 @@ export default function MobileTerminal() {
             </button>
           ) : (
             <button
-              onClick={() => handleQuickTrade()}
+              onClick={() => placeTrade()}
               disabled={tradeBusy}
               className="w-full h-[56px] rounded-xl flex items-center justify-center gap-2 text-sm font-bold text-white transition-all disabled:opacity-60"
               style={{ background: "linear-gradient(180deg, var(--accent) 0%, color-mix(in srgb, var(--accent) 85%, black) 100%)" }}
