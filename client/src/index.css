@@ -1525,12 +1525,7 @@
   }
   @media (max-width: 1024px) {
     .terminal-layout { flex-direction: column; height: auto; }
-    .terminal-page { height: auto; min-height: 100%; overflow: visible; }
-    .terminal-chart-area { height: min(48vh, 480px); }
     .terminal-trade-panel { width: 100%; border-left: none; border-top: 1px solid rgba(255, 255, 255, 0.08); }
-  }
-  @media (max-width: 768px) {
-    .terminal-chart-area { height: min(44vh, 400px); }
   }
 
   /* ─── Glow Effects ─────────────────────────────────────── */

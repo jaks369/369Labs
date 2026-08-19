@@ -8,6 +8,8 @@ import { formatMoney, formatSignedMoney } from "@/lib/format";
 import { PageSection } from "@/components/PageSection";
 import { Loader2, Activity, Zap, ChevronDown, Wallet, BarChart3, Bot, Brain, Star, Search, Clock, History } from "lucide-react";
 import { useLocation, useSearch } from "wouter";
+import { useIsMobile } from "@/hooks/useMobile";
+import MobileTerminal from "@/pages/MobileTerminal";
 import TickChart from "@/components/TickChart";
 import { derivWS, DerivSymbol } from "@/services/derivWebSocket";
 import { useDerivStatus } from "@/hooks/useDerivStatus";
@@ -594,6 +596,8 @@ export default function Dashboard() {
   const decimalPlaces = derivWS.decimalPlacesFor(selectedSymbol);
   const { status: derivStatus, accountType } = useDerivStatus();
 
+  const isMobile = useIsMobile();
+
   const health = healthQuery.data;
   const healthDD = health?.overall.currentDrawdownPct ?? 0;
   // All-time ledger performance (server-side over up to your last 5,000 trades),
@@ -610,6 +614,10 @@ export default function Dashboard() {
     );
   }
 
+  if (isMobile) {
+    return <MobileTerminal />;
+  }
+
   return (
     <div className="terminal-page h-full">
       <PageSection className="h-full">
@@ -618,7 +626,7 @@ export default function Dashboard() {
           {/* Left: Chart area */}
           <div className="terminal-chart-area">
             {/* Chart Header: Symbol + Price + Balance + Status */}
-            <div className="flex items-center justify-between flex-wrap px-4 py-2 border-b border-[rgba(255,255,255,0.08)] shrink-0" style={{ background: 'transparent' }}>
+            <div className="flex items-center justify-between px-4 py-2 border-b border-[rgba(255,255,255,0.08)] shrink-0" style={{ background: 'transparent' }}>
               <div className="flex items-center gap-3">
                 {/* Symbol Picker */}
                 <div className="relative">
@@ -770,8 +778,8 @@ export default function Dashboard() {
                       : "DD —"}
                   </span>
                 </div>
-                {/* Quick Access Popups — single toggle (also on mobile so SL/TP risk controls, watchlist and insights stay reachable) */}
-                <div className="flex items-center gap-0.5 shrink-0">
+                {/* Quick Access Popups — single toggle */}
+                <div className="hidden md:flex items-center gap-0.5 shrink-0">
                   <button onClick={() => { setDataPopupTab("prices"); setDataPopupOpen(true); }} className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-white/5 border border-[var(--border)] text-[10px] font-bold text-[var(--text-muted)] hover:text-white hover:border-[rgba(255,255,255,0.15)] transition-colors" title="Price History: last prices & digits for this symbol">
                     <History className="w-3 h-3" />
                     <span className="hidden xl:inline">History</span>
