@@ -97,6 +97,10 @@ export interface ConciergeSettings {
   autoExec: boolean;
   /** Max daily loss in USD (0 = off). */
   maxDailyLoss: number;
+  /** Max trades per UTC day (0 = off). */
+  maxDailyTrades: number;
+  /** Max concurrently open contracts (0 = off). */
+  maxOpenContracts: number;
   /** Position sizing method: 'fixed' | 'kelly' | 'vol_adjusted' */
   sizingMethod: 'fixed' | 'kelly' | 'vol_adjusted';
 }
@@ -111,6 +115,8 @@ export const DEFAULT_SETTINGS: ConciergeSettings = {
   takeProfit: 0,
   autoExec: false,
   maxDailyLoss: 0,
+  maxDailyTrades: 0,
+  maxOpenContracts: 0,
   sizingMethod: 'fixed',
 };
 
@@ -695,12 +701,23 @@ export async function scanAndPersistForUser(userId: number): Promise<ScanAndPers
         // Auto-execute: place real trade when autoExec is enabled and signal is STRONG
         if (settings.autoExec) {
           // Daily loss cap check
-          if (settings.maxDailyLoss > 0) {
-            const dayStart = new Date();
-            dayStart.setUTCHours(0, 0, 0, 0);
-            const usage = await db.getDigitTraderDailyUsage(userId, dayStart);
-            if (usage.pnl <= -settings.maxDailyLoss) {
-              console.log(`[concierge] Auto-exec blocked: daily loss $${Math.abs(usage.pnl).toFixed(2)} >= limit $${settings.maxDailyLoss}`);
+          const dayStart = new Date();
+          dayStart.setUTCHours(0, 0, 0, 0);
+          const usage = await db.getDigitTraderDailyUsage(userId, dayStart);
+          if (settings.maxDailyLoss > 0 && usage.pnl <= -settings.maxDailyLoss) {
+            console.log(`[concierge] Auto-exec blocked: daily loss $${Math.abs(usage.pnl).toFixed(2)} >= limit $${settings.maxDailyLoss}`);
+            break;
+          }
+          // Max daily trades cap
+          if (settings.maxDailyTrades > 0 && usage.trades >= settings.maxDailyTrades) {
+            console.log(`[concierge] Auto-exec blocked: daily trades ${usage.trades} >= limit ${settings.maxDailyTrades}`);
+            break;
+          }
+          // Max open contracts cap
+          if (settings.maxOpenContracts > 0) {
+            const openCount = await db.countOpenDigitTraderTrades(userId);
+            if (openCount >= settings.maxOpenContracts) {
+              console.log(`[concierge] Auto-exec blocked: open contracts ${openCount} >= limit ${settings.maxOpenContracts}`);
               break;
             }
           }
