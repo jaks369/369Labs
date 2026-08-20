@@ -5,6 +5,7 @@ import { useState, useEffect, useRef, lazy, Suspense } from "react";
 import NotFound from "@/pages/NotFound";
 import { Route, Switch, Redirect, useLocation } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
+import RouteErrorBoundary from "./components/RouteErrorBoundary";
 import CommandPalette from "./components/CommandPalette";
 
 import DashboardLayout from "./components/DashboardLayout";
@@ -115,12 +116,12 @@ function Router() {
       <Route path={"/oauth/callback"}><PageTransition><OAuthCallback /></PageTransition></Route>
       <Route path={"/onboarding"}><PageTransition><Onboarding /></PageTransition></Route>
       <Route path={"/500"}><PageTransition><ServerError /></PageTransition></Route>
-      <Route path={"/dashboard"}><AppLayout><Dashboard /></AppLayout></Route>
+      <Route path={"/dashboard"}><AppLayout><RouteErrorBoundary route="dashboard"><Dashboard /></RouteErrorBoundary></AppLayout></Route>
       <Route path={"/markets"}><AppLayout><LazyLoad><LazyMarkets /></LazyLoad></AppLayout></Route>
       <Route path={"/order-book"}><AppLayout><OrderBook /></AppLayout></Route>
       <Route path={"/paper-trading"}><AppLayout><PaperTrading /></AppLayout></Route>
       <Route path={"/theme-preview"}><AppLayout><ThemePreview /></AppLayout></Route>
-      <Route path={"/bots"}><AppLayout><Bots /></AppLayout></Route>
+      <Route path={"/bots"}><AppLayout><RouteErrorBoundary route="bots"><Bots /></RouteErrorBoundary></AppLayout></Route>
       <Route path={"/portfolio"}><AppLayout><LazyLoad><LazyPortfolio /></LazyLoad></AppLayout></Route>
       <Route path={"/strategy-builder"}><AppLayout><LazyLoad><LazyStrategyBuilder /></LazyLoad></AppLayout></Route>
       <Route path={"/telegram"}><AppLayout><Telegram /></AppLayout></Route>
@@ -133,17 +134,17 @@ function Router() {
       <Route path={"/backtesting"}><AppLayout><LazyLoad><LazyBacktesting /></LazyLoad></AppLayout></Route>
       <Route path={"/analytics"}><AppLayout><LazyLoad><LazyAnalytics /></LazyLoad></AppLayout></Route>
       <Route path={"/cloud-bots"}><AppLayout><LazyLoad><LazyCloudBots /></LazyLoad></AppLayout></Route>
-      <Route path={"/ai-assistant"}><AppLayout><AIAssistant /></AppLayout></Route>
-      <Route path={"/trades"}><AppLayout><TradeHistory /></AppLayout></Route>
+      <Route path={"/ai-assistant"}><AppLayout><RouteErrorBoundary route="ai-assistant"><AIAssistant /></RouteErrorBoundary></AppLayout></Route>
+      <Route path={"/trades"}><AppLayout><RouteErrorBoundary route="trades"><TradeHistory /></RouteErrorBoundary></AppLayout></Route>
       <Route path={"/logs"}><AppLayout><Logs /></AppLayout></Route>
       <Route path={"/journal"}><AppLayout><Journal /></AppLayout></Route>
       <Route path={"/replay"}><AppLayout><Replay /></AppLayout></Route>
       <Route path={"/workflow"}><AppLayout><Workflow /></AppLayout></Route>
       <Route path={"/coding"}><AppLayout><LazyLoad><LazyCoding /></LazyLoad></AppLayout></Route>
-      <Route path={"/concierge"}><AppLayout><LazyLoad><LazyConcierge /></LazyLoad></AppLayout></Route>
+      <Route path={"/concierge"}><AppLayout><LazyLoad><RouteErrorBoundary route="concierge"><LazyConcierge /></RouteErrorBoundary></LazyLoad></AppLayout></Route>
       <Route path={"/copy-trading"}><AppLayout><LazyLoad><LazyCopyTrading /></LazyLoad></AppLayout></Route>
       <Route path={"/strategy-gallery"}><AppLayout><LazyLoad><LazyStrategyGallery /></LazyLoad></AppLayout></Route>
-      <Route path={"/digit-trader"}><AppLayout><LazyLoad><LazyDigitTrader /></LazyLoad></AppLayout></Route>
+      <Route path={"/digit-trader"}><AppLayout><LazyLoad><RouteErrorBoundary route="digit-trader"><LazyDigitTrader /></RouteErrorBoundary></LazyLoad></AppLayout></Route>
       <Route path={"/plugins"}><AppLayout><Plugins /></AppLayout></Route>
       <Route path={"/webhooks"}><AppLayout><WebhooksPage /></AppLayout></Route>
       <Route path={"/api-docs"}><AppLayout><ApiDocs /></AppLayout></Route>

@@ -5,6 +5,7 @@ import { getRecentTicks, isFeedStale } from "./tickCollector";
 import { fireWebhookEvent } from "./webhookExecutor";
 import { actionToContractType, isDigitContract } from "@shared/contractSim";
 import { buildLimitOrder } from "@shared/slTp";
+import { logger } from "./_core/logger";
 
 const POLL_INTERVAL = 500; // 500ms — near-live bot evaluation
 const MAX_PIPELINE_TRADES = 50; // max trades in one cycle globally
@@ -82,7 +83,7 @@ async function executeBotCycleInner(): Promise<void> {
       bot.lossStreak = 0;
       bot.lastDailyReset = now;
       botRunner.persistSummary(bot.def.id, bot.def.userId).catch((e: any) =>
-        console.warn(`[ExecutionEngine] failed to persist daily reset for bot ${bot.def.id}`, e?.message || e),
+        logger.warn("Failed to persist daily reset", { userId: bot.def.userId, error: e?.message || e, botId: bot.def.id }),
       );
     }
   }
@@ -163,7 +164,7 @@ async function executeBotCycleInner(): Promise<void> {
     try {
       const conn = await derivManager.ensureConnected(bot.def.userId);
       if (!conn) {
-        console.warn(`[ExecutionEngine] No Deriv connection/token for bot ${bot.def.id} (user ${bot.def.userId}). Skipping.`);
+        logger.warn("No Deriv connection for bot", { userId: bot.def.userId, botId: bot.def.id });
         continue;
       }
 
@@ -195,11 +196,11 @@ async function executeBotCycleInner(): Promise<void> {
       const limitOrder = buildLimitOrder(contractType, Number(rule.params?.stopLoss), Number(rule.params?.takeProfit));
       if (limitOrder.limit_order) proposalPayload.limit_order = limitOrder.limit_order;
       const proposal = await (conn as any).sendRaw(proposalPayload).catch((e: any) => {
-        console.warn(`[ExecutionEngine] Deriv proposal failed for bot ${bot.def.id}: ${e?.message || e}`);
+        logger.warn("Deriv proposal failed", { userId: bot.def.userId, botId: bot.def.id, error: e?.message || e });
         return null;
       });
       if (!proposal?.proposal?.id) {
-        console.warn(`[ExecutionEngine] Deriv proposal returned no id for bot ${bot.def.id}. Response: ${JSON.stringify(proposal)}`);
+        logger.warn("Deriv proposal returned no id", { userId: bot.def.userId, botId: bot.def.id, response: JSON.stringify(proposal) });
         continue;
       }
 
@@ -209,15 +210,11 @@ async function executeBotCycleInner(): Promise<void> {
           price: proposal.proposal.ask_price,
         })
         .catch((e: any) => {
-          console.warn(`[ExecutionEngine] Deriv buy failed for bot ${bot.def.id}: ${e?.message || e}`);
+          logger.warn("Deriv buy failed", { userId: bot.def.userId, botId: bot.def.id, error: e?.message || e });
           return null;
         });
       if (!buy?.buy?.contract_id) {
-        // Real fill failed. Do NOT fabricate a fake win/loss and record it as a
-        // real trade in the user's history/portfolio/analytics — that silently
-        // pollutes the trading record. Surface the failure instead and let the
-        // bot evaluate again on the next cycle.
-        console.warn(`[ExecutionEngine] Deriv buy failed for bot ${bot.def.id} (${symbol}). Trade not recorded.`);
+        logger.warn("Deriv buy failed, trade not recorded", { userId: bot.def.userId, botId: bot.def.id, symbol });
         fireWebhookEvent(bot.def.userId, "trade.error", { botId: bot.def.id, symbol, stake, reason: "buy_failed" }).catch(() => {});
         continue;
       }
@@ -247,8 +244,7 @@ async function executeBotCycleInner(): Promise<void> {
           botRunId,
         });
       } catch (e: any) {
-        console.error(`[ExecutionEngine] CRITICAL: contract ${buy.buy.contract_id} was bought on Deriv but the DB save failed for bot ${bot.def.id}. Retrying once...`, e?.message || e);
-        // Retry once after a brief delay
+        logger.error("DB save failed after Deriv buy, retrying", { userId: bot.def.userId, botId: bot.def.id, contractId: String(buy.buy.contract_id), error: e?.message || e });
         await new Promise(r => setTimeout(r, 1000));
         try {
           await db.saveTrade({
@@ -262,9 +258,9 @@ async function executeBotCycleInner(): Promise<void> {
             entryTime,
             botRunId,
           });
-          console.log(`[ExecutionEngine] Retry succeeded for contract ${buy.buy.contract_id}`);
+          logger.info("Retry succeeded for orphaned contract", { userId: bot.def.userId, contractId: String(buy.buy.contract_id) });
         } catch (retryErr: any) {
-          console.error(`[ExecutionEngine] CRITICAL: retry also failed for contract ${buy.buy.contract_id}. Contract orphaned on Deriv.`, retryErr?.message || retryErr);
+          logger.error("CRITICAL: retry also failed, contract orphaned on Deriv", { userId: bot.def.userId, botId: bot.def.id, contractId: String(buy.buy.contract_id), error: retryErr?.message || retryErr });
           fireWebhookEvent(bot.def.userId, "trade.error", { botId: bot.def.id, symbol, stake, contractId: buy.buy.contract_id, reason: "db_save_failed" }).catch(() => {});
           continue;
         }
@@ -275,16 +271,16 @@ async function executeBotCycleInner(): Promise<void> {
       fireWebhookEvent(bot.def.userId, "trade.executed", { botId: bot.def.id, symbol, stake, contractId: buy.buy.contract_id }).catch(() => {});
       traded++;
     } catch (e: any) {
-      console.error(`[ExecutionEngine] Trade cycle error for bot ${bot.def.id}:`, e?.message || e);
+      logger.error("Trade cycle error", { userId: bot.def.userId, botId: bot.def.id, error: e?.message || e });
     }
   }
 }
 
 export function startExecutionEngine(): void {
   if (intervalId) return;
-  console.log("[ExecutionEngine] Starting — polling every 500ms for active bots");
+  logger.info("ExecutionEngine starting", { pollInterval: POLL_INTERVAL });
   intervalId = setInterval(() => {
-    executeBotCycle().catch((e) => console.error("[ExecutionEngine] Cycle error:", e?.message || e));
+    executeBotCycle().catch((e) => logger.error("Cycle error", { error: e?.message || e }));
   }, POLL_INTERVAL);
 }
 

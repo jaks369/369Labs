@@ -84,6 +84,7 @@ import {
 } from "../drizzle/schema";
 import { ENV } from "./_core/env";
 import { encrypt, decrypt } from "./_core/encryption";
+import { logger } from "./_core/logger";
 
 function parseDbUrl(url: string) {
   const parsed = new URL(url);
@@ -168,24 +169,24 @@ export async function getDb() {
   if (!_db && !_dbError) {
     if (!process.env.DATABASE_URL) {
       _dbError = "DATABASE_URL environment variable is not set";
-      console.error("[Database] " + _dbError);
+      logger.error(_dbError);
     } else {
       try {
         const cfg = parseDbUrl(process.env.DATABASE_URL);
         _pool = mysql.createPool(cfg);
         _db = drizzle(_pool) as any;
         _dbRetryCount = 0;
-        console.log("[Database] Connected successfully");
+        logger.info("Database connected successfully");
       } catch (error) {
         _dbError = String(error);
-        console.error("[Database] Failed to connect:", error);
+        logger.error("Database connection failed", { error: _dbError });
       }
     }
   }
   // Retry transient failures periodically so a blip on startup doesn't brick the server
   if (!_db && _dbError && _dbRetryCount < MAX_DB_RETRIES) {
     _dbRetryCount++;
-    console.log(`[Database] Retrying connection (attempt ${_dbRetryCount}/${MAX_DB_RETRIES})...`);
+    logger.info("Retrying database connection", { attempt: _dbRetryCount, maxRetries: MAX_DB_RETRIES });
     _dbError = null as any;
   }
   return _db;
@@ -468,7 +469,7 @@ export async function updateUserEmailVerified(userId: number, verified?: boolean
         await db.update(users).set({ role: "admin" }).where(eq(users.id, userId));
       }
     } catch (e) {
-      console.error("[db] Failed to promote owner to admin on email verification:", e);
+      logger.error("Failed to promote owner to admin on email verification", { error: e instanceof Error ? e.message : String(e) });
     }
   }
 }
@@ -568,7 +569,7 @@ export async function getTradeStatusCounts(): Promise<{ pending: number; stuck: 
     const r = (rows as any[])[0] || {};
     return { pending: Number(r.pending || 0), stuck: Number(r.stuck || 0), settledToday: Number(r.settledToday || 0) };
   } catch (e: any) {
-    console.error("[getTradeStatusCounts] failed", e?.message || e);
+    logger.error("getTradeStatusCounts failed", { error: e?.message || e });
     return { pending: 0, stuck: 0, settledToday: 0 };
   }
 }
@@ -609,7 +610,7 @@ export async function getUsersWithActiveTokens(): Promise<number[]> {
       const [rows] = await pool.execute("SELECT DISTINCT userId FROM derivTokens WHERE isActive = TRUE");
       return (rows as any[]).map((r) => Number(r.userId));
     } catch (e: any) {
-      console.error("[getUsersWithActiveTokens] raw failed", e?.message || e);
+      logger.error("getUsersWithActiveTokens raw failed", { error: e?.message || e });
     }
   }
   const db = await getDb();
@@ -618,7 +619,7 @@ export async function getUsersWithActiveTokens(): Promise<number[]> {
     const rows = await db.selectDistinct({ userId: derivTokens.userId }).from(derivTokens).where(eq(derivTokens.isActive, true));
     return rows.map((r) => r.userId);
   } catch (e: any) {
-    console.error("[getUsersWithActiveTokens] drizzle failed", e?.message || e);
+    logger.error("getUsersWithActiveTokens drizzle failed", { error: e?.message || e });
     return [];
   }
 }
@@ -690,7 +691,7 @@ export async function saveStrategy(strategy: InsertStrategy): Promise<Strategy> 
         .limit(1)
     )[0];
   } catch (e1: any) {
-    console.error("[saveStrategy] Drizzle insert failed, trying raw fallback. Error:", e1?.message || e1, "userId:", strategy.userId, "name:", strategy.name);
+    logger.warn("saveStrategy Drizzle insert failed, trying raw fallback", { userId: strategy.userId, name: strategy.name, error: e1?.message || e1 });
     const pool = getRawPool();
     if (!pool) throw new Error("Pool not available");
     try {
@@ -706,7 +707,7 @@ export async function saveStrategy(strategy: InsertStrategy): Promise<Strategy> 
       const [rows] = await pool.execute("SELECT * FROM strategies WHERE id=?", [id]);
       return (rows as any[])[0];
     } catch (e2: any) {
-      console.error("[saveStrategy] Raw fallback also failed", e2?.message || e2);
+      logger.error("saveStrategy raw fallback also failed", { userId: strategy.userId, error: e2?.message || e2 });
       throw new Error("Failed to save strategy: " + (e2?.message || e2));
     }
   }
@@ -1068,7 +1069,7 @@ export async function getPendingTradesForUser(userId: number): Promise<Trade[]> 
       );
       return rows as Trade[];
     } catch (e: any) {
-      console.error("[getPendingTradesForUser] raw failed", e?.message || e);
+      logger.error("getPendingTradesForUser raw failed", { userId, error: e?.message || e });
     }
   }
   const db = await getDb();
@@ -1081,7 +1082,7 @@ export async function getPendingTradesForUser(userId: number): Promise<Trade[]> 
       .orderBy(asc(trades.entryTime))
       .limit(200);
   } catch (e: any) {
-    console.error("[getPendingTradesForUser] drizzle failed", e?.message || e);
+    logger.error("getPendingTradesForUser drizzle failed", { userId, error: e?.message || e });
     return [];
   }
 }
@@ -1106,7 +1107,7 @@ export async function markTradeStuck(tradeId: number, reason: string): Promise<b
     await pool.execute("UPDATE trades SET result='stuck', profitLoss=IFNULL(profitLoss, '0'), exitTime=NOW() WHERE id=? AND result='pending'", [tradeId]);
     return true;
   } catch (e: any) {
-    console.error(`[markTradeStuck] trade #${tradeId} failed:`, e?.message || e);
+    logger.error("markTradeStuck failed", { tradeId, error: e?.message || e });
     return false;
   }
 }
@@ -1392,7 +1393,7 @@ export async function saveAiKnowledge(data: InsertAiKnowledge): Promise<void> {
   try {
     await db.insert(aiKnowledge).values(data);
   } catch (e: any) {
-    console.error("[aiKnowledge] insert failed", e?.message || e);
+    logger.error("aiKnowledge insert failed", { error: e?.message || e });
   }
 }
 

@@ -8,6 +8,7 @@ import * as db from "../db";
 import { AIInsight, MarketHealth, AIPrediction, LiveFeedEntry, AIState, RiskAdvisory } from "./types";
 import { getAllVolatilitySymbols } from "@shared/symbols";
 import { marketRegimeDetector } from "./StrategyEngine";
+import { logger } from "../_core/logger";
 
 const VOLATILITY_SYMBOLS = getAllVolatilitySymbols();
 const POLL_INTERVAL = 15000;
@@ -44,7 +45,7 @@ export class AIOrchestrator {
     this.state.active = true;
     this.tick();
     this.intervalId = setInterval(() => this.tick(), POLL_INTERVAL);
-    console.log("[369AI] Orchestrator started — polling every 15s");
+    logger.info("AI Orchestrator started", { pollInterval: POLL_INTERVAL });
   }
 
   stop(): void {
@@ -53,7 +54,7 @@ export class AIOrchestrator {
       this.intervalId = null;
     }
     this.state.active = false;
-    console.log("[369AI] Orchestrator stopped");
+    logger.info("AI Orchestrator stopped");
   }
 
   getState(): AIState {
@@ -214,7 +215,7 @@ export class AIOrchestrator {
 
       this.state.lastUpdated = Date.now();
     } catch (err) {
-      console.error("[369AI] Tick error:", err);
+      logger.error("AI Orchestrator tick error", { error: err instanceof Error ? err.message : String(err) });
     }
   }
 
