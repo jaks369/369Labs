@@ -341,8 +341,38 @@ export function computeSmartAlerts(trades: TradeLike[], advisories: RiskAdvisory
   for (const [sym, n] of Object.entries(lossStreakSym)) {
     if (n >= 3) alerts.push({ severity: "warning", message: `${n} straight losses on ${getSymbolDisplayName(sym)}. Stop or switch.` });
   }
+
+  // Cooling-off nudge: rapid losing streak (time-based)
+  const rapidLossAlert = computeRapidLossAlert(trades);
+  if (rapidLossAlert) alerts.push(rapidLossAlert);
+
   if (alerts.length === 0) alerts.push({ severity: "info", message: "No risk flags right now." });
   return alerts.slice(0, 8);
+}
+
+export function computeRapidLossAlert(trades: TradeLike[]): SmartAlert | null {
+  const losses = trades.filter(t => t.result === "loss");
+  if (losses.length < 4) return null;
+
+  // Check if last 4 losses happened within 10 minutes
+  const recentLosses = losses.slice(-4);
+  const now = Date.now();
+  const tenMinutesAgo = now - 10 * 60 * 1000;
+
+  const allRecent = recentLosses.every(l => {
+    const entryTime = l.entryTime ? new Date(l.entryTime as any).getTime() : 0;
+    return entryTime > tenMinutesAgo;
+  });
+
+  if (!allRecent) return null;
+
+  const symbols = [...new Set(recentLosses.map(l => l.symbol).filter(Boolean))];
+  const symStr = symbols.length === 1 ? getSymbolDisplayName(symbols[0]!) : "multiple symbols";
+
+  return {
+    severity: "warning",
+    message: `⚠️ Rapid losing streak: 4 losses in <10 minutes on ${symStr}. Consider pausing for 15 minutes to reset.`
+  };
 }
 
 export function computePreTradeChecklist(input: {

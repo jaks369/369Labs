@@ -175,6 +175,7 @@ export default function Concierge() {
   const history = trpc.concierge.history.useQuery({ limit: 30 }, { enabled: isAuthenticated });
   const accuracy = trpc.concierge.accuracy.useQuery(undefined, { enabled: isAuthenticated });
   const calibration = trpc.concierge.calibration.useQuery(undefined, { enabled: isAuthenticated });
+  const tradeReviews = trpc.concierge.tradeReviews.useQuery({ limit: 20 }, { enabled: isAuthenticated });
   const settingsQ = trpc.concierge.getSettings.useQuery(undefined, { enabled: isAuthenticated });
   const loopStatus = trpc.concierge.loopStatus.useQuery(undefined, { enabled: isAuthenticated, refetchInterval: 5000 });
   const marketContext = trpc.concierge.marketContext.useQuery({ symbol: ctxSymbol }, { enabled: isAuthenticated });
@@ -588,10 +589,77 @@ export default function Concierge() {
                   </tbody>
                 </table>
                 {(history.data || []).length === 0 && <p className="text-xs text-[var(--text-muted)] py-4">No predictions yet — scan now to seed the ledger.</p>}
-                {(history.data || []).length > 0 && (
+{(history.data || []).length > 0 && (
                   <p className="text-[10px] text-[var(--text-disabled)] mt-3 leading-relaxed">
                     Predictions are guiding reads, not executed trades. Stake & P&L belong in Auto-execute history when enabled.
                   </p>
+                )}
+              </div>
+            )}
+          </Card>
+
+          {/* Trade Reviews */}
+          <Card title="Trade reviews" icon={<Target className="w-4 h-4 text-[var(--accent)]" />}>
+            {tradeReviews.isLoading ? <Loader2 className="w-5 h-5 animate-spin text-[var(--accent)]" /> : (
+              <div className="max-h-80 overflow-y-auto">
+                {(tradeReviews.data || []).length > 0 ? (
+                  <div className="space-y-3">
+                    {(tradeReviews.data || []).map((tr: any) => (
+                      <div key={tr.tradeId} className="rounded-lg border border-[var(--border)] bg-[var(--surface-elevated)] p-3">
+                        <div className="flex items-start justify-between gap-3 mb-2">
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-bold text-white">{getSymbolDisplayName(tr.symbol)}</span>
+                            <span className={`px-1.5 py-0.5 rounded border text-[10px] font-bold ${tr.result === "win" ? "text-[var(--green)] border-[var(--green)]/40 bg-[var(--green)]/15" : "text-[var(--red)] border-[var(--red)]/40 bg-[var(--red)]/15"}`}>
+                              {tr.result === "win" ? "WIN" : "LOSS"}
+                            </span>
+                            <span className="text-xs text-[var(--text-muted)]">{tr.contractType}</span>
+                          </div>
+                          <div className="text-right">
+                            <span className={`text-sm font-bold ${parseFloat(tr.profitLoss || "0") >= 0 ? "text-[var(--green)]" : "text-[var(--red)]"}`}>
+                              {parseFloat(tr.profitLoss || "0") >= 0 ? "+" : ""}${parseFloat(tr.profitLoss || "0").toFixed(2)}
+                            </span>
+                            <span className="text-xs text-[var(--text-muted)] ml-2">Stake: $${parseFloat(tr.stake || "0").toFixed(2)}</span>
+                          </div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-3 text-[11px]">
+                          <div>
+                            <span className="text-[var(--text-muted)]">Why taken:</span>
+                            <p className="text-[var(--text-secondary)] mt-0.5 line-clamp-2">{tr.review?.whyTradeWasTaken || "—"}</p>
+                          </div>
+                          <div>
+                            <span className="text-[var(--text-muted)]">Market:</span>
+                            <p className="text-[var(--text-secondary)] mt-0.5 line-clamp-2">{tr.review?.marketConditions || "—"}</p>
+                          </div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-3 text-[11px] mt-2 pt-2 border-t border-[var(--border)]">
+                          <div>
+                            <span className="text-[var(--green)] font-semibold">What went right:</span>
+                            <ul className="mt-1 space-y-0.5 list-disc list-inside">
+                              {(tr.review?.whatWentRight || []).slice(0, 2).map((w: string, i: number) => (
+                                <li key={i} className="text-[var(--text-secondary)]">{w}</li>
+                              ))}
+                              {(tr.review?.whatWentRight || []).length === 0 && <li className="text-[var(--text-muted)]">—</li>}
+                            </ul>
+                          </div>
+                          <div>
+                            <span className="text-[var(--red)] font-semibold">What went wrong:</span>
+                            <ul className="mt-1 space-y-0.5 list-disc list-inside">
+                              {(tr.review?.whatWentWrong || []).slice(0, 2).map((w: string, i: number) => (
+                                <li key={i} className="text-[var(--text-secondary)]">{w}</li>
+                              ))}
+                              {(tr.review?.whatWentWrong || []).length === 0 && <li className="text-[var(--text-muted)]">—</li>}
+                            </ul>
+                          </div>
+                        </div>
+                        <div className="text-[10px] text-[var(--text-disabled)] mt-2 pt-2 border-t border-[var(--border)]">
+                          <span className="font-semibold">Risk:</span> {tr.review?.riskAssessment || "—"} | 
+                          <span className="font-semibold ml-2">Score:</span> {tr.review?.score || "—"}/100
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-xs text-[var(--text-muted)] py-4">No settled trades with reviews yet.</p>
                 )}
               </div>
             )}

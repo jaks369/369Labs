@@ -2398,6 +2398,47 @@ Return ONLY the JSON.`;
       .query(async ({ ctx, input }) => {
         return db.getAiKnowledgeByRelatedTradeId(ctx.user.id, input.contractId);
       }),
+    tradeReviews: protectedProcedure
+      .input(z.object({ limit: z.number().default(20) }))
+      .query(async ({ ctx, input }) => {
+        const { tradeReviewEngine } = await import("./ai/TradeReviewEngine");
+        const trades = await db.getTradesByUserId(ctx.user.id, input.limit);
+        const settled = trades.filter((t: any) => t.result === "win" || t.result === "loss");
+        const reviews = await Promise.all(
+          settled.map(async (trade: any) => {
+            const review = await tradeReviewEngine.review(
+              {
+                id: trade.id,
+                symbol: trade.symbol,
+                contractType: trade.contractType,
+                stake: trade.stake,
+                profitLoss: trade.profitLoss,
+                result: trade.result,
+                entryTime: trade.entryTime,
+                exitTime: trade.exitTime,
+                strategyId: trade.strategyId,
+                botRunId: trade.botRunId,
+                contractId: trade.contractId,
+                entryPrice: trade.entryPrice,
+                exitPrice: trade.exitPrice,
+              },
+              ctx.user.id
+            );
+            return {
+              tradeId: trade.id,
+              symbol: trade.symbol,
+              contractType: trade.contractType,
+              stake: trade.stake,
+              profitLoss: trade.profitLoss,
+              result: trade.result,
+              entryTime: trade.entryTime,
+              exitTime: trade.exitTime,
+              review: review.review,
+            };
+          })
+        );
+        return reviews;
+      }),
     state: protectedProcedure.query(async () => {
       const { aiOrchestrator } = await import("./ai/AIOrchestrator");
       const state = aiOrchestrator.getState();
@@ -2786,8 +2827,9 @@ watch: protectedProcedure
 
   aiChat: router({
     sendMessage: protectedProcedure
-      .input(z.object({ message: z.string().min(1) }))
+      .input(z.object({ message: z.string().min(1).max(2000) }))
       .mutation(async ({ ctx, input }) => {
+        checkRateLimit(`chat:${ctx.user.id}`);
         const { getAIChatEngine } = await import("./ai/AIChatEngine");
         return getAIChatEngine().sendMessage(ctx.user.id, input.message);
       }),
@@ -3366,6 +3408,47 @@ aiMarket: router({
       const { computeSignalCalibration } = await import("./concierge");
       return computeSignalCalibration(ctx.user.id);
     }),
+    tradeReviews: protectedProcedure
+      .input(z.object({ limit: z.number().default(20) }))
+      .query(async ({ ctx, input }) => {
+        const { tradeReviewEngine } = await import("./ai/TradeReviewEngine");
+        const trades = await db.getTradesByUserId(ctx.user.id, input.limit);
+        const settled = trades.filter((t: any) => t.result === "win" || t.result === "loss");
+        const reviews = await Promise.all(
+          settled.map(async (trade: any) => {
+            const review = await tradeReviewEngine.review(
+              {
+                id: trade.id,
+                symbol: trade.symbol,
+                contractType: trade.contractType,
+                stake: trade.stake,
+                profitLoss: trade.profitLoss,
+                result: trade.result,
+                entryTime: trade.entryTime,
+                exitTime: trade.exitTime,
+                strategyId: trade.strategyId,
+                botRunId: trade.botRunId,
+                contractId: trade.contractId,
+                entryPrice: trade.entryPrice,
+                exitPrice: trade.exitPrice,
+              },
+              ctx.user.id
+            );
+            return {
+              tradeId: trade.id,
+              symbol: trade.symbol,
+              contractType: trade.contractType,
+              stake: trade.stake,
+              profitLoss: trade.profitLoss,
+              result: trade.result,
+              entryTime: trade.entryTime,
+              exitTime: trade.exitTime,
+              review: review.review,
+            };
+          })
+        );
+        return reviews;
+      }),
   }),
   digitTrader: router({
     snapshot: protectedProcedure
