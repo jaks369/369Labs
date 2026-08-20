@@ -160,6 +160,19 @@ class BotRunner {
     return count;
   }
 
+  /** Remove stopped/errored bots older than 1 hour from the in-memory map. */
+  pruneStopped(): number {
+    const cutoff = Date.now() - 3600_000;
+    let pruned = 0;
+    for (const [id, bot] of Array.from(this.bots)) {
+      if ((bot.status === "stopped" || bot.status === "error") && (bot.def.startedAt || 0) < cutoff) {
+        this.bots.delete(id);
+        pruned++;
+      }
+    }
+    return pruned;
+  }
+
   getStatus(id: string, userId: number): BotRuntime | null {
     const bot = this.bots.get(id);
     if (!bot || bot.def.userId !== userId) return null;

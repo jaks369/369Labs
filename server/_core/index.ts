@@ -480,6 +480,8 @@ const RATE = (limit: number, windowMs: number) => async (req: any, res: any, nex
       try {
         const { botRunner } = await import("../botRunner");
         await botRunner.restoreFromDb();
+        // Periodically prune stopped/errored bots from memory
+        setInterval(() => { botRunner.pruneStopped(); }, 60_000);
       } catch (e) { logger.error("[startup] BotRunner restore failed", { error: String(e) }); }
       try {
         const { startConciergeScanner } = await import("../concierge");

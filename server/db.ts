@@ -160,6 +160,10 @@ export interface PortfolioContractInput {
   source?: string;
 }
 
+let _dbRetryCount = 0;
+const MAX_DB_RETRIES = 3;
+const DB_RETRY_DELAY_MS = 5000;
+
 export async function getDb() {
   if (!_db && !_dbError) {
     if (!process.env.DATABASE_URL) {
@@ -170,12 +174,19 @@ export async function getDb() {
         const cfg = parseDbUrl(process.env.DATABASE_URL);
         _pool = mysql.createPool(cfg);
         _db = drizzle(_pool) as any;
+        _dbRetryCount = 0;
         console.log("[Database] Connected successfully");
       } catch (error) {
         _dbError = String(error);
         console.error("[Database] Failed to connect:", error);
       }
     }
+  }
+  // Retry transient failures periodically so a blip on startup doesn't brick the server
+  if (!_db && _dbError && _dbRetryCount < MAX_DB_RETRIES) {
+    _dbRetryCount++;
+    console.log(`[Database] Retrying connection (attempt ${_dbRetryCount}/${MAX_DB_RETRIES})...`);
+    _dbError = null as any;
   }
   return _db;
 }
@@ -1680,6 +1691,34 @@ export async function getTickHistory(symbol: string, limit: number = 1000, befor
   if (!db) return [];
   const cond = beforeEpoch ? and(eq(tickHistory.symbol, symbol), lte(tickHistory.epoch, beforeEpoch)) : eq(tickHistory.symbol, symbol);
   return db.select().from(tickHistory).where(cond).orderBy(desc(tickHistory.epoch)).limit(limit);
+}
+
+/** Batch tick history: fetch the latest N ticks for multiple symbols in a single query. */
+export async function getTickHistoryBatch(symbols: string[], limit: number = 50): Promise<Map<string, TickHistoryRow[]>> {
+  const result = new Map<string, TickHistoryRow[]>();
+  if (symbols.length === 0) return result;
+  const db = await getDb();
+  if (!db) return result;
+  try {
+    const rows = await db.select().from(tickHistory)
+      .where(inArray(tickHistory.symbol, symbols))
+      .orderBy(desc(tickHistory.epoch));
+    // Group by symbol, take only `limit` per symbol
+    for (const row of rows) {
+      const arr = result.get(row.symbol) || [];
+      if (arr.length < limit) arr.push(row);
+      result.set(row.symbol, arr);
+    }
+  } catch {
+    // Fallback to individual queries if batch fails
+    for (const symbol of symbols) {
+      try {
+        const ticks = await getTickHistory(symbol, limit);
+        result.set(symbol, ticks);
+      } catch { /* skip */ }
+    }
+  }
+  return result;
 }
 
 export async function checkMAcross(

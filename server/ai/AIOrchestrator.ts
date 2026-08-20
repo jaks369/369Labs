@@ -126,9 +126,12 @@ export class AIOrchestrator {
         }
       }
 
+      // Batch tick history fetch — one query instead of N+1
+      const tickMap = await db.getTickHistoryBatch(VOLATILITY_SYMBOLS, 50);
+
       for (const symbol of VOLATILITY_SYMBOLS) {
         try {
-          const ticks = await db.getTickHistory(symbol, 50);
+          const ticks = tickMap.get(symbol) || [];
           const prices = ticks.map((t: any) => Number(t.price)).filter((p: number) => !isNaN(p));
           if (prices.length < 20) continue;
 
