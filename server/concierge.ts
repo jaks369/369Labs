@@ -829,3 +829,131 @@ export async function getSettingsFor(userId: number): Promise<ConciergeSettings>
 }
 
 export type MarketHealthRef = MarketHealth;
+
+export interface CalibrationResult {
+  brierScore: number;
+  logLoss: number;
+  expectedCalibrationError: number;
+  maxCalibrationError: number;
+  totalPredictions: number;
+  resolvedPredictions: number;
+  reliabilityDiagram: Array<{
+    bin: string;
+    predictedProbability: number;
+    actualFrequency: number;
+    count: number;
+    isWellCalibrated: boolean;
+  }>;
+  byStrength: Record<string, {
+    brierScore: number;
+    logLoss: number;
+    ece: number;
+    count: number;
+    resolvedCount: number;
+  }>;
+}
+
+function binConfidence(confidence: number): { bin: string; midpoint: number } {
+  const bins = [
+    { min: 50, max: 55, label: "50-55%" },
+    { min: 55, max: 60, label: "55-60%" },
+    { min: 60, max: 65, label: "60-65%" },
+    { min: 65, max: 70, label: "65-70%" },
+    { min: 70, max: 75, label: "70-75%" },
+    { min: 75, max: 80, label: "75-80%" },
+    { min: 80, max: 86, label: "80-86%" },
+  ];
+  const bin = bins.find(b => confidence >= b.min && confidence < b.max) || bins[bins.length - 1];
+  return { bin: bin.label, midpoint: (bin.min + bin.max) / 2 / 100 };
+}
+
+export async function computeSignalCalibration(userId: number): Promise<CalibrationResult> {
+  const signals = await db.listGuidingSignals(userId, 500);
+  const resolved = signals.filter(s => s.status === "win" || s.status === "loss");
+  
+  if (resolved.length === 0) {
+    return {
+      brierScore: 0,
+      logLoss: 0,
+      expectedCalibrationError: 0,
+      maxCalibrationError: 0,
+      totalPredictions: signals.length,
+      resolvedPredictions: 0,
+      reliabilityDiagram: [],
+      byStrength: {},
+    };
+  }
+
+  const bins = new Map<string, { sumPredicted: number; sumActual: number; count: number }>();
+  let totalBrier = 0;
+  let totalLogLoss = 0;
+  const byStrengthMap = new Map<string, { sumBrier: number; sumLogLoss: number; sumEce: number; count: number; resolvedCount: number }>();
+
+  for (const s of resolved) {
+    const confidence = Math.min(s.confidence / 100, 0.86);
+    const outcome = s.status === "win" ? 1 : 0;
+    const brier = Math.pow(confidence - outcome, 2);
+    const eps = 1e-15;
+    const logLoss = - (outcome * Math.log(confidence + eps) + (1 - outcome) * Math.log(1 - confidence + eps));
+    
+    totalBrier += brier;
+    totalLogLoss += logLoss;
+
+    const { bin, midpoint } = binConfidence(s.confidence);
+    const b = bins.get(bin) || { sumPredicted: 0, sumActual: 0, count: 0 };
+    b.sumPredicted += confidence;
+    b.sumActual += outcome;
+    b.count += 1;
+    bins.set(bin, b);
+
+    const strength = s.strength || "UNKNOWN";
+    const sm = byStrengthMap.get(strength) || { sumBrier: 0, sumLogLoss: 0, sumEce: 0, count: 0, resolvedCount: 0 };
+    sm.sumBrier += brier;
+    sm.sumLogLoss += logLoss;
+    sm.sumEce += Math.abs(confidence - outcome);
+    sm.count += 1;
+    sm.resolvedCount += 1;
+    byStrengthMap.set(strength, sm);
+  }
+
+  const reliabilityDiagram = Array.from(bins.entries()).map(([bin, data]) => {
+    const predictedProbability = data.sumPredicted / data.count;
+    const actualFrequency = data.sumActual / data.count;
+    const calibrationError = Math.abs(predictedProbability - actualFrequency);
+    return {
+      bin,
+      predictedProbability: Math.round(predictedProbability * 10000) / 10000,
+      actualFrequency: Math.round(actualFrequency * 10000) / 10000,
+      count: data.count,
+      isWellCalibrated: calibrationError < 0.05,
+    };
+  }).sort((a, b) => a.predictedProbability - b.predictedProbability);
+
+  const calibrationErrors = reliabilityDiagram.map(d => Math.abs(d.predictedProbability - d.actualFrequency));
+  const expectedCalibrationError = calibrationErrors.length > 0 
+    ? calibrationErrors.reduce((a, b) => a + b, 0) / calibrationErrors.length 
+    : 0;
+  const maxCalibrationError = calibrationErrors.length > 0 ? Math.max(...calibrationErrors) : 0;
+
+  const byStrength: Record<string, { brierScore: number; logLoss: number; ece: number; count: number; resolvedCount: number }> = {};
+  for (const [strength, data] of byStrengthMap.entries()) {
+    byStrength[strength] = {
+      brierScore: Math.round((data.sumBrier / data.resolvedCount) * 10000) / 10000,
+      logLoss: Math.round((data.sumLogLoss / data.resolvedCount) * 10000) / 10000,
+      ece: Math.round((data.sumEce / data.resolvedCount) * 10000) / 10000,
+      count: data.count,
+      resolvedCount: data.resolvedCount,
+    };
+  }
+
+  return {
+    brierScore: Math.round((totalBrier / resolved.length) * 10000) / 10000,
+    logLoss: Math.round((totalLogLoss / resolved.length) * 10000) / 10000,
+    expectedCalibrationError: Math.round(expectedCalibrationError * 10000) / 10000,
+    maxCalibrationError: Math.round(maxCalibrationError * 10000) / 10000,
+    totalPredictions: signals.length,
+    resolvedPredictions: resolved.length,
+    reliabilityDiagram,
+    byStrength,
+  };
+}

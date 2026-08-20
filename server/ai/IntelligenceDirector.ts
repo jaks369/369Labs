@@ -3,6 +3,7 @@ import { PatternResult } from "../signalEngine";
 import { scanTicks } from "../signalScanner";
 import { aiOrchestrator } from "./AIOrchestrator";
 import { MarketHealth } from "./types";
+import { marketRegimeDetector, type RegimeResult } from "./StrategyEngine";
 
 /**
  * IntelligenceDirector — the decision layer between raw engine output and the
@@ -60,6 +61,7 @@ export interface MarketDecision {
   topCondition: ConditionView | null;
   healthScore: number;
   volatility: string;
+  regime?: { regime: string; aligned: boolean; reason: string };
 }
 
 export interface Development {
@@ -203,42 +205,61 @@ function submarketOf(symbol: string): string {
 
 // Per-market stance: WHY / WHAT TO WATCH / WHAT CHANGES — all derived from the
 // validated engine output, never from invented heuristics.
-function decide(results: PatternResult[], symbol: string, health: MarketHealth | undefined): MarketDecision {
+async function decide(results: PatternResult[], symbol: string, health: MarketHealth | undefined): Promise<MarketDecision> {
   const displayName = getSymbolDisplayName(symbol);
   const healthScore = health?.score ?? 0;
   const volatility = health?.volatility ?? "—";
 
+  // Regime detection - informs stance weighting
+  let regime: RegimeResult | null = null;
+  try {
+    regime = await marketRegimeDetector.detect(symbol);
+  } catch {
+    // Regime detection failed, continue without it
+  }
+
+  const regimeAligned = !!(regime && (regime.regime === 'bullish' || regime.regime === 'bearish' || regime.regime === 'calm'));
+  const regimeReason = regime 
+    ? `trend=${regime.indicators.trend}, momentum=${regime.indicators.momentum}, vol=${regime.indicators.volatility}, noise=${regime.indicators.noise}`
+    : '';
+
   const top = bestValidated(results);
   if (top && top.tier === "strong") {
     const cv = conditionView(top, symbol);
+    const stance = regime && !regimeAligned ? "WATCH" : "TRADE";
     return {
       symbol,
       displayName,
       submarket: submarketOf(symbol),
-      stance: "TRADE",
-      stanceRule: "Verified condition — small-size candidates only",
-      why: `${top.supportsLabel} is validated here: ${cv.interpretation}`,
-      whatToWatch: `Trade only while the condition stays inside its valid window; re-run the engine when the trigger stops printing.`,
+      stance,
+      stanceRule: regime && !regimeAligned ? "Verified condition but regime misaligned — size down" : "Verified condition — small-size candidates only",
+      why: `${top.supportsLabel} is validated here: ${cv.interpretation}${regime ? ` · Regime: ${regime.regime} ${regimeAligned ? "✓ aligned" : "✗ misaligned"}` : ""}`,
+      whatToWatch: regime && !regimeAligned 
+        ? `Regime (${regime.regime}) doesn't favor this signal — monitor for regime shift before sizing up.`
+        : `Trade only while the condition stays inside its valid window; re-run the engine when the trigger stops printing.`,
       wouldTrigger: top.triggerText,
       topCondition: cv,
       healthScore,
       volatility,
+      regime: regime ? { regime: regime.regime, aligned: regimeAligned, reason: regimeReason } : undefined,
     };
   }
   if (top && top.tier === "watch") {
     const cv = conditionView(top, symbol);
+    const stance = regime && regimeAligned ? "WATCH" : "WATCH";
     return {
       symbol,
       displayName,
       submarket: submarketOf(symbol),
-      stance: "WATCH",
-      stanceRule: "Interesting but unconfirmed",
-      why: `${top.supportsLabel}: ${cv.interpretation}  Do NOT size up.`,
-      whatToWatch: `Next forward windows for ${top.supportsLabel} — if it keeps holding, this market rotates toward TRADE.`,
+      stance,
+      stanceRule: regime && regimeAligned ? "Interesting — regime aligned, monitor for confirmation" : "Interesting but unconfirmed",
+      why: `${top.supportsLabel}: ${cv.interpretation}  Do NOT size up.${regime ? ` · Regime: ${regime.regime} ${regimeAligned ? "✓ aligned" : "✗ misaligned"}` : ""}`,
+      whatToWatch: `Next forward windows for ${top.supportsLabel} — if it keeps holding, this market rotates toward TRADE.${regime ? ` Regime: ${regime.regime}.` : ""}`,
       wouldTrigger: `${top.supportsLabel} holds its forward windows and clears CI + FDR.`,
       topCondition: cv,
       healthScore,
       volatility,
+      regime: regime ? { regime: regime.regime, aligned: regimeAligned, reason: regimeReason } : undefined,
     };
   }
   const ins = results.filter((r) => r.tier === "insufficient");
@@ -391,7 +412,7 @@ export async function buildIntelligenceReport(): Promise<IntelligenceReport> {
 
   for (const sym of symbols) {
     const results = await scanFor(sym);
-    const decision = decide(results, sym, healthMap.get(sym));
+    const decision = await decide(results, sym, healthMap.get(sym));
     markets.push(decision);
     if (decision.topCondition) conditions.push(decision.topCondition);
   }

@@ -3362,6 +3362,10 @@ aiMarket: router({
       const { getConciergeLoopStatus } = await import("./concierge");
       return getConciergeLoopStatus();
     }),
+    calibration: protectedProcedure.query(async ({ ctx }) => {
+      const { computeSignalCalibration } = await import("./concierge");
+      return computeSignalCalibration(ctx.user.id);
+    }),
   }),
   digitTrader: router({
     snapshot: protectedProcedure

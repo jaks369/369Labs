@@ -7,6 +7,7 @@ import { aiMemory } from "./AIMemory";
 import * as db from "../db";
 import { AIInsight, MarketHealth, AIPrediction, LiveFeedEntry, AIState, RiskAdvisory } from "./types";
 import { getAllVolatilitySymbols } from "@shared/symbols";
+import { marketRegimeDetector } from "./StrategyEngine";
 
 const VOLATILITY_SYMBOLS = getAllVolatilitySymbols();
 const POLL_INTERVAL = 15000;
@@ -132,6 +133,15 @@ export class AIOrchestrator {
           if (prices.length < 20) continue;
 
           const health = this.state.health.get(symbol);
+
+          // Regime detection - informs signal weighting
+          let regime: ReturnType<typeof marketRegimeDetector.detect> | null = null;
+          try {
+            regime = marketRegimeDetector.detect(symbol);
+          } catch {
+            // Regime detection failed, continue without it
+          }
+
           const risk = await this.riskEngine.assess(symbol, prices);
           const now = Date.now();
           const lastAlert = this.lastRiskAlert.get(symbol) || 0;

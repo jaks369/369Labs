@@ -174,6 +174,7 @@ export default function Concierge() {
   const candidates = trpc.concierge.liveCandidates.useQuery(undefined, { enabled: isAuthenticated });
   const history = trpc.concierge.history.useQuery({ limit: 30 }, { enabled: isAuthenticated });
   const accuracy = trpc.concierge.accuracy.useQuery(undefined, { enabled: isAuthenticated });
+  const calibration = trpc.concierge.calibration.useQuery(undefined, { enabled: isAuthenticated });
   const settingsQ = trpc.concierge.getSettings.useQuery(undefined, { enabled: isAuthenticated });
   const loopStatus = trpc.concierge.loopStatus.useQuery(undefined, { enabled: isAuthenticated, refetchInterval: 5000 });
   const marketContext = trpc.concierge.marketContext.useQuery({ symbol: ctxSymbol }, { enabled: isAuthenticated });
@@ -526,6 +527,33 @@ export default function Concierge() {
                 </div>
                 <p className="text-[10px] text-[var(--text-disabled)] leading-relaxed">
                   Every signal's score is an agreement read (how many indicators pointed the same way), not a predicted win rate. The only performance measure here is the historical win rate above.
+                </p>
+              </div>
+            )}
+          </Card>
+
+          {/* Calibration */}
+          <Card title="Signal calibration" icon={<Target className="w-4 h-4 text-[var(--accent)]" />}>
+            {calibration.isLoading ? <Loader2 className="w-5 h-5 animate-spin text-[var(--accent)]" /> : calibration.data && (
+              <div className="space-y-4">
+                <div className="grid grid-cols-3 gap-2">
+                  <Metric label="Resolved" value={calibration.data.resolvedPredictions} />
+                  <Metric label="Brier score" value={calibration.data.brierScore.toFixed(4)} accent={calibration.data.brierScore < 0.25 ? "text-[var(--green)]" : "text-[var(--red)]"} />
+                  <Metric label="ECE" value={calibration.data.expectedCalibrationError.toFixed(4)} accent={calibration.data.expectedCalibrationError < 0.05 ? "text-[var(--green)]" : "text-[var(--red)]"} />
+                </div>
+                <div className="space-y-2">
+                  {calibration.data.reliabilityDiagram.map((bin: any, i: number) => (
+                    <div key={i} className="flex items-center justify-between text-xs">
+                      <span className="text-[var(--text-secondary)]">{bin.bin}</span>
+                      <span className="text-[var(--text-muted)]">Pred: {(bin.predictedProbability * 100).toFixed(1)}% · Actual: {(bin.actualFrequency * 100).toFixed(1)}% · N={bin.count}</span>
+                      <span className={bin.isWellCalibrated ? "text-[var(--green)] text-[10px] font-bold" : "text-[var(--red)] text-[10px] font-bold"}>
+                        {bin.isWellCalibrated ? "✓ Calibrated" : "✗ Off"}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+                <p className="text-[10px] text-[var(--text-disabled)] leading-relaxed">
+                  Brier score: lower is better (0 = perfect). ECE (Expected Calibration Error): {"<"}5% is well-calibrated. Each bin shows predicted vs actual frequency — should sit on the diagonal.
                 </p>
               </div>
             )}
