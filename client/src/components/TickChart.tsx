@@ -9,6 +9,9 @@ interface TickChartProps {
   decimalPlaces?: number; // ignored - fetched from Deriv active_symbols
   compact?: boolean;
   fillHeight?: boolean;
+  /** When false (no Deriv connection), chart shows "Awaiting data" instead of
+   *  serving stale cached / historical ticks. */
+  connected?: boolean;
 }
 
 const MAX_BUFFER = 2000;
@@ -27,7 +30,7 @@ const HISTORY_LIMIT = 500;
 // server snapshot that looks like it "starts from 1" every time.
 const rollingCache = new Map<string, PriceChartPoint[]>();
 
-export default function TickChart({ symbol, maxDataPoints = 100, compact = false, fillHeight = false }: TickChartProps) {
+export default function TickChart({ symbol, maxDataPoints = 100, compact = false, fillHeight = false, connected = true }: TickChartProps) {
   const [timeframe, setTimeframe] = useState<number>(maxDataPoints || 100);
   const [error, setError] = useState<string | null>(null);
   const [decimalPlaces, setDecimalPlaces] = useState<number>(3);
@@ -72,17 +75,19 @@ export default function TickChart({ symbol, maxDataPoints = 100, compact = false
     setVisibleData([]);
     setInitialLoad(false);
     setError(null);
-    const cached = rollingCache.get(symbol);
-    if (cached && cached.length) {
-      bufferRef.current = cached;
-      setVisibleData(cached.slice(-MAX_BUFFER));
-      setInitialLoad(true);
+    if (connected) {
+      const cached = rollingCache.get(symbol);
+      if (cached && cached.length) {
+        bufferRef.current = cached;
+        setVisibleData(cached.slice(-MAX_BUFFER));
+        setInitialLoad(true);
+      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [symbol]);
+  }, [symbol, connected]);
 
   // Initial history load - prepend to buffer once (only when nothing cached)
-  const historyQuery = trpc.market.getHistory.useQuery({ symbol, limit: HISTORY_LIMIT }, { enabled: Boolean(symbol) && !initialLoad });
+  const historyQuery = trpc.market.getHistory.useQuery({ symbol, limit: HISTORY_LIMIT }, { enabled: Boolean(symbol) && !initialLoad && connected });
   useEffect(() => {
     const ticks = historyQuery.data?.ticks;
     if (!ticks || !ticks.length || initialLoad) return;

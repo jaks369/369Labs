@@ -873,7 +873,7 @@ export default function Dashboard() {
             {/* Chart Plot */}
             <div className="flex-1 min-h-0 relative terminal-chart-panel">
               <div className="chart-plot h-full" style={{ background: 'transparent', minHeight: 0 }}>
-                <TickChart symbol={selectedSymbol} maxDataPoints={50} decimalPlaces={decimalPlaces} fillHeight />
+                <TickChart symbol={selectedSymbol} maxDataPoints={50} decimalPlaces={decimalPlaces} fillHeight connected={derivStatus === "connected"} />
               </div>
             </div>
           </div>

@@ -7,7 +7,7 @@
 // every visit gets the latest build. Cached copies are kept only as an
 // offline fallback, and old cache versions are purged on activate.
 
-const CACHE = "369labs-v2";
+const CACHE = "369labs-v3";
 
 self.addEventListener("install", () => {
   self.skipWaiting();

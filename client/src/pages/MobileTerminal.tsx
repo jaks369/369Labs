@@ -59,7 +59,7 @@ export default function MobileTerminal() {
     { symbol, limit: 200 },
     { enabled: showPriceHistory && Boolean(symbol), staleTime: 30000, gcTime: 120000 },
   );
-  const { accountType } = useDerivStatus();
+  const { accountType, status: derivStatus } = useDerivStatus();
   const [saveError, setSaveError] = useState<string | null>(null);
 
   // Persist a trade record with bounded retry so a transient reject (dropped
@@ -398,7 +398,7 @@ export default function MobileTerminal() {
 
       {/* Chart */}
       <div className="px-0 pt-1 pb-0">
-        <TickChart symbol={symbol} maxDataPoints={TIMEFRAMES[timeframe].points} decimalPlaces={decimalPlaces} compact />
+        <TickChart symbol={symbol} maxDataPoints={TIMEFRAMES[timeframe].points} decimalPlaces={decimalPlaces} compact connected={derivStatus === "connected"} />
       </div>
 
       {/* Balance — near trade controls */}
