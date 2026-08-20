@@ -1,4 +1,4 @@
-import { int, mysqlEnum, mysqlTable, text, timestamp, varchar, decimal, boolean, json, bigint } from "drizzle-orm/mysql-core";
+import { int, mysqlEnum, mysqlTable, text, timestamp, varchar, decimal, boolean, json, bigint, index } from "drizzle-orm/mysql-core";
 import { relations } from "drizzle-orm";
 
 /**
@@ -106,7 +106,11 @@ export const trades = mysqlTable("trades", {
   discoveredAt: timestamp("discoveredAt"),
   reconciled: boolean("reconciled").default(false).notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
-});
+}, (table) => ({
+  resultIdx: index("trades_result_idx").on(table.result),
+  contractIdIdx: index("trades_contract_id_idx").on(table.contractId),
+  botRunIdIdx: index("trades_bot_run_id_idx").on(table.botRunId),
+}));
 
 export type Trade = typeof trades.$inferSelect;
 export type InsertTrade = typeof trades.$inferInsert;
