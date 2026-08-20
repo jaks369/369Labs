@@ -27,6 +27,7 @@ import type { MarketHealth, RiskAdvisory } from "./ai/types";
 import { derivManager } from "./derivConnection";
 import { buildLimitOrder } from "@shared/slTp";
 import { fireWebhookEvent } from "./webhookExecutor";
+import { logger } from "./_core/logger";
 
 // ---------------------------------------------------------------------------
 // Types

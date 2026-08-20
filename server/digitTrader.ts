@@ -20,6 +20,7 @@ import { getStandardVolatilitySymbols } from "@shared/symbols";
 import { derivManager } from "./derivConnection";
 import { getRecentTicks, isFeedStale } from "./tickCollector";
 import { fireWebhookEvent } from "./webhookExecutor";
+import { logger } from "./_core/logger";
 
 export const READ_WINDOW_TICKS = 100; // digits sampled per read
 export const READ_DEDUP_MS = 4 * 3600 * 1000; // same symbol+read kept open 4h
