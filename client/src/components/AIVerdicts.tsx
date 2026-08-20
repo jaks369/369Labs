@@ -35,7 +35,7 @@ function marketHealth(ticks: any[]) {
     vol: rangePct > 0.5 ? "high" : rangePct > 0.15 ? "medium" : "low",
     rangePct,
     hottestDigit: hottest ? hottest[0] : null,
-    hottestPct: hottest && digits.length ? Math.round((Number(hottest[1]) / digits.length) * 100) : 0,
+    hottestPct: hottest && ticks.length ? Math.round((Number(hottest[1]) / ticks.length) * 100) : 0,
   };
 }
 

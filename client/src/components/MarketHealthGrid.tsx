@@ -100,7 +100,6 @@ export default function MarketHealthGrid({ data, loading }: MarketHealthGridProp
               </span>
             </div>
             <div className={`text-xl font-bold font-mono ${scoreColor(h.score)}`}><IntegerStat value={h.score} /></div>
-            <div className="text-[8px] text-[var(--text-muted)] mb-2">{h.displayName}</div>
             <div className="flex items-center gap-2 text-[8px] text-[var(--text-muted)]">
               <span className="flex items-center gap-0.5">
                 {h.trend > 5 ? <TrendingUp className="w-2.5 h-2.5 text-[var(--green)]" /> : h.trend < -5 ? <TrendingDown className="w-2.5 h-2.5 text-[var(--red)]" /> : <Minus className="w-2.5 h-2.5 text-[var(--text-muted)]" />}

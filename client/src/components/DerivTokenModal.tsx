@@ -9,7 +9,6 @@ import { derivWS } from '@/services/derivWebSocket';
 interface Props { open: boolean; onClose: () => void; }
 
 export default function DerivTokenModal({ open, onClose }: Props) {
-  if (!open) return null;
   const [token, setToken] = useState('');
   const [preview, setPreview] = useState('');
   const [status, setStatus] = useState<'idle'|'ok'|'error'>('idle');
@@ -19,6 +18,16 @@ export default function DerivTokenModal({ open, onClose }: Props) {
   const rm = trpc.deriv.removeToken.useMutation();
 
   useEffect(() => { if (q.data?.token) { setPreview(q.data.token.substring(0, 10) + '...'); setStatus('ok'); setMsg('Connected'); } }, [q.data]);
+
+  useEffect(() => {
+    if (!open) {
+      setToken('');
+      setStatus('idle');
+      setMsg('');
+    }
+  }, [open]);
+
+  if (!open) return null;
 
   const save = async () => {
     try {
@@ -35,8 +44,8 @@ export default function DerivTokenModal({ open, onClose }: Props) {
   };
 
   return createPortal(
-    <div className="fixed inset-0 bg-black/70 z-[100] flex items-center justify-center p-4 animate-modal-backdrop">
-      <div className="w-full max-w-md bg-[var(--card)] rounded-xl elevation-2 animate-modal-panel">
+    <div className="fixed inset-0 bg-black/70 z-[100] flex items-center justify-center p-4 animate-modal-backdrop" onClick={onClose}>
+      <div className="w-full max-w-md bg-[var(--card)] rounded-xl elevation-2 animate-modal-panel" onClick={e => e.stopPropagation()}>
         <div className="flex items-center justify-between p-5 border-b border-[var(--border)]">
           <h2 className="text-lg font-bold text-white">Connect Deriv Account</h2>
           <button onClick={onClose} className="text-[var(--text-secondary)] hover:text-white"><X className="w-5 h-5" /></button>

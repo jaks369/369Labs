@@ -13,7 +13,7 @@ export default function MobileTabBar() {
   const [location, navigate] = useLocation();
 
   const isActive = (path: string) => {
-    return location.startsWith(path);
+    return location === path || location.startsWith(path + "/");
   };
 
   return (

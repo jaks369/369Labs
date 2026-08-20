@@ -945,20 +945,20 @@ export default function Settings() {
               <p className="text-sm text-[var(--text-muted)] mb-2">Data retention controls how long your trade history, bot logs, and AI knowledge are kept.</p>
               <div className="flex items-center gap-3">
                 <span className="text-xs text-[var(--text-secondary)]">Retain trade data for:</span>
-                <select className="bg-[var(--card)] border border-[var(--border)] rounded-lg px-3 py-1.5 text-xs text-white outline-none">
+                <select value="365" onChange={() => {}} className="bg-[var(--card)] border border-[var(--border)] rounded-lg px-3 py-1.5 text-xs text-white outline-none">
                   <option value="30">30 days</option>
                   <option value="90">90 days</option>
                   <option value="180">180 days</option>
-                  <option value="365" selected>1 year</option>
+                  <option value="365">1 year</option>
                   <option value="0">Indefinitely</option>
                 </select>
               </div>
             </div>
             <div className="flex gap-2">
-              <Button className="bg-[var(--card)] border border-[var(--border)] text-[var(--text-secondary)] hover:text-white text-xs">
+              <Button onClick={() => toast("Export coming soon", "info")} className="bg-[var(--card)] border border-[var(--border)] text-[var(--text-secondary)] hover:text-white text-xs">
                 <Download className="w-3.5 h-3.5 mr-1" /> Export All Data
               </Button>
-              <Button className="bg-[var(--red-soft)] text-[var(--red)] border border-[var(--red)]/30 hover:bg-[var(--red)]/20 text-xs">
+              <Button onClick={() => { localStorage.clear(); toast("Cached data cleared", "success"); }} className="bg-[var(--red-soft)] text-[var(--red)] border border-[var(--red)]/30 hover:bg-[var(--red)]/20 text-xs">
                 <Trash2 className="w-3.5 h-3.5 mr-1" /> Clear Cached Data
               </Button>
             </div>

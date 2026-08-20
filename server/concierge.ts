@@ -661,9 +661,15 @@ export async function scanAndPersistForUser(userId: number): Promise<ScanAndPers
     if (balance !== null) return balance;
     try {
       const snap = await getPortfolioSnapshot(userId);
-      balance = snap?.balance > 0 ? snap.balance : 500;
+      if (!snap || snap.balance <= 0) {
+        logger.warn("Could not read balance for concierge user", { userId });
+        balance = 0;
+      } else {
+        balance = snap.balance;
+      }
     } catch {
-      balance = 500;
+      logger.warn("Balance fetch failed for concierge user", { userId });
+      balance = 0;
     }
     return balance;
   };

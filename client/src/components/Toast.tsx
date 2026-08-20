@@ -1,16 +1,23 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { addError } from "@/lib/errorLog";
 
 export type ToastKind = "success" | "error" | "info" | "warning" | "loading";
 
 let listeners: ((t: { id: number; kind: ToastKind; text: string }) => void)[] = [];
+let dismissListeners: ((id: number) => void)[] = [];
 let nextId = 1;
 
-export function toast(text: string, kind: ToastKind = "info", _options?: { duration?: number; onDismiss?: () => void }) {
+export function toast(text: string, kind: ToastKind = "info", options?: { duration?: number }) {
   const id = nextId++;
   const t = { id, kind, text };
   listeners.forEach((l) => l(t));
   if (kind === "error" || kind === "warning") addError(text, kind);
+  const duration = options?.duration ?? (kind === "loading" ? 0 : kind === "error" ? 6000 : 4000);
+  if (duration > 0) {
+    setTimeout(() => {
+      dismissListeners.forEach((l) => l(id));
+    }, duration);
+  }
   return id;
 }
 
@@ -21,10 +28,18 @@ export function useToast(onToast: (t: { id: number; kind: ToastKind; text: strin
   }, deps || []);
 }
 
+export function useToastDismiss(onDismiss: (id: number) => void) {
+  useEffect(() => {
+    dismissListeners.push(onDismiss);
+    return () => { dismissListeners = dismissListeners.filter((l) => l !== onDismiss); };
+  }, []);
+}
+
 export function ToastViewport({ items, onDismiss }: {
   items: { id: number; kind: ToastKind; text: string }[];
   onDismiss: (id: number) => void;
 }) {
+  useToastDismiss(onDismiss);
   return (
     <div className="fixed bottom-4 right-4 z-[100] flex flex-col gap-2 w-80 max-w-[90vw]">
       {items.map((t) => (

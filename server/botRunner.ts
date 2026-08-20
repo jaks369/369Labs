@@ -204,9 +204,9 @@ class BotRunner {
     try {
       await db.updateBotRun(parseInt(id), userId, { 
         totalTrades: bot.totalTrades,
-        totalProfitLoss: bot.totalProfitLoss.toString(),
+        totalProfitLoss: (Number.isFinite(bot.totalProfitLoss) ? bot.totalProfitLoss : 0).toString(),
         dailyTrades: bot.dailyTrades,
-        dailyPnl: bot.dailyPnl.toString(),
+        dailyPnl: (Number.isFinite(bot.dailyPnl) ? bot.dailyPnl : 0).toString(),
         safety: bot.def.safety,
         lossStreak: bot.lossStreak,
         hasOpenTrade: bot.hasOpenTrade,

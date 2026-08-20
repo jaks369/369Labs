@@ -117,7 +117,7 @@ export default function MarketRiskPanel({ data, loading }: MarketRiskPanelProps)
             {(a.warnings?.length || 0) > 0 && (
               <div className="space-y-0.5 mb-1.5">
                 {(a.warnings || []).map((w, j) => (
-                  <p key={j} className="text-[8px] text-[var(--red)]">ΓÜá {w}</p>
+                  <p key={j} className="text-[8px] text-[var(--red)]">{"\u26A0"} {w}</p>
                 ))}
               </div>
             )}

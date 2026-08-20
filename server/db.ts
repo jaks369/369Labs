@@ -936,7 +936,7 @@ export async function saveTrade(trade: InsertTrade): Promise<Trade> {
     if (!pool) throw new Error("Pool not available");
     try {
       const [r] = await pool.execute(
-        "INSERT INTO trades (userId, botRunId, strategyId, entryTime, exitTime, entryPrice, exitPrice, stake, profitLoss, symbol, contractType, result, contractId) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        "INSERT INTO trades (userId, botRunId, strategyId, entryTime, exitTime, entryPrice, exitPrice, stake, profitLoss, symbol, contractType, result, contractId, source) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
         [
           trade.userId,
           trade.botRunId ?? null,
@@ -951,6 +951,7 @@ export async function saveTrade(trade: InsertTrade): Promise<Trade> {
           trade.contractType ?? "CALL",
           trade.result ?? null,
           trade.contractId ?? null,
+          (trade as any).source ?? null,
         ],
       );
       id = (r as any).insertId;
@@ -959,7 +960,7 @@ export async function saveTrade(trade: InsertTrade): Promise<Trade> {
       // try without symbol (schema may be missing it)
       try {
         const [r] = await pool.execute(
-          "INSERT INTO trades (userId, botRunId, strategyId, entryTime, exitTime, entryPrice, exitPrice, stake, profitLoss, contractType, result, contractId) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+          "INSERT INTO trades (userId, botRunId, strategyId, entryTime, exitTime, entryPrice, exitPrice, stake, profitLoss, contractType, result, contractId, source) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
           [
             trade.userId,
             trade.botRunId ?? null,
@@ -973,6 +974,7 @@ export async function saveTrade(trade: InsertTrade): Promise<Trade> {
             trade.contractType ?? "CALL",
             trade.result ?? null,
             trade.contractId ?? null,
+            (trade as any).source ?? null,
           ],
         );
         id = (r as any).insertId;
@@ -980,7 +982,7 @@ export async function saveTrade(trade: InsertTrade): Promise<Trade> {
         if (e3?.errno !== 1054 && e3?.code !== "ER_BAD_FIELD_ERROR") throw e3;
         // try without both symbol and contractType
         const [r] = await pool.execute(
-          "INSERT INTO trades (userId, botRunId, strategyId, entryTime, exitTime, entryPrice, exitPrice, stake, profitLoss, result, contractId) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+          "INSERT INTO trades (userId, botRunId, strategyId, entryTime, exitTime, entryPrice, exitPrice, stake, profitLoss, result, contractId, source) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
           [
             trade.userId,
             trade.botRunId ?? null,
@@ -993,6 +995,7 @@ export async function saveTrade(trade: InsertTrade): Promise<Trade> {
             trade.profitLoss ?? null,
             trade.result ?? null,
             trade.contractId ?? null,
+            (trade as any).source ?? null,
           ],
         );
         id = (r as any).insertId;
@@ -3173,7 +3176,7 @@ export async function setGuidingSignalOutcome(id: number, status: "win" | "loss"
   const db = await getDb();
   if (!db) return;
   try {
-    await db.update(guidingSignals).set({ status, outcomeEpoch }).where(eq(guidingSignals.id, id));
+    await db.update(guidingSignals).set({ status, outcomeEpoch }).where(and(eq(guidingSignals.id, id), eq(guidingSignals.status, "open")));
   } catch (e: any) {
     console.error("[setGuidingSignalOutcome] failed", e?.message || e);
   }
@@ -3293,7 +3296,7 @@ export async function setDigitReadOutcome(id: number, status: "win" | "loss" | "
   const db = await getDb();
   if (!db) return;
   try {
-    await db.update(digitReads).set({ status, outcomeEpoch }).where(eq(digitReads.id, id));
+    await db.update(digitReads).set({ status, outcomeEpoch }).where(and(eq(digitReads.id, id), eq(digitReads.status, "open")));
   } catch (e: any) {
     console.error("[setDigitReadOutcome] failed", e?.message || e);
   }
