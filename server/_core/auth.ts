@@ -60,7 +60,7 @@ function getSessionSecret() {
 export async function createSessionToken(
   userId: number,
   sessionId: string,
-  expiresInMs: number = ONE_YEAR_MS
+  expiresInMs: number = SESSION_MS
 ): Promise<string> {
   const issuedAt = Date.now();
   const expirationSeconds = Math.floor((issuedAt + expiresInMs) / 1000);
