@@ -96,6 +96,8 @@ export interface ConciergeSettings {
   autoExec: boolean;
   /** Max daily loss in USD (0 = off). */
   maxDailyLoss: number;
+  /** Position sizing method: 'fixed' | 'kelly' | 'vol_adjusted' */
+  sizingMethod: 'fixed' | 'kelly' | 'vol_adjusted';
 }
 
 export const DEFAULT_SETTINGS: ConciergeSettings = {
@@ -108,6 +110,7 @@ export const DEFAULT_SETTINGS: ConciergeSettings = {
   takeProfit: 0,
   autoExec: false,
   maxDailyLoss: 0,
+  sizingMethod: 'fixed',
 };
 
 // ---------------------------------------------------------------------------

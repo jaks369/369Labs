@@ -263,7 +263,7 @@ export default function Concierge() {
     const maxDailyLoss = Math.max(0, parseFloat(draftMaxDailyLoss) || 0);
 
     patchSettings.mutate(
-      { maxPerDay, stake, stopLoss, takeProfit, maxDailyLoss },
+      { maxPerDay, stake, stopLoss, takeProfit, maxDailyLoss, sizingMethod },
       {
         onSuccess: (saved) => {
           setSaveNote("Settings saved.");

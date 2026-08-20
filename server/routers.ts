@@ -3351,6 +3351,7 @@ aiMarket: router({
         symbols: z.array(z.string()).max(12).optional(),
         autoExec: z.boolean().optional(),
         maxDailyLoss: z.number().min(0).max(1000000).optional(),
+        sizingMethod: z.enum(['fixed', 'kelly', 'vol_adjusted']).optional(),
       }))
       .mutation(async ({ ctx, input }) => {
         const { updateSettings, getSettingsFor } = await import("./concierge");
