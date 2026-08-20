@@ -39,7 +39,15 @@ const csrfCheck = t.middleware(async opts => {
   const { ctx, next } = opts;
   const origin = ctx.req.headers["origin"];
   const host = ctx.req.headers["host"];
-  if (origin && host) {
+  const method = ctx.req.method;
+
+  // Only check CSRF on mutating methods
+  const isMutating = ["POST", "PUT", "PATCH", "DELETE"].includes(method);
+
+  if (isMutating) {
+    if (!origin || !host) {
+      throw new TRPCError({ code: "FORBIDDEN", message: "Missing Origin header" });
+    }
     try {
       const originHost = new URL(origin).host;
       if (originHost !== host) {
