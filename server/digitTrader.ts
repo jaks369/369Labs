@@ -237,6 +237,7 @@ async function placeAutoTrade(userId: number, conn: any, symbol: string, read: D
     return false;
   }
 
+  const entryTime = new Date();
   try {
     await db.saveTrade({
       userId,
@@ -246,7 +247,7 @@ async function placeAutoTrade(userId: number, conn: any, symbol: string, read: D
       entryPrice: String(entryPrice),
       result: "pending",
       contractId: String(buy.buy.contract_id),
-      entryTime: new Date(),
+      entryTime,
       source: DIGIT_TRADER_SOURCE,
     });
   } catch (e: any) {
@@ -265,7 +266,7 @@ async function placeAutoTrade(userId: number, conn: any, symbol: string, read: D
         entryPrice: String(entryPrice),
         result: "pending",
         contractId: String(buy.buy.contract_id),
-        entryTime: new Date(),
+        entryTime,
         source: DIGIT_TRADER_SOURCE,
       });
       console.log(`[digitTrader] Retry succeeded for contract ${buy.buy.contract_id}`);

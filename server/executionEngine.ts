@@ -74,7 +74,7 @@ async function executeBotCycleInner(): Promise<void> {
   // safety limits read) reset — totalTrades/totalProfitLoss are LIFETIME counters
   // and must survive across days (they're what the UI shows as all-time stats).
   const now = Date.now();
-  const midnight = new Date().setHours(0, 0, 0, 0);
+  const midnight = new Date().setUTCHours(0, 0, 0, 0);
   for (const bot of allBots) {
     if (!bot.lastDailyReset || bot.lastDailyReset < midnight) {
       bot.dailyTrades = 0;
@@ -225,6 +225,15 @@ async function executeBotCycleInner(): Promise<void> {
       // Record the trade as pending FIRST (settlement happens in SettlementTracker).
       // If this save fails we must NOT set hasOpenTrade=true, otherwise the bot is
       // locked forever with a live contract that has no DB row to settle.
+      const entryTime = new Date();
+      const botRunId = (() => {
+        const parsed = parseInt(bot.def.id, 10);
+        if (isNaN(parsed)) {
+          console.error(`[ExecutionEngine] Invalid bot run ID: ${bot.def.id} (must be numeric)`);
+          return undefined;
+        }
+        return parsed;
+      })();
       try {
         await db.saveTrade({
           userId: bot.def.userId,
@@ -234,15 +243,8 @@ async function executeBotCycleInner(): Promise<void> {
           entryPrice: String(entryPrice),
           result: "pending",
           contractId: String(buy.buy.contract_id),
-          entryTime: new Date(),
-          botRunId: (() => {
-            const parsed = parseInt(bot.def.id, 10);
-            if (isNaN(parsed)) {
-              console.error(`[ExecutionEngine] Invalid bot run ID: ${bot.def.id} (must be numeric)`);
-              return undefined;
-            }
-            return parsed;
-          })(),
+          entryTime,
+          botRunId,
         });
       } catch (e: any) {
         console.error(`[ExecutionEngine] CRITICAL: contract ${buy.buy.contract_id} was bought on Deriv but the DB save failed for bot ${bot.def.id}. Retrying once...`, e?.message || e);
@@ -257,12 +259,8 @@ async function executeBotCycleInner(): Promise<void> {
             entryPrice: String(entryPrice),
             result: "pending",
             contractId: String(buy.buy.contract_id),
-            entryTime: new Date(),
-            botRunId: (() => {
-              const parsed = parseInt(bot.def.id, 10);
-              if (isNaN(parsed)) return undefined;
-              return parsed;
-            })(),
+            entryTime,
+            botRunId,
           });
           console.log(`[ExecutionEngine] Retry succeeded for contract ${buy.buy.contract_id}`);
         } catch (retryErr: any) {

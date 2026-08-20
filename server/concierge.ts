@@ -743,6 +743,7 @@ export async function scanAndPersistForUser(userId: number): Promise<ScanAndPers
                       return null;
                     });
                     if (buy?.buy?.contract_id) {
+                      const entryTime = new Date();
                       try {
                         await db.saveTrade({
                           userId,
@@ -752,7 +753,7 @@ export async function scanAndPersistForUser(userId: number): Promise<ScanAndPers
                           entryPrice: String(sig.entryPrice),
                           result: "pending",
                           contractId: String(buy.buy.contract_id),
-                          entryTime: new Date(),
+                          entryTime,
                           source: "concierge",
                         });
                         console.log(`[concierge] Auto trade placed — #${buy.buy.contract_id} ${sym} ${contractType} @ $${stake}`);
@@ -769,7 +770,7 @@ export async function scanAndPersistForUser(userId: number): Promise<ScanAndPers
                             entryPrice: String(sig.entryPrice),
                             result: "pending",
                             contractId: String(buy.buy.contract_id),
-                            entryTime: new Date(),
+                            entryTime,
                             source: "concierge",
                           });
                           console.log(`[concierge] Retry succeeded for contract ${buy.buy.contract_id}`);

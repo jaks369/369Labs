@@ -1120,14 +1120,14 @@ export async function settleTrade(
         exitPrice: data.exitPrice,
         exitTime: data.exitTime,
       })
-      .where(eq(trades.id, tradeId));
+      .where(and(eq(trades.id, tradeId), eq(trades.result, "pending")));
     const updated = await db.select().from(trades).where(eq(trades.id, tradeId)).limit(1);
     return updated[0] || null;
   } catch {
     const pool = getRawPool();
     if (!pool) return null;
     try {
-      await pool.execute("UPDATE trades SET result=?, profitLoss=?, exitPrice=?, exitTime=? WHERE id=?", [
+      await pool.execute("UPDATE trades SET result=?, profitLoss=?, exitPrice=?, exitTime=? WHERE id=? AND result='pending'", [
         data.result,
         data.profitLoss,
         data.exitPrice,
