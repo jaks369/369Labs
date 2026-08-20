@@ -65,7 +65,7 @@ oauthRouter.get("/callback", async (req: Request, res: Response) => {
   const cookies = parseCookieHeader(req.headers.cookie || "");
   const cookieState = cookies[OAUTH_STATE_COOKIE];
 
-  if (!state || !cookieState || state !== cookieState) {
+  if (!state || !cookieState || state.length !== cookieState.length || !crypto.timingSafeEqual(Buffer.from(state), Buffer.from(cookieState))) {
     return res.redirect(`${ENV.appUrl}/login?oauth_error=invalid_state`);
   }
   res.clearCookie(OAUTH_STATE_COOKIE, { path: "/" });

@@ -245,13 +245,35 @@ async function executeBotCycleInner(): Promise<void> {
           })(),
         });
       } catch (e: any) {
-        console.error(`[ExecutionEngine] CRITICAL: contract ${buy.buy.contract_id} was bought on Deriv but the DB save failed for bot ${bot.def.id}. Not locking the bot.`, e?.message || e);
-        fireWebhookEvent(bot.def.userId, "trade.error", { botId: bot.def.id, symbol, stake, contractId: buy.buy.contract_id, reason: "db_save_failed" }).catch(() => {});
-        continue;
+        console.error(`[ExecutionEngine] CRITICAL: contract ${buy.buy.contract_id} was bought on Deriv but the DB save failed for bot ${bot.def.id}. Retrying once...`, e?.message || e);
+        // Retry once after a brief delay
+        await new Promise(r => setTimeout(r, 1000));
+        try {
+          await db.saveTrade({
+            userId: bot.def.userId,
+            symbol,
+            contractType,
+            stake: String(stake),
+            entryPrice: String(entryPrice),
+            result: "pending",
+            contractId: String(buy.buy.contract_id),
+            entryTime: new Date(),
+            botRunId: (() => {
+              const parsed = parseInt(bot.def.id, 10);
+              if (isNaN(parsed)) return undefined;
+              return parsed;
+            })(),
+          });
+          console.log(`[ExecutionEngine] Retry succeeded for contract ${buy.buy.contract_id}`);
+        } catch (retryErr: any) {
+          console.error(`[ExecutionEngine] CRITICAL: retry also failed for contract ${buy.buy.contract_id}. Contract orphaned on Deriv.`, retryErr?.message || retryErr);
+          fireWebhookEvent(bot.def.userId, "trade.error", { botId: bot.def.id, symbol, stake, contractId: buy.buy.contract_id, reason: "db_save_failed" }).catch(() => {});
+          continue;
+        }
       }
 
       // Track open contract only after the pending row is safely recorded
-      botRunner.setOpenTrade(bot.def.id, bot.def.userId, true);
+      await botRunner.setOpenTrade(bot.def.id, bot.def.userId, true);
       fireWebhookEvent(bot.def.userId, "trade.executed", { botId: bot.def.id, symbol, stake, contractId: buy.buy.contract_id }).catch(() => {});
       traded++;
     } catch (e: any) {

@@ -24,7 +24,7 @@ export function getSessionCookieOptions(req: Request): {
   return {
     httpOnly: true,
     path: "/",
-    sameSite: "lax",
+    sameSite: "strict",
     secure,
   };
 }

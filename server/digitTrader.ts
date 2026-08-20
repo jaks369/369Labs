@@ -192,7 +192,7 @@ async function placeAutoTrade(userId: number, conn: any, symbol: string, read: D
   // Skip cleanly when the connected account can't cover the stake (e.g. an
   // empty soft/demo account) instead of burning a proposal that Deriv rejects.
   const balance = typeof account?.balance === "number" ? account.balance : 0;
-  if (balance > 0 && settings.stake > balance) {
+  if (balance <= 0 || settings.stake > balance) {
     console.warn(`[digitTrader] User ${userId}: balance $${balance.toFixed(2)} below stake $${settings.stake}. Skipping placement on ${symbol}.`);
     return false;
   }
@@ -251,18 +251,39 @@ async function placeAutoTrade(userId: number, conn: any, symbol: string, read: D
     });
   } catch (e: any) {
     console.error(
-      `[digitTrader] CRITICAL: contract ${buy.buy.contract_id} was bought on Deriv but the DB save failed for user ${userId}. Not re-arming.`,
+      `[digitTrader] CRITICAL: contract ${buy.buy.contract_id} was bought on Deriv but the DB save failed for user ${userId}. Retrying once...`,
       e?.message || e,
     );
-    fireWebhookEvent(userId, "trade.error", {
-      source: DIGIT_TRADER_SOURCE,
-      symbol,
-      stake: settings.stake,
-      contractId: buy.buy.contract_id,
-      read: read.label,
-      reason: "db_save_failed",
-    }).catch(() => {});
-    return false;
+    // Retry once after a brief delay
+    await new Promise(r => setTimeout(r, 1000));
+    try {
+      await db.saveTrade({
+        userId,
+        symbol,
+        contractType,
+        stake: String(settings.stake),
+        entryPrice: String(entryPrice),
+        result: "pending",
+        contractId: String(buy.buy.contract_id),
+        entryTime: new Date(),
+        source: DIGIT_TRADER_SOURCE,
+      });
+      console.log(`[digitTrader] Retry succeeded for contract ${buy.buy.contract_id}`);
+    } catch (retryErr: any) {
+      console.error(
+        `[digitTrader] CRITICAL: retry also failed for contract ${buy.buy.contract_id}. Contract orphaned on Deriv.`,
+        retryErr?.message || retryErr,
+      );
+      fireWebhookEvent(userId, "trade.error", {
+        source: DIGIT_TRADER_SOURCE,
+        symbol,
+        stake: settings.stake,
+        contractId: buy.buy.contract_id,
+        read: read.label,
+        reason: "db_save_failed",
+      }).catch(() => {});
+      return false;
+    }
   }
 
   console.log(`[digitTrader] Auto trade placed — #${buy.buy.contract_id} ${symbol} ${read.label} (${contractType}) @ $${settings.stake}`);

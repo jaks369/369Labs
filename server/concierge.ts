@@ -26,6 +26,7 @@ import {
 import type { MarketHealth, RiskAdvisory } from "./ai/types";
 import { derivManager } from "./derivConnection";
 import { buildLimitOrder } from "@shared/slTp";
+import { fireWebhookEvent } from "./webhookExecutor";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -693,6 +694,16 @@ export async function scanAndPersistForUser(userId: number): Promise<ScanAndPers
 
         // Auto-execute: place real trade when autoExec is enabled and signal is STRONG
         if (settings.autoExec) {
+          // Daily loss cap check
+          if (settings.maxDailyLoss > 0) {
+            const dayStart = new Date();
+            dayStart.setUTCHours(0, 0, 0, 0);
+            const usage = await db.getDigitTraderDailyUsage(userId, dayStart);
+            if (usage.pnl <= -settings.maxDailyLoss) {
+              console.log(`[concierge] Auto-exec blocked: daily loss $${Math.abs(usage.pnl).toFixed(2)} >= limit $${settings.maxDailyLoss}`);
+              break;
+            }
+          }
           // Regime filter: block auto-exec in chop/high_vol unless aligned
           const regime = (sig as any).regime;
           if (regime && !regime.aligned) {
@@ -704,7 +715,7 @@ export async function scanAndPersistForUser(userId: number): Promise<ScanAndPers
                 const account = conn.getSnapshot?.()?.account;
                 const currency = account?.currency || "USD";
                 const balance = typeof account?.balance === "number" ? account.balance : 0;
-                if (balance > 0 && stake > balance) {
+                if (balance <= 0 || stake > balance) {
                   console.warn(`[concierge] User ${userId}: balance $${balance.toFixed(2)} below stake $${stake}. Skipping placement on ${sym}.`);
                 } else {
                   const contractType = sig.direction === "up" ? "CALL" : "PUT";
@@ -732,18 +743,41 @@ export async function scanAndPersistForUser(userId: number): Promise<ScanAndPers
                       return null;
                     });
                     if (buy?.buy?.contract_id) {
-                      await db.saveTrade({
-                        userId,
-                        symbol: sym,
-                        contractType,
-                        stake: String(stake),
-                        entryPrice: String(sig.entryPrice),
-                        result: "pending",
-                        contractId: String(buy.buy.contract_id),
-                        entryTime: new Date(),
-                        source: "concierge",
-                      });
-                      console.log(`[concierge] Auto trade placed — #${buy.buy.contract_id} ${sym} ${contractType} @ $${stake}`);
+                      try {
+                        await db.saveTrade({
+                          userId,
+                          symbol: sym,
+                          contractType,
+                          stake: String(stake),
+                          entryPrice: String(sig.entryPrice),
+                          result: "pending",
+                          contractId: String(buy.buy.contract_id),
+                          entryTime: new Date(),
+                          source: "concierge",
+                        });
+                        console.log(`[concierge] Auto trade placed — #${buy.buy.contract_id} ${sym} ${contractType} @ $${stake}`);
+                      } catch (saveErr: any) {
+                        console.error(`[concierge] CRITICAL: contract ${buy.buy.contract_id} bought on Deriv but DB save failed for user ${userId}. Retrying once...`, saveErr?.message || saveErr);
+                        // Retry once after a brief delay
+                        await new Promise(r => setTimeout(r, 1000));
+                        try {
+                          await db.saveTrade({
+                            userId,
+                            symbol: sym,
+                            contractType,
+                            stake: String(stake),
+                            entryPrice: String(sig.entryPrice),
+                            result: "pending",
+                            contractId: String(buy.buy.contract_id),
+                            entryTime: new Date(),
+                            source: "concierge",
+                          });
+                          console.log(`[concierge] Retry succeeded for contract ${buy.buy.contract_id}`);
+                        } catch (retryErr: any) {
+                          console.error(`[concierge] CRITICAL: retry also failed for contract ${buy.buy.contract_id}. Contract orphaned on Deriv.`, retryErr?.message || retryErr);
+                          fireWebhookEvent(userId, "trade.error", { source: "concierge", symbol: sym, stake, contractId: buy.buy.contract_id, reason: "db_save_failed" }).catch(() => {});
+                        }
+                      }
                     }
                   }
                 }

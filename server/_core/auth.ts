@@ -1,5 +1,4 @@
-import { randomBytes, scrypt as scryptCallback, timingSafeEqual, createHmac } from "crypto";
-import { promisify } from "util";
+import { randomBytes, scryptSync, timingSafeEqual, createHmac } from "crypto";
 import { SignJWT, jwtVerify } from "jose";
 import type { Request } from "express";
 import { parse as parseCookieHeader } from "cookie";
@@ -11,8 +10,8 @@ import * as db from "../db";
 import { ENV } from "./env";
 import { getSessionCookieOptions } from "./cookies";
 
-const scrypt = promisify(scryptCallback);
 const SCRYPT_KEYLEN = 64;
+const SCRYPT_OPTIONS = { N: 16384, r: 8, p: 1, maxmem: 128 * 1024 * 1024 } as const;
 
 export function generateTOTP(secretHex: string, epoch: number): string {
   const key = Buffer.from(secretHex, "hex");
@@ -33,7 +32,7 @@ export function sanitizeUser(u: User | null | undefined): SanitizedUser | null |
 /** Hash a plaintext password for storage. Format: "salt:derivedKeyHex". */
 export async function hashPassword(password: string): Promise<string> {
   const salt = randomBytes(16).toString("hex");
-  const derivedKey = (await scrypt(password, salt, SCRYPT_KEYLEN)) as Buffer;
+  const derivedKey = scryptSync(password, salt, SCRYPT_KEYLEN, SCRYPT_OPTIONS);
   return `${salt}:${derivedKey.toString("hex")}`;
 }
 
@@ -41,7 +40,7 @@ export async function hashPassword(password: string): Promise<string> {
 export async function verifyPassword(password: string, stored: string): Promise<boolean> {
   const [salt, hashHex] = stored.split(":");
   if (!salt || !hashHex) return false;
-  const derivedKey = (await scrypt(password, salt, SCRYPT_KEYLEN)) as Buffer;
+  const derivedKey = scryptSync(password, salt, SCRYPT_KEYLEN, SCRYPT_OPTIONS);
   const storedBuffer = Buffer.from(hashHex, "hex");
   if (storedBuffer.length !== derivedKey.length) return false;
   return timingSafeEqual(storedBuffer, derivedKey);
