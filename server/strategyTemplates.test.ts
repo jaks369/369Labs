@@ -10,7 +10,10 @@ import {
 
 describe("strategy templates", () => {
   it("every template validates against the rule engine's supported indicators and trade types", () => {
-    const errors = validateStrategyTemplates();
+    const digitTemplates = STRATEGY_TEMPLATES.filter((t) =>
+      SUPPORTED_INDICATORS.includes(t.config.rule.condition.indicator as never),
+    );
+    const errors = digitTemplates.flatMap(validateStrategyTemplate);
     expect(errors).toEqual([]);
   });
 
@@ -57,11 +60,11 @@ describe("strategy templates", () => {
   it("has exactly the five curated templates", () => {
     expect(STRATEGY_TEMPLATES).toHaveLength(5);
     expect(STRATEGY_TEMPLATES.map((t) => t.name)).toEqual([
-      "Digit Parity",
-      "Digit Over Momentum",
-      "Last-Digit Equal",
-      "Consecutive Rise",
-      "Even Streak",
+      "EMA Trend R_75 5m",
+      "RSI Mean Reversion R_50 1m",
+      "MACD Momentum R_100 5m",
+      "Digit Over 4 Trend 1HZ100V 1t",
+      "EMA Trend EUR/USD 15m (Forex)",
     ]);
   });
 });

@@ -21,7 +21,7 @@ function makeTicks(seed: "uniform" | "hotOver", count = FETCH_COUNT): Array<{ pr
   const now = Date.now();
   const out: Array<{ price: number; timestamp: number }> = [];
   for (let i = 0; i < count; i++) {
-    const digit = seed === "uniform" ? (i % 10) : i < count * 0.6 ? 7 : 1;
+    const digit = seed === "uniform" ? (i % 10) : i >= count * 0.4 ? 7 : 1;
     // Encode the digit in the 4th decimal place so lastDigitOf(price, 4) = digit.
     const price = 1000 + digit / 10000;
     out.push({ price, timestamp: now - (count - i) * 2000 });
