@@ -54,6 +54,8 @@ const CONTRACT_LABELS: Record<string, string> = {
   DIGITUNDER: "Under",
   DIGITEVEN: "Even",
   DIGITODD: "Odd",
+  DIGITMATCH: "Match",
+  DIGITDIFFER: "Differ",
 };
 
 export default function DigitTrader() {
@@ -62,6 +64,7 @@ export default function DigitTrader() {
   const { accountType } = useDerivStatus();
   const [symbol, setSymbol] = useState(getSymbolDisplayName("R_100"));
   const [activeSymbol, setActiveSymbol] = useState("R_100");
+  const [symbolPickerOpen, setSymbolPickerOpen] = useState(false);
 
   // Automation settings (persisted server-side; auto-predict runs the honest
   // ledger 24/7, auto-exec places real contracts on top).
@@ -76,6 +79,14 @@ export default function DigitTrader() {
   const [autoPredict, setAutoPredict] = useState(true);
   const [autoExec, setAutoExec] = useState(false);
 
+  // String drafts for smooth numeric inputs that do not snap-back when typing or deleting
+  const [draftStake, setDraftStake] = useState("1");
+  const [draftStopLoss, setDraftStopLoss] = useState("0");
+  const [draftTakeProfit, setDraftTakeProfit] = useState("0");
+  const [draftMaxDailyLoss, setDraftMaxDailyLoss] = useState("0");
+  const [draftMaxDailyTrades, setDraftMaxDailyTrades] = useState("0");
+  const [savingNumeric, setSavingNumeric] = useState(false);
+
   useEffect(() => {
     if (!settingsQ.data) return;
     setStake(settingsQ.data.stake);
@@ -86,9 +97,17 @@ export default function DigitTrader() {
     setFollowed(settingsQ.data.symbols);
     setAutoPredict(settingsQ.data.autoPredict);
     setAutoExec(settingsQ.data.autoExec);
+
+    setDraftStake(settingsQ.data.stake.toString());
+    setDraftStopLoss(settingsQ.data.stopLoss.toString());
+    setDraftTakeProfit(settingsQ.data.takeProfit.toString());
+    setDraftMaxDailyLoss((settingsQ.data.maxDailyLoss || 0).toString());
+    setDraftMaxDailyTrades((settingsQ.data.maxDailyTrades || 0).toString());
   }, [settingsQ.data]);
 
   const snapshot = trpc.digitTrader.snapshot.useQuery({ symbol: activeSymbol }, { enabled: isAuthenticated, refetchInterval: 10000 });
+  // Create queries for each followed symbol
+  const followedSnapshots = followed.map((sym) => trpc.digitTrader.snapshot.useQuery({ symbol: sym }, { enabled: isAuthenticated, refetchInterval: 10000 }));
   const history = trpc.digitTrader.history.useQuery({ limit: 40 }, { enabled: isAuthenticated });
   const accuracy = trpc.digitTrader.accuracy.useQuery(undefined, { enabled: isAuthenticated });
   const autoTrades = trpc.digitTrader.trades.useQuery({ limit: 30 }, { enabled: isAuthenticated, refetchInterval: 10000 });
@@ -118,6 +137,16 @@ export default function DigitTrader() {
     }
   }, [scan.isSuccess, scan.error]);
 
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (symbolPickerOpen && !(e.target as HTMLElement).closest('[data-symbol-picker]')) {
+        setSymbolPickerOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [symbolPickerOpen]);
+
   const saveConfig = (next: { stake?: number; stopLoss?: number; takeProfit?: number; maxDailyLoss?: number; maxDailyTrades?: number; symbols?: string[] }) => {
     patchSettings.mutate(next as any, {
       onSuccess: (saved) => {
@@ -128,8 +157,46 @@ export default function DigitTrader() {
         setMaxDailyTrades(saved.maxDailyTrades || 0);
         setFollowed(saved.symbols);
         toast("Settings saved", "success");
+        settingsQ.refetch();
       },
       onError: (e: any) => toast(e?.message || "Failed to save settings", "error"),
+    });
+  };
+
+  const saveNumericSettings = () => {
+    setSavingNumeric(true);
+    const parsedStake = Math.max(0.35, parseFloat(draftStake) || 0.35);
+    const parsedStopLoss = Math.max(0, parseFloat(draftStopLoss) || 0);
+    const parsedTakeProfit = Math.max(0, parseFloat(draftTakeProfit) || 0);
+    const parsedMaxDailyLoss = Math.max(0, parseFloat(draftMaxDailyLoss) || 0);
+    const parsedMaxDailyTrades = Math.max(0, Math.floor(parseFloat(draftMaxDailyTrades) || 0));
+
+    patchSettings.mutate({
+      stake: parsedStake,
+      stopLoss: parsedStopLoss,
+      takeProfit: parsedTakeProfit,
+      maxDailyLoss: parsedMaxDailyLoss,
+      maxDailyTrades: parsedMaxDailyTrades,
+    } as any, {
+      onSuccess: (saved) => {
+        setStake(saved.stake);
+        setStopLoss(saved.stopLoss);
+        setTakeProfit(saved.takeProfit);
+        setMaxDailyLoss(saved.maxDailyLoss || 0);
+        setMaxDailyTrades(saved.maxDailyTrades || 0);
+        setFollowed(saved.symbols);
+
+        setDraftStake(saved.stake.toString());
+        setDraftStopLoss(saved.stopLoss.toString());
+        setDraftTakeProfit(saved.takeProfit.toString());
+        setDraftMaxDailyLoss((saved.maxDailyLoss || 0).toString());
+        setDraftMaxDailyTrades((saved.maxDailyTrades || 0).toString());
+
+        toast("Automation settings saved", "success");
+        settingsQ.refetch();
+      },
+      onError: (e: any) => toast(e?.message || "Failed to save settings", "error"),
+      onSettled: () => setSavingNumeric(false),
     });
   };
 
@@ -138,6 +205,7 @@ export default function DigitTrader() {
       onSuccess: (saved) => {
         setAutoPredict(saved.autoPredict);
         toast(saved.autoPredict ? "Auto-predict ON — logging and settling predictions continuously." : "Auto-predict OFF — ledger stops growing.", saved.autoPredict ? "success" : "info");
+        settingsQ.refetch();
       },
       onError: (e: any) => toast(e?.message || "Failed to update auto-predict", "error"),
     });
@@ -152,6 +220,7 @@ export default function DigitTrader() {
       onSuccess: (saved) => {
         setAutoExec(saved.autoExec);
         toast(saved.autoExec ? "Auto-execute ON — placing REAL contracts on the strongest live tilt." : "Auto-execute OFF — predictions only.", saved.autoExec ? "success" : "info");
+        settingsQ.refetch();
       },
       onError: (e: any) => toast(e?.message || "Failed to update auto-execute", "error"),
     });
@@ -212,35 +281,29 @@ export default function DigitTrader() {
         </div>
 
         {/* Symbol picker — friendly names only, codes stay internal */}
-        <div className="flex items-center gap-2 flex-wrap">
-          <input
-            value={symbol}
-            onChange={(e) => setSymbol(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && symbol.trim()) {
-                const normalized = normalizeSymbol(symbol);
-                if (normalized) { setActiveSymbol(normalized); setSymbol(getSymbolDisplayName(normalized)); }
-                else setSymbol(getSymbolDisplayName(activeSymbol));
-              }
-            }}
-            className="bg-[var(--surface-elevated)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-white w-64"
-            placeholder={`e.g. ${getSymbolDisplayName("R_100")}`}
-          />
-          <Button onClick={() => { if (symbol.trim()) { const normalized = normalizeSymbol(symbol); if (normalized) { setActiveSymbol(normalized); setSymbol(getSymbolDisplayName(normalized)); } } }} className="btn btn-outline gap-2" size="sm">
-            <ArrowUpRight className="w-3.5 h-3.5" />Load
-          </Button>
-          <select
-            value={symbolOptions.some((o) => o.value === activeSymbol) ? activeSymbol : ""}
-            onChange={(e) => { const v = e.target.value; if (v) { setActiveSymbol(v); setSymbol(getSymbolDisplayName(v)); } }}
-            className="bg-[var(--surface-elevated)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-white flex-1 min-w-[220px] max-w-md cursor-pointer"
-            title={`Current: ${getSymbolDisplayName(activeSymbol) || activeSymbol}`}
-          >
-            <option value="" disabled>Pick a volatility index…</option>
-            {symbolOptions.map((o) => (
-              <option key={o.value} value={o.value}>{o.label}</option>
-            ))}
-          </select>
-          <span className="text-xs text-[var(--text-muted)]">Viewing <span className="text-white font-semibold">{getSymbolDisplayName(activeSymbol) || activeSymbol}</span></span>
+        <div className="flex items-center gap-2 flex-wrap" data-symbol-picker>
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => setSymbolPickerOpen(!symbolPickerOpen)}
+              className="bg-[var(--surface-elevated)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-white flex-1 min-w-[220px] max-w-md cursor-pointer text-left w-full"
+            >
+              <span>{getSymbolDisplayName(activeSymbol) || activeSymbol}</span>
+            </button>
+            {symbolPickerOpen && (
+              <div className="absolute top-full left-0 right-0 mt-1 bg-[var(--card)] border border-[var(--border)] rounded-lg shadow-lg z-20 max-h-60 overflow-auto">
+                {symbolOptions.map((o) => (
+                  <button
+                    key={o.value}
+                    onClick={() => { setActiveSymbol(o.value); setSymbolPickerOpen(false); }}
+                    className={`w-full px-3 py-2 text-sm text-left transition-colors ${activeSymbol === o.value ? "bg-[var(--accent)]/20 text-[var(--accent)]" : "text-white hover:bg-[var(--surface-elevated)]"}`}
+                  >
+                    {o.label}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Automation — predictions always run; real trades are optional */}
@@ -289,24 +352,24 @@ export default function DigitTrader() {
             <div>
               <label className="text-[11px] text-[var(--text-muted)] mb-1 block">Stake ($)</label>
               <input
-                type="number" min={0.35} step={0.1} value={stake}
-                onChange={(e) => setStake(parseFloat(e.target.value) || 0.35)}
+                type="number" min={0.35} step={1} value={draftStake}
+                onChange={(e) => setDraftStake(e.target.value)}
                 className="w-full bg-[var(--surface-elevated)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-white font-mono"
               />
             </div>
             <div>
               <label className="text-[11px] text-[var(--text-muted)] mb-1 block">Stop loss ($ · 0 = off)</label>
               <input
-                type="number" min={0} step={0.1} value={stopLoss}
-                onChange={(e) => setStopLoss(parseFloat(e.target.value) || 0)}
+                type="number" min={0} step={1} value={draftStopLoss}
+                onChange={(e) => setDraftStopLoss(e.target.value)}
                 className="w-full bg-[var(--surface-elevated)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-white font-mono"
               />
             </div>
             <div>
               <label className="text-[11px] text-[var(--text-muted)] mb-1 block">Take profit ($ · 0 = off)</label>
               <input
-                type="number" min={0} step={0.1} value={takeProfit}
-                onChange={(e) => setTakeProfit(parseFloat(e.target.value) || 0)}
+                type="number" min={0} step={1} value={draftTakeProfit}
+                onChange={(e) => setDraftTakeProfit(e.target.value)}
                 className="w-full bg-[var(--surface-elevated)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-white font-mono"
               />
             </div>
@@ -316,24 +379,24 @@ export default function DigitTrader() {
             <div>
               <label className="text-[11px] text-[var(--text-muted)] mb-1 block">Max daily loss ($ · 0 = off)</label>
               <input
-                type="number" min={0} step={1} value={maxDailyLoss}
-                onChange={(e) => setMaxDailyLoss(parseFloat(e.target.value) || 0)}
+                type="number" min={0} step={1} value={draftMaxDailyLoss}
+                onChange={(e) => setDraftMaxDailyLoss(e.target.value)}
                 className="w-full bg-[var(--surface-elevated)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-white font-mono"
               />
             </div>
             <div>
               <label className="text-[11px] text-[var(--text-muted)] mb-1 block">Max trades / day (0 = off)</label>
               <input
-                type="number" min={0} step={1} value={maxDailyTrades}
-                onChange={(e) => setMaxDailyTrades(Math.max(0, Math.floor(parseFloat(e.target.value) || 0)))}
+                type="number" min={0} step={1} value={draftMaxDailyTrades}
+                onChange={(e) => setDraftMaxDailyTrades(e.target.value)}
                 className="w-full bg-[var(--surface-elevated)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-white font-mono"
               />
             </div>
           </div>
 
           <div className="flex items-center gap-3 mt-4">
-            <Button onClick={() => saveConfig({ stake, stopLoss, takeProfit, maxDailyLoss, maxDailyTrades })} className="btn btn-outline gap-2" size="sm" disabled={patchSettings.isPending}>
-              <RefreshCw className="w-3.5 h-3.5" />{patchSettings.isPending ? "Saving…" : "Save stake / SL / TP / daily limits"}
+            <Button onClick={saveNumericSettings} className="btn btn-outline gap-2" size="sm" disabled={savingNumeric}>
+              <RefreshCw className="w-3.5 h-3.5" />{savingNumeric ? "Saving…" : "Save settings"}
             </Button>
             <p className="text-[11px] text-[var(--text-muted)]">Last cycle: {autoStatus?.lastCycleAt ? new Date(autoStatus.lastCycleAt).toLocaleTimeString() : "never"} · {autoStatus?.lastCyclePredictions ?? 0} prediction(s) logged<span className="text-[var(--text-secondary)]"> · {autoStatus?.lastCycleTrades ?? 0} trade(s) real-placed</span>.</p>
           </div>
@@ -473,45 +536,52 @@ export default function DigitTrader() {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Live reads */}
-          <Card title={`Live reads — ${activeSymbol}`} icon={<TrendingUp className="w-4 h-4 text-[var(--accent)]" />}>
-            {snapshot.isLoading ? <Loader2 className="w-5 h-5 animate-spin text-[var(--accent)]" /> : (snap?.reads.length || 0) > 0 ? (
-              <div className="space-y-2">
-                {snap!.reads.map((read: any) => {
-                  const dir = read.deltaPp >= 0;
-                  return (
-                    <div key={`${read.type}-${read.barrier ?? "n"}`} className="flex items-start gap-3 rounded-lg border border-[var(--border)] bg-[var(--surface-elevated)] p-3">
-                      <span className={`w-7 h-7 rounded-md flex items-center justify-center text-xs font-bold ${dir ? "bg-[var(--green)]/15 text-[var(--green)]" : "bg-[var(--red)]/15 text-[var(--red)]"}`}>
-                        {dir ? <TrendingUp className="w-4 h-4" /> : <TrendingDown className="w-4 h-4" />}
-                      </span>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className="text-sm font-bold text-white">{read.label}</span>
-                          <span className={`px-1.5 py-0.5 rounded border text-[10px] font-bold ${strengthChip(read.strength)}`}>{read.strength}</span>
-                          <span className="text-xs text-[var(--text-muted)]">{read.confidence}% · {read.sample} digits</span>
-                        </div>
-                        <p className="text-[11px] text-[var(--text-secondary)] mt-1 line-clamp-2">{(read.reasons || []).slice(0, 2).join(" ")}</p>
-                        <div className="flex items-center gap-2 mt-1.5">
-                          <div className="flex-1 h-1.5 bg-[var(--surface-elevated)] border border-[var(--border)] rounded-full overflow-hidden">
-                            <div className={`h-full rounded-full ${dir ? "bg-[var(--green)]" : "bg-[var(--red)]"}`} style={{ width: `${Math.min(100, Math.max(4, read.freq))}%` }} />
+          {/* Live reads — all followed symbols */}
+          <Card title="Live reads — all followed symbols" icon={<TrendingUp className="w-4 h-4 text-[var(--accent)]" />}>
+            {followedSnapshots.some((q: any) => q.isLoading) ? <Loader2 className="w-5 h-5 animate-spin text-[var(--accent)]" /> : (
+              (() => {
+                const allReads = followedSnapshots.flatMap((q: any) => (q.data?.reads || []).map((r: any) => ({ ...r, symbol: q.data?.symbol })));
+                const sortedReads = allReads.sort((a: any, b: any) => Math.abs(b.deltaPp) - Math.abs(a.deltaPp));
+                return sortedReads.length > 0 ? (
+                  <div className="space-y-2">
+                    {sortedReads.map((read: any) => {
+                      const dir = read.deltaPp >= 0;
+                      return (
+                        <div key={`${read.symbol}-${read.type}-${read.barrier ?? "n"}`} className="flex items-start gap-3 rounded-lg border border-[var(--border)] bg-[var(--surface-elevated)] p-3">
+                          <span className={`w-7 h-7 rounded-md flex items-center justify-center text-xs font-bold ${dir ? "bg-[var(--green)]/15 text-[var(--green)]" : "bg-[var(--red)]/15 text-[var(--red)]"}`}>
+                            {dir ? <TrendingUp className="w-4 h-4" /> : <TrendingDown className="w-4 h-4" />}
+                          </span>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="text-sm font-bold text-white">{getSymbolDisplayName(read.symbol) || read.symbol}</span>
+                              <span className="text-xs text-[var(--accent-soft)]">{read.label}</span>
+                              <span className={`px-1.5 py-0.5 rounded border text-[10px] font-bold ${strengthChip(read.strength)}`}>{read.strength}</span>
+                              <span className="text-xs text-[var(--text-muted)]">{read.freq}% freq · {read.confidence}% conf · {read.sample} digits</span>
+                            </div>
+                            <p className="text-[11px] text-[var(--text-secondary)] mt-1 line-clamp-2">{(read.reasons || []).slice(0, 2).join(" ")}</p>
+                            <div className="flex items-center gap-2 mt-1.5">
+                              <div className="flex-1 h-1.5 bg-[var(--surface-elevated)] border border-[var(--border)] rounded-full overflow-hidden">
+                                <div className={`h-full rounded-full ${dir ? "bg-[var(--green)]" : "bg-[var(--red)]"}`} style={{ width: `${Math.min(100, Math.max(4, read.freq))}%` }} />
+                              </div>
+                              <span className="text-[10px] text-[var(--text-muted)] font-mono whitespace-nowrap">{read.freq}% vs {read.baseline}% fair</span>
+                            </div>
                           </div>
-                          <span className="text-[10px] text-[var(--text-muted)] font-mono whitespace-nowrap">{read.freq}% vs {read.baseline}% fair</span>
+                          <button
+                            onClick={() => trade(read)}
+                            className="shrink-0 px-2.5 py-1.5 rounded-lg border border-[var(--accent)]/40 bg-[var(--accent)]/10 text-[var(--accent-soft)] text-[11px] font-bold hover:bg-[var(--accent)]/20 transition-colors"
+                            title="Prefill the terminal with this read"
+                          >
+                            Trade this →
+                          </button>
                         </div>
-                      </div>
-                      <button
-                        onClick={() => trade(read)}
-                        className="shrink-0 px-2.5 py-1.5 rounded-lg border border-[var(--accent)]/40 bg-[var(--accent)]/10 text-[var(--accent-soft)] text-[11px] font-bold hover:bg-[var(--accent)]/20 transition-colors"
-                        title="Prefill the terminal with this read"
-                      >
-                        Trade this →
-                      </button>
-                    </div>
-                  );
-                })}
-                {(snap as any)?.reads.length && <p className="text-[11px] text-[var(--text-muted)] pt-1">Auto-predict logs the strongest call and settles it against the next tick — wins and losses land in the ledger above.</p>}
-              </div>
-            ) : (
-              <p className="text-xs text-[var(--text-muted)]">No tilt ≥5pp in the last {snap ? Math.max(30, snap.digits.length) : 100} digits — standing aside is the honest call right now.</p>
+                      );
+                    })}
+                    <p className="text-[11px] text-[var(--text-muted)] pt-1">Auto-predict logs the strongest call per symbol and settles it against the next tick — wins and losses land in the ledger above.</p>
+                  </div>
+                ) : (
+                  <p className="text-xs text-[var(--text-muted)]">No tilt ≥5pp across followed symbols — standing aside is the honest call right now.</p>
+                );
+              })()
             )}
           </Card>
 
@@ -524,32 +594,31 @@ export default function DigitTrader() {
                     <tr className="text-left text-[var(--text-muted)]">
                       <th className="pb-2 pr-2 font-medium">Symbol</th>
                       <th className="pb-2 pr-2 font-medium">Call</th>
-                      <th className="pb-2 pr-2 font-medium">Conf</th>
-                      <th className="pb-2 pr-2 font-medium">Delta</th>
-                      <th className="pb-2 pr-2 font-medium">P&L (virtual)</th>
+                      <th className="pb-2 pr-2 font-medium">Confidence</th>
                       <th className="pb-2 font-medium">Status</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {(history.data || []).map((r: any) => {
-                      const done = r.status === "win" || r.status === "loss";
-                      const pnl = done ? (r.status === "win" ? stake * PAYOUT_RATE : -stake) : 0;
-                      return (
+                    {(history.data || []).map((r: any) => (
                       <tr key={r.id} className="border-t border-[var(--border)]">
                         <td className="py-2 pr-2 text-white font-medium">{getSymbolDisplayName(r.symbol)}</td>
                         <td className="py-2 pr-2 text-[var(--text-secondary)]">{r.label}</td>
                         <td className="py-2 pr-2 text-[var(--text-muted)]">{r.confidence}%</td>
-                        <td className="py-2 pr-2 text-[var(--text-muted)]">{r.deltaPp > 0 ? "+" : ""}{r.deltaPp}pp</td>
-                        <td className={`py-2 pr-2 font-mono ${done ? (pnl >= 0 ? "text-[var(--green)]" : "text-[var(--red)]") : "text-[var(--text-muted)]"}`}>{done ? `${pnl >= 0 ? "+" : ""}$${pnl.toFixed(2)}` : "—"}</td>
                         <td className="py-2">
-                          <span className={`px-1.5 py-0.5 rounded border text-[10px] font-bold ${r.status === "win" ? "text-[var(--green)] border-[var(--green)]/40 bg-[var(--green)]/15" : r.status === "loss" ? "text-[var(--red)] border-[var(--red)]/40 bg-[var(--red)]/15" : r.status === "open" ? "text-[var(--amber)] border-[var(--amber)]/40 bg-[var(--amber)]/15" : "text-[var(--text-muted)] border-[var(--border)] bg-white/5"}`}>{r.status}</span>
+                          <span className={`px-1.5 py-0.5 rounded border text-[10px] font-bold ${r.status === "win" ? "text-[var(--green)] border-[var(--green)]/40 bg-[var(--green)]/15" : r.status === "loss" ? "text-[var(--red)] border-[var(--red)]/40 bg-[var(--red)]/15" : r.status === "open" ? "text-[var(--amber)] border-[var(--amber)]/40 bg-[var(--amber)]/15" : "text-[var(--text-muted)] border-[var(--border)] bg-white/5"}`}>
+                            {r.status === "win" ? "Win" : r.status === "loss" ? "Loss" : "Open"}
+                          </span>
                         </td>
                       </tr>
-                      );
-                    })}
+                    ))}
                   </tbody>
                 </table>
                 {(history.data || []).length === 0 && <p className="text-xs text-[var(--text-muted)] py-4">No predictions yet — scan or turn on auto-predict to seed the ledger.</p>}
+                {(history.data || []).length > 0 && (
+                  <p className="text-[10px] text-[var(--text-disabled)] mt-3 leading-relaxed">
+                    Predictions are reads settled against the next tick — not executed trades. Stake & P&L appear in Auto-execute history when enabled.
+                  </p>
+                )}
               </div>
             )}
           </Card>

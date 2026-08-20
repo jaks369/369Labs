@@ -3349,6 +3349,8 @@ aiMarket: router({
         stopLoss: z.number().min(0).max(10000).optional(),
         takeProfit: z.number().min(0).max(10000).optional(),
         symbols: z.array(z.string()).max(12).optional(),
+        autoExec: z.boolean().optional(),
+        maxDailyLoss: z.number().min(0).max(1000000).optional(),
       }))
       .mutation(async ({ ctx, input }) => {
         const { updateSettings, getSettingsFor } = await import("./concierge");
@@ -3492,11 +3494,69 @@ aiMarket: router({
           pnl: Math.round(pnl * 100) / 100,
         };
       }));
-      return withStats.filter((p) => p.tradeCount > 0).sort((a, b) => b.pnl - a.pnl);
+return withStats.filter((p) => p.tradeCount > 0).sort((a, b) => b.pnl - a.pnl);
     }),
   }),
-});
 
+  botMarketplace: router({
+    list: protectedProcedure.query(async () => {
+      const { getVerifiedBots } = await import("./botMarketplace");
+      return getVerifiedBots();
+    }),
+    clone: protectedProcedure
+      .input(z.object({
+        botId: z.string(),
+        customRiskSettings: z.object({
+          stake: z.number().optional(),
+          maxDailyLoss: z.number().optional(),
+          maxDailyTrades: z.number().optional(),
+          maxOpenPositions: z.number().optional(),
+        }).optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const { cloneBotToUser } = await import("./botMarketplace");
+        return cloneBotToUser(ctx.user.id, input.botId, input.customRiskSettings);
+      }),
+    submit: protectedProcedure
+      .input(z.object({
+        name: z.string().min(1),
+        description: z.string(),
+        strategyId: z.number(),
+        trackRecord: z.object({
+          startDate: z.string(),
+          endDate: z.string(),
+          accountType: z.enum(['demo', 'real']),
+          initialBalance: z.number(),
+          finalBalance: z.number(),
+          totalTrades: z.number(),
+          winRate: z.number(),
+          profitFactor: z.number(),
+          maxDrawdown: z.number(),
+          sharpeRatio: z.number(),
+          monthlyReturns: z.array(z.number()),
+        }),
+        riskSettings: z.object({
+          stake: z.number(),
+          maxDailyLoss: z.number(),
+          maxDailyTrades: z.number(),
+          maxOpenPositions: z.number(),
+        }),
+        tags: z.array(z.string()).optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const { submitBotForVerification } = await import("./botMarketplace");
+        return submitBotForVerification(ctx.user.id, {
+          name: input.name,
+          description: input.description,
+          strategyId: input.strategyId,
+          trackRecord: input.trackRecord,
+          riskSettings: input.riskSettings,
+          tags: input.tags || [],
+        });
+      }),
+  }),
+
+});
 
 // Render the user's remembered profile into a compact string for the AI system prompt.
 export function formatMemoryForPrompt(mem: Record<string, any> | null | undefined): string {

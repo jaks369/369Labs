@@ -131,6 +131,111 @@ export function bollinger(closes: number[], period = 20, mult = 2): BollingerRes
   return { upper, middle, lower, widthPct };
 }
 
+/** Average True Range (Wilder smoothing) — returns array aligned to input. */
+export function atr(highs: number[], lows: number[], closes: number[], period = 14): number[] {
+  const out: number[] = new Array(closes.length).fill(NaN);
+  if (closes.length < period + 1) return out;
+  
+  const tr: number[] = [NaN];
+  for (let i = 1; i < closes.length; i++) {
+    const hl = highs[i] - lows[i];
+    const hc = Math.abs(highs[i] - closes[i - 1]);
+    const lc = Math.abs(lows[i] - closes[i - 1]);
+    tr.push(Math.max(hl, hc, lc));
+  }
+  
+  // Wilder smoothing
+  let sum = 0;
+  for (let i = 1; i <= period; i++) sum += tr[i];
+  out[period] = sum / period;
+  
+  for (let i = period + 1; i < closes.length; i++) {
+    out[i] = (out[i - 1] * (period - 1) + tr[i]) / period;
+  }
+  return out;
+}
+
+/** Bollinger Bands over full array — returns arrays aligned to input. */
+export function bollingerBands(closes: number[], period = 20, mult = 2): { upper: number[]; middle: number[]; lower: number[] } {
+  const upper: number[] = new Array(closes.length).fill(NaN);
+  const middle: number[] = new Array(closes.length).fill(NaN);
+  const lower: number[] = new Array(closes.length).fill(NaN);
+  
+  if (closes.length < period) return { upper, middle, lower };
+  
+  for (let i = period - 1; i < closes.length; i++) {
+    const window = closes.slice(i - period + 1, i + 1);
+    const mid = window.reduce((s, v) => s + v, 0) / period;
+    const variance = window.reduce((s, v) => s + (v - mid) * (v - mid), 0) / period;
+    const sd = Math.sqrt(variance);
+    middle[i] = mid;
+    upper[i] = mid + mult * sd;
+    lower[i] = mid - mult * sd;
+  }
+  return { upper, middle, lower };
+}
+
+/** ADX (Average Directional Index) with Wilder smoothing — returns array aligned to input. */
+export function adx(highs: number[], lows: number[], closes: number[], period = 14): number[] {
+  const out: number[] = new Array(closes.length).fill(NaN);
+  if (closes.length < period + 1) return out;
+  
+  const plusDM: number[] = [NaN];
+  const minusDM: number[] = [NaN];
+  const tr: number[] = [NaN];
+  
+  for (let i = 1; i < closes.length; i++) {
+    const upMove = highs[i] - highs[i - 1];
+    const downMove = lows[i - 1] - lows[i];
+    plusDM.push(upMove > downMove && upMove > 0 ? upMove : 0);
+    minusDM.push(downMove > upMove && downMove > 0 ? downMove : 0);
+    const hl = highs[i] - lows[i];
+    const hc = Math.abs(highs[i] - closes[i - 1]);
+    const lc = Math.abs(lows[i] - closes[i - 1]);
+    tr.push(Math.max(hl, hc, lc));
+  }
+  
+  // Wilder smoothing for +DI, -DI, TR
+  const smooth = (arr: number[]): number[] => {
+    const res: number[] = new Array(arr.length).fill(NaN);
+    let sum = 0;
+    for (let i = 1; i <= period; i++) sum += arr[i];
+    res[period] = sum / period;
+    for (let i = period + 1; i < arr.length; i++) {
+      res[i] = (res[i - 1] * (period - 1) + arr[i]) / period;
+    }
+    return res;
+  };
+  
+  const plusDISmoothed = smooth(plusDM);
+  const minusDISmoothed = smooth(minusDM);
+  const trSmoothed = smooth(tr);
+  
+  const plusDI: number[] = new Array(closes.length).fill(NaN);
+  const minusDI: number[] = new Array(closes.length).fill(NaN);
+  const dx: number[] = new Array(closes.length).fill(NaN);
+  
+  for (let i = period; i < closes.length; i++) {
+    if (trSmoothed[i] > 0) {
+      plusDI[i] = (plusDISmoothed[i] / trSmoothed[i]) * 100;
+      minusDI[i] = (minusDISmoothed[i] / trSmoothed[i]) * 100;
+      const diSum = plusDI[i] + minusDI[i];
+      dx[i] = diSum > 0 ? (Math.abs(plusDI[i] - minusDI[i]) / diSum) * 100 : 0;
+    }
+  }
+  
+  // ADX = Wilder smoothed DX
+  let sum = 0;
+  for (let i = period; i <= 2 * period - 1; i++) sum += dx[i] || 0;
+  out[2 * period - 1] = sum / period;
+  
+  for (let i = 2 * period; i < closes.length; i++) {
+    out[i] = (out[i - 1] * (period - 1) + (dx[i] || 0)) / period;
+  }
+  
+  return out;
+}
+
 /** Median tick-to-tick gap in seconds — used to pick an honest candle timeframe. */
 export function medianTickGapSec(ticks: TickLike[]): number | null {
   if (ticks.length < 2) return null;

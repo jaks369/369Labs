@@ -24,6 +24,8 @@ import {
   GuideStrength,
 } from "./indicatorSignal";
 import type { MarketHealth, RiskAdvisory } from "./ai/types";
+import { derivManager } from "./derivConnection";
+import { buildLimitOrder } from "@shared/slTp";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -90,6 +92,10 @@ export interface ConciergeSettings {
   stopLoss: number;
   takeProfit: number;
   symbols?: string[];
+  /** Auto-execute STRONG signals as real trades. */
+  autoExec: boolean;
+  /** Max daily loss in USD (0 = off). */
+  maxDailyLoss: number;
 }
 
 export const DEFAULT_SETTINGS: ConciergeSettings = {
@@ -100,6 +106,8 @@ export const DEFAULT_SETTINGS: ConciergeSettings = {
   stake: 1,
   stopLoss: 0,
   takeProfit: 0,
+  autoExec: false,
+  maxDailyLoss: 0,
 };
 
 // ---------------------------------------------------------------------------
@@ -623,7 +631,9 @@ export async function scanAndPersistForUser(userId: number): Promise<ScanAndPers
     try {
       const sig = await scanSymbolAndCache(sym);
       perSymbol.push({ symbol: sym, strength: sig?.strength ?? null, confidence: sig?.confidence ?? null });
-      if (!sig || sig.strength === "WEAK") continue;
+      // Only record and suggest signals when agreement is STRONG (3/3 or 4/4 indicators agree),
+      // filtering out the 1/3 and 2/3 coin-flips to minimize losses.
+      if (!sig || sig.strength !== "STRONG") continue;
       if (recentKeys.has(`${sym}:${sig.direction}`)) continue;
       const stake = suggestStakeForSettings(await userBalance(), settings).stake;
       const ok = await db.saveGuidingSignal({
@@ -647,6 +657,69 @@ export async function scanAndPersistForUser(userId: number): Promise<ScanAndPers
         persisted++;
         recentKeys.add(`${sym}:${sig.direction}`);
         if (sig.strength === "STRONG") newStrong = sig;
+
+        // Auto-execute: place real trade when autoExec is enabled and signal is STRONG
+        if (settings.autoExec) {
+          // Regime filter: block auto-exec in chop/high_vol unless aligned
+          const regime = (sig as any).regime;
+          if (regime && !regime.aligned) {
+            console.log(`[concierge] Auto-exec blocked: regime ${regime.regime} (${regime.reason}) misaligned for ${sym}`);
+          } else {
+            try {
+              const conn = await derivManager.ensureConnected(userId);
+              if (conn && conn.isAuthorized()) {
+                const account = conn.getSnapshot?.()?.account;
+                const currency = account?.currency || "USD";
+                const balance = typeof account?.balance === "number" ? account.balance : 0;
+                if (balance > 0 && stake > balance) {
+                  console.warn(`[concierge] User ${userId}: balance $${balance.toFixed(2)} below stake $${stake}. Skipping placement on ${sym}.`);
+                } else {
+                  const contractType = sig.direction === "up" ? "CALL" : "PUT";
+                  const proposalPayload: Record<string, any> = {
+                    proposal: 1,
+                    amount: stake,
+                    basis: "stake",
+                    contract_type: contractType,
+                    currency,
+                    duration: sig.windowTicks,
+                    duration_unit: "t",
+                    underlying_symbol: sym,
+                  };
+                  // Add SL/TP via limit_order if supported
+                  const limitOrder = buildLimitOrder(contractType, settings.stopLoss, settings.takeProfit);
+                  if (limitOrder.limit_order) proposalPayload.limit_order = limitOrder.limit_order;
+
+                  const proposal = await (conn as any).sendRaw(proposalPayload).catch((e: any) => {
+                    console.warn(`[concierge] Deriv proposal failed (${sym} ${contractType}): ${e?.message || e}`);
+                    return null;
+                  });
+                  if (proposal?.proposal?.id) {
+                    const buy = await (conn as any).sendRaw({ buy: proposal.proposal.id, price: proposal.proposal.ask_price }).catch((e: any) => {
+                      console.warn(`[concierge] Deriv buy failed (${sym} ${contractType}): ${e?.message || e}`);
+                      return null;
+                    });
+                    if (buy?.buy?.contract_id) {
+                      await db.saveTrade({
+                        userId,
+                        symbol: sym,
+                        contractType,
+                        stake: String(stake),
+                        entryPrice: String(sig.entryPrice),
+                        result: "pending",
+                        contractId: String(buy.buy.contract_id),
+                        entryTime: new Date(),
+                        source: "concierge",
+                      });
+                      console.log(`[concierge] Auto trade placed — #${buy.buy.contract_id} ${sym} ${contractType} @ $${stake}`);
+                    }
+                  }
+                }
+              }
+            } catch (e) {
+              console.warn(`[concierge] auto-exec error for ${sym}:`, (e as any)?.message || e);
+            }
+          }
+        }
       }
     } catch {
       errors.push(sym);

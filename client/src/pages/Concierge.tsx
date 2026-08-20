@@ -158,11 +158,14 @@ export default function Concierge() {
   const [ctxSymbol, setCtxSymbol] = useState("R_100");
   const [followInput, setFollowInput] = useState("");
   const [followNote, setFollowNote] = useState("");
-  const [draftMaxPerDay, setDraftMaxPerDay] = useState(10);
-  const [draftStake, setDraftStake] = useState(1);
-  const [draftStopLoss, setDraftStopLoss] = useState(0);
-  const [draftTakeProfit, setDraftTakeProfit] = useState(0);
+  const [draftMaxPerDay, setDraftMaxPerDay] = useState("10");
+  const [draftStake, setDraftStake] = useState("1");
+  const [draftStopLoss, setDraftStopLoss] = useState("0");
+  const [draftTakeProfit, setDraftTakeProfit] = useState("0");
+  const [draftMaxDailyLoss, setDraftMaxDailyLoss] = useState("0");
   const [saveNote, setSaveNote] = useState("");
+  const [savingNumeric, setSavingNumeric] = useState(false);
+  const [sizingMethod, setSizingMethod] = useState<'kelly' | 'fixed' | 'vol_adjusted'>('fixed');
 
   const briefing = trpc.concierge.briefing.useQuery(undefined, { enabled: isAuthenticated });
   const coach = trpc.concierge.sessionCoach.useQuery(undefined, { enabled: isAuthenticated });
@@ -190,10 +193,11 @@ export default function Concierge() {
 
   useEffect(() => {
     if (!settingsQ.data) return;
-    setDraftMaxPerDay(settingsQ.data.maxPerDay);
-    setDraftStake(settingsQ.data.stake);
-    setDraftStopLoss(settingsQ.data.stopLoss);
-    setDraftTakeProfit(settingsQ.data.takeProfit);
+    setDraftMaxPerDay(settingsQ.data.maxPerDay.toString());
+    setDraftStake(settingsQ.data.stake.toString());
+    setDraftStopLoss(settingsQ.data.stopLoss.toString());
+    setDraftTakeProfit(settingsQ.data.takeProfit.toString());
+    setDraftMaxDailyLoss((settingsQ.data.maxDailyLoss || 0).toString());
   }, [settingsQ.data]);
 
   const syncSymbol = (sym: string) => {
@@ -251,16 +255,29 @@ export default function Concierge() {
   };
 
   const saveNumeric = () => {
+    setSavingNumeric(true);
+    const maxPerDay = Math.max(1, Math.min(50, parseInt(draftMaxPerDay) || 10));
+    const stake = Math.max(0.35, parseFloat(draftStake) || 0.35);
+    const stopLoss = Math.max(0, parseFloat(draftStopLoss) || 0);
+    const takeProfit = Math.max(0, parseFloat(draftTakeProfit) || 0);
+    const maxDailyLoss = Math.max(0, parseFloat(draftMaxDailyLoss) || 0);
+
     patchSettings.mutate(
-      { maxPerDay: draftMaxPerDay, stake: draftStake, stopLoss: draftStopLoss, takeProfit: draftTakeProfit },
+      { maxPerDay, stake, stopLoss, takeProfit, maxDailyLoss },
       {
-        onSuccess: () => {
+        onSuccess: (saved) => {
           setSaveNote("Settings saved.");
           setTimeout(() => setSaveNote(""), 3000);
           refresh();
           settingsQ.refetch();
+          setDraftMaxPerDay(saved.maxPerDay.toString());
+          setDraftStake(saved.stake.toString());
+          setDraftStopLoss(saved.stopLoss.toString());
+          setDraftTakeProfit(saved.takeProfit.toString());
+          setDraftMaxDailyLoss((saved.maxDailyLoss || 0).toString());
         },
         onError: (e: any) => setSaveNote(e?.message || "Failed to save settings"),
+        onSettled: () => setSavingNumeric(false),
       },
     );
   };
@@ -272,6 +289,7 @@ export default function Concierge() {
         onSuccess: (saved) => {
           toast(saved.enabled ? "Signal scan ON — scanning your followed symbols." : "Signal scan OFF — stopped.", saved.enabled ? "success" : "info");
           refresh();
+          settingsQ.refetch();
         },
         onError: (e: any) => toast(e?.message || "Failed to update settings", "error"),
       },
@@ -330,16 +348,11 @@ export default function Concierge() {
               <div className="mt-3 space-y-4">
                 <PlainBlock plain={sig.plain} fallback={brief.summary} />
                 <DetailDisclosure details={sig.details} />
-                <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                   <Metric label="Symbol" value={nm.symbolLabel} />
                   <Metric label="Direction" value={sig.direction === "up" ? "Rise" : "Fall"} accent={sig.direction === "up" ? "text-[var(--green)]" : "text-[var(--red)]"} />
                   <Metric label="Agreement" value={agreementText(sig.votes) || "—"} />
-                  <Metric label="Suggested stake" value={`$${nm.suggestedStake}`} accent="text-[var(--accent-soft)]" />
-                  <Metric label="Max stake" value={`$${nm.maxStake}`} />
                 </div>
-                <p className="text-[11px] text-[var(--text-muted)]">
-                  Suggested stake = {nm.riskPct}% of your account balance — sized from risk management, not from how many indicators agree. Never risk more than ${nm.maxStake} (3× the recommended {nm.riskPct}%).
-                </p>
                 {acc && acc.total > 0 && (
                   <div className="rounded-lg border border-[var(--border)] bg-[var(--surface-elevated)] p-3 text-[11px] text-[var(--text-secondary)]">
                     Current signal: <span className="text-white font-semibold">{agreementText(sig.votes) || "no computable indicators yet"}</span> — that's how many indicators agree, not your chance of winning. Your guided-signal history: <span className="text-white font-semibold">{acc.winRatePct}% win rate</span> over {acc.total} resolved signals. Judge performance by the history, not the score.
@@ -349,7 +362,7 @@ export default function Concierge() {
                   onClick={() => tradeThis(sig)}
                   className="mt-1 inline-flex items-center gap-2 px-3 py-1.5 rounded-lg border border-[var(--accent)]/40 bg-[var(--accent)]/10 text-[var(--accent-soft)] text-xs font-bold hover:bg-[var(--accent)]/20 transition-colors"
                 >
-                  Trade this → <span className="text-[10px] font-medium opacity-70">prefills the terminal · you confirm</span>
+                  Trade this → <span className="text-[10px] font-medium opacity-70">prefills terminal with your configured ${settings?.stake || "1.00"} stake · you approve</span>
                 </button>
               </div>
             ) : (
@@ -454,6 +467,10 @@ export default function Concierge() {
               <div className="space-y-2">
                 {(candidates.data || []).slice(0, 12).map((c: any) => {
                   const sc = strengthColor(c.strength);
+                  // Expected value using historical win rate for this strength
+                  const histWinRate = acc?.byStrength?.[c.strength]?.winRatePct ?? acc?.winRatePct ?? 50;
+                  const ev = (histWinRate / 100) * 0.95 - (1 - histWinRate / 100);
+                  const evColor = ev > 0 ? "text-[var(--green)]" : ev < 0 ? "text-[var(--red)]" : "text-[var(--text-muted)]";
                   return (
                     <div key={`${c.symbol}-${c.direction}`} className="flex items-start gap-3 rounded-lg border border-[var(--border)] bg-[var(--surface-elevated)] p-3">
                       <span className={`w-7 h-7 rounded-md flex items-center justify-center text-xs font-bold ${c.direction === "up" ? "bg-[var(--green)]/15 text-[var(--green)]" : "bg-[var(--red)]/15 text-[var(--red)]"}`}>
@@ -464,9 +481,15 @@ export default function Concierge() {
                           <span className="text-sm font-bold text-white">{getSymbolDisplayName(c.symbol)}</span>
                           <span className={`px-1.5 py-0.5 rounded border text-[10px] font-bold ${sc.chip}`}>{c.strength}</span>
                           <span className="text-xs text-[var(--text-muted)]">{agreementText(c.votes) || c.contractType}</span>
+                          <span className={`text-[10px] font-bold ${evColor}`}>EV: ${ev > 0 ? "+" : ""}${(ev * (settings?.stake || 1)).toFixed(2)} (${(ev * 100).toFixed(1)}%)</span>
                         </div>
                         {c.plain?.what && <p className="text-[11px] text-[var(--text-secondary)] mt-1">{c.plain.what}</p>}
                         <div className="mt-1"><DetailDisclosure details={c.details} /></div>
+                        {c.regime && (
+                          <p className="text-[10px] text-[var(--text-muted)] mt-1">
+                            Regime: <span className={c.regime.aligned ? "text-[var(--green)]" : "text-[var(--red)]"}>{c.regime.regime}</span> ({c.regime.reason})
+                          </p>
+                        )}
                         <button
                           onClick={() => tradeThis(c)}
                           className="mt-2 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-[var(--accent)]/40 bg-[var(--accent)]/10 text-[var(--accent-soft)] text-[11px] font-bold hover:bg-[var(--accent)]/20 transition-colors"
@@ -508,17 +531,16 @@ export default function Concierge() {
             )}
           </Card>
 
-          {/* History */}
-          <Card title="Signal history" icon={<History className="w-4 h-4 text-[var(--accent)]" />}>
+{/* History */}
+          <Card title="Prediction history" icon={<History className="w-4 h-4 text-[var(--accent)]" />}>
             {history.isLoading ? <Loader2 className="w-5 h-5 animate-spin text-[var(--accent)]" /> : (
               <div className="max-h-80 overflow-y-auto">
                 <table className="w-full text-xs">
                   <thead>
                     <tr className="text-left text-[var(--text-muted)]">
                       <th className="pb-2 pr-2 font-medium">Symbol</th>
-                      <th className="pb-2 pr-2 font-medium">Dir</th>
+                      <th className="pb-2 pr-2 font-medium">Direction</th>
                       <th className="pb-2 pr-2 font-medium">Agreement</th>
-                      <th className="pb-2 pr-2 font-medium">Stake</th>
                       <th className="pb-2 font-medium">Result</th>
                     </tr>
                   </thead>
@@ -528,18 +550,19 @@ export default function Concierge() {
                         <td className="py-2 pr-2 text-white font-medium">{getSymbolDisplayName(s.symbol)}</td>
                         <td className="py-2 pr-2 text-[var(--text-secondary)]">{s.direction === "up" ? "Rise" : "Fall"}</td>
                         <td className="py-2 pr-2 text-[var(--text-muted)]">{rowAgreement(s)}</td>
-                        <td className="py-2 pr-2 text-[var(--text-secondary)]">${(Number(s.stake) || 0).toFixed(2)}</td>
                         <td className="py-2">
-                          <span className={`px-1.5 py-0.5 rounded border text-[10px] font-bold ${s.status === "win" ? "text-[var(--green)] border-[var(--green)]/40 bg-[var(--green)]/15" : s.status === "loss" ? "text-[var(--red)] border-[var(--red)]/40 bg-[var(--red)]/15" : s.status === "open" ? "text-[var(--amber)] border-[var(--amber)]/40 bg-[var(--amber)]/15" : "text-[var(--text-muted)] border-[var(--border)] bg-white/5"}`}>{resultLabel(s)}</span>
+                          <span className={`px-1.5 py-0.5 rounded border text-[10px] font-bold ${s.status === "win" ? "text-[var(--green)] border-[var(--green)]/40 bg-[var(--green)]/15" : s.status === "loss" ? "text-[var(--red)] border-[var(--red)]/40 bg-[var(--red)]/15" : s.status === "open" ? "text-[var(--amber)] border-[var(--amber)]/40 bg-[var(--amber)]/15" : s.status === "expired" ? "text-[var(--text-muted)] border-[var(--border)] bg-white/5" : "text-[var(--text-muted)] border-[var(--border)] bg-white/5"}`}>
+                            {s.status === "win" ? "Win" : s.status === "loss" ? "Loss" : s.status === "expired" ? "Refund" : "Open"}
+                          </span>
                         </td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
-                {(history.data || []).length === 0 && <p className="text-xs text-[var(--text-muted)] py-4">No guiding signals yet — scan now to seed the ledger.</p>}
+                {(history.data || []).length === 0 && <p className="text-xs text-[var(--text-muted)] py-4">No predictions yet — scan now to seed the ledger.</p>}
                 {(history.data || []).length > 0 && (
                   <p className="text-[10px] text-[var(--text-disabled)] mt-3 leading-relaxed">
-                    Stake is the recorded recommended stake; P&amp;L is the would-have CALL/PUT result (win +95% of stake, loss −100%, flat-tick refund $0) — guiding signals are reads, not executed trades.
+                    Predictions are guiding reads, not executed trades. Stake & P&L belong in Auto-execute history when enabled.
                   </p>
                 )}
               </div>
@@ -585,29 +608,76 @@ export default function Concierge() {
                   </button>
                 </div>
 
+                {/* Auto-execute toggle */}
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <p className="text-sm font-semibold text-white">Auto-execute STRONG signals</p>
+                    <p className="text-[11px] text-[var(--text-muted)]">Place REAL trades automatically when a STRONG signal is found</p>
+                  </div>
+                  <button
+                    onClick={() => patchSettings.mutate({ autoExec: !settings.autoExec }, { onSuccess: refresh })}
+                    className={`relative w-11 h-6 rounded-full transition-colors ${settings.autoExec ? "bg-[var(--amber)]" : "bg-[var(--surface-elevated)] border border-[var(--border)]"}`}
+                    title={settings.autoExec ? "Tap to turn off" : "Tap to turn on"}
+                  >
+                    <span className={`absolute top-0.5 w-5 h-5 rounded-full bg-white transition-all ${settings.autoExec ? "left-[22px]" : "left-0.5"}`} />
+                  </button>
+                </div>
+
+                {/* Position Sizing Method */}
+                <div className="space-y-3">
+                  <p className="text-sm font-semibold text-white">Position Sizing Method</p>
+                  <select
+                    value={sizingMethod}
+                    onChange={(e) => setSizingMethod(e.target.value as 'kelly' | 'fixed' | 'vol_adjusted')}
+                    className="bg-[var(--surface-elevated)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-white w-full max-w-xs"
+                  >
+                    <option value="fixed">Fixed % of Balance (simple, predictable)</option>
+                    <option value="kelly">Kelly Criterion (25% Kelly, math-optimal)</option>
+                    <option value="vol_adjusted">Volatility-Adjusted (ATR-based stops)</option>
+                  </select>
+                  <p className="text-[11px] text-[var(--text-muted)]">
+                    Fixed: stake = balance × risk%. Kelly: uses historical win rate. Vol-adjusted: stake = risk / (1.5×ATR).
+                  </p>
+                </div>
+
+                {/* Position Sizing Card */}
+                <div className="p-3 rounded-lg bg-[var(--surface-elevated)] border border-[var(--border)]">
+                  <p className="text-[11px] font-semibold text-white mb-2">Position Sizing Preview</p>
+                  <div className="space-y-1 text-[11px]">
+                    <p>Account: <span className="text-white font-bold">${(coach.data?.totalExposure || 500).toFixed(2)}</span></p>
+                    <p>Risk setting: <span className="text-white font-bold">{settings.stakePct}%</span> = <span className="text-white font-bold">${(coach.data?.totalExposure || 500) * (settings.stakePct / 100) * 0.25 | 0}.00</span></p>
+                    <p className="text-[var(--text-muted)]">Max per trade (5% cap): ${((coach.data?.totalExposure || 500) * 0.05).toFixed(2)}</p>
+                    <p className="text-[var(--text-muted)]">Daily loss limit: ${settings.maxDailyLoss || 'off'}</p>
+                  </div>
+                </div>
+
                 {/* Numeric fields: draft locally, persist on Save */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   <div>
                     <label className="text-[11px] text-[var(--text-muted)] mb-1 block">Max signals/day</label>
-                    <input type="number" min={1} max={50} value={draftMaxPerDay} onChange={(e) => setDraftMaxPerDay(parseFloat(e.target.value) || 1)} className="w-full bg-[var(--surface-elevated)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-white font-mono" />
+                    <input type="number" min={1} max={50} step={1} value={draftMaxPerDay} onChange={(e) => setDraftMaxPerDay(e.target.value)} className="w-full bg-[var(--surface-elevated)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-white font-mono" />
                   </div>
                   <div>
                     <label className="text-[11px] text-[var(--text-muted)] mb-1 block">Stake ($ · min 0.35)</label>
-                    <input type="number" min={0.35} step={0.1} value={draftStake} onChange={(e) => setDraftStake(parseFloat(e.target.value) || 0.35)} className="w-full bg-[var(--surface-elevated)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-white font-mono" />
+                    <input type="number" min={0.35} step={1} value={draftStake} onChange={(e) => setDraftStake(e.target.value)} className="w-full bg-[var(--surface-elevated)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-white font-mono" />
                   </div>
                   <div>
                     <label className="text-[11px] text-[var(--text-muted)] mb-1 block">Stop loss ($ · 0 = off)</label>
-                    <input type="number" min={0} step={0.1} value={draftStopLoss} onChange={(e) => setDraftStopLoss(parseFloat(e.target.value) || 0)} className="w-full bg-[var(--surface-elevated)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-white font-mono" />
+                    <input type="number" min={0} step={1} value={draftStopLoss} onChange={(e) => setDraftStopLoss(e.target.value)} className="w-full bg-[var(--surface-elevated)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-white font-mono" />
                   </div>
                   <div>
                     <label className="text-[11px] text-[var(--text-muted)] mb-1 block">Take profit ($ · 0 = off)</label>
-                    <input type="number" min={0} step={0.1} value={draftTakeProfit} onChange={(e) => setDraftTakeProfit(parseFloat(e.target.value) || 0)} className="w-full bg-[var(--surface-elevated)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-white font-mono" />
+                    <input type="number" min={0} step={1} value={draftTakeProfit} onChange={(e) => setDraftTakeProfit(e.target.value)} className="w-full bg-[var(--surface-elevated)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-white font-mono" />
+                  </div>
+                  <div>
+                    <label className="text-[11px] text-[var(--text-muted)] mb-1 block">Max daily loss ($ · 0 = off)</label>
+                    <input type="number" min={0} step={1} value={draftMaxDailyLoss} onChange={(e) => setDraftMaxDailyLoss(e.target.value)} className="w-full bg-[var(--surface-elevated)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-white font-mono" />
                   </div>
                 </div>
 
                 <div className="flex items-center gap-3">
-                  <Button onClick={saveNumeric} className="btn btn-outline gap-2" size="sm" disabled={patchSettings.isPending}>
-                    <Save className="w-3.5 h-3.5" />{patchSettings.isPending ? "Saving…" : "Save settings"}
+                  <Button onClick={saveNumeric} className="btn btn-outline gap-2" size="sm" disabled={savingNumeric}>
+                    <Save className="w-3.5 h-3.5" />{savingNumeric ? "Saving…" : "Save settings"}
                   </Button>
                   {saveNote && <p className="text-[11px] text-[var(--accent-soft)]">{saveNote}</p>}
                 </div>

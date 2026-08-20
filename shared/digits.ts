@@ -18,7 +18,7 @@
 
 import { lastDigitOf, getDecimalPlaces } from "./lastDigit";
 
-export type DigitReadType = "OVER" | "UNDER" | "EVEN" | "ODD";
+export type DigitReadType = "OVER" | "UNDER" | "EVEN" | "ODD" | "MATCH" | "DIFFER";
 export type DigitStrength = "STRONG" | "MEDIUM" | "WEAK";
 
 export interface DigitRead {
@@ -109,12 +109,16 @@ export function buildDigitSnapshot(symbol: string, ticks: TickLike[]): DigitSnap
 export function readBaseline(type: DigitReadType, barrier: number | null): number {
   if (type === "OVER") return barrier == null ? 40 : ((9 - Math.min(9, Math.max(0, barrier))) / 10) * 100;
   if (type === "UNDER") return barrier == null ? 40 : (Math.min(9, Math.max(0, barrier)) / 10) * 100;
+  if (type === "MATCH") return 10; // 1/10 = 10% fair for exact digit match
+  if (type === "DIFFER") return 90; // 9/10 = 90% fair for differing from a digit
   return 50; // EVEN / ODD
 }
 
 export function readLabel(type: DigitReadType, barrier: number | null): string {
   if (type === "OVER") return `Over ${barrier ?? 4}`;
   if (type === "UNDER") return `Under ${barrier ?? 5}`;
+  if (type === "MATCH") return `Match ${barrier ?? 0}`;
+  if (type === "DIFFER") return `Differ ${barrier ?? 0}`;
   return type === "EVEN" ? "Even" : "Odd";
 }
 
@@ -166,15 +170,28 @@ export function buildDigitReads(digits: number[], window: number = READ_WINDOW):
     { type: "UNDER", barrier: 5, freq: under5Pct, label: "Under 5" },
   ];
 
+  // Add MATCH reads for individual digits with significant tilt
+  for (let d = 0; d <= 9; d++) {
+    const digitPct = pct(win, (x) => x === d);
+    const baseline = 10; // 10% fair for each digit
+    const delta = digitPct - baseline;
+    if (delta >= 5) {
+      specs.push({ type: "MATCH", barrier: d, freq: digitPct, label: `Match ${d}` });
+      specs.push({ type: "DIFFER", barrier: d, freq: 100 - digitPct, label: `Differ ${d}` });
+    }
+  }
+
   const reads: DigitRead[] = [];
   for (const spec of specs) {
     const baseline = readBaseline(spec.type, spec.barrier);
     const delta = spec.freq - baseline;
-    if (Math.abs(delta) < 5) continue;
+    // Only return positive tilts (delta >= 5pp). This filters out small deviations
+    // and redundant, complementary negative-tilt (contrarian) recommendations.
+    if (delta < 5) continue;
     // Capped at ~58 so a tilt is never sold as an edge; scaled slower than
     // the concierge's confluence so the digit read stays conservative.
-    const confidence = Math.round(50 + Math.min(Math.abs(delta) * 0.8, 8));
-    const strength: DigitStrength = Math.abs(delta) >= 10 && sample >= 80 ? "STRONG" : Math.abs(delta) >= 6 ? "MEDIUM" : "WEAK";
+    const confidence = Math.round(50 + Math.min(delta * 0.8, 8));
+    const strength: DigitStrength = delta >= 10 && sample >= 80 ? "STRONG" : delta >= 6 ? "MEDIUM" : "WEAK";
     reads.push({
       type: spec.type,
       barrier: spec.barrier,
@@ -209,6 +226,8 @@ function buildReason(spec: { type: DigitReadType; barrier: number | null; label:
 export function settleDigitRead(read: Pick<DigitRead, "type" | "barrier">, nextDigit: number): "win" | "loss" | "expired" {
   if (read.type === "EVEN") return nextDigit % 2 === 0 ? "win" : "loss";
   if (read.type === "ODD") return nextDigit % 2 !== 0 ? "win" : "loss";
+  if (read.type === "MATCH") return nextDigit === (read.barrier ?? 0) ? "win" : "loss";
+  if (read.type === "DIFFER") return nextDigit !== (read.barrier ?? 0) ? "win" : "loss";
   const b = read.barrier == null ? 5 : read.barrier;
   if (read.type === "OVER") return nextDigit > b ? "win" : nextDigit < b ? "loss" : "expired";
   // UNDER

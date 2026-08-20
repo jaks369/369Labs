@@ -32,6 +32,10 @@ export function digitReadToContract(read: DigitRead): ContractSelection {
       return { category: "even_odd", digitMatch: "match" };
     case "ODD":
       return { category: "even_odd", digitMatch: "differ" };
+    case "MATCH":
+      return { category: "digits", digitMatch: "match", barrier: read.barrier ?? 0 };
+    case "DIFFER":
+      return { category: "digits", digitMatch: "differ", barrier: read.barrier ?? 0 };
   }
 }
 

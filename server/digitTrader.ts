@@ -16,6 +16,7 @@ import { getTickHistory } from "./aitools";
 import { buildDigitSnapshot, settleDigitRead, digitsFromTicks, DigitRead, DigitSnapshot, TickLike } from "@shared/digits";
 import { getDecimalPlaces } from "@shared/lastDigit";
 import { buildLimitOrder } from "@shared/slTp";
+import { getStandardVolatilitySymbols } from "@shared/symbols";
 import { derivManager } from "./derivConnection";
 import { getRecentTicks, isFeedStale } from "./tickCollector";
 import { fireWebhookEvent } from "./webhookExecutor";
@@ -46,7 +47,7 @@ export const DEFAULT_DT_SETTINGS: DigitTraderSettings = {
   stake: 1,
   stopLoss: 0,
   takeProfit: 0,
-  symbols: ["R_100"],
+  symbols: getStandardVolatilitySymbols(),
   maxDailyLoss: 0,
   maxDailyTrades: 0,
 };
@@ -172,6 +173,10 @@ function readToContract(read: DigitRead): { contractType: string; barrier?: stri
       return { contractType: "DIGITEVEN" };
     case "ODD":
       return { contractType: "DIGITODD" };
+    case "MATCH":
+      return { contractType: "DIGITMATCH", barrier: String(read.barrier ?? 0) };
+    case "DIFFER":
+      return { contractType: "DIGITDIFFER", barrier: String(read.barrier ?? 0) };
   }
 }
 
@@ -334,9 +339,10 @@ async function persistReadsForTicks(
   symbol: string,
   ticks: TickLike[],
   nowEpoch: number,
+  filterWeak = true, // when false, persist ALL reads including WEAK for ledger transparency
 ): Promise<{ snapshot: DigitSnapshot; persisted: number; emitted: DigitRead[] }> {
   const snapshot = buildDigitSnapshot(symbol, ticks);
-  const reads = snapshot.reads.filter((r) => r.strength !== "WEAK");
+  const reads = filterWeak ? snapshot.reads.filter((r) => r.strength !== "WEAK") : snapshot.reads;
   const since = nowEpoch * 1000 - READ_DEDUP_MS; // generatedAt is ms in the schema
   const open = await db.listOpenDigitReads(userId, symbol, since);
   const recentKeys = new Set(open.map((r) => `${r.readType}:${r.barrier ?? ""}`));
@@ -376,7 +382,7 @@ async function persistReadsForTicks(
 export async function scanAndPersistForUser(userId: number, symbol: string): Promise<DigitScanResult> {
   const ticks = await getTickHistory(symbol, FETCH_COUNT);
   const nowEpoch = Math.floor(Date.now() / 1000);
-  const { snapshot, persisted, emitted } = await persistReadsForTicks(userId, symbol, digitsToEpochs(ticks), nowEpoch);
+  const { snapshot, persisted, emitted } = await persistReadsForTicks(userId, symbol, digitsToEpochs(ticks), nowEpoch, false);
   const settled = await settleOpenDigitReads(userId);
   return { snapshot, persisted, emitted, settled };
 }
@@ -419,7 +425,7 @@ async function autoCycle(): Promise<void> {
             if (ticks.length < 16) continue;
             const lastEpoch = ticks[ticks.length - 1].epoch;
             if (!lastEpoch || now / 1000 - lastEpoch > 60) continue; // stale feed for this symbol
-            const res = await persistReadsForTicks(userId, symbol, ticks, Math.floor(now / 1000));
+            const res = await persistReadsForTicks(userId, symbol, ticks, Math.floor(now / 1000), false);
             predicted += res.persisted;
           } catch (e) {
             console.warn(`[digitTrader] prediction error for user ${userId} symbol ${symbol}:`, (e as any)?.message || e);

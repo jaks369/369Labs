@@ -1,4 +1,4 @@
-// Single authoritative source of truth for Deriv Volatility Index symbols
+// Single authoritative source of truth for Deriv symbols (Volatility, Forex, Crypto, Stock Indices)
 
 export const VOLATILITY_SYMBOLS = [
   // Standard Volatility Indices
@@ -24,6 +24,30 @@ export const VOLATILITY_SYMBOLS = [
   { symbol: "CRASH300", displayName: "Crash 300 Index", market: "boom_crash", submarket: "crash" },
   { symbol: "CRASH500", displayName: "Crash 500 Index", market: "boom_crash", submarket: "crash" },
   { symbol: "CRASH1000", displayName: "Crash 1000 Index", market: "boom_crash", submarket: "crash" },
+  // Forex (Major Pairs)
+  { symbol: "frxEURUSD", displayName: "EUR/USD", market: "forex", submarket: "major" },
+  { symbol: "frxGBPUSD", displayName: "GBP/USD", market: "forex", submarket: "major" },
+  { symbol: "frxUSDJPY", displayName: "USD/JPY", market: "forex", submarket: "major" },
+  { symbol: "frxUSDCHF", displayName: "USD/CHF", market: "forex", submarket: "major" },
+  { symbol: "frxAUDUSD", displayName: "AUD/USD", market: "forex", submarket: "major" },
+  { symbol: "frxUSDCAD", displayName: "USD/CAD", market: "forex", submarket: "major" },
+  { symbol: "frxNZDUSD", displayName: "NZD/USD", market: "forex", submarket: "major" },
+  { symbol: "frxEURGBP", displayName: "EUR/GBP", market: "forex", submarket: "cross" },
+  { symbol: "frxEURJPY", displayName: "EUR/JPY", market: "forex", submarket: "cross" },
+  { symbol: "frxGBPJPY", displayName: "GBP/JPY", market: "forex", submarket: "cross" },
+  // Crypto
+  { symbol: "cryBTCUSD", displayName: "BTC/USD", market: "crypto", submarket: "major" },
+  { symbol: "cryETHUSD", displayName: "ETH/USD", market: "crypto", submarket: "major" },
+  { symbol: "cryLTCUSD", displayName: "LTC/USD", market: "crypto", submarket: "major" },
+  { symbol: "cryBCHUSD", displayName: "BCH/USD", market: "crypto", submarket: "major" },
+  // Stock Indices
+  { symbol: "stxUS500", displayName: "US 500 (S&P 500)", market: "stock_index", submarket: "us" },
+  { symbol: "stxUSTEC", displayName: "US Tech 100 (Nasdaq)", market: "stock_index", submarket: "us" },
+  { symbol: "stxUS30", displayName: "Wall Street 30 (Dow Jones)", market: "stock_index", submarket: "us" },
+  { symbol: "stxEU50", displayName: "Europe 50 (Euro Stoxx 50)", market: "stock_index", submarket: "eu" },
+  { symbol: "stxJP225", displayName: "Japan 225 (Nikkei 225)", market: "stock_index", submarket: "asia" },
+  { symbol: "stxHK50", displayName: "Hong Kong 50 (HSI)", market: "stock_index", submarket: "asia" },
+  { symbol: "stxAU200", displayName: "Australia 200 (ASX 200)", market: "stock_index", submarket: "asia" },
 ] as const;
 
 export type SymbolInfo = typeof VOLATILITY_SYMBOLS[number];
@@ -54,9 +78,9 @@ export function getAllSymbols(): string[] {
 }
 
 // Normalize a user-entered symbol string to a known symbol. Accepts raw codes
-// (R_100, 1HZ10V, BOOM500), compact display forms (VOLATILITY100, BOOM500),
-// and the full friendly names shown in the UI ("Volatility 100 Index",
-// "Volatility 10 (1s) Index", "Boom 500 Index"). Unknown input is returned
+// (R_100, 1HZ10V, BOOM500, frxEURUSD, cryBTCUSD, stxUS500), compact display forms
+// (VOLATILITY100, BOOM500, EURUSD, BTCUSD, US500),
+// and the full friendly names shown in the UI. Unknown input is returned
 // as-is so callers can surface a clear "unrecognised" message.
 export function normalizeSymbol(input: string): string {
   if (!input) return input;
@@ -64,7 +88,7 @@ export function normalizeSymbol(input: string): string {
 
   // Full friendly names first — longest match wins.
   for (const info of VOLATILITY_SYMBOLS) {
-    const compactName = info.displayName.toUpperCase().replace(/[\s()\-]/g, "");
+    const compactName = info.displayName.toUpperCase().replace(/[\s()\-\/]/g, "");
     if (s === compactName || s === compactName.replace(/INDEX$/, "")) return info.symbol;
   }
 
@@ -91,6 +115,28 @@ export function normalizeSymbol(input: string): string {
   const boomCrash = s.match(/^(BOOM|CRASH)(\d{3})$/);
   if (boomCrash) {
     const candidate = boomCrash[1] + boomCrash[2];
+    if (VOLATILITY_SYMBOLS.some(v => v.symbol === candidate)) return candidate;
+  }
+  // Forex: "EURUSD" -> "frxEURUSD", "GBPUSD" -> "frxGBPUSD", etc.
+  const forexMatch = s.match(/^(FRX)?(EUR|GBP|AUD|NZD|USD)(USD|JPY|CHF|CAD|GBP|EUR)$/);
+  if (forexMatch) {
+    const base = forexMatch[2];
+    const quote = forexMatch[3];
+    const candidate = "frx" + base + quote;
+    if (VOLATILITY_SYMBOLS.some(v => v.symbol === candidate)) return candidate;
+  }
+  // Crypto: "BTCUSD" -> "cryBTCUSD", "ETHUSD" -> "cryETHUSD"
+  const cryptoMatch = s.match(/^(CRY)?(BTC|ETH|LTC|BCH)(USD)$/);
+  if (cryptoMatch) {
+    const base = cryptoMatch[2];
+    const quote = cryptoMatch[3];
+    const candidate = "cry" + base + quote;
+    if (VOLATILITY_SYMBOLS.some(v => v.symbol === candidate)) return candidate;
+  }
+  // Stock Indices: "US500" -> "stxUS500", "USTEC" -> "stxUSTEC", etc.
+  const stockMatch = s.match(/^(STX)?(US500|USTEC|US30|EU50|JP225|HK50|AU200)$/);
+  if (stockMatch) {
+    const candidate = "stx" + stockMatch[2];
     if (VOLATILITY_SYMBOLS.some(v => v.symbol === candidate)) return candidate;
   }
   return s;

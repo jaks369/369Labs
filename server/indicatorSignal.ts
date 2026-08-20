@@ -14,10 +14,22 @@
  *    "nothing to do" state instead of inventing trades.
  */
 
-import { scoreConfluence, explainConfluence, ema, rsi, macd, buildCandles, medianTickGapSec, TickLike, Candle, IndicatorDetail } from "@shared/indicators";
+import { scoreConfluence, explainConfluence, ema, rsi, macd, buildCandles, medianTickGapSec, TickLike, Candle, IndicatorDetail, atr, bollingerBands, adx } from "@shared/indicators";
 
 export type GuideStrength = "STRONG" | "MEDIUM" | "WEAK";
 export type GuideDirection = "up" | "down";
+
+export type MarketRegime = 'trend_up' | 'trend_down' | 'chop' | 'high_vol' | 'low_vol' | 'unknown';
+
+export interface RegimeInfo {
+  regime: MarketRegime;
+  adx: number | null;
+  bbWidthPct: number | null; // percentile 0-100
+  emaSlope: 'up' | 'down' | 'flat' | null;
+  hurst?: number | null;
+  aligned: boolean; // true if regime supports signal direction
+  reason: string;
+}
 
 export interface GuidingSignalCandidate {
   symbol: string;
@@ -36,6 +48,8 @@ export interface GuidingSignalCandidate {
   plain: { scoreLabel: string; what: string; why: string; strength: string; risk: string };
   /** Per-indicator technical reads for the expandable "Technical details" layer. */
   details: IndicatorDetail[];
+  /** Market regime at signal time */
+  regime?: RegimeInfo;
 }
 
 /** Pick a horizon in ticks for outcome resolution given the tick cadence. */
@@ -96,6 +110,11 @@ export function scanSignalForSymbol(symbol: string, rawTicks: TickLike[]): ScanR
   const strength = strengthFor(confluence.score);
   const last = candles[candles.length - 1];
 
+  // Detect market regime
+  const regimeInfo = detectRegime(candles);
+  const regimeAligned = isRegimeAligned(regimeInfo.regime, confluence.direction);
+  const regimeWithAlignment = { ...regimeInfo, aligned: regimeAligned };
+
   // Do not emit a tradeable card from a bare coin-flip observation. WEAK is
   // only emitted when there is real (if thin) directional agreement.
   const signal: GuidingSignalCandidate | null =
@@ -111,12 +130,14 @@ export function scanSignalForSymbol(symbol: string, rawTicks: TickLike[]): ScanR
           votes: confluence.votes,
           plain: explanation,
           details: confluence.details,
+          regime: regimeWithAlignment,
           // First line is the honest vote tally ("2/2 indicators agree") so the
           // persisted ledger and notifications carry the count, not a scaled
           // percentage. Everything that follows is the same technical read.
           reasons: [
             `${Math.max(confluence.votes.up, confluence.votes.down)}/${confluence.votes.total} indicators agree`,
             ...confluence.reasons,
+            `Regime: ${regimeWithAlignment.regime} (${regimeWithAlignment.reason}) · ${regimeAligned ? 'aligned' : 'misaligned'}`,
             `Observed over ${candles.length} ${timeframeSec}s candles · ${available.join("+")} · technical read, not a guaranteed edge`,
           ],
           entryPrice: last.close,
@@ -134,4 +155,87 @@ function computeEmaUp(closes: number[]): boolean | null {
   const i = closes.length - 1;
   if (Number.isNaN(fast[i]) || Number.isNaN(slow[i])) return null;
   return fast[i] > slow[i];
+}
+
+/** Detect market regime from candles */
+export function detectRegime(candles: Candle[]): RegimeInfo {
+  if (candles.length < 30) {
+    return { regime: 'unknown', adx: null, bbWidthPct: null, emaSlope: null, aligned: false, reason: 'Insufficient candles for regime detection' };
+  }
+
+  const closes = candles.map(c => c.close);
+  const highs = candles.map(c => c.high);
+  const lows = candles.map(c => c.low);
+
+  // ADX (14 period) - trend strength
+  const adxValue = adx(highs, lows, closes, 14);
+  const adxLast = adxValue && adxValue.length ? adxValue[adxValue.length - 1] : null;
+
+  // Bollinger Band width percentile (20 period, 2 std) - volatility regime
+  const bb = bollingerBands(closes, 20, 2);
+  let bbWidthPct: number | null = null;
+  if (bb.upper && bb.lower && bb.middle) {
+    const widths = bb.upper.map((u, i) => bb.middle[i] ? (u - bb.lower![i]) / bb.middle[i] : 0);
+    const currentWidth = widths[widths.length - 1];
+    const sorted = [...widths].sort((a, b) => a - b);
+    const rank = sorted.findIndex(w => w >= currentWidth);
+    bbWidthPct = sorted.length > 0 ? (rank / sorted.length) * 100 : null;
+  }
+
+  // EMA slope (21 period) - trend direction
+  const ema21 = ema(closes, 21);
+  let emaSlope: 'up' | 'down' | 'flat' | null = null;
+  if (ema21.length >= 5) {
+    const last = ema21[ema21.length - 1];
+    const prev = ema21[ema21.length - 5];
+    if (last && prev) {
+      const pctChange = (last - prev) / prev;
+      if (pctChange > 0.002) emaSlope = 'up';
+      else if (pctChange < -0.002) emaSlope = 'down';
+      else emaSlope = 'flat';
+    }
+  }
+
+  // Determine regime
+  let regime: MarketRegime = 'chop';
+  let reason = '';
+
+  if (adxLast !== null && adxLast > 25) {
+    // Strong trend
+    regime = emaSlope === 'up' ? 'trend_up' : emaSlope === 'down' ? 'trend_down' : 'chop';
+    reason = `ADX ${adxLast.toFixed(1)} > 25 (strong trend)`;
+  } else if (adxLast !== null && adxLast < 20) {
+    // Chop / ranging
+    regime = 'chop';
+    reason = `ADX ${adxLast.toFixed(1)} < 20 (choppy/ranging)`;
+  } else {
+    // Moderate ADX - check volatility
+    if (bbWidthPct !== null && bbWidthPct > 80) {
+      regime = 'high_vol';
+      reason = `BB width ${bbWidthPct.toFixed(0)}th percentile (high volatility)`;
+    } else if (bbWidthPct !== null && bbWidthPct < 20) {
+      regime = 'low_vol';
+      reason = `BB width ${bbWidthPct.toFixed(0)}th percentile (low volatility)`;
+    } else {
+      regime = 'chop';
+      reason = `ADX ${adxLast?.toFixed(1) ?? 'N/A'} moderate, BB width ${bbWidthPct?.toFixed(0) ?? 'N/A'}th percentile`;
+    }
+  }
+
+  return {
+    regime,
+    adx: adxLast,
+    bbWidthPct,
+    emaSlope,
+    aligned: false, // set by caller based on signal direction
+    reason,
+  };
+}
+
+/** Check if regime aligns with signal direction */
+export function isRegimeAligned(regime: MarketRegime, direction: GuideDirection): boolean {
+  if (direction === 'up') {
+    return regime === 'trend_up' || regime === 'low_vol';
+  }
+  return regime === 'trend_down' || regime === 'low_vol';
 }
