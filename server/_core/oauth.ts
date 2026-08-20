@@ -144,6 +144,12 @@ async function handleGoogleCallback(code: string): Promise<{ id: string; email: 
     headers: { Authorization: `Bearer ${tokens.access_token}` },
   });
   const userInfo = await userRes.json() as any;
+
+  // Verify email is verified by Google before trusting it
+  if (!userInfo.verified_email) {
+    throw new Error("Google account email not verified. Please verify your email with Google first.");
+  }
+
   return { id: userInfo.id, email: userInfo.email || "", name: userInfo.name || userInfo.given_name || "" };
 }
 
