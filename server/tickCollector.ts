@@ -87,13 +87,24 @@ async function fetchActiveSymbols(): Promise<string[]> {
         const msg = JSON.parse(data.toString());
         if (msg.req_id !== reqId) return;
         ws!.removeListener("message", handler);
-        // Capture market + exchange_is_open alongside the symbol so downstream
-        // code can distinguish "closed market, expected silence" from "feed broken."
+        const raw = msg.active_symbols || [];
+        if (!raw.length) {
+          console.warn("[tickCollector] active_symbols response empty");
+          resolve([]);
+          return;
+        }
+        // Deriv may use different field names for the symbol across response
+        // types. Try the common ones (same logic as the client-side parser).
+        const sample = raw[0];
+        const symField = ["underlying_symbol", "symbol", "name", "id", "code", "underlying", "ticker"].find((f) => f in sample) || "symbol";
+        const mktField = ["market", "market_name", "sector", "group"].find((f) => f in sample) || "market";
+        console.log(`[tickCollector] active_symbols: ${raw.length} total, sample fields: ${Object.keys(sample).join(", ")}, using symField=${symField}`);
         const now = Date.now();
         const syms: string[] = [];
-        for (const s of (msg.active_symbols || [])) {
-          const sym = s.symbol as string;
-          const market = (s.market || "") as string;
+        for (const s of raw) {
+          const sym = String(s[symField] || "").trim();
+          if (!sym) continue;
+          const market = String(s[mktField] || "").trim();
           const exchangeIsOpen = s.exchange_is_open === 1 || s.exchange_is_open === true;
           symbolMarketStatus.set(sym, { market, exchangeIsOpen, lastChecked: now });
           // Subscribe to: volatility/boom/crash indices (always open) + real markets
@@ -103,9 +114,10 @@ async function fetchActiveSymbols(): Promise<string[]> {
             syms.push(sym);
           }
         }
-        console.log(`[tickCollector] active_symbols: ${syms.length} symbols (${[...new Set(syms.map(s => symbolMarketStatus.get(s)?.market))].join(", ")})`);
+        console.log(`[tickCollector] subscribing to ${syms.length} symbols (markets: ${[...new Set(syms.map(s => symbolMarketStatus.get(s)?.market))].join(", ") || "none"})`);
         resolve(syms);
-      } catch {
+      } catch (e) {
+        console.error("[tickCollector] fetchActiveSymbols parse error", e);
         resolve([]);
       }
     };
