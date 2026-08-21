@@ -77,6 +77,11 @@ export function getAllSymbols(): string[] {
   return VOLATILITY_SYMBOLS.map(s => s.symbol);
 }
 
+// Get only symbols that have live Deriv websocket data (volatility + boom/crash)
+export function getDerivSymbols(): string[] {
+  return VOLATILITY_SYMBOLS.filter(s => s.market === "volatility" || s.market === "boom_crash").map(s => s.symbol);
+}
+
 // Normalize a user-entered symbol string to a known symbol. Accepts raw codes
 // (R_100, 1HZ10V, BOOM500, frxEURUSD, cryBTCUSD, stxUS500), compact display forms
 // (VOLATILITY100, BOOM500, EURUSD, BTCUSD, US500),

@@ -1223,6 +1223,22 @@ export const appRouter = router({
         }
       }),
 
+    delete: protectedProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ ctx, input }) => {
+        try {
+          const existing = await db.getStrategyById(input.id, ctx.user.id);
+          if (!existing) throw new TRPCError({ code: "NOT_FOUND", message: "Strategy not found" });
+          const ok = await db.deleteStrategy(input.id, ctx.user.id);
+          if (!ok) throw new TRPCError({ code: "NOT_FOUND", message: "Strategy not found" });
+          db.saveAuditLog({ userId: ctx.user.id, action: "strategy.delete", target: String(input.id), detail: { name: existing.name } }).catch(() => {});
+          return { ok: true };
+        } catch (error) {
+          if (error instanceof TRPCError) throw error;
+          throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Failed to delete strategy" });
+        }
+      }),
+
     update: protectedProcedure
       .input(z.object({
         id: z.number(),

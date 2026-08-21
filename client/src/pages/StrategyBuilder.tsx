@@ -149,6 +149,9 @@ export function StrategyBuilderContent({ embedded = false, onClose, onSaved }: S
   const duplicateMutation = trpc.strategies.duplicate.useMutation({
     onSuccess: () => strategiesQuery.refetch(),
   });
+  const deleteMutation = trpc.strategies.delete.useMutation({
+    onSuccess: () => strategiesQuery.refetch(),
+  });
   const critiqueMutation = trpc.ai.critique.useMutation();
   const strategiesQuery = trpc.strategies.list.useQuery();
   const templatesQuery = trpc.strategies.templates.useQuery();
@@ -420,7 +423,7 @@ export function StrategyBuilderContent({ embedded = false, onClose, onSaved }: S
                   </div>
                 ) : strategiesQuery.isError ? (
                   <p className="text-xs text-[var(--red)] italic">Failed to load strategies.</p>
-                ) : (Array.isArray(strategiesQuery.data) ? strategiesQuery.data.slice(0, 5) : []).map(s => (
+                ) : (Array.isArray(strategiesQuery.data) ? strategiesQuery.data : []).map(s => (
                   <div key={s.id} className="p-3 rounded-lg bg-black/20 border border-white/5 hover:border-[var(--accent)]/50 transition-all">
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0 flex-1">
@@ -429,14 +432,32 @@ export function StrategyBuilderContent({ embedded = false, onClose, onSaved }: S
                           {s.updatedAt ? new Date(s.updatedAt).toLocaleDateString() : "Not saved yet"}
                         </p>
                       </div>
-                      <button
-                        onClick={() => duplicateMutation.mutate({ id: s.id })}
-                        disabled={duplicateMutation.isPending}
-                        title="Duplicate strategy"
-                        className="p-1.5 rounded-md text-[var(--text-muted)] hover:text-[var(--accent)] hover:bg-[var(--accent-soft)] transition-colors disabled:opacity-50"
-                      >
-                        <Copy className="w-3.5 h-3.5" />
-                      </button>
+                      <div className="flex items-center gap-1 shrink-0">
+                        <button
+                          onClick={() => {
+                            if (window.confirm(`Duplicate "${s.name}"?`)) {
+                              duplicateMutation.mutate({ id: s.id });
+                            }
+                          }}
+                          disabled={duplicateMutation.isPending}
+                          title="Duplicate strategy"
+                          className="p-1.5 rounded-md text-[var(--text-muted)] hover:text-[var(--accent)] hover:bg-[var(--accent-soft)] transition-colors disabled:opacity-50"
+                        >
+                          <Copy className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          onClick={() => {
+                            if (window.confirm(`Delete "${s.name}"? This cannot be undone.`)) {
+                              deleteMutation.mutate({ id: s.id });
+                            }
+                          }}
+                          disabled={deleteMutation.isPending}
+                          title="Delete strategy"
+                          className="p-1.5 rounded-md text-[var(--text-muted)] hover:text-[var(--red)] hover:bg-[var(--red)]/10 transition-colors disabled:opacity-50"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
                     </div>
                   </div>
                 ))}

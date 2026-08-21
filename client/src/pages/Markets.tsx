@@ -4,11 +4,11 @@ import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { BarChart3, Search, RefreshCw, TrendingUp, TrendingDown, Minus, ArrowRight } from "lucide-react";
 import { derivWS } from "@/services/derivWebSocket";
-import { getAllSymbols, getSymbolDisplayName } from "@shared/symbols";
+import { getDerivSymbols, getSymbolDisplayName } from "@shared/symbols";
 import { PageContainer, PageSection } from "@/components/PageSection";
 import { FilterPill } from "@/components/ui/filter-pill";
 
-const SYMBOLS = getAllSymbols() ?? [];
+const SYMBOLS = getDerivSymbols() ?? [];
 
 type Group = "all" | "volatility" | "volatility_1s" | "boom_crash";
 
