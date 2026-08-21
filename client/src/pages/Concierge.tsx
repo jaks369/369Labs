@@ -28,6 +28,7 @@ import { Button } from "@/components/ui/button";
 import { toast } from "@/components/Toast";
 import { pushTradeIntent } from "@/lib/tradeIntent";
 import { getSymbolDisplayName, normalizeSymbol, filterValidSymbols } from "@/lib/symbols";
+import { derivWS } from "@/services/derivWebSocket";
 
 function badge(level: string) {
   const map: Record<string, string> = {
@@ -156,6 +157,7 @@ export default function Concierge() {
   const { isAuthenticated } = useAuth();
   const [, navigate] = useLocation();
   const [ctxSymbol, setCtxSymbol] = useState("R_100");
+  const [ctxSymbolFocused, setCtxSymbolFocused] = useState(false);
   const [followInput, setFollowInput] = useState("");
   const [followNote, setFollowNote] = useState("");
   const [draftMaxPerDay, setDraftMaxPerDay] = useState("10");
@@ -166,6 +168,17 @@ export default function Concierge() {
   const [saveNote, setSaveNote] = useState("");
   const [savingNumeric, setSavingNumeric] = useState(false);
   const [sizingMethod, setSizingMethod] = useState<'kelly' | 'fixed' | 'vol_adjusted'>('fixed');
+  const [balance, setBalance] = useState(0);
+
+  useEffect(() => {
+    const unsub = derivWS.onBalance((b) => {
+      const list = Array.isArray(b.balance) ? b.balance : b.accounts || [b];
+      const acct = list[0];
+      setBalance(parseFloat(acct?.balance != null ? acct.balance : acct?.display_balance || "0") || 0);
+    });
+    if (derivWS.isAuthorized()) derivWS.fetchBalance();
+    return unsub;
+  }, []);
 
   const briefing = trpc.concierge.briefing.useQuery(undefined, { enabled: isAuthenticated });
   const coach = trpc.concierge.sessionCoach.useQuery(undefined, { enabled: isAuthenticated });
@@ -434,10 +447,12 @@ export default function Concierge() {
           <Card title="Market context" icon={<BarChart3 className="w-4 h-4 text-[var(--accent)]" />}>
             <div className="flex gap-2 mb-1">
               <input
-                value={ctxSymbol}
+                value={ctxSymbolFocused ? ctxSymbol : getSymbolDisplayName(ctxSymbol) || ctxSymbol}
                 onChange={(e) => setCtxSymbol(e.target.value.toUpperCase())}
+                onFocus={() => setCtxSymbolFocused(true)}
+                onBlur={() => setCtxSymbolFocused(false)}
                 className="bg-[var(--surface-elevated)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-white flex-1"
-                placeholder="Symbol e.g. R_100"
+                placeholder="e.g. Volatility 100 Index or R_100"
               />
               <Button onClick={() => marketContext.refetch()} className="btn btn-outline gap-2" size="sm"><RefreshCw className="w-3.5 h-3.5" />Refresh</Button>
             </div>
@@ -740,10 +755,10 @@ export default function Concierge() {
                 <div className="p-3 rounded-lg bg-[var(--surface-elevated)] border border-[var(--border)]">
                   <p className="text-[11px] font-semibold text-white mb-2">Position Sizing Preview</p>
                   <div className="space-y-1 text-[11px]">
-                    <p>Account: <span className="text-white font-bold">${(coach.data?.totalExposure || 500).toFixed(2)}</span></p>
-                    <p>Risk setting: <span className="text-white font-bold">{settings.stakePct}%</span> = <span className="text-white font-bold">${(coach.data?.totalExposure || 500) * (settings.stakePct / 100) * 0.25 | 0}.00</span></p>
-                    <p className="text-[var(--text-muted)]">Max per trade (5% cap): ${((coach.data?.totalExposure || 500) * 0.05).toFixed(2)}</p>
-                    <p className="text-[var(--text-muted)]">Daily loss limit: ${settings.maxDailyLoss || 'off'}</p>
+                    <p>Account: <span className="text-white font-bold">{balance > 0 ? `$${balance.toFixed(2)}` : '—'}</span></p>
+                    <p>Risk setting: <span className="text-white font-bold">{settings.stakePct}%</span> = <span className="text-white font-bold">{balance > 0 ? `$${(balance * (settings.stakePct / 100) * 0.25).toFixed(2)}` : '—'}</span></p>
+                    <p className="text-[var(--text-muted)]">Max per trade (5% cap): {balance > 0 ? `$${(balance * 0.05).toFixed(2)}` : '—'}</p>
+                    <p className="text-[var(--text-muted)]">Daily loss limit: {settings.maxDailyLoss ? `$${settings.maxDailyLoss}` : 'off'}</p>
                   </div>
                 </div>
 
