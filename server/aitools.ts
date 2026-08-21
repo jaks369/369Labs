@@ -83,7 +83,12 @@ export async function getActiveSymbols() {
   const res = await sendDeriv({ active_symbols: 'full' });
   if (res.error) throw new Error(res.error.message);
   const all = res.active_symbols || [];
-  const mapped = all.map((s: any) => ({ symbol: s.symbol, displayName: s.display_name || s.symbol }));
+  const mapped = all.map((s: any) => ({
+    symbol: s.symbol,
+    displayName: s.display_name || s.symbol,
+    market: s.market || "",
+    exchangeIsOpen: s.exchange_is_open === 1 || s.exchange_is_open === true,
+  }));
   const filtered = mapped.filter((s: any) => VALID_SYMBOLS.includes(s.symbol));
   return filtered.length ? filtered : mapped;
 }

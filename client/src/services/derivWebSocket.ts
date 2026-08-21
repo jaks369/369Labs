@@ -63,6 +63,7 @@ export interface DerivSymbol {
   market: string;
   submarket: string;
   decimalPlaces?: number;
+  exchangeIsOpen?: boolean;
 }
 
 const DERIV_APP_ID = (import.meta as any).env?.VITE_DERIV_APP_ID || "33V0MWtYaZLLmAZBWUycN";
@@ -352,33 +353,34 @@ class DerivWebSocketService {
               if (typeof pip === "number" || typeof pip === "string") return countDecimals(pip);
               return 3;
             })(),
+            exchangeIsOpen: s.exchange_is_open === 1 || s.exchange_is_open === true,
           };
         })
         .filter((s: any) => s.symbol && s.displayName);
       if (!symbols.length) {
         console.warn("[Deriv WS] active_symbols all filtered out, using defaults");
         symbols = [
-          { symbol: "R_10", displayName: "Volatility 10 Index", market: "volatility", submarket: "synthetic_index", decimalPlaces: 3 },
-          { symbol: "R_25", displayName: "Volatility 25 Index", market: "volatility", submarket: "synthetic_index", decimalPlaces: 3 },
-          { symbol: "R_50", displayName: "Volatility 50 Index", market: "volatility", submarket: "synthetic_index", decimalPlaces: 4 },
-          { symbol: "R_75", displayName: "Volatility 75 Index", market: "volatility", submarket: "synthetic_index", decimalPlaces: 4 },
-          { symbol: "R_100", displayName: "Volatility 100 Index", market: "volatility", submarket: "synthetic_index", decimalPlaces: 2 },
-          { symbol: "R_150", displayName: "Volatility 150 Index", market: "volatility", submarket: "synthetic_index", decimalPlaces: 3 },
-          { symbol: "R_200", displayName: "Volatility 200 Index", market: "volatility", submarket: "synthetic_index", decimalPlaces: 3 },
-          { symbol: "1HZ10V", displayName: "Volatility 10 (1s) Index", market: "volatility", submarket: "synthetic_index", decimalPlaces: 2 },
-          { symbol: "1HZ25V", displayName: "Volatility 25 (1s) Index", market: "volatility", submarket: "synthetic_index", decimalPlaces: 2 },
-          { symbol: "1HZ50V", displayName: "Volatility 50 (1s) Index", market: "volatility", submarket: "synthetic_index", decimalPlaces: 2 },
-          { symbol: "1HZ75V", displayName: "Volatility 75 (1s) Index", market: "volatility", submarket: "synthetic_index", decimalPlaces: 2 },
-          { symbol: "1HZ100V", displayName: "Volatility 100 (1s) Index", market: "volatility", submarket: "synthetic_index", decimalPlaces: 2 },
-          { symbol: "1HZ15V", displayName: "Volatility 15 (1s) Index", market: "volatility", submarket: "synthetic_index", decimalPlaces: 3 },
-          { symbol: "1HZ30V", displayName: "Volatility 30 (1s) Index", market: "volatility", submarket: "synthetic_index", decimalPlaces: 3 },
-          { symbol: "1HZ90V", displayName: "Volatility 90 (1s) Index", market: "volatility", submarket: "synthetic_index", decimalPlaces: 3 },
-          { symbol: "BOOM300", displayName: "Boom 300 Index", market: "boom_crash", submarket: "synthetic_index", decimalPlaces: 3 },
-          { symbol: "BOOM500", displayName: "Boom 500 Index", market: "boom_crash", submarket: "synthetic_index", decimalPlaces: 3 },
-          { symbol: "BOOM1000", displayName: "Boom 1000 Index", market: "boom_crash", submarket: "synthetic_index", decimalPlaces: 3 },
-          { symbol: "CRASH300", displayName: "Crash 300 Index", market: "boom_crash", submarket: "synthetic_index", decimalPlaces: 3 },
-          { symbol: "CRASH500", displayName: "Crash 500 Index", market: "boom_crash", submarket: "synthetic_index", decimalPlaces: 3 },
-          { symbol: "CRASH1000", displayName: "Crash 1000 Index", market: "boom_crash", submarket: "synthetic_index", decimalPlaces: 3 },
+          { symbol: "R_10", displayName: "Volatility 10 Index", market: "volatility", submarket: "synthetic_index", decimalPlaces: 3, exchangeIsOpen: true },
+          { symbol: "R_25", displayName: "Volatility 25 Index", market: "volatility", submarket: "synthetic_index", decimalPlaces: 3, exchangeIsOpen: true },
+          { symbol: "R_50", displayName: "Volatility 50 Index", market: "volatility", submarket: "synthetic_index", decimalPlaces: 4, exchangeIsOpen: true },
+          { symbol: "R_75", displayName: "Volatility 75 Index", market: "volatility", submarket: "synthetic_index", decimalPlaces: 4, exchangeIsOpen: true },
+          { symbol: "R_100", displayName: "Volatility 100 Index", market: "volatility", submarket: "synthetic_index", decimalPlaces: 2, exchangeIsOpen: true },
+          { symbol: "R_150", displayName: "Volatility 150 Index", market: "volatility", submarket: "synthetic_index", decimalPlaces: 3, exchangeIsOpen: true },
+          { symbol: "R_200", displayName: "Volatility 200 Index", market: "volatility", submarket: "synthetic_index", decimalPlaces: 3, exchangeIsOpen: true },
+          { symbol: "1HZ10V", displayName: "Volatility 10 (1s) Index", market: "volatility", submarket: "synthetic_index", decimalPlaces: 2, exchangeIsOpen: true },
+          { symbol: "1HZ25V", displayName: "Volatility 25 (1s) Index", market: "volatility", submarket: "synthetic_index", decimalPlaces: 2, exchangeIsOpen: true },
+          { symbol: "1HZ50V", displayName: "Volatility 50 (1s) Index", market: "volatility", submarket: "synthetic_index", decimalPlaces: 2, exchangeIsOpen: true },
+          { symbol: "1HZ75V", displayName: "Volatility 75 (1s) Index", market: "volatility", submarket: "synthetic_index", decimalPlaces: 2, exchangeIsOpen: true },
+          { symbol: "1HZ100V", displayName: "Volatility 100 (1s) Index", market: "volatility", submarket: "synthetic_index", decimalPlaces: 2, exchangeIsOpen: true },
+          { symbol: "1HZ15V", displayName: "Volatility 15 (1s) Index", market: "volatility", submarket: "synthetic_index", decimalPlaces: 3, exchangeIsOpen: true },
+          { symbol: "1HZ30V", displayName: "Volatility 30 (1s) Index", market: "volatility", submarket: "synthetic_index", decimalPlaces: 3, exchangeIsOpen: true },
+          { symbol: "1HZ90V", displayName: "Volatility 90 (1s) Index", market: "volatility", submarket: "synthetic_index", decimalPlaces: 3, exchangeIsOpen: true },
+          { symbol: "BOOM300", displayName: "Boom 300 Index", market: "boom_crash", submarket: "synthetic_index", decimalPlaces: 3, exchangeIsOpen: true },
+          { symbol: "BOOM500", displayName: "Boom 500 Index", market: "boom_crash", submarket: "synthetic_index", decimalPlaces: 3, exchangeIsOpen: true },
+          { symbol: "BOOM1000", displayName: "Boom 1000 Index", market: "boom_crash", submarket: "synthetic_index", decimalPlaces: 3, exchangeIsOpen: true },
+          { symbol: "CRASH300", displayName: "Crash 300 Index", market: "boom_crash", submarket: "synthetic_index", decimalPlaces: 3, exchangeIsOpen: true },
+          { symbol: "CRASH500", displayName: "Crash 500 Index", market: "boom_crash", submarket: "synthetic_index", decimalPlaces: 3, exchangeIsOpen: true },
+          { symbol: "CRASH1000", displayName: "Crash 1000 Index", market: "boom_crash", submarket: "synthetic_index", decimalPlaces: 3, exchangeIsOpen: true },
         ];
       }
       console.log("[Deriv WS] active_symbols loaded:", symbols.length);

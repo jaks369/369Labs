@@ -1,7 +1,7 @@
 import * as db from "./db";
 import { botRunner } from "./botRunner";
 import { derivManager } from "./derivConnection";
-import { getRecentTicks, isFeedStale } from "./tickCollector";
+import { getRecentTicks, isFeedStale, isMarketOpen } from "./tickCollector";
 import { fireWebhookEvent } from "./webhookExecutor";
 import { actionToContractType, isDigitContract } from "@shared/contractSim";
 import { buildLimitOrder } from "@shared/slTp";
@@ -102,6 +102,11 @@ async function executeBotCycleInner(): Promise<void> {
     if (!rule?.condition) continue;
 
     const symbol = rule.symbol || "R_100";
+
+    // Market-open check: skip bots on closed markets. This is expected, not a
+    // failure — the bot should resume when the market reopens.
+    if (!isMarketOpen(symbol)) continue;
+
     const stake = parseFloat(rule.params?.stake || "1");
     if (isNaN(stake) || stake <= 0) continue;
 

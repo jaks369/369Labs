@@ -17,6 +17,7 @@ import { lastDigitOf, getDecimalPlaces } from "@shared/lastDigit";
 import { getAllSymbols } from "@shared/symbols";
 import { and, eq, gt } from "drizzle-orm";
 import { signals } from "../drizzle/schema";
+import { isMarketOpen } from "./tickCollector";
 import {
   runAnalysis,
   PatternResult,
@@ -250,6 +251,80 @@ export async function runWatchAll(opts: Omit<ScanOptions, "symbol">): Promise<Wa
 
 // ---------------- always-on scanner (cron) ---------------
 
+/**
+ * Persist pre-scanned results for a specific user. Used by the always-on
+ * scanner to avoid re-scanning the same symbol N times for N users.
+ */
+async function persistResultsForUser(results: PatternResult[], symbol: string, userId: number): Promise<number> {
+  const db = await getDb();
+  if (!db) return 0;
+  let saved = 0;
+  for (const r of results) {
+    if (r.tier !== "strong" && r.tier !== "watch") continue;
+    if (r.supports.contract === "DIGITREPEAT" || r.supports.contract === "DIGITCHANGE") continue;
+    if (r.oosInsufficient) continue;
+    const edgeText = `${r.edgePp > 0 ? "+" : ""}${r.edgePp} pp`;
+    const wfText = `${r.holds}/${r.walks.length} OOS windows held (avg ${(r.oosAvg * 100).toFixed(1)}%)`;
+    const title = `${symbol} · ${r.supportsLabel}`;
+    const description =
+      `${r.describe} Baseline ${(r.baseline * 100).toFixed(1)}%, observed ${(r.observed * 100).toFixed(1)}% (edge ${edgeText}). ` +
+      `${wfText}. ${r.fdrAdjusted ? "FDR-adjusted p=" + r.pValue.toFixed(4) : "Not FDR-significant."} Verified ${new Date(r.discoveredAt * 1000).toUTCString()}.`;
+
+    try {
+      const existing = await db
+        .select({ id: signals.id })
+        .from(signals)
+        .where(
+          and(
+            eq(signals.userId, userId),
+            eq(signals.symbol, symbol),
+            eq(signals.title, title),
+            gt(signals.expiresAt, Math.floor(Date.now() / 1000)),
+          ),
+        )
+        .limit(1);
+      if (existing.length > 0) continue;
+    } catch (e) {
+      console.error("[signalScanner] dedup check failed", e);
+    }
+
+    try {
+      await dbSaveSignal({
+        userId,
+        symbol,
+        title,
+        description,
+        rule: ruleFromContract(r.supports),
+        evidence: [],
+        patternType: r.family,
+        sampleSize: r.inSampleSize,
+        winRate: (r.observed * 100).toFixed(2),
+        confidence: Math.min(99, +(r.observed * 100).toFixed(2)),
+        baselineWinRate: (r.baseline * 100).toFixed(2),
+        oosWinRate: (r.oosAvg * 100).toFixed(2),
+        oosSampleSize: r.walks.reduce((sum, w) => sum + w.n, 0),
+        oosValidated: "true",
+        discoveredAt: r.discoveredAt,
+        startEpoch: r.window.startEpoch,
+        endEpoch: r.window.endEpoch,
+        expiresAt: r.expiresAt,
+        source: "watch",
+      } as any);
+      saved++;
+      await notifyUser(
+        userId,
+        "signalDetected",
+        "Condition Detected",
+        `A ${r.supportsLabel} condition was verified on ${symbol}: ${description}`,
+        `Contract: ${r.supportsLabel}\nTier: ${r.tier}\nBaseline: ${(r.baseline * 100).toFixed(1)}%\nObserved: ${(r.observed * 100).toFixed(1)}%\nEdge: ${edgeText}\nWalk-forward: ${wfText}`,
+      );
+    } catch (e) {
+      console.error("[signalScanner] save failed", e);
+    }
+  }
+  return saved;
+}
+
 let alwaysOnScannerInterval: ReturnType<typeof setInterval> | null = null;
 
 export interface AlwaysOnStatus {
@@ -306,13 +381,24 @@ export function startAlwaysOnScanner(): void {
       const db = await getDb();
       if (db) {
         const allUsers = await db.select().from((await import("../drizzle/schema")).users);
-        for (const u of allUsers) {
-          for (const sym of SYMBOLS) {
-            status.activeSymbol = sym;
+        // O(symbols × users) not O(users × symbols): scan each symbol once,
+        // then persist results for each user. The scan (runAnalysis) is pure
+        // and doesn't depend on userId — only the dedup/save/notify needs it.
+        for (const sym of SYMBOLS) {
+          // Skip closed markets — expected silence, not a failure.
+          if (!isMarketOpen(sym)) continue;
+          status.activeSymbol = sym;
+          let results: PatternResult[] = [];
+          try {
+            results = await scanTicks({ userId: 0, symbol: sym, sampleSize: 1000 });
+          } catch (e) { console.error("[alwaysOnScanner] scan failed", sym, e); continue; }
+
+          for (const u of allUsers) {
             try {
-              await runWatch({ userId: u.id, symbol: sym, sampleSize: 1000 });
-              scans++;
-            } catch (e) { console.error("[alwaysOnScanner] symbol", sym, e); }
+              // runWatchWithResults: persist pre-scanned results for this user
+              const saved = await persistResultsForUser(results, sym, u.id);
+              scans += saved;
+            } catch (e) { console.error("[alwaysOnScanner] persist", sym, u.id, e); }
           }
         }
       }

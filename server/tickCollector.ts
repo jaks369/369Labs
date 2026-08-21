@@ -23,6 +23,11 @@ const RECOVERY_REQUIRED_SECONDS = 10;
 // In-memory tick buffer: symbol -> latest 500 ticks (for strategy evaluation)
 const tickBuffer = new Map<string, { price: number; epoch: number; lastDigit: number }[]>();
 const MAX_TICKS_PER_SYMBOL = 500;
+
+// Market-open tracking: populated from Deriv's `exchange_is_open` field on every
+// reconnect. Synthetic indices are always open; real markets (forex, crypto, etc.)
+// have trading hours.
+const symbolMarketStatus = new Map<string, { market: string; exchangeIsOpen: boolean; lastChecked: number }>();
 export function getRecentTicks(symbol: string, count: number = 100): { price: number; epoch: number; lastDigit: number }[] {
   const buf = tickBuffer.get(symbol);
   if (!buf) return [];
@@ -34,10 +39,44 @@ export function isFeedStale(): boolean {
 export function getFeedHealth(): { stale: boolean; lastTickEpoch: number; consecutiveHealthySeconds: number } {
   return { stale: feedStale, lastTickEpoch: lastAnyTickEpoch, consecutiveHealthySeconds };
 }
+
+/**
+ * Check whether a symbol's market is currently open for trading.
+ * Returns `true` (open) for symbols not in the map — synthetic indices are
+ * always open and may not appear in the market-status map.
+ */
+export function isMarketOpen(symbol: string): boolean {
+  return symbolMarketStatus.get(symbol)?.exchangeIsOpen ?? true;
+}
+
+/**
+ * Check whether the most recent tick for a symbol is fresh enough to trade on.
+ * If the market is closed, returns `false` explicitly — a closed market has no
+ * "fresh" data by definition, and callers need to distinguish "closed" from
+ * "open but feed problem."
+ */
+export function isSymbolDataFresh(symbol: string, maxAgeSeconds: number = 60): boolean {
+  if (!isMarketOpen(symbol)) return false;
+  const epoch = lastTickEpoch[symbol];
+  if (!epoch) return false;
+  const nowSec = Math.floor(Date.now() / 1000);
+  return nowSec - epoch <= maxAgeSeconds;
+}
+
+/** Get market status for a symbol (for UI display). */
+export function getSymbolMarketStatus(symbol: string): { market: string; exchangeIsOpen: boolean } | undefined {
+  return symbolMarketStatus.get(symbol);
+}
 let msgId = 1;
 let reconnectAttempts = 0;
 let isIntentionallyStopped = false;
 let watchdog: ReturnType<typeof setInterval> | null = null;
+
+// Markets to subscribe to: volatility/boom/crash (always) + real markets from
+// Deriv (forex, commodities, crypto, stock indices). The exact market strings
+// come from Deriv's `active_symbols` response — verify against a live response
+// before changing these values.
+const ALLOWED_MARKETS = new Set(["forex", "commodities", "cryptocurrency", "stock_indices"]);
 
 async function fetchActiveSymbols(): Promise<string[]> {
   return new Promise((resolve) => {
@@ -48,9 +87,23 @@ async function fetchActiveSymbols(): Promise<string[]> {
         const msg = JSON.parse(data.toString());
         if (msg.req_id !== reqId) return;
         ws!.removeListener("message", handler);
-        const syms = (msg.active_symbols || [])
-          .map((s: any) => s.symbol as string)
-          .filter((s: string) => VOLATILITY_PREFIXES.some((p) => s === p || s.startsWith(p + "_")));
+        // Capture market + exchange_is_open alongside the symbol so downstream
+        // code can distinguish "closed market, expected silence" from "feed broken."
+        const now = Date.now();
+        const syms: string[] = [];
+        for (const s of (msg.active_symbols || [])) {
+          const sym = s.symbol as string;
+          const market = (s.market || "") as string;
+          const exchangeIsOpen = s.exchange_is_open === 1 || s.exchange_is_open === true;
+          symbolMarketStatus.set(sym, { market, exchangeIsOpen, lastChecked: now });
+          // Subscribe to: volatility/boom/crash indices (always open) + real markets
+          const isVolatility = VOLATILITY_PREFIXES.some((p) => sym === p || sym.startsWith(p + "_"));
+          const isRealMarket = ALLOWED_MARKETS.has(market);
+          if (isVolatility || isRealMarket) {
+            syms.push(sym);
+          }
+        }
+        console.log(`[tickCollector] active_symbols: ${syms.length} symbols (${[...new Set(syms.map(s => symbolMarketStatus.get(s)?.market))].join(", ")})`);
         resolve(syms);
       } catch {
         resolve([]);

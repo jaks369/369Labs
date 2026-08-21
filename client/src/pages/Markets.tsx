@@ -3,19 +3,21 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { BarChart3, Search, RefreshCw, TrendingUp, TrendingDown, Minus, ArrowRight } from "lucide-react";
-import { derivWS } from "@/services/derivWebSocket";
-import { getDerivSymbols, getSymbolDisplayName } from "@shared/symbols";
+import { derivWS, type DerivSymbol } from "@/services/derivWebSocket";
+import { getSymbolDisplayName } from "@shared/symbols";
 import { PageContainer, PageSection } from "@/components/PageSection";
 import { FilterPill } from "@/components/ui/filter-pill";
 
-const SYMBOLS = getDerivSymbols() ?? [];
+type Group = "all" | "volatility" | "volatility_1s" | "boom_crash" | "forex" | "crypto" | "stock_index";
 
-type Group = "all" | "volatility" | "volatility_1s" | "boom_crash";
-
-function groupOf(sym: string): Group {
+function groupOf(sym: string, market: string): Group {
   if (/^1HZ/.test(sym)) return "volatility_1s";
   if (/^R_/.test(sym)) return "volatility";
-  return "boom_crash";
+  if (/^(BOOM|CRASH)/.test(sym)) return "boom_crash";
+  if (market === "forex") return "forex";
+  if (market === "cryptocurrency" || market === "crypto") return "crypto";
+  if (market === "stock_index" || market === "indices") return "stock_index";
+  return "volatility";
 }
 
 function SparklineMini({ points, up }: { points: number[]; up: boolean }) {
@@ -45,6 +47,21 @@ export default function Markets() {
   const tickBufferRef = useRef<Record<string, any>>({});
   const rafIdRef = useRef<number | null>(null);
   const [initialLoading, setInitialLoading] = useState(true);
+  const [allSymbols, setAllSymbols] = useState<DerivSymbol[]>([]);
+
+  // Load dynamic symbols from Deriv's active_symbols response
+  useEffect(() => {
+    setAllSymbols(derivWS.activeSymbols);
+    const unsub = derivWS.onSymbols((syms) => setAllSymbols(syms));
+    return unsub;
+  }, []);
+
+  const SYMBOLS = useMemo(() => allSymbols.map((s) => s.symbol), [allSymbols]);
+  const symbolMeta = useMemo(() => {
+    const m: Record<string, DerivSymbol> = {};
+    for (const s of allSymbols) m[s.symbol] = s;
+    return m;
+  }, [allSymbols]);
 
   const healthQuery = trpc.aiMarket.overview.useQuery(void 0, { refetchInterval: 60000 });
   const signalsQuery = trpc.signals.list.useQuery(void 0, { refetchInterval: 60000 });
@@ -151,9 +168,9 @@ export default function Markets() {
 
   const rows = useMemo(() => {
     const q = query.trim().toLowerCase();
-    return SYMBOLS.filter((s) => group === "all" || groupOf(s) === group)
+    return SYMBOLS.filter((s) => group === "all" || groupOf(s, symbolMeta[s]?.market || "") === group)
       .filter((s) => !q || s.toLowerCase().includes(q) || getSymbolDisplayName(s).toLowerCase().includes(q));
-  }, [group, query]);
+  }, [group, query, SYMBOLS, symbolMeta]);
 
   return (
     <PageContainer className="page-container">
@@ -226,7 +243,7 @@ export default function Markets() {
       {/* Group filter */}
       <PageSection>
         <div className="flex gap-1.5 overflow-x-auto scrollbar-none mb-4">
-          {([["all", "All"], ["volatility", "Volatility"], ["volatility_1s", "Volatility 1s"], ["boom_crash", "Boom & Crash"]] as [Group, string][]).map(([g, label]) => (
+          {([["all", "All"], ["volatility", "Volatility"], ["volatility_1s", "Volatility 1s"], ["boom_crash", "Boom & Crash"], ["forex", "Forex"], ["crypto", "Crypto"], ["stock_index", "Stocks"]] as [Group, string][]).map(([g, label]) => (
             <FilterPill key={g} active={group === g} onClick={() => setGroup(g)} label={label} />
           ))}
         </div>
@@ -242,9 +259,11 @@ export default function Markets() {
                 {rows.map((sym) => {
                   const p = live[sym];
                   const h = healthMap[sym];
+                  const meta = symbolMeta[sym];
                   const isHot = hotSet.has(sym);
                   const hasSignal = signals.some((s: any) => s.symbol === sym);
                   const isLive = !!p && p.spark.length > 0;
+                  const marketOpen = meta?.exchangeIsOpen !== false;
                   const vol = h?.volatility || volMemo[sym] || null;
                   const trend = h?.trend != null ? h.trend : p ? (p.change >= 0.05 ? 1 : p.change <= -0.05 ? -1 : 0) : 0;
                   const score = h?.score;
@@ -282,7 +301,11 @@ export default function Markets() {
                         {p ? <SparklineMini points={p.spark} up={p.change >= 0} /> : <span className="w-16 inline-block" />}
                       </td>
                       <td>
-                        {isLive ? (
+                        {!marketOpen ? (
+                          <span className="inline-flex items-center gap-1 text-[9px] uppercase tracking-wider font-bold px-1.5 py-0.5 rounded bg-[var(--text-muted)]/15 text-[var(--text-muted)] border border-[var(--text-muted)]/25">
+                            Closed
+                          </span>
+                        ) : isLive ? (
                           <span className="inline-flex items-center gap-1 text-[9px] uppercase tracking-wider font-bold px-1.5 py-0.5 rounded bg-[var(--green)]/15 text-[var(--green)] border border-[var(--green)]/25">
                             <span className="w-1.5 h-1.5 rounded-full bg-[var(--green)] animate-pulse" /> Live
                           </span>
