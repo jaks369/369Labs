@@ -29,6 +29,7 @@ import {
 import { useLocation, useSearch } from "wouter";
 import RuleBuilder, { StrategyRule, DEFAULT_RULE, summarizeRule } from "@/components/RuleBuilder";
 import { getSymbolDisplayName } from "@/lib/symbols";
+import { VOLATILITY_SYMBOLS } from "@shared/symbols";
 
 interface StrategyBlock {
   id: string;
@@ -57,7 +58,7 @@ const PIPELINE_STAGES: { type: StrategyBlock["type"]; label: string }[] = [
   { type: "exit", label: "Exit" },
 ];
 
-const SYMBOL_OPTIONS = ["R_10", "R_25", "R_50", "R_75", "R_100", "1HZ10V", "1HZ25V", "1HZ50V", "1HZ75V", "1HZ100V"];
+const SYMBOL_OPTIONS = VOLATILITY_SYMBOLS.map(s => s.symbol);
 
 const CONDITION_OPTIONS = [
   "Digit over 5",
@@ -390,7 +391,7 @@ export function StrategyBuilderContent({ embedded = false, onClose, onSaved }: S
 
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
           {/* Left Panel - Library */}
-          <div className="space-y-6">
+          <div className="space-y-6 lg:sticky lg:top-20 lg:self-start lg:max-h-[calc(100vh-6rem)] lg:overflow-y-auto">
             <div className="panel p-6">
               <h3 className="text-micro mb-6">Execution Blocks</h3>
                 <div className="grid grid-cols-1 gap-2">
