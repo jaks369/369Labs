@@ -361,6 +361,15 @@ function decideIndicator(
     : "";
 
   const bt = signal.backtest;
+
+  // Detect price action evidence in reasons
+  const paReasons = signal.reasons.filter((r) =>
+    r.includes("candle pattern") || r.includes("Market structure") ||
+    r.includes("Divergence") || r.includes("SMC zone") || r.includes("Chart pattern"),
+  );
+  const hasPA = paReasons.length > 0;
+  const paText = hasPA ? ` Price action: ${paReasons.join("; ")}.` : "";
+
   const conditionView: ConditionView = {
     symbol,
     displayName,
@@ -386,13 +395,13 @@ function decideIndicator(
     describe: signal.plain.what,
     triggerText: bt
       ? `${signal.direction === "up" ? "CALL" : "PUT"} when confluence aligns — backtest win rate ${(bt.observed * 100).toFixed(0)}%, edge ${bt.edgePp}pp`
-      : `${signal.direction === "up" ? "CALL" : "PUT"} when confluence aligns`,
+      : `${signal.direction === "up" ? "CALL" : "PUT"} when confluence aligns${hasPA ? " (PA confirmed)" : ""}`,
     progress: bt
       ? `${signal.votes.up}/${signal.votes.total} indicators agree · ${bt.inSampleSize} in-sample, ${bt.oosTotal} OOS`
-      : `${signal.votes.up}/${signal.votes.total} indicators agree`,
+      : `${signal.votes.up}/${signal.votes.total} indicators agree${hasPA ? ` · ${paReasons.length} PA pattern(s)` : ""}`,
     discoveredAt: Math.floor(Date.now() / 1000),
     evidence: signal.reasons,
-    interpretation: `${signal.plain.what} ${signal.plain.why} ${signal.plain.strength} Risk: ${signal.plain.risk}${bt ? ` Backtest: ${(bt.observed * 100).toFixed(0)}% win rate, CI [${(bt.ciLow * 100).toFixed(0)}%, ${(bt.ciHigh * 100).toFixed(0)}%], OOS avg ${(bt.oosAvg * 100).toFixed(0)}% (${bt.oosTotal} samples).` : ""}`,
+    interpretation: `${signal.plain.what} ${signal.plain.why} ${signal.plain.strength}${paText} Risk: ${signal.plain.risk}${bt ? ` Backtest: ${(bt.observed * 100).toFixed(0)}% win rate, CI [${(bt.ciLow * 100).toFixed(0)}%, ${(bt.ciHigh * 100).toFixed(0)}%], OOS avg ${(bt.oosAvg * 100).toFixed(0)}% (${bt.oosTotal} samples).` : ""}`,
   };
 
   return {
@@ -405,11 +414,13 @@ function decideIndicator(
       : effectiveStance === "WATCH"
         ? "Developing signal — monitor for confirmation"
         : "Weak signal — wait for stronger confluence",
-    why: `${signal.plain.what} ${signal.plain.why}${regimeText}`,
+    why: `${signal.plain.what} ${signal.plain.why}${regimeText}${paText}`,
     whatToWatch: signal.regime && !regimeAligned
       ? `Regime (${signal.regime.regime}) doesn't favor this signal — monitor for regime shift before sizing up.`
-      : "Watch for confluence weakening or regime change.",
-    wouldTrigger: `${signal.votes.up}/${signal.votes.total} indicators align directionally with regime confirmation.`,
+      : hasPA
+        ? "Watch for confluence weakening, PA pattern invalidation, or regime change."
+        : "Watch for confluence weakening or regime change.",
+    wouldTrigger: `${signal.votes.up}/${signal.votes.total} indicators${hasPA ? " + PA patterns" : ""} align directionally with regime confirmation.`,
     topCondition: conditionView,
     healthScore,
     volatility,
