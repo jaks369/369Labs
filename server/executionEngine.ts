@@ -51,16 +51,18 @@ function evaluateCondition(rule: any, prices: number[], digits: number[], idx: n
       const rsiVal = rsi(closes, 14);
       if (rsiVal === null || rsiVal === undefined) return false;
       const barrier = cond.barrier ?? 30;
-      return cond.comparison === "below" ? rsiVal < barrier : rsiVal > (cond.comparison === "above" ? 100 - barrier : barrier);
+      return cond.comparison === "below" ? rsiVal < barrier : rsiVal > barrier;
     }
 
     if (cond.indicator === "macd_histogram") {
-      const { histogram } = macd(closes);
-      if (histogram === null || histogram === undefined) return false;
+      if (closes.length < 28) return false;
+      const { histogram: curHist } = macd(closes);
+      const { histogram: prevHist } = macd(closes.slice(0, -1));
+      if (curHist === null || prevHist === null) return false;
       const barrier = cond.barrier ?? 0;
-      if (cond.comparison === "crosses_above") return histogram > barrier;
-      if (cond.comparison === "crosses_below") return histogram < barrier;
-      return histogram > barrier;
+      if (cond.comparison === "crosses_above") return prevHist <= barrier && curHist > barrier;
+      if (cond.comparison === "crosses_below") return prevHist >= barrier && curHist < barrier;
+      return curHist > barrier;
     }
   }
 
