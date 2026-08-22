@@ -5,6 +5,7 @@ import { getRecentTicks, isFeedStale, isMarketOpen } from "./tickCollector";
 import { fireWebhookEvent } from "./webhookExecutor";
 import { actionToContractType, isDigitContract } from "@shared/contractSim";
 import { isSyntheticIndexSymbol } from "@shared/symbols";
+import { buildCandles, ema, rsi, macd } from "@shared/indicators";
 import { buildLimitOrder } from "@shared/slTp";
 import { logger } from "./_core/logger";
 
@@ -25,6 +26,42 @@ function evaluateCondition(rule: any, prices: number[], digits: number[], idx: n
   const DIGIT_INDICATORS = ["digit_over", "digit_under", "digit_even", "digit_odd", "parity", "last_digit"];
   if (DIGIT_INDICATORS.includes(cond.indicator) && symbol && !isSyntheticIndexSymbol(symbol)) {
     return false;
+  }
+
+  // Indicator-based conditions (ema_trend, rsi, macd_histogram) — these work on
+  // candle data built from the tick stream, not individual ticks.
+  if (cond.indicator === "ema_trend" || cond.indicator === "rsi" || cond.indicator === "macd_histogram") {
+    if (prices.length < 30) return false;
+    // Build candles from the tick prices — use 1-minute timeframe as default
+    const tickLikes = prices.map((p, i) => ({ price: p, epoch: i }));
+    const candles = buildCandles(tickLikes, 60);
+    if (candles.length < 15) return false;
+    const closes = candles.map((c) => c.close);
+
+    if (cond.indicator === "ema_trend") {
+      const fast = ema(closes, 9);
+      const slow = ema(closes, 21);
+      const last = closes.length - 1;
+      if (Number.isNaN(fast[last]) || Number.isNaN(slow[last])) return false;
+      const emaUp = fast[last] > slow[last];
+      return cond.comparison === "up" ? emaUp : !emaUp;
+    }
+
+    if (cond.indicator === "rsi") {
+      const rsiVal = rsi(closes, 14);
+      if (rsiVal === null || rsiVal === undefined) return false;
+      const barrier = cond.barrier ?? 30;
+      return cond.comparison === "below" ? rsiVal < barrier : rsiVal > (cond.comparison === "above" ? 100 - barrier : barrier);
+    }
+
+    if (cond.indicator === "macd_histogram") {
+      const { histogram } = macd(closes);
+      if (histogram === null || histogram === undefined) return false;
+      const barrier = cond.barrier ?? 0;
+      if (cond.comparison === "crosses_above") return histogram > barrier;
+      if (cond.comparison === "crosses_below") return histogram < barrier;
+      return histogram > barrier;
+    }
   }
 
   const checkIndex = (i: number): boolean => {
