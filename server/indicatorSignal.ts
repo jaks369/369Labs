@@ -50,6 +50,23 @@ export interface GuidingSignalCandidate {
   details: IndicatorDetail[];
   /** Market regime at signal time */
   regime?: RegimeInfo;
+  /** Optional backtest results for validation — populated by scanIndicatorTicks */
+  backtest?: {
+    confidence: number;
+    tier: string;
+    baseline: number;
+    observed: number;
+    edgePp: number;
+    ciLow: number;
+    ciHigh: number;
+    pValue: number;
+    fdrAdjusted: boolean;
+    inSampleSize: number;
+    oosAvg: number;
+    oosTotal: number;
+    oosInsufficient: boolean;
+    walks: { wins: number; n: number; rate: number }[];
+  };
 }
 
 /** Pick a horizon in ticks for outcome resolution given the tick cadence. */

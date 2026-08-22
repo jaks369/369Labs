@@ -26,6 +26,8 @@ import {
   ContractSupport,
 } from "./signalEngine";
 import { scanSignalForSymbol, GuidingSignalCandidate } from "./indicatorSignal";
+import { wilsonInterval, binomialPvsBaseline, benjaminiHochbergFDR, walkForwardSummary, WALK_FORWARD_WINDOWS, MIN_OOS_SAMPLES, MIN_WINDOW_SAMPLES, assignTier, type SignalTier, type WalkForwardResult } from "./signalStats";
+import { buildCandles, medianTickGapSec, type TickLike } from "@shared/indicators";
 
 // Pattern categories remain from the v1 API so routers/agents keep compiling.
 export type PatternType =
@@ -93,7 +95,7 @@ async function scanDigitPatterns(opts: ScanOptions): Promise<PatternResult[]> {
 /**
  * Run the indicator-confluence engine for real markets (forex/crypto/stocks).
  * Returns a GuidingSignalCandidate if the engine detects a directional read,
- * null otherwise.
+ * null otherwise. Also runs a backtest to validate the signal historically.
  */
 export async function scanIndicatorTicks(opts: ScanOptions): Promise<GuidingSignalCandidate | null> {
   const symbol = normalizeSymbol(opts.symbol);
@@ -101,7 +103,166 @@ export async function scanIndicatorTicks(opts: ScanOptions): Promise<GuidingSign
   if (ticks.length < 30) return null;
   const tickLikes = ticks.map((t) => ({ price: Number(t.price), epoch: Math.floor(Number(t.timestamp) / 1000) }));
   const { signal } = scanSignalForSymbol(symbol, tickLikes);
+  if (!signal) return null;
+
+  // Run backtest to validate the signal historically
+  const backtest = backtestIndicatorSignal(symbol, tickLikes, signal.direction, signal.windowTicks);
+  if (backtest) {
+    // If the backtest says the signal is no_edge or failed, don't emit it
+    if (backtest.tier === "no_edge" || backtest.tier === "failed") return null;
+    // Attach backtest-derived confidence and validation data
+    signal.confidence = backtest.confidence;
+    signal.backtest = {
+      confidence: backtest.confidence,
+      tier: backtest.tier,
+      baseline: backtest.baseline,
+      observed: backtest.observed,
+      edgePp: backtest.edgePp,
+      ciLow: backtest.ciLow,
+      ciHigh: backtest.ciHigh,
+      pValue: backtest.pValue,
+      fdrAdjusted: backtest.fdrAdjusted,
+      inSampleSize: backtest.inSampleSize,
+      oosAvg: backtest.oosAvg,
+      oosTotal: backtest.oosTotal,
+      oosInsufficient: backtest.oosInsufficient,
+      walks: backtest.walks,
+    };
+  }
+
   return signal;
+}
+
+// ---------------- indicator backtest (validation layer) ---------------
+
+export interface IndicatorBacktestResult {
+  symbol: string;
+  direction: "up" | "down";
+  confidence: number;
+  tier: SignalTier;
+  baseline: number;
+  observed: number;
+  edgePp: number;
+  ciLow: number;
+  ciHigh: number;
+  pValue: number;
+  fdrAdjusted: boolean;
+  inSampleSize: number;
+  walks: { wins: number; n: number; rate: number }[];
+  oosAvg: number;
+  holds: number;
+  oosTotal: number;
+  oosInsufficient: boolean;
+  windowTicks: number;
+}
+
+/**
+ * Backtest an indicator-confluence signal over historical ticks.
+ *
+ * Defines a concrete outcome: "CALL wins if price is higher after N candles",
+ * "PUT wins if price is lower after N candles". Slides the indicator engine
+ * over the tick history in windows, counts wins/losses, then applies the same
+ * Wilson CI + BH-FDR + walk-forward discipline as the digit-pattern engine.
+ *
+ * This is the validation layer that makes indicator signals honest — without
+ * it, scoreConfluence() is a heuristic with no historical hit-rate evidence.
+ */
+export function backtestIndicatorSignal(
+  symbol: string,
+  rawTicks: TickLike[],
+  direction: "up" | "down",
+  windowTicks: number,
+): IndicatorBacktestResult | null {
+  if (rawTicks.length < 100) return null;
+
+  const ticks = rawTicks.slice().sort((a, b) => a.epoch - b.epoch);
+  const gapSec = medianTickGapSec(ticks) ?? 1;
+  const timeframeSec = symbol.startsWith("1HZ") ? 60 : gapSec <= 1 ? 60 : gapSec <= 2 ? 120 : 300;
+  const candles = buildCandles(ticks, timeframeSec);
+  if (candles.length < 30) return null;
+
+  const closes = candles.map((c) => c.close);
+
+  // Slide the indicator engine over the candles and record signal + outcome
+  const MIN_CANDLES = 22; // warmup for EMA(21)
+  const STEP = 1; // slide by 1 candle
+  const outcomes: { signal: boolean; win: boolean }[] = [];
+
+  for (let i = MIN_CANDLES; i < candles.length - windowTicks; i += STEP) {
+    const window = candles.slice(i - MIN_CANDLES, i + 1);
+    const windowCloses = window.map((c) => c.close);
+
+    // Check if the indicator would have signaled at this point
+    const { signal } = scanSignalForSymbol(symbol, window.map((c) => ({ price: c.close, epoch: c.time })));
+    if (!signal || signal.direction !== direction) {
+      outcomes.push({ signal: false, win: false });
+      continue;
+    }
+
+    // Outcome: did price move in the predicted direction after N candles?
+    const entryPrice = candles[i].close;
+    const exitPrice = candles[Math.min(i + windowTicks, candles.length - 1)].close;
+    const win = direction === "up" ? exitPrice > entryPrice : exitPrice < entryPrice;
+    outcomes.push({ signal: true, win });
+  }
+
+  // Count only the signals that fired
+  const signals = outcomes.filter((o) => o.signal);
+  if (signals.length < 20) return null;
+
+  const wins = signals.filter((o) => o.win).length;
+  const total = signals.length;
+  const observed = wins / total;
+  const baseline = 0.5; // random direction is 50%
+
+  // Wilson CI
+  const ci = wilsonInterval(wins, total);
+
+  // Binomial p-value vs baseline
+  const pValue = binomialPvsBaseline(wins, total, baseline);
+
+  // Walk-forward: split into 5 sequential windows
+  const wfLen = Math.max(1, Math.floor(signals.length / WALK_FORWARD_WINDOWS));
+  const walks: { wins: number; n: number; rate: number }[] = [];
+  for (let w = 0; w < WALK_FORWARD_WINDOWS; w++) {
+    const s = w * wfLen;
+    const e = Math.min(signals.length, s + wfLen);
+    if (e <= s) continue;
+    const wSlice = signals.slice(s, e);
+    const wWins = wSlice.filter((o) => o.win).length;
+    walks.push({ wins: wWins, n: wSlice.length, rate: wSlice.length > 0 ? wWins / wSlice.length : 0 });
+  }
+
+  const eff = walkForwardSummary(walks, baseline);
+
+  // BH-FDR (single test, but still apply for consistency)
+  const rejected = benjaminiHochbergFDR([pValue], 0.05);
+
+  const edgePp = Math.round((observed - baseline) * 1000) / 10;
+  const significant = rejected[0] && ci.low > baseline && Math.abs(edgePp) >= 3;
+
+  const tier = assignTier(significant, ci.low > baseline, edgePp, eff.oosTotal, eff);
+
+  return {
+    symbol,
+    direction,
+    confidence: Math.round(observed * 100),
+    tier,
+    baseline,
+    observed,
+    edgePp,
+    ciLow: ci.low,
+    ciHigh: ci.high,
+    pValue,
+    fdrAdjusted: rejected[0],
+    inSampleSize: total,
+    walks,
+    oosAvg: eff.avgRate,
+    holds: eff.holdCount,
+    oosTotal: eff.oosTotal,
+    oosInsufficient: eff.oosTotal < MIN_OOS_SAMPLES || eff.settledCount === 0,
+    windowTicks,
+  };
 }
 
 /**
@@ -368,13 +529,15 @@ export async function persistIndicatorSignal(signal: GuidingSignalCandidate, use
   if (signal.strength === "WEAK") return false;
 
   const symbol = signal.symbol;
+  const bt = signal.backtest;
   const title = `${symbol} · ${signal.direction === "up" ? "Bullish" : "Bearish"} ${signal.votes.agreement}/${signal.votes.total} confluence`;
-  const edgeText = `confidence ${signal.confidence}%`;
+  const edgeText = bt ? `edge ${bt.edgePp}pp` : `confidence ${signal.confidence}%`;
   const regimeText = signal.regime ? ` · Regime: ${signal.regime.regime} (${signal.regime.aligned ? "aligned" : "misaligned"})` : "";
+  const btText = bt ? ` · Backtest: ${(bt.observed * 100).toFixed(1)}% over ${(bt.baseline * 100).toFixed(1)}% baseline (${bt.oosTotal} OOS samples)` : "";
   const description =
     `${signal.plain.what}. ${signal.plain.why}. ` +
     `${signal.plain.strength}. Risk: ${signal.plain.risk}. ` +
-    `${signal.votes.up}/${signal.votes.total} indicators agree · ${edgeText}${regimeText}`;
+    `${signal.votes.up}/${signal.votes.total} indicators agree · ${edgeText}${regimeText}${btText}`;
 
   // Dedup: skip if an identical signal already exists and is unexpired
   try {
@@ -410,13 +573,13 @@ export async function persistIndicatorSignal(signal: GuidingSignalCandidate, use
       },
       evidence: signal.reasons,
       patternType: "momentum_confluence",
-      sampleSize: 0,
-      winRate: signal.confidence.toFixed(2),
+      sampleSize: bt ? bt.inSampleSize : 0,
+      winRate: bt ? (bt.observed * 100).toFixed(2) : signal.confidence.toFixed(2),
       confidence: signal.confidence,
-      baselineWinRate: "50.00",
-      oosWinRate: signal.confidence.toFixed(2),
-      oosSampleSize: 0,
-      oosValidated: "false",
+      baselineWinRate: bt ? (bt.baseline * 100).toFixed(2) : "50.00",
+      oosWinRate: bt ? (bt.oosAvg * 100).toFixed(2) : signal.confidence.toFixed(2),
+      oosSampleSize: bt ? bt.oosTotal : 0,
+      oosValidated: bt && !bt.oosInsufficient && bt.ciLow > bt.baseline ? "true" : "false",
       discoveredAt: Math.floor(Date.now() / 1000),
       startEpoch: signal.entryEpoch,
       endEpoch: expiresAt,
@@ -428,7 +591,7 @@ export async function persistIndicatorSignal(signal: GuidingSignalCandidate, use
       "signalDetected",
       "Indicator Signal",
       `A ${signal.plain.scoreLabel} signal was detected on ${symbol}: ${description}`,
-      `Direction: ${signal.direction.toUpperCase()} · Confidence: ${signal.confidence}% · Strength: ${signal.strength}\n${signal.plain.what}\n${signal.plain.why}\nRisk: ${signal.plain.risk}`,
+      `Direction: ${signal.direction.toUpperCase()} · Confidence: ${signal.confidence}% · Strength: ${signal.strength}\n${signal.plain.what}\n${signal.plain.why}\nRisk: ${signal.plain.risk}${bt ? `\nBacktest: ${(bt.observed * 100).toFixed(1)}% win rate, OOS avg ${(bt.oosAvg * 100).toFixed(1)}%` : ""}`,
     );
     return true;
   } catch (e) {

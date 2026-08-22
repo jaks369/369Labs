@@ -179,6 +179,30 @@ function ConditionRow({ c, showSymbol }: { c: ConditionView; showSymbol: boolean
           {c.evidence.map((ev, j) => <p key={j} className="text-[9px] text-[var(--text-muted)]">• {ev}</p>)}
           <p className="text-[9px] text-[var(--text-secondary)] italic mt-1">Trigger: {c.triggerText}</p>
           <p className="text-[9px] text-[var(--text-secondary)] italic">Progress: {c.progress || "—"}</p>
+          {c.inSample > 0 && (
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mt-2">
+              <div className="bg-black/10 rounded-lg p-2">
+                <p className="text-[8px] uppercase font-bold text-[var(--text-muted)]">In-Sample</p>
+                <p className="text-[11px] font-bold text-white">{c.observedPct}%</p>
+                <p className="text-[8px] text-[var(--text-muted)]">{c.inSample} samples</p>
+              </div>
+              <div className="bg-black/10 rounded-lg p-2">
+                <p className="text-[8px] uppercase font-bold text-[var(--text-muted)]">CI [{c.ciLowPct}%, {c.ciHighPct}%]</p>
+                <p className="text-[11px] font-bold text-white">baseline {c.baselinePct}%</p>
+                <p className="text-[8px] text-[var(--text-muted)]">{c.fdrAdjusted ? "BH-FDR" : "uncorrected"}</p>
+              </div>
+              <div className="bg-black/10 rounded-lg p-2">
+                <p className="text-[8px] uppercase font-bold text-[var(--text-muted)]">OOS Avg</p>
+                <p className="text-[11px] font-bold text-white">{c.oosAvgPct}%</p>
+                <p className="text-[8px] text-[var(--text-muted)]">{c.oosTotal} samples</p>
+              </div>
+              <div className="bg-black/10 rounded-lg p-2">
+                <p className="text-[8px] uppercase font-bold text-[var(--text-muted)]">Walk-Forward</p>
+                <p className="text-[11px] font-bold text-white">{c.holds}/{c.walks}</p>
+                <p className="text-[8px] text-[var(--text-muted)]">windows passing</p>
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>

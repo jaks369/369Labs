@@ -360,30 +360,39 @@ function decideIndicator(
     ? ` · Regime: ${signal.regime.regime} (${signal.regime.aligned ? "aligned" : "misaligned"})`
     : "";
 
+  const bt = signal.backtest;
   const conditionView: ConditionView = {
     symbol,
     displayName,
     supportsLabel: `${signal.direction === "up" ? "Bullish" : "Bearish"} Confluence`,
     tier: signal.strength === "STRONG" ? "strong" : signal.strength === "MEDIUM" ? "watch" : "insufficient",
-    tierLabel: signal.strength === "STRONG" ? "Strong signal" : signal.strength === "MEDIUM" ? "Developing signal" : "Weak signal",
-    observedPct: signal.confidence,
-    baselinePct: 50,
-    edgePp: signal.confidence - 50,
-    ciLowPct: signal.confidence - 10,
-    ciHighPct: signal.confidence + 10,
-    pValue: 0.05,
-    fdrAdjusted: false,
-    inSample: 0,
-    holds: 0,
-    walks: 0,
-    oosAvgPct: signal.confidence,
-    oosTotal: 0,
+    tierLabel: signal.strength === "STRONG"
+      ? (bt ? `Strong signal (backtest ${(bt.observed * 100).toFixed(0)}%)` : "Strong signal")
+      : signal.strength === "MEDIUM"
+        ? (bt ? `Developing signal (backtest ${(bt.observed * 100).toFixed(0)}%)` : "Developing signal")
+        : "Weak signal",
+    observedPct: bt ? +(bt.observed * 100).toFixed(1) : signal.confidence,
+    baselinePct: bt ? +(bt.baseline * 100).toFixed(1) : 50,
+    edgePp: bt ? bt.edgePp : +(signal.confidence - 50).toFixed(1),
+    ciLowPct: bt ? +(bt.ciLow * 100).toFixed(1) : +(signal.confidence - 10).toFixed(1),
+    ciHighPct: bt ? +(bt.ciHigh * 100).toFixed(1) : +(signal.confidence + 10).toFixed(1),
+    pValue: bt ? bt.pValue : 0.05,
+    fdrAdjusted: bt ? bt.fdrAdjusted : false,
+    inSample: bt ? bt.inSampleSize : 0,
+    holds: bt ? bt.walks.filter((w) => w.rate > 0.5).length : 0,
+    walks: bt ? bt.walks.length : 0,
+    oosAvgPct: bt ? +(bt.oosAvg * 100).toFixed(1) : signal.confidence,
+    oosTotal: bt ? bt.oosTotal : 0,
     describe: signal.plain.what,
-    triggerText: `${signal.direction === "up" ? "CALL" : "PUT"} when confluence aligns`,
-    progress: `${signal.votes.up}/${signal.votes.total} indicators agree`,
+    triggerText: bt
+      ? `${signal.direction === "up" ? "CALL" : "PUT"} when confluence aligns — backtest win rate ${(bt.observed * 100).toFixed(0)}%, edge ${bt.edgePp}pp`
+      : `${signal.direction === "up" ? "CALL" : "PUT"} when confluence aligns`,
+    progress: bt
+      ? `${signal.votes.up}/${signal.votes.total} indicators agree · ${bt.inSampleSize} in-sample, ${bt.oosTotal} OOS`
+      : `${signal.votes.up}/${signal.votes.total} indicators agree`,
     discoveredAt: Math.floor(Date.now() / 1000),
     evidence: signal.reasons,
-    interpretation: `${signal.plain.what} ${signal.plain.why} ${signal.plain.strength} Risk: ${signal.plain.risk}`,
+    interpretation: `${signal.plain.what} ${signal.plain.why} ${signal.plain.strength} Risk: ${signal.plain.risk}${bt ? ` Backtest: ${(bt.observed * 100).toFixed(0)}% win rate, CI [${(bt.ciLow * 100).toFixed(0)}%, ${(bt.ciHigh * 100).toFixed(0)}%], OOS avg ${(bt.oosAvg * 100).toFixed(0)}% (${bt.oosTotal} samples).` : ""}`,
   };
 
   return {
