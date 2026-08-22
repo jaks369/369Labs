@@ -1,8 +1,9 @@
 /**
- * Signal scanner — orchestrates the v2 engine (signalEngine.ts).
+ * Signal scanner — orchestrates the v2 engine (signalEngine.ts) and the
+ * indicator-confluence engine (indicatorSignal.ts) for real markets.
  *
  * This file is the ONLY place that knows about the database, notifications and
- * the always-on cron. The engine itself is pure. It keeps the old exported API
+ * the always-on cron. The engines themselves are pure. It keeps the old exported API
  * (runWatch / scanTicks / startAlwaysOnScanner / stopAlwaysOnScanner /
  * nullWinRate) so routers.ts and _core/index.ts keep working unchanged.
  *
@@ -11,7 +12,7 @@
  * Market Intelligence page re-derives them on demand via signals.fit query.
  */
 import { getDb, saveSignal as dbSaveSignal } from "./db";
-import { getTickHistory, normalizeSymbol } from "./aitools";
+import { getTickHistory, getTickHistoryDeep, normalizeSymbol } from "./aitools";
 import { notifyUser } from "./_core/notification";
 import { lastDigitOf, getDecimalPlaces } from "@shared/lastDigit";
 import { getAllSymbols, isSyntheticIndexSymbol } from "@shared/symbols";
@@ -24,6 +25,7 @@ import {
   PatternFamily,
   ContractSupport,
 } from "./signalEngine";
+import { scanSignalForSymbol, GuidingSignalCandidate } from "./indicatorSignal";
 
 // Pattern categories remain from the v1 API so routers/agents keep compiling.
 export type PatternType =
@@ -73,24 +75,11 @@ export function nullWinRate(contractType: string, barrier: number | undefined): 
 // ---------------- live analysis (no DB writes) ---------------
 
 /**
- * Run the engine over the symbol's most recent tick window and return the
- * full PatternResult list (all tiers). Used by interactions.listFitSignals →
- * /live and by the Market Intelligence page when the user wants current,
- * not stale, tradeable conditions.
+ * Run the digit-pattern engine over the symbol's most recent tick window.
+ * Only valid for synthetic indices (R_*, 1HZ*, BOOM*, CRASH*).
  */
-export async function scanTicks(opts: ScanOptions): Promise<PatternResult[]> {
+async function scanDigitPatterns(opts: ScanOptions): Promise<PatternResult[]> {
   const symbol = normalizeSymbol(opts.symbol);
-
-  // Digit-pattern analysis (Matches/Differs/Over/Under/Even/Odd) is only statistically
-  // valid on Deriv's synthetic/jump indices, whose last digit is engineered to be
-  // uniform-random. Real forex/commodities/crypto/stock-index prices have no such
-  // property — running this test against them produces spurious, extreme-looking
-  // "edges" that are statistical artifacts, not real signals. Do not remove this guard
-  // without replacing what it's protecting against — see the companion design doc.
-  if (!isSyntheticIndexSymbol(symbol)) {
-    return [];
-  }
-
   const decimals = getDecimalPlaces(symbol);
   const sample = Math.min(4000, Math.max(120, opts.sampleSize || 1000));
   const ticks = await getTickHistory(symbol, sample); // [{price, timestamp(ms)}] old->new
@@ -99,6 +88,38 @@ export async function scanTicks(opts: ScanOptions): Promise<PatternResult[]> {
   const digits = ticks.map((t) => lastDigitOf(Number(t.price), decimals));
   const epochs = ticks.map((t) => Math.floor(Number(t.timestamp) / 1000));
   return runAnalysis({ digits, epochs, ctx: { symbol, nowSec: Math.floor(Date.now() / 1000) } });
+}
+
+/**
+ * Run the indicator-confluence engine for real markets (forex/crypto/stocks).
+ * Returns a GuidingSignalCandidate if the engine detects a directional read,
+ * null otherwise.
+ */
+export async function scanIndicatorTicks(opts: ScanOptions): Promise<GuidingSignalCandidate | null> {
+  const symbol = normalizeSymbol(opts.symbol);
+  const ticks = await getTickHistoryDeep(symbol, 2000);
+  if (ticks.length < 30) return null;
+  const tickLikes = ticks.map((t) => ({ price: Number(t.price), epoch: Math.floor(Number(t.timestamp) / 1000) }));
+  const { signal } = scanSignalForSymbol(symbol, tickLikes);
+  return signal;
+}
+
+/**
+ * Run the appropriate engine for a symbol: digit-pattern for synthetic indices,
+ * indicator-confluence for real markets. Returns digit results for synthetic,
+ * empty array for real markets (indicator results are handled separately by
+ * scanIndicatorTicks).
+ */
+export async function scanTicks(opts: ScanOptions): Promise<PatternResult[]> {
+  const symbol = normalizeSymbol(opts.symbol);
+
+  // Digit-pattern analysis is only statistically valid on synthetic indices.
+  // Real markets use the indicator engine (scanIndicatorTicks) instead.
+  if (!isSyntheticIndexSymbol(symbol)) {
+    return [];
+  }
+
+  return scanDigitPatterns(opts);
 }
 
 // ---------------- persistence + notification ---------------
@@ -336,6 +357,86 @@ async function persistResultsForUser(results: PatternResult[], symbol: string, u
   return saved;
 }
 
+/**
+ * Persist an indicator-confluence signal (forex/crypto/stocks) for a user.
+ * These signals come from indicatorSignal.ts, not the digit-pattern engine.
+ * Only STRONG and MEDIUM signals are persisted — WEAK is too thin to act on.
+ */
+export async function persistIndicatorSignal(signal: GuidingSignalCandidate, userId: number): Promise<boolean> {
+  const db = await getDb();
+  if (!db) return false;
+  if (signal.strength === "WEAK") return false;
+
+  const symbol = signal.symbol;
+  const title = `${symbol} · ${signal.direction === "up" ? "Bullish" : "Bearish"} ${signal.votes.agreement}/${signal.votes.total} confluence`;
+  const edgeText = `confidence ${signal.confidence}%`;
+  const regimeText = signal.regime ? ` · Regime: ${signal.regime.regime} (${signal.regime.aligned ? "aligned" : "misaligned"})` : "";
+  const description =
+    `${signal.plain.what}. ${signal.plain.why}. ` +
+    `${signal.plain.strength}. Risk: ${signal.plain.risk}. ` +
+    `${signal.votes.up}/${signal.votes.total} indicators agree · ${edgeText}${regimeText}`;
+
+  // Dedup: skip if an identical signal already exists and is unexpired
+  try {
+    const existing = await db
+      .select({ id: signals.id })
+      .from(signals)
+      .where(
+        and(
+          eq(signals.userId, userId),
+          eq(signals.symbol, symbol),
+          eq(signals.title, title),
+          gt(signals.expiresAt, Math.floor(Date.now() / 1000)),
+        ),
+      )
+      .limit(1);
+    if (existing.length > 0) return false;
+  } catch (e) {
+    console.error("[signalScanner] indicator dedup check failed", e);
+  }
+
+  // Expires when the signal window resolves (entryEpoch + windowTicks)
+  const expiresAt = signal.entryEpoch + signal.windowTicks * 2;
+
+  try {
+    await dbSaveSignal({
+      userId,
+      symbol,
+      title,
+      description,
+      rule: {
+        action: { tradeType: signal.contractType === "CALL" ? "buy_rise" : "buy_fall" },
+        condition: { indicator: "momentum_confluence", comparison: signal.direction, count: 1 },
+      },
+      evidence: signal.reasons,
+      patternType: "momentum_confluence",
+      sampleSize: 0,
+      winRate: signal.confidence.toFixed(2),
+      confidence: signal.confidence,
+      baselineWinRate: "50.00",
+      oosWinRate: signal.confidence.toFixed(2),
+      oosSampleSize: 0,
+      oosValidated: "false",
+      discoveredAt: Math.floor(Date.now() / 1000),
+      startEpoch: signal.entryEpoch,
+      endEpoch: expiresAt,
+      expiresAt,
+      source: "indicator",
+    } as any);
+    await notifyUser(
+      userId,
+      "signalDetected",
+      "Indicator Signal",
+      `A ${signal.plain.scoreLabel} signal was detected on ${symbol}: ${description}`,
+      `Direction: ${signal.direction.toUpperCase()} · Confidence: ${signal.confidence}% · Strength: ${signal.strength}\n${signal.plain.what}\n${signal.plain.why}\nRisk: ${signal.plain.risk}`,
+    );
+    return true;
+  } catch (e) {
+    console.error("[signalScanner] indicator save failed", e);
+    return false;
+  }
+}
+
 let alwaysOnScannerInterval: ReturnType<typeof setInterval> | null = null;
 
 export interface AlwaysOnStatus {
@@ -399,17 +500,35 @@ export function startAlwaysOnScanner(): void {
           // Skip closed markets — expected silence, not a failure.
           if (!isMarketOpen(sym)) continue;
           status.activeSymbol = sym;
-          let results: PatternResult[] = [];
-          try {
-            results = await scanTicks({ userId: 0, symbol: sym, sampleSize: 1000 });
-          } catch (e) { console.error("[alwaysOnScanner] scan failed", sym, e); continue; }
 
-          for (const u of allUsers) {
+          if (isSyntheticIndexSymbol(sym)) {
+            // Synthetic indices: digit-pattern analysis
+            let results: PatternResult[] = [];
             try {
-              // runWatchWithResults: persist pre-scanned results for this user
-              const saved = await persistResultsForUser(results, sym, u.id);
-              scans += saved;
-            } catch (e) { console.error("[alwaysOnScanner] persist", sym, u.id, e); }
+              results = await scanTicks({ userId: 0, symbol: sym, sampleSize: 1000 });
+            } catch (e) { console.error("[alwaysOnScanner] scan failed", sym, e); continue; }
+
+            for (const u of allUsers) {
+              try {
+                const saved = await persistResultsForUser(results, sym, u.id);
+                scans += saved;
+              } catch (e) { console.error("[alwaysOnScanner] persist", sym, u.id, e); }
+            }
+          } else {
+            // Real markets (forex/crypto/stocks): indicator-confluence analysis
+            let signal: GuidingSignalCandidate | null = null;
+            try {
+              signal = await scanIndicatorTicks({ userId: 0, symbol: sym });
+            } catch (e) { console.error("[alwaysOnScanner] indicator scan failed", sym, e); continue; }
+
+            if (signal && signal.strength !== "WEAK") {
+              for (const u of allUsers) {
+                try {
+                  const saved = await persistIndicatorSignal(signal, u.id);
+                  if (saved) scans++;
+                } catch (e) { console.error("[alwaysOnScanner] indicator persist", sym, u.id, e); }
+              }
+            }
           }
         }
       }

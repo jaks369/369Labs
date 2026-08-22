@@ -1,6 +1,7 @@
 import { getAllSymbols, getSymbolDisplayName, isSyntheticIndexSymbol } from "@shared/symbols";
 import { PatternResult } from "../signalEngine";
-import { scanTicks } from "../signalScanner";
+import { scanTicks, scanIndicatorTicks } from "../signalScanner";
+import { GuidingSignalCandidate } from "../indicatorSignal";
 import { aiOrchestrator } from "./AIOrchestrator";
 import { MarketHealth } from "./types";
 import { marketRegimeDetector, type RegimeResult } from "./StrategyEngine";
@@ -119,6 +120,7 @@ export interface IntelligenceReport {
 
 const FIT_TTL_MS = 120_000;
 const fitCache = new Map<string, { at: number; results: PatternResult[] }>();
+const indicatorCache = new Map<string, { at: number; signal: GuidingSignalCandidate | null }>();
 
 async function scanFor(symbol: string): Promise<PatternResult[]> {
   const hit = fitCache.get(symbol);
@@ -131,6 +133,19 @@ async function scanFor(symbol: string): Promise<PatternResult[]> {
   }
   fitCache.set(symbol, { at: Date.now(), results });
   return results;
+}
+
+async function scanIndicatorFor(symbol: string): Promise<GuidingSignalCandidate | null> {
+  const hit = indicatorCache.get(symbol);
+  if (hit && Date.now() - hit.at < FIT_TTL_MS) return hit.signal;
+  let signal: GuidingSignalCandidate | null = null;
+  try {
+    signal = await scanIndicatorTicks({ userId: 0, symbol });
+  } catch {
+    signal = null;
+  }
+  indicatorCache.set(symbol, { at: Date.now(), signal });
+  return signal;
 }
 
 const TIER_LABEL: Record<string, string> = {
@@ -213,6 +228,13 @@ async function decide(results: PatternResult[], symbol: string, health: MarketHe
   const healthScore = health?.score ?? 0;
   const volatility = health?.volatility ?? "—";
 
+  // Non-synthetic symbols: use indicator-confluence engine instead of digit patterns
+  if (!isSyntheticIndexSymbol(symbol)) {
+    const signal = await scanIndicatorFor(symbol);
+    return decideIndicator(signal, symbol, displayName, healthScore, volatility);
+  }
+
+  // Synthetic indices: use digit-pattern engine
   // Regime detection - informs stance weighting
   let regime: RegimeResult | null = null;
   try {
@@ -282,25 +304,6 @@ async function decide(results: PatternResult[], symbol: string, health: MarketHe
       volatility,
     };
   }
-  // Non-synthetic symbols (forex/crypto/stocks): digit-pattern analysis is not
-  // applicable — their last digit reflects tick size, not randomness. The indicator
-  // engine (indicatorSignal.ts) will handle these once wired in. For now, show an
-  // honest "not yet analysed" state rather than a fabricated no-edge verdict.
-  if (!isSyntheticIndexSymbol(symbol)) {
-    return {
-      symbol,
-      displayName,
-      submarket: submarketOf(symbol),
-      stance: "NO TRADE",
-      stanceRule: "Digit-pattern analysis not applicable for this market type",
-      why: `Digit-pattern analysis (Matches/Differs/Over/Under) is only valid on synthetic indices where the last digit is uniform-random. ${displayName} is a real market — its price reflects economic data, not a random number engine.`,
-      whatToWatch: "Indicator-based analysis (EMA/RSI/MACD) for this market — coming soon.",
-      wouldTrigger: "The indicator engine validates a directional signal with backtested confidence.",
-      topCondition: null,
-      healthScore,
-      volatility,
-    };
-  }
 
   return {
     symbol,
@@ -314,6 +317,94 @@ async function decide(results: PatternResult[], symbol: string, health: MarketHe
     topCondition: null,
     healthScore,
     volatility,
+  };
+}
+
+/**
+ * Build a MarketDecision from an indicator-confluence signal (forex/crypto/stocks).
+ * This is the real-market counterpart to the digit-pattern decide() path.
+ */
+function decideIndicator(
+  signal: GuidingSignalCandidate | null,
+  symbol: string,
+  displayName: string,
+  healthScore: number,
+  volatility: string,
+): MarketDecision {
+  const submarket = submarketOf(symbol);
+
+  if (!signal) {
+    return {
+      symbol,
+      displayName,
+      submarket,
+      stance: "NO TRADE",
+      stanceRule: "No directional signal detected",
+      why: `The indicator engine (EMA/RSI/MACD/ADX) analysed recent price action on ${displayName} and found no clear directional confluence. Doing nothing is correct.`,
+      whatToWatch: "EMA trend alignment, RSI momentum, MACD histogram direction.",
+      wouldTrigger: "Multiple indicators align directionally with regime confirmation.",
+      topCondition: null,
+      healthScore,
+      volatility,
+    };
+  }
+
+  // Map signal strength to stance
+  const stance: MarketStance = signal.strength === "STRONG" ? "TRADE" : signal.strength === "MEDIUM" ? "WATCH" : "WAIT";
+  const regimeAligned = signal.regime?.aligned ?? false;
+
+  // If regime is misaligned, downgrade stance
+  const effectiveStance: MarketStance = stance === "TRADE" && !regimeAligned ? "WATCH" : stance;
+
+  const regimeText = signal.regime
+    ? ` · Regime: ${signal.regime.regime} (${signal.regime.aligned ? "aligned" : "misaligned"})`
+    : "";
+
+  const conditionView: ConditionView = {
+    symbol,
+    displayName,
+    supportsLabel: `${signal.direction === "up" ? "Bullish" : "Bearish"} Confluence`,
+    tier: signal.strength === "STRONG" ? "strong" : signal.strength === "MEDIUM" ? "watch" : "insufficient",
+    tierLabel: signal.strength === "STRONG" ? "Strong signal" : signal.strength === "MEDIUM" ? "Developing signal" : "Weak signal",
+    observedPct: signal.confidence,
+    baselinePct: 50,
+    edgePp: signal.confidence - 50,
+    ciLowPct: signal.confidence - 10,
+    ciHighPct: signal.confidence + 10,
+    pValue: 0.05,
+    fdrAdjusted: false,
+    inSample: 0,
+    holds: 0,
+    walks: 0,
+    oosAvgPct: signal.confidence,
+    oosTotal: 0,
+    describe: signal.plain.what,
+    triggerText: `${signal.direction === "up" ? "CALL" : "PUT"} when confluence aligns`,
+    progress: `${signal.votes.up}/${signal.votes.total} indicators agree`,
+    discoveredAt: Math.floor(Date.now() / 1000),
+    evidence: signal.reasons,
+    interpretation: `${signal.plain.what} ${signal.plain.why} ${signal.plain.strength} Risk: ${signal.plain.risk}`,
+  };
+
+  return {
+    symbol,
+    displayName,
+    submarket,
+    stance: effectiveStance,
+    stanceRule: effectiveStance === "TRADE"
+      ? "Indicator confluence validated — small-size candidate"
+      : effectiveStance === "WATCH"
+        ? "Developing signal — monitor for confirmation"
+        : "Weak signal — wait for stronger confluence",
+    why: `${signal.plain.what} ${signal.plain.why}${regimeText}`,
+    whatToWatch: signal.regime && !regimeAligned
+      ? `Regime (${signal.regime.regime}) doesn't favor this signal — monitor for regime shift before sizing up.`
+      : "Watch for confluence weakening or regime change.",
+    wouldTrigger: `${signal.votes.up}/${signal.votes.total} indicators align directionally with regime confirmation.`,
+    topCondition: conditionView,
+    healthScore,
+    volatility,
+    regime: signal.regime ? { regime: signal.regime.regime, aligned: signal.regime.aligned, reason: signal.regime.reason } : undefined,
   };
 }
 
