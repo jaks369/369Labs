@@ -240,7 +240,7 @@ async function placeAutoTrade(userId: number, conn: any, symbol: string, read: D
 
   const entryTime = new Date();
   try {
-    await db.saveTrade({
+    const trade = await db.saveTrade({
       userId,
       symbol,
       contractType,
@@ -251,6 +251,9 @@ async function placeAutoTrade(userId: number, conn: any, symbol: string, read: D
       entryTime,
       source: DIGIT_TRADER_SOURCE,
     });
+    import("./copyTrader").then(({ broadcastLeaderFill }) =>
+      broadcastLeaderFill(trade, userId).catch(() => {})
+    ).catch(() => {});
   } catch (e: any) {
     console.error(
       `[digitTrader] CRITICAL: contract ${buy.buy.contract_id} was bought on Deriv but the DB save failed for user ${userId}. Retrying once...`,
@@ -259,7 +262,7 @@ async function placeAutoTrade(userId: number, conn: any, symbol: string, read: D
     // Retry once after a brief delay
     await new Promise(r => setTimeout(r, 1000));
     try {
-      await db.saveTrade({
+      const retriedTrade = await db.saveTrade({
         userId,
         symbol,
         contractType,
@@ -271,6 +274,9 @@ async function placeAutoTrade(userId: number, conn: any, symbol: string, read: D
         source: DIGIT_TRADER_SOURCE,
       });
       console.log(`[digitTrader] Retry succeeded for contract ${buy.buy.contract_id}`);
+      import("./copyTrader").then(({ broadcastLeaderFill }) =>
+        broadcastLeaderFill(retriedTrade, userId).catch(() => {})
+      ).catch(() => {});
     } catch (retryErr: any) {
       console.error(
         `[digitTrader] CRITICAL: retry also failed for contract ${buy.buy.contract_id}. Contract orphaned on Deriv.`,

@@ -164,6 +164,18 @@ export function startTickCollector() {
         feedStale = true;
         consecutiveHealthySeconds = 0;
       }
+      // Self-heal: if the feed has been stale for 2+ minutes and the websocket is
+      // dead (null or closed), reset reconnect attempts and restart the collector.
+      // This covers the case where MAX_RECONNECT_ATTEMPTS was exhausted — without
+      // this, the feed stays dead until the process is manually restarted.
+      if (feedStale && nowSec - lastAnyTickEpoch > 120 && (!ws || ws.readyState >= 2)) {
+        if (reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
+          console.warn("[tickCollector] Feed stale 2+ min with dead socket — resetting reconnect counter and restarting");
+          reconnectAttempts = 0;
+          started = false;
+          startTickCollector();
+        }
+      }
     }, 5000);
   }
   try {

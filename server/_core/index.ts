@@ -15,9 +15,15 @@ import { logger, createRequestLogger, addCorrelationIdHeader } from "./logger";
 
 process.on("unhandledRejection", (reason) => {
   logger.error("[Startup] Unhandled promise rejection", { error: String(reason) });
+  // Let the process manager (Render) restart cleanly. A process with unhandled
+  // rejections may be in a partially-corrupted state that causes blank pages.
+  setTimeout(() => process.exit(1), 500);
 });
 process.on("uncaughtException", (err) => {
   logger.error("[Startup] Uncaught exception", { error: err.message, stack: err.stack });
+  // Exit immediately — the process is in an undefined state after an uncaught
+  // exception. The process manager will restart it.
+  process.exit(1);
 });
 
 function logStartupChecks() {
@@ -544,8 +550,10 @@ export default async (req: any, res: any) => {
 
 process.on("unhandledRejection", (reason) => {
   console.error("[UNHANDLED REJECTION]", reason);
+  setTimeout(() => process.exit(1), 500);
 });
 process.on("uncaughtException", (err) => {
   console.error("[UNCAUGHT EXCEPTION]", err);
+  process.exit(1);
 });
 

@@ -286,7 +286,7 @@ async function executeBotCycleInner(): Promise<void> {
         return parsed;
       })();
       try {
-        await db.saveTrade({
+        const trade = await db.saveTrade({
           userId: bot.def.userId,
           symbol,
           contractType,
@@ -297,11 +297,14 @@ async function executeBotCycleInner(): Promise<void> {
           entryTime,
           botRunId,
         });
+        import("./copyTrader").then(({ broadcastLeaderFill }) =>
+          broadcastLeaderFill(trade, bot.def.userId).catch(() => {})
+        ).catch(() => {});
       } catch (e: any) {
         logger.error("DB save failed after Deriv buy, retrying", { userId: bot.def.userId, botId: bot.def.id, contractId: String(buy.buy.contract_id), error: e?.message || e });
         await new Promise(r => setTimeout(r, 1000));
         try {
-          await db.saveTrade({
+          const retriedTrade = await db.saveTrade({
             userId: bot.def.userId,
             symbol,
             contractType,
@@ -313,6 +316,9 @@ async function executeBotCycleInner(): Promise<void> {
             botRunId,
           });
           logger.info("Retry succeeded for orphaned contract", { userId: bot.def.userId, contractId: String(buy.buy.contract_id) });
+          import("./copyTrader").then(({ broadcastLeaderFill }) =>
+            broadcastLeaderFill(retriedTrade, bot.def.userId).catch(() => {})
+          ).catch(() => {});
         } catch (retryErr: any) {
           logger.error("CRITICAL: retry also failed, contract orphaned on Deriv", { userId: bot.def.userId, botId: bot.def.id, contractId: String(buy.buy.contract_id), error: retryErr?.message || retryErr });
           fireWebhookEvent(bot.def.userId, "trade.error", { botId: bot.def.id, symbol, stake, contractId: buy.buy.contract_id, reason: "db_save_failed" }).catch(() => {});
