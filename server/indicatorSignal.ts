@@ -14,7 +14,7 @@
  *    "nothing to do" state instead of inventing trades.
  */
 
-import { scoreConfluence, explainConfluence, ema, rsi, macd, buildCandles, medianTickGapSec, TickLike, Candle, IndicatorDetail, atr, bollingerBands, adx } from "@shared/indicators";
+import { scoreConfluence, explainConfluence, scorePriceActionConfluence, ema, rsi, macd, buildCandles, medianTickGapSec, TickLike, Candle, IndicatorDetail, atr, bollingerBands, adx } from "@shared/indicators";
 
 export type GuideStrength = "STRONG" | "MEDIUM" | "WEAK";
 export type GuideDirection = "up" | "down";
@@ -127,6 +127,18 @@ export function scanSignalForSymbol(symbol: string, rawTicks: TickLike[]): ScanR
   const strength = strengthFor(confluence.score);
   const last = candles[candles.length - 1];
 
+  // Price action confluence: candle patterns, structure, divergence, SMC, chart patterns
+  const paConfluence = scorePriceActionConfluence(candles.slice(-CANDLE_LOOKBACK));
+
+  // Combine momentum + price action into final score
+  // Weight: 60% momentum, 40% price action (PA has fewer indicators, so lower weight)
+  const combinedScore = paConfluence.votes.total > 0
+    ? Math.round(confluence.score * 0.6 + paConfluence.score * 0.4)
+    : confluence.score;
+  const combinedDirection = paConfluence.votes.total > 0
+    ? (confluence.score >= paConfluence.score ? confluence.direction : paConfluence.direction)
+    : confluence.direction;
+
   // Detect market regime
   const regimeInfo = detectRegime(candles);
   const regimeAligned = isRegimeAligned(regimeInfo.regime, confluence.direction);
@@ -134,31 +146,37 @@ export function scanSignalForSymbol(symbol: string, rawTicks: TickLike[]): ScanR
 
   // Do not emit a tradeable card from a bare coin-flip observation. WEAK is
   // only emitted when there is real (if thin) directional agreement.
+  const paStrength = strengthFor(combinedScore);
   const signal: GuidingSignalCandidate | null =
-    strength === "WEAK" && confluence.reasons.length === 1
+    paStrength === "WEAK" && confluence.reasons.length === 1 && paConfluence.votes.total === 0
       ? null
       : {
           symbol,
           family: "momentum_confluence",
-          direction: confluence.direction,
-          contractType: confluence.direction === "up" ? "CALL" : "PUT",
-          confidence: confluence.score,
-          strength,
-          votes: confluence.votes,
+          direction: combinedDirection,
+          contractType: combinedDirection === "up" ? "CALL" : "PUT",
+          confidence: combinedScore,
+          strength: paStrength,
+          votes: {
+            up: confluence.votes.up + paConfluence.votes.up,
+            down: confluence.votes.down + paConfluence.votes.down,
+            total: confluence.votes.total + paConfluence.votes.total,
+            agreement: (confluence.votes.total + paConfluence.votes.total) > 0
+              ? Math.max(confluence.votes.up + paConfluence.votes.up, confluence.votes.down + paConfluence.votes.down) / (confluence.votes.total + paConfluence.votes.total)
+              : 0,
+          },
           plain: explanation,
-          details: confluence.details,
+          details: [...confluence.details, ...paConfluence.details],
           regime: regimeWithAlignment,
-          // First line is the honest vote tally ("2/2 indicators agree") so the
-          // persisted ledger and notifications carry the count, not a scaled
-          // percentage. Everything that follows is the same technical read.
           reasons: [
-            `${Math.max(confluence.votes.up, confluence.votes.down)}/${confluence.votes.total} indicators agree`,
+            `${Math.max(confluence.votes.up + paConfluence.votes.up, confluence.votes.down + paConfluence.votes.down)}/${confluence.votes.total + paConfluence.votes.total} indicators agree`,
             ...confluence.reasons,
+            ...paConfluence.reasons,
             `Regime: ${regimeWithAlignment.regime} (${regimeWithAlignment.reason}) · ${regimeAligned ? 'aligned' : 'misaligned'}`,
-            `Observed over ${candles.length} ${timeframeSec}s candles · ${available.join("+")} · technical read, not a guaranteed edge`,
+            `Observed over ${candles.length} ${timeframeSec}s candles · ${available.join("+")} · PA patterns · technical read, not a guaranteed edge`,
           ],
           entryPrice: last.close,
-          entryEpoch: last.time + timeframeSec, // resolve starting after the candle closes
+          entryEpoch: last.time + timeframeSec,
           windowTicks: windowTicksFor(symbol, gapSec),
         };
 

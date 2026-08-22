@@ -424,3 +424,112 @@ export function explainConfluence(score: ConfluenceScore): ConfluenceExplanation
 
   return { scoreLabel, what, why, strength, risk };
 }
+
+/**
+ * Price-action confluence score combining candle patterns, market structure,
+ * divergence, SMC zones, and chart patterns into a directional vote.
+ *
+ * Same interface pattern as scoreConfluence: returns a score (50-86),
+ * direction, vote tally, details and reasons.
+ */
+export interface PriceActionScore {
+  score: number;
+  direction: "up" | "down";
+  votes: { up: number; down: number; total: number; agreement: number };
+  details: IndicatorDetail[];
+  reasons: string[];
+}
+
+export function scorePriceActionConfluence(candles: Candle[]): PriceActionScore {
+  if (!candles || candles.length < 15) {
+    return { score: 50, direction: "up", votes: { up: 0, down: 0, total: 0, agreement: 0 }, details: [], reasons: [] };
+  }
+
+  let up = 0;
+  let down = 0;
+  let computable = 0;
+  const details: IndicatorDetail[] = [];
+  const reasons: string[] = [];
+
+  // 1. Candle patterns (imported lazily to avoid circular deps)
+  try {
+    const { scanCandlePatterns } = require("./candlePatterns");
+    const patterns = scanCandlePatterns(candles);
+    if (patterns.length > 0) {
+      computable++;
+      const bullish = patterns.filter((p: { direction: string }) => p.direction === "bullish").length;
+      const bearish = patterns.filter((p: { direction: string }) => p.direction === "bearish").length;
+      if (bullish > bearish) { up++; reasons.push(`${patterns.length} candle pattern(s) bullish`); }
+      else if (bearish > bullish) { down++; reasons.push(`${patterns.length} candle pattern(s) bearish`); }
+      else { reasons.push(`${patterns.length} candle pattern(s) mixed`); }
+      details.push({ name: "Candle patterns", value: `${bullish}B/${bearish}S`, verdict: bullish > bearish ? "up" : bearish > bullish ? "down" : "neutral" });
+    }
+  } catch { /* module not loaded */ }
+
+  // 2. Market structure
+  try {
+    const { labelStructure } = require("./marketStructure");
+    const structure = labelStructure(candles, { internalLookback: 3, smoothPeriod: 5 });
+    if (structure.currentBias !== "neutral") {
+      computable++;
+      if (structure.currentBias === "bullish") { up++; reasons.push("Market structure bullish"); }
+      else { down++; reasons.push("Market structure bearish"); }
+      details.push({ name: "Market structure", value: structure.currentBias, verdict: structure.currentBias === "bullish" ? "up" : "down" });
+    }
+  } catch { /* module not loaded */ }
+
+  // 3. Divergence
+  try {
+    const { detectDivergences } = require("./divergence");
+    const divs = detectDivergences(candles, { swingLookback: 3 });
+    if (divs.length > 0) {
+      computable++;
+      const recent = divs[0];
+      if (recent.direction === "bullish") { up++; reasons.push(`Divergence: ${recent.type.replace(/_/g, " ")}`); }
+      else { down++; reasons.push(`Divergence: ${recent.type.replace(/_/g, " ")}`); }
+      details.push({ name: "Divergence", value: recent.type.replace(/_/g, " "), verdict: recent.direction === "bullish" ? "up" : "down" });
+    }
+  } catch { /* module not loaded */ }
+
+  // 4. SMC zones
+  try {
+    const { detectSmcZones } = require("./smcZones");
+    const zones = detectSmcZones(candles, { internalLookback: 3, smoothPeriod: 5 });
+    const unfilled = zones.filter((z: { filled: boolean }) => !z.filled);
+    if (unfilled.length > 0) {
+      computable++;
+      const bullishZones = unfilled.filter((z: { direction: string }) => z.direction === "bullish").length;
+      const bearishZones = unfilled.filter((z: { direction: string }) => z.direction === "bearish").length;
+      if (bullishZones > bearishZones) { up++; reasons.push(`${unfilled.length} unfilled bullish SMC zone(s)`); }
+      else if (bearishZones > bullishZones) { down++; reasons.push(`${unfilled.length} unfilled bearish SMC zone(s)`); }
+      details.push({ name: "SMC zones", value: `${bullishZones}B/${bearishZones}S unfilled`, verdict: bullishZones > bearishZones ? "up" : bearishZones > bullishZones ? "down" : "neutral" });
+    }
+  } catch { /* module not loaded */ }
+
+  // 5. Chart patterns
+  try {
+    const { detectChartPatterns } = require("./chartPatterns");
+    const patterns = detectChartPatterns(candles, { internalLookback: 3, smoothPeriod: 5 });
+    if (patterns.length > 0) {
+      computable++;
+      const recent = patterns[0];
+      if (recent.direction === "bullish") { up++; reasons.push(`Chart pattern: ${recent.type.replace(/_/g, " ")}`); }
+      else { down++; reasons.push(`Chart pattern: ${recent.type.replace(/_/g, " ")}`); }
+      details.push({ name: "Chart patterns", value: recent.type.replace(/_/g, " "), verdict: recent.direction === "bullish" ? "up" : "down" });
+    }
+  } catch { /* module not loaded */ }
+
+  const total = computable;
+  const net = up - down;
+  const direction: "up" | "down" = net >= 0 ? "up" : "down";
+  const agreement = total > 0 ? Math.max(up, down) / total : 0;
+  const score = Math.min(86, 50 + Math.round(agreement * 28));
+
+  return {
+    score,
+    direction,
+    votes: { up, down, total, agreement },
+    details,
+    reasons: reasons.length ? reasons : ["No price action patterns detected"],
+  };
+}
