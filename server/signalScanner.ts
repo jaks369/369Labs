@@ -14,7 +14,7 @@ import { getDb, saveSignal as dbSaveSignal } from "./db";
 import { getTickHistory, normalizeSymbol } from "./aitools";
 import { notifyUser } from "./_core/notification";
 import { lastDigitOf, getDecimalPlaces } from "@shared/lastDigit";
-import { getAllSymbols } from "@shared/symbols";
+import { getAllSymbols, isSyntheticIndexSymbol } from "@shared/symbols";
 import { and, eq, gt } from "drizzle-orm";
 import { signals } from "../drizzle/schema";
 import { isMarketOpen } from "./tickCollector";
@@ -80,6 +80,17 @@ export function nullWinRate(contractType: string, barrier: number | undefined): 
  */
 export async function scanTicks(opts: ScanOptions): Promise<PatternResult[]> {
   const symbol = normalizeSymbol(opts.symbol);
+
+  // Digit-pattern analysis (Matches/Differs/Over/Under/Even/Odd) is only statistically
+  // valid on Deriv's synthetic/jump indices, whose last digit is engineered to be
+  // uniform-random. Real forex/commodities/crypto/stock-index prices have no such
+  // property — running this test against them produces spurious, extreme-looking
+  // "edges" that are statistical artifacts, not real signals. Do not remove this guard
+  // without replacing what it's protecting against — see the companion design doc.
+  if (!isSyntheticIndexSymbol(symbol)) {
+    return [];
+  }
+
   const decimals = getDecimalPlaces(symbol);
   const sample = Math.min(4000, Math.max(120, opts.sampleSize || 1000));
   const ticks = await getTickHistory(symbol, sample); // [{price, timestamp(ms)}] old->new

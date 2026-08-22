@@ -4,6 +4,7 @@ import { derivManager } from "./derivConnection";
 import { getRecentTicks, isFeedStale, isMarketOpen } from "./tickCollector";
 import { fireWebhookEvent } from "./webhookExecutor";
 import { actionToContractType, isDigitContract } from "@shared/contractSim";
+import { isSyntheticIndexSymbol } from "@shared/symbols";
 import { buildLimitOrder } from "@shared/slTp";
 import { logger } from "./_core/logger";
 
@@ -14,9 +15,18 @@ const MAX_CONCURRENT_BOTS_PER_USER = 10; // max concurrent running bots per user
 let intervalId: ReturnType<typeof setInterval> | null = null;
 let cycleRunning = false;
 
-function evaluateCondition(rule: any, prices: number[], digits: number[], idx: number): boolean {
+function evaluateCondition(rule: any, prices: number[], digits: number[], idx: number, symbol?: string): boolean {
   const cond = rule?.condition;
   if (!cond) return false;
+
+  // Defense-in-depth: digit-pattern indicators are only valid on Deriv synthetic indices
+  // (R_*, 1HZ*, BOOM*, CRASH*). If a digit condition is paired with a non-synthetic
+  // symbol (forex/crypto/stocks), refuse to evaluate rather than silently returning false.
+  const DIGIT_INDICATORS = ["digit_over", "digit_under", "digit_even", "digit_odd", "parity", "last_digit"];
+  if (DIGIT_INDICATORS.includes(cond.indicator) && symbol && !isSyntheticIndexSymbol(symbol)) {
+    return false;
+  }
+
   const checkIndex = (i: number): boolean => {
     const d = digits[i];
     switch (cond.indicator) {
@@ -152,7 +162,7 @@ async function executeBotCycleInner(): Promise<void> {
     // signal with a wrong recorded entry price.
     let triggered = false;
     let triggerIdx = prices.length - 1;
-    if (evaluateCondition(rule, prices, digits, triggerIdx)) {
+    if (evaluateCondition(rule, prices, digits, triggerIdx, symbol)) {
       triggered = true;
     }
     if (!triggered) continue;

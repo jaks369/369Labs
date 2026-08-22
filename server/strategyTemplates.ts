@@ -1,3 +1,5 @@
+import { isSyntheticIndexSymbol } from "@shared/symbols";
+
 export interface StrategyTemplate {
   name: string;
   description: string;
@@ -170,6 +172,12 @@ export function validateStrategyTemplate(template: StrategyTemplate): string[] {
   if (rule.condition) {
     if (!SUPPORTED_INDICATORS.includes(rule.condition.indicator as never)) {
       errors.push(`${template.name}: indicator '${rule.condition.indicator}' is not supported by the rule engine`);
+    }
+    // Digit-pattern indicators are only valid on synthetic indices — reject
+    // templates that pair them with forex/crypto/stocks.
+    const DIGIT_INDICATORS = ["digit_over", "digit_under", "digit_even", "digit_odd", "parity", "last_digit"];
+    if (DIGIT_INDICATORS.includes(rule.condition.indicator) && rule.symbol && !isSyntheticIndexSymbol(rule.symbol)) {
+      errors.push(`${template.name}: digit-pattern indicator '${rule.condition.indicator}' cannot be used with non-synthetic symbol '${rule.symbol}'`);
     }
   }
   if (rule.action && !SUPPORTED_TRADE_TYPES.includes(rule.action.tradeType as never)) {

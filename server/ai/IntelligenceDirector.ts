@@ -1,4 +1,4 @@
-import { getAllSymbols, getSymbolDisplayName } from "@shared/symbols";
+import { getAllSymbols, getSymbolDisplayName, isSyntheticIndexSymbol } from "@shared/symbols";
 import { PatternResult } from "../signalEngine";
 import { scanTicks } from "../signalScanner";
 import { aiOrchestrator } from "./AIOrchestrator";
@@ -200,6 +200,9 @@ function submarketOf(symbol: string): string {
   if (symbol.startsWith("R_")) return "Volatility index";
   if (symbol.startsWith("BOOM")) return "Boom index";
   if (symbol.startsWith("CRASH")) return "Crash index";
+  if (symbol.startsWith("frx")) return "Forex";
+  if (symbol.startsWith("cry")) return "Crypto";
+  if (symbol.startsWith("stx")) return "Stock index";
   return "Index";
 }
 
@@ -279,6 +282,26 @@ async function decide(results: PatternResult[], symbol: string, health: MarketHe
       volatility,
     };
   }
+  // Non-synthetic symbols (forex/crypto/stocks): digit-pattern analysis is not
+  // applicable — their last digit reflects tick size, not randomness. The indicator
+  // engine (indicatorSignal.ts) will handle these once wired in. For now, show an
+  // honest "not yet analysed" state rather than a fabricated no-edge verdict.
+  if (!isSyntheticIndexSymbol(symbol)) {
+    return {
+      symbol,
+      displayName,
+      submarket: submarketOf(symbol),
+      stance: "NO TRADE",
+      stanceRule: "Digit-pattern analysis not applicable for this market type",
+      why: `Digit-pattern analysis (Matches/Differs/Over/Under) is only valid on synthetic indices where the last digit is uniform-random. ${displayName} is a real market — its price reflects economic data, not a random number engine.`,
+      whatToWatch: "Indicator-based analysis (EMA/RSI/MACD) for this market — coming soon.",
+      wouldTrigger: "The indicator engine validates a directional signal with backtested confidence.",
+      topCondition: null,
+      healthScore,
+      volatility,
+    };
+  }
+
   return {
     symbol,
     displayName,
