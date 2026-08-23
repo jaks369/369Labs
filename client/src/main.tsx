@@ -67,6 +67,26 @@ const trpcClient = trpc.createClient({
             credentials: "include",
             signal: controller.signal,
           })
+          .then(async (res) => {
+            // When Render cold-starts it returns 503 with an empty body.
+            // tRPC's httpBatchLink tries .json() on it and throws a confusing
+            // "Unexpected end of JSON input". Intercept non-ok or empty-body
+            // responses here so the error surfaces as a normal network failure.
+            if (!res.ok) {
+              const text = await res.text().catch(() => "");
+              if (!text) {
+                throw new Error(`Server unavailable (HTTP ${res.status}). It may be waking up — retry in a few seconds.`);
+              }
+              // Re-create a Response with the consumed text so tRPC can parse
+              // its error body as usual.
+              return new Response(text, {
+                status: res.status,
+                statusText: res.statusText,
+                headers: res.headers,
+              });
+            }
+            return res;
+          })
           .finally(() => clearTimeout(timeout));
       },
     }),
