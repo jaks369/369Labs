@@ -669,7 +669,16 @@ export function startAlwaysOnScanner(): void {
             let results: PatternResult[] = [];
             try {
               results = await scanTicks({ userId: 0, symbol: sym, sampleSize: 1000 });
-            } catch (e) { console.error("[alwaysOnScanner] scan failed", sym, e); continue; }
+            } catch (e: any) {
+              // "Invalid symbol" is expected for symbols Deriv doesn't serve via tick history
+              const msg = String(e?.message || e);
+              if (msg.includes("Invalid symbol")) {
+                console.warn("[alwaysOnScanner] skip (no tick data)", sym);
+              } else {
+                console.error("[alwaysOnScanner] scan failed", sym, e);
+              }
+              continue;
+            }
 
             for (const u of allUsers) {
               try {
@@ -682,7 +691,15 @@ export function startAlwaysOnScanner(): void {
             let signal: GuidingSignalCandidate | null = null;
             try {
               signal = await scanIndicatorTicks({ userId: 0, symbol: sym });
-            } catch (e) { console.error("[alwaysOnScanner] indicator scan failed", sym, e); continue; }
+            } catch (e: any) {
+              const msg = String(e?.message || e);
+              if (msg.includes("Invalid symbol")) {
+                console.warn("[alwaysOnScanner] skip (no tick data)", sym);
+              } else {
+                console.error("[alwaysOnScanner] indicator scan failed", sym, e);
+              }
+              continue;
+            }
 
             if (signal && signal.strength !== "WEAK") {
               for (const u of allUsers) {

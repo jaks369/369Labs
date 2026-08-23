@@ -38,7 +38,13 @@ export async function getTickHistory(symbol: string, count = 100) {
   const now = Math.floor(Date.now() / 1000);
   const start = now - count * 3;
   const res = await sendDeriv({ ticks_history: sym, end: 'latest', start, adjust_start_time: 1, count });
-  if (res.error) throw new Error(res.error.message);
+  if (res.error) {
+    // "Invalid symbol" means Deriv doesn't serve tick history for this symbol
+    // (e.g. BOOM300, CRASH300). Return empty instead of throwing — callers
+    // already handle empty results gracefully.
+    if (res.error.code === "InvalidSymbol" || String(res.error.message || "").includes("Invalid symbol")) return [];
+    throw new Error(res.error.message);
+  }
   const prices: number[] = res.history?.prices || [];
   const times: number[] = res.history?.times || [];
   return prices.map((p, i) => ({ price: p, timestamp: times[i] * 1000 }));
@@ -57,7 +63,10 @@ export async function getTickHistoryDeep(symbol: string, count = 10000): Promise
   for (let r = 0; r < capRequests && results.length < count; r++) {
     const want = Math.min(MAX, count - results.length);
     const res = await sendDeriv({ ticks_history: sym, end, start: end === 'latest' ? Math.floor(Date.now() / 1000) - want * 3 : undefined, adjust_start_time: 1, count: want });
-    if (res.error) throw new Error(res.error.message);
+    if (res.error) {
+      if (res.error.code === "InvalidSymbol" || String(res.error.message || "").includes("Invalid symbol")) return [];
+      throw new Error(res.error.message);
+    }
     const prices: number[] = res.history?.prices || [];
     const times: number[] = res.history?.times || [];
     if (prices.length === 0) break;

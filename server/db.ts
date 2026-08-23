@@ -1690,6 +1690,16 @@ export async function saveTickHistory(row: InsertTickHistory): Promise<void> {
   }
 }
 
+export async function saveTickHistoryBatch(rows: InsertTickHistory[]): Promise<void> {
+  const db = await getDb();
+  if (!db || !rows.length) return;
+  try {
+    await db.insert(tickHistory).values(rows);
+  } catch (error) {
+    console.error("[tickHistory] batch insert error:", error);
+  }
+}
+
 export async function getTickHistory(symbol: string, limit: number = 1000, beforeEpoch?: number): Promise<TickHistoryRow[]> {
   const db = await getDb();
   if (!db) return [];

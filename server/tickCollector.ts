@@ -1,5 +1,5 @@
 import { WebSocket } from "ws";
-import { saveTickHistory } from "./db";
+import { saveTickHistoryBatch } from "./db";
 import { getAllVolatilitySymbols } from "@shared/symbols";
 import { getDecimalPlaces, lastDigitOf } from "@shared/lastDigit";
 
@@ -20,9 +20,22 @@ let feedStale = false;
 let consecutiveHealthySeconds = 0;
 const STALE_THRESHOLD_SECONDS = 30;
 const RECOVERY_REQUIRED_SECONDS = 10;
-// In-memory tick buffer: symbol -> latest 500 ticks (for strategy evaluation)
-const tickBuffer = new Map<string, { price: number; epoch: number; lastDigit: number }[]>();
-const MAX_TICKS_PER_SYMBOL = 500;
+// Batch DB writes: accumulate ticks and flush every 2 seconds instead of
+// writing each tick individually. This reduces DB connection pressure and
+// eliminates the untracked promise accumulation that caused OOM on Render.
+const pendingDbWrites: { symbol: string; price: string; lastDigit: number; epoch: number }[] = [];
+let dbFlushTimer: ReturnType<typeof setInterval> | null = null;
+const DB_FLUSH_INTERVAL_MS = 2000;
+const MAX_DB_BATCH = 200;
+
+function flushDbWrites() {
+  if (!pendingDbWrites.length) return;
+  const batch = pendingDbWrites.splice(0, MAX_DB_BATCH);
+  // Fire-and-forget the batch — if it fails we lose 2s of ticks, which is
+  // acceptable for a free-tier deployment. Individual tick errors are logged
+  // inside saveTickHistoryBatch.
+  saveTickHistoryBatch(batch).catch(() => {});
+}
 
 // Market-open tracking: populated from Deriv's `exchange_is_open` field on every
 // reconnect. Synthetic indices are always open; real markets (forex, crypto, etc.)
@@ -109,8 +122,9 @@ async function fetchActiveSymbols(): Promise<string[]> {
           symbolMarketStatus.set(sym, { market, exchangeIsOpen, lastChecked: now });
           // Subscribe to: volatility/boom/crash indices (always open) + real markets
           const isVolatility = VOLATILITY_PREFIXES.some((p) => sym === p || sym.startsWith(p + "_"));
+          const isBoomCrash = sym.startsWith("BOOM") || sym.startsWith("CRASH");
           const isRealMarket = ALLOWED_MARKETS.has(market);
-          if (isVolatility || isRealMarket) {
+          if (isVolatility || isBoomCrash || (isRealMarket && exchangeIsOpen)) {
             syms.push(sym);
           }
         }
@@ -141,6 +155,12 @@ export function stopTickCollector() {
     clearInterval(watchdog);
     watchdog = null;
   }
+  if (dbFlushTimer) {
+    clearInterval(dbFlushTimer);
+    dbFlushTimer = null;
+  }
+  // Flush any remaining pending writes before closing
+  flushDbWrites();
   if (ws) {
     ws.close();
     ws = null;
@@ -180,6 +200,10 @@ export function startTickCollector() {
   }
   try {
     ws = new WebSocket(DERIV_WS_PUBLIC);
+    // Start DB flush timer for batched tick writes
+    if (!dbFlushTimer) {
+      dbFlushTimer = setInterval(flushDbWrites, DB_FLUSH_INTERVAL_MS);
+    }
     ws.on("open", async () => {
       console.log("[tickCollector] connected");
       reconnectAttempts = 0; // Reset on successful connection
@@ -205,6 +229,8 @@ export function startTickCollector() {
         // instead of silently discarding them — these were invisible before
         // and made rate-limit issues impossible to diagnose.
         if (msg.error) {
+          // MarketIsClosed is expected on weekends/holidays — not an error.
+          if (msg.error.code === "MarketIsClosed") return;
           console.error("[tickCollector] Deriv error:", JSON.stringify(msg.error));
           return;
         }
@@ -232,12 +258,8 @@ export function startTickCollector() {
         if (outOfOrder) {
           console.warn(`[tickCollector] out-of-order tick for ${symbol}: ${epoch} < ${prev}`);
         }
-        saveTickHistory({
-          symbol,
-          price: quote,
-          lastDigit,
-          epoch,
-        }).catch(() => {});
+        // Batch for DB flush instead of fire-and-forget individual inserts.
+        pendingDbWrites.push({ symbol, price: quote, lastDigit, epoch });
         // maintain in-memory buffer for strategy execution
         if (!tickBuffer.has(symbol)) tickBuffer.set(symbol, []);
         const buf = tickBuffer.get(symbol)!;
