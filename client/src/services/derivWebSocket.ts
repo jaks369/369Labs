@@ -125,6 +125,12 @@ class DerivWebSocketService {
 
   private friendlyError(msg: string, status?: number): string {
     const lower = msg.toLowerCase();
+    if (status === 502 || status === 503 || status === 504) {
+      return "Server is starting up. Retrying automatically…";
+    }
+    if (status === 429) {
+      return "Too many requests. Wait a moment and try again.";
+    }
     if (status === 401 || lower.includes("invalidtoken") || lower.includes("invalid token")) {
       return "Your Deriv API token is invalid or has expired. Generate a new token at app.deriv.com/account/api-token and update it in Settings.";
     }
@@ -140,6 +146,7 @@ class DerivWebSocketService {
     if (lower.includes("timeout")) {
       return "Deriv server did not respond in time. Check your connection and try again.";
     }
+    if (!msg) return "Server is waking up. Please wait a moment and try again.";
     return msg;
   }
 
@@ -1151,33 +1158,49 @@ class DerivWebSocketService {
   private async connectWithOtp(token: string): Promise<void> {
     if (this.otpInProgress) return;
     this.otpInProgress = true;
+    const MAX_RETRIES = 3;
+    const RETRY_DELAY_MS = 8000;
     const timeoutMs = 15000;
     const timeoutPromise = new Promise<never>((_, reject) => setTimeout(() => reject(new Error("OTP connection timeout")), timeoutMs));
-    try {
-      await Promise.race([
-        (async () => {
-          const accounts = await this.fetchAccounts();
-          if (!accounts.length) throw new Error(this.friendlyError("No trading accounts found"));
-          const account = accounts[0];
-          this.accountId = account.account_id;
-          this.apiMode = "v1";
-          const { url, accountType } = await this.fetchOtpUrl(account.account_id);
-          this.lastAccountType = accountType;
-          this.cachedOtpUrl = url;
-          this.disconnect();
-          this.connectWs(url, true);
-        })(),
-        timeoutPromise,
-      ]);
-    } catch (error: any) {
-      console.error("[Deriv WS] OTP connection failed:", error.message);
-      const msg = error.message || "";
-      const friendly = msg.includes(".") ? msg : this.friendlyError(msg);
-      this.notifyTokenError(friendly);
-      this.connectPublic();
-    } finally {
-      this.otpInProgress = false;
+    let lastError: any;
+    for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+      try {
+        await Promise.race([
+          (async () => {
+            const accounts = await this.fetchAccounts();
+            if (!accounts.length) throw new Error(this.friendlyError("No trading accounts found"));
+            const account = accounts[0];
+            this.accountId = account.account_id;
+            this.apiMode = "v1";
+            const { url, accountType } = await this.fetchOtpUrl(account.account_id);
+            this.lastAccountType = accountType;
+            this.cachedOtpUrl = url;
+            this.disconnect();
+            this.connectWs(url, true);
+          })(),
+          timeoutPromise,
+        ]);
+        this.otpInProgress = false;
+        return; // success
+      } catch (error: any) {
+        lastError = error;
+        const msg = error.message || "";
+        const isServerError = msg.includes("502") || msg.includes("503") || msg.includes("504") || msg.includes("Server is waking up") || msg.includes("Server is starting up");
+        if (isServerError && attempt < MAX_RETRIES) {
+          console.log(`[Deriv WS] Server unavailable (attempt ${attempt}/${MAX_RETRIES}), retrying in ${RETRY_DELAY_MS}ms…`);
+          this.notifyTokenError(`Server is waking up — retry ${attempt}/${MAX_RETRIES}…`);
+          await new Promise(r => setTimeout(r, RETRY_DELAY_MS));
+          continue;
+        }
+        break; // non-retryable or exhausted
+      }
     }
+    // All retries exhausted
+    const msg = lastError?.message || "";
+    const friendly = msg.includes(".") ? msg : this.friendlyError(msg);
+    this.notifyTokenError(friendly);
+    this.connectPublic();
+    this.otpInProgress = false;
   }
 }
 
