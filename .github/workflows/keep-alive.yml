@@ -1,0 +1,22 @@
+name: Keep Render Awake
+
+on:
+  schedule:
+    # Every 10 minutes — Render free tier sleeps after 15 min of inactivity
+    - cron: "*/10 * * * *"
+  workflow_dispatch: # allow manual trigger
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping server
+        run: |
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 30 "https://three69labs.onrender.com/")
+          echo "Server responded with HTTP $STATUS"
+          if [ "$STATUS" -ge 500 ]; then
+            echo "Server returned $STATUS — it may still be waking up, waiting 45s and retrying..."
+            sleep 45
+            STATUS2=$(curl -s -o /dev/null -w "%{http_code}" --max-time 30 "https://three69labs.onrender.com/")
+            echo "Retry: HTTP $STATUS2"
+          fi
