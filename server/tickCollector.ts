@@ -184,12 +184,30 @@ export function startTickCollector() {
       console.log("[tickCollector] connected");
       reconnectAttempts = 0; // Reset on successful connection
       const symbols = await fetchActiveSymbols();
-      console.log(`[tickCollector] subscribing to ${symbols.length} volatility symbols`);
-      symbols.forEach(subscribeSymbol);
+      console.log(`[tickCollector] subscribing to ${symbols.length} symbols`);
+      // Throttle subscribes: Deriv rate-limits requests per second. Batching
+      // 15 symbols with 100ms gaps keeps us well under the limit even with
+      // 150+ symbols (15 × 100ms = 1.5s total, ~10 req/s per batch).
+      const BATCH_SIZE = 15;
+      const BATCH_DELAY_MS = 100;
+      for (let i = 0; i < symbols.length; i += BATCH_SIZE) {
+        const batch = symbols.slice(i, i + BATCH_SIZE);
+        batch.forEach(subscribeSymbol);
+        if (i + BATCH_SIZE < symbols.length) {
+          await new Promise((r) => setTimeout(r, BATCH_DELAY_MS));
+        }
+      }
     });
     ws.on("message", (data: Buffer) => {
       try {
         const msg = JSON.parse(data.toString());
+        // Log Deriv error responses (rate-limit, auth, subscribe failures)
+        // instead of silently discarding them — these were invisible before
+        // and made rate-limit issues impossible to diagnose.
+        if (msg.error) {
+          console.error("[tickCollector] Deriv error:", JSON.stringify(msg.error));
+          return;
+        }
         if (!msg.tick) return;
         const symbol = msg.tick.symbol;
         const quote = String(msg.tick.quote);
