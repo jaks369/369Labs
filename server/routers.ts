@@ -587,7 +587,11 @@ export const appRouter = router({
       }))
       .mutation(async ({ ctx, input }) => {
         checkRateLimit(ctx.req.ip || "unknown");
-        let user; try { user = await db.getUserByEmail(input.email); } catch { throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Authentication service unavailable" }); }
+        let user;
+        try { user = await db.getUserByEmail(input.email); } catch (e: any) {
+          logger.error("[auth] getUserByEmail failed", { error: e?.message || e, email: input.email });
+          throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Authentication service unavailable" });
+        }
         if (!user) {
           throw new TRPCError({ code: "UNAUTHORIZED", message: "Invalid email or password" });
         }

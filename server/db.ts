@@ -174,6 +174,14 @@ export async function getDb() {
       try {
         const cfg = parseDbUrl(process.env.DATABASE_URL);
         _pool = mysql.createPool(cfg);
+        // Handle pool-level errors (connection drops, fatal errors). Without
+        // this, a stale DB connection silently poisons all subsequent queries.
+        _pool.on("error", (err: any) => {
+          logger.error("[DB] Pool error — resetting connection", { error: err?.message || err });
+          _db = null;
+          _pool = null;
+          _dbError = null;
+        });
         _db = drizzle(_pool) as any;
         _dbRetryCount = 0;
         logger.info("Database connected successfully");
