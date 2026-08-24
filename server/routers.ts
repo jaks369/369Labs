@@ -589,9 +589,24 @@ export const appRouter = router({
       .mutation(async ({ ctx, input }) => {
         checkRateLimit(ctx.req.ip || "unknown");
         let user;
-        try { user = await db.getUserByEmail(input.email); } catch (e: any) {
+        try {
+          user = await db.getUserByEmail(input.email);
+          // TiDB Cloud free tier pauses after inactivity — first query may fail
+          // while it wakes up (~10-30s). One retry after a short delay catches this.
+          if (!user && input.email) {
+            await new Promise(r => setTimeout(r, 3000));
+            user = await db.getUserByEmail(input.email);
+          }
+        } catch (e: any) {
           logger.error("[auth] getUserByEmail failed", { error: e?.message || e, email: input.email });
-          throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Authentication service unavailable" });
+          // One retry on connection error (TiDB wake-up)
+          try {
+            await new Promise(r => setTimeout(r, 3000));
+            user = await db.getUserByEmail(input.email);
+          } catch (e2: any) {
+            logger.error("[auth] getUserByEmail retry failed", { error: e2?.message || e2 });
+            throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Authentication service unavailable — database may be waking up. Please try again in 30 seconds." });
+          }
         }
         if (!user) {
           throw new TRPCError({ code: "UNAUTHORIZED", message: "Invalid email or password" });

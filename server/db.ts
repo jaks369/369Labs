@@ -116,6 +116,7 @@ function parseDbUrl(url: string) {
 let _db: ReturnType<typeof drizzle> | null = null;
 let _dbError: string | null = null;
 let _pool: mysql.Pool | null = null;
+let _dbKeepAlive: ReturnType<typeof setInterval> | null = null;
 
 // Simple per-key async mutex. Used to serialize saveTrade dedup check+insert so
 // two concurrent requests for the same (userId, contractId) cannot both see "no
@@ -178,6 +179,7 @@ export async function getDb() {
         // this, a stale DB connection silently poisons all subsequent queries.
         (_pool as any).on("error", (err: any) => {
           logger.error("[DB] Pool error — resetting connection", { error: err?.message || err });
+          if (_dbKeepAlive) { clearInterval(_dbKeepAlive); _dbKeepAlive = null; }
           _db = null;
           _pool = null;
           _dbError = null;
@@ -185,6 +187,18 @@ export async function getDb() {
         _db = drizzle(_pool) as any;
         _dbRetryCount = 0;
         logger.info("Database connected successfully");
+        // Keep TiDB Cloud free tier awake — it pauses after ~5 min of no queries.
+        // A simple SELECT 1 every 3 minutes prevents the pause without load.
+        if (!_dbKeepAlive) {
+          _dbKeepAlive = setInterval(() => {
+            const pool = _pool;
+            if (!pool) return;
+            pool.query("SELECT 1").catch((e: any) => {
+              logger.warn("[DB] Keep-alive ping failed — TiDB may be waking up", { error: e?.message || e });
+            });
+          }, 3 * 60 * 1000);
+          _dbKeepAlive.unref?.();
+        }
       } catch (error) {
         _dbError = String(error);
         logger.error("Database connection failed", { error: _dbError });
