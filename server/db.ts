@@ -176,7 +176,7 @@ export async function getDb() {
         _pool = mysql.createPool(cfg);
         // Handle pool-level errors (connection drops, fatal errors). Without
         // this, a stale DB connection silently poisons all subsequent queries.
-        _pool.on("error", (err: any) => {
+        (_pool as any).on("error", (err: any) => {
           logger.error("[DB] Pool error — resetting connection", { error: err?.message || err });
           _db = null;
           _pool = null;

@@ -94,6 +94,32 @@ export function rsi(closes: number[], period = 14): number | null {
   return 100 - 100 / (1 + avgGain / avgLoss);
 }
 
+/** Full RSI time series — returns an array the same length as `closes`.
+ *  Values before `period` are NaN. Used by divergence detection and any
+ *  code that needs RSI at arbitrary historical indices. */
+export function rsiSeries(closes: number[], period = 14): number[] {
+  const result: number[] = new Array(closes.length).fill(NaN);
+  if (closes.length <= period) return result;
+  let gain = 0;
+  let loss = 0;
+  for (let i = 1; i <= period; i++) {
+    const d = closes[i] - closes[i - 1];
+    if (d >= 0) gain += d;
+    else loss -= d;
+  }
+  let avgGain = gain / period;
+  let avgLoss = loss / period;
+  if (avgLoss === 0) result[period] = 100;
+  else result[period] = 100 - 100 / (1 + avgGain / avgLoss);
+  for (let i = period + 1; i < closes.length; i++) {
+    const d = closes[i] - closes[i - 1];
+    avgGain = (avgGain * (period - 1) + Math.max(d, 0)) / period;
+    avgLoss = (avgLoss * (period - 1) + Math.max(-d, 0)) / period;
+    result[i] = avgLoss === 0 ? 100 : 100 - 100 / (1 + avgGain / avgLoss);
+  }
+  return result;
+}
+
 export interface MacdResult {
   macd: number | null;
   signal: number | null;
@@ -454,8 +480,8 @@ export function scorePriceActionConfluence(candles: Candle[]): PriceActionScore 
   const candlePats = scanCandlePatterns(candles);
   if (candlePats.length > 0) {
     computable++;
-    const bullish = candlePats.filter((p) => p.direction === "bullish").length;
-    const bearish = candlePats.filter((p) => p.direction === "bearish").length;
+    const bullish = candlePats.filter((p) => p.direction === "up").length;
+    const bearish = candlePats.filter((p) => p.direction === "down").length;
     if (bullish > bearish) { up++; reasons.push(`${candlePats.length} candle pattern(s) bullish`); }
     else if (bearish > bullish) { down++; reasons.push(`${candlePats.length} candle pattern(s) bearish`); }
     else { reasons.push(`${candlePats.length} candle pattern(s) mixed`); }

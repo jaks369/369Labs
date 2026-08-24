@@ -20,6 +20,9 @@ let feedStale = false;
 let consecutiveHealthySeconds = 0;
 const STALE_THRESHOLD_SECONDS = 30;
 const RECOVERY_REQUIRED_SECONDS = 10;
+// In-memory tick buffer: symbol -> latest 200 ticks (for strategy evaluation)
+const tickBuffer = new Map<string, { price: number; epoch: number; lastDigit: number }[]>();
+const MAX_TICKS_PER_SYMBOL = 200;
 // Batch DB writes: accumulate ticks and flush every 2 seconds instead of
 // writing each tick individually. This reduces DB connection pressure and
 // eliminates the untracked promise accumulation that caused OOM on Render.

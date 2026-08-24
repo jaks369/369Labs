@@ -13,6 +13,7 @@ import type { PatternType } from "./signalScanner";
 import { lastDigitOf, getDecimalPlaces } from "@shared/lastDigit";
 import { equityCurve, type TradeLike } from "@shared/portfolio";
 import { createHmac, timingSafeEqual, randomBytes } from "crypto";
+import { logger } from "./_core/logger";
 import { STRATEGY_TEMPLATES } from "./strategyTemplates";
 
 function hexToBase32(hex: string): string {

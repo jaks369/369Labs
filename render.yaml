@@ -2,7 +2,7 @@ services:
   - type: web
     name: 369labs
     runtime: node
-    buildCommand: pnpm install --no-frozen-lockfile && pnpm db:push && pnpm build
+    buildCommand: pnpm install --no-frozen-lockfile && pnpm db:push && pnpm check && pnpm build
     startCommand: NODE_ENV=production node dist/index.js
     envVars:
       - key: DATABASE_URL

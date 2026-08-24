@@ -11,7 +11,7 @@
  * Depends on shared/swingPoints.ts for swing detection and shared/indicators.ts for RSI/MACD.
  */
 
-import { Candle, rsi, ema } from "./indicators";
+import { Candle, rsiSeries, ema } from "./indicators";
 import { detectSwings, SwingPoint } from "./swingPoints";
 
 export type DivergenceType = "regular_bullish" | "regular_bearish" | "hidden_bullish" | "hidden_bearish";
@@ -61,7 +61,7 @@ export function detectDivergences(
 
   // Compute oscillators
   const closes = candles.map((c) => c.close);
-  const rsiValues = rsi(closes, rsiPeriod);
+  const rsiValues = rsiSeries(closes, rsiPeriod);
 
   // Compute MACD histogram as a time series (macd() only returns last value)
   const fastEma = ema(closes, macdFast);
