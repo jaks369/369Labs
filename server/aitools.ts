@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { normalizeSymbol as normalizeShared, getAllVolatilitySymbols } from '@shared/symbols';
+import { isSyntheticIndexSymbol } from '@shared/symbols';
 import { lastDigitOf, getDecimalPlaces } from '@shared/lastDigit';
 
 const DERIV_WS_PUBLIC = "wss://api.derivws.com/trading/v1/options/ws/public";
@@ -106,6 +107,19 @@ export async function getActiveSymbols() {
 
 // Last-digit distribution + hot/cold digits for a symbol.
 export async function getDigitStats(symbol: string, count = 100) {
+  const canonical = normalizeSymbol(symbol);
+  if (!isSyntheticIndexSymbol(canonical)) {
+    return {
+      symbol: canonical,
+      count: 0,
+      digits: {},
+      hottest: [],
+      coldest: [],
+      note:
+        "Digit statistics are only meaningful for synthetic indices (R_, 1HZ, BOOM, CRASH) whose digits are engineered to be uniform. " +
+        `${canonical} is a real-market symbol — its digit distribution carries no exploitable structure, so no stats are shown.`,
+    };
+  }
   const ticks = await getTickHistory(symbol, count);
   if (!ticks.length) return { symbol: normalizeSymbol(symbol), count: 0, digits: {}, hottest: [], coldest: [] };
   const decimals = getDecimalPlaces(normalizeSymbol(symbol));

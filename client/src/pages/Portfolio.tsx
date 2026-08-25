@@ -17,7 +17,14 @@ export default function Portfolio() {
   const [, navigate] = useLocation();
   const tradesQuery = trpc.trades.list.useQuery({ limit: 500 });
   const positionsQuery = trpc.deriv.getPositions.useQuery(undefined, { enabled: isAuthenticated, retry: false });
-  const closePositionMutation = trpc.deriv.closePosition.useMutation();
+  const closePositionMutation = trpc.deriv.closePosition.useMutation({
+    // Refresh positions + ledger immediately after a close — without this the
+    // list (and P&L) didn't move and users tried to close again.
+    onSuccess: () => {
+      positionsQuery.refetch();
+      tradesQuery.refetch();
+    },
+  });
   const [balance, setBalance] = useState(0);
   const [balanceInfo, setBalanceInfo] = useState<{ currency: string; accountType: string } | null>(null);
 
@@ -33,7 +40,7 @@ export default function Portfolio() {
       });
     });
     if (derivWS.isAuthorized()) derivWS.fetchBalance();
-    return () => {};
+    return unsub;
   }, [isAuthenticated, navigate]);
 
   const positions = (positionsQuery.data || []) as any[];

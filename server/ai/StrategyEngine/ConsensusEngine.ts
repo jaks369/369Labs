@@ -3,6 +3,7 @@ import { MarketRegimeDetector } from "./MarketRegimeDetector";
 import type { ConsensusResult, MarketData, StrategyPerformance, StrategySignal } from "./StrategyTypes";
 import { AIKnowledgeType } from "../knowledgeTypes";
 import * as db from "../../db";
+import { isSyntheticIndexSymbol } from "@shared/symbols";
 
 export class ConsensusEngine {
   private regimeDetector = new MarketRegimeDetector();
@@ -13,13 +14,22 @@ export class ConsensusEngine {
       const { registerDefaultStrategies } = await import("./Strategies/registerStrategies");
       registerDefaultStrategies();
     }
-    const strategies = registry.getEnabled(userId).filter((s) => s.meta.id !== "ensemble_voting");
+    // Digit-bias/digit-trend strategies are only statistically valid on
+    // synthetic indices; on real-market symbols they must not contribute to
+    // consensus. The ensemble is also skipped there because its internal
+    // fan-out includes those digit strategies.
+    const synthetic = isSyntheticIndexSymbol(symbol);
+    const strategies = registry
+      .getEnabled(userId)
+      .filter((s) => s.meta.id !== "ensemble_voting")
+      .filter((s) => synthetic || !/digit/i.test(s.meta.id));
 
     if (strategies.length === 0) {
       return this.emptyConsensus(symbol, "No strategies registered");
     }
 
-    const strategy = registry.get("ensemble_voting");
+    const ensembleId = "ensemble_voting";
+    const strategy = synthetic ? registry.get(ensembleId) : undefined;
     let ensembleSignal: StrategySignal | null = null;
     if (strategy) {
       const marketData = await strategy.fetchMarketData(symbol);

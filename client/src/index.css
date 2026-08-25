@@ -3,6 +3,11 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* iOS safe area: the fixed mobile tab bar must clear the home indicator. */
+@utility pb-safe {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
 @theme inline {
   --radius-sm: var(--radius-sm);
   --radius-md: var(--radius-md);

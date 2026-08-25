@@ -2593,11 +2593,12 @@ watch: protectedProcedure
           }
           return { ticks: allTicks };
         } catch {
-          // Fallback to DB (stale data)
+          // Fallback to DB (stale data). Single batched query — the old
+          // per-symbol loop issued one query per symbol on a cold path.
           try {
             const allTicks: any[] = [];
-            for (const sym of symbols) {
-              const rows = await db.getTickHistory(sym, input.limit);
+            const batched = await db.getTickHistoryBatch(symbols, input.limit);
+            for (const [, rows] of batched) {
               for (const r of rows) {
                 allTicks.push({
                   symbol: r.symbol,
@@ -3493,6 +3494,25 @@ aiMarket: router({
         const { getDigitSnapshot } = await import("./digitTrader");
         return getDigitSnapshot(input.symbol);
       }),
+    // Batch snapshot for a list of followed symbols. Per-symbol failures
+    // (including the synthetic-only guard rejecting non-synthetic symbols)
+    // are returned as an empty reads list + error message, never thrown —
+    // one bad symbol must not kill the whole batch.
+    snapshots: protectedProcedure
+      .input(z.object({ symbols: z.array(z.string().min(1)).min(1).max(12) }))
+      .query(async ({ input }) => {
+        const { getDigitSnapshot } = await import("./digitTrader");
+        return Promise.all(
+          input.symbols.map(async (symbol) => {
+            try {
+              const snap = await getDigitSnapshot(symbol);
+              return { symbol, reads: snap.reads };
+            } catch (e: any) {
+              return { symbol, reads: [], error: e?.message || String(e) };
+            }
+          })
+        );
+      }),
     scan: protectedProcedure
       .input(z.object({ symbol: z.string().min(1) }))
       .mutation(async ({ ctx, input }) => {
@@ -3506,6 +3526,11 @@ aiMarket: router({
       }),
     accuracy: protectedProcedure.query(async ({ ctx }) => {
       return db.digitReadAccuracy(ctx.user.id);
+    }),
+    // Reliability calibration for the prediction ledger: stated confidence vs
+    // observed win rate per bucket, with Wilson CIs and an overall Brier score.
+    calibration: protectedProcedure.query(async ({ ctx }) => {
+      return db.digitReadCalibration(ctx.user.id);
     }),
     settle: protectedProcedure.mutation(async ({ ctx }) => {
       const { settleOpenDigitReads } = await import("./digitTrader");

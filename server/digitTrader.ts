@@ -16,7 +16,7 @@ import { getTickHistory } from "./aitools";
 import { buildDigitSnapshot, settleDigitRead, digitsFromTicks, DigitRead, DigitSnapshot, TickLike } from "@shared/digits";
 import { getDecimalPlaces } from "@shared/lastDigit";
 import { buildLimitOrder } from "@shared/slTp";
-import { getStandardVolatilitySymbols } from "@shared/symbols";
+import { getStandardVolatilitySymbols, isSyntheticIndexSymbol } from "@shared/symbols";
 import { derivManager } from "./derivConnection";
 import { getRecentTicks, isFeedStale } from "./tickCollector";
 import { fireWebhookEvent } from "./webhookExecutor";
@@ -68,6 +68,7 @@ async function readSettings(userId: number): Promise<DigitTraderSettings> {
         ? out.symbols
             .map((s: any) => String(s).toUpperCase())
             .filter(Boolean)
+            .filter((s: string) => isSyntheticIndexSymbol(s))
             .slice(0, 12)
         : DEFAULT_DT_SETTINGS.symbols,
     maxDailyLoss: Math.max(0, Number(out.maxDailyLoss) || 0),
@@ -94,6 +95,7 @@ export async function saveDTPSettings(userId: number, patch: Partial<DigitTrader
     symbols: (Array.isArray(next.symbols) && next.symbols.length ? next.symbols : DEFAULT_DT_SETTINGS.symbols)
       .map((s: any) => String(s).toUpperCase())
       .filter(Boolean)
+      .filter((s: string) => isSyntheticIndexSymbol(s))
       .slice(0, 12),
     maxDailyLoss: Math.max(0, Number(next.maxDailyLoss) || 0),
     maxDailyTrades: Math.max(0, Math.floor(Number(next.maxDailyTrades) || 0)),
@@ -251,9 +253,11 @@ async function placeAutoTrade(userId: number, conn: any, symbol: string, read: D
       entryTime,
       source: DIGIT_TRADER_SOURCE,
     });
+    // Copy-trading broadcast: silent failure would mean followers silently
+    // miss leader fills — log instead of swallowing.
     import("./copyTrader").then(({ broadcastLeaderFill }) =>
-      broadcastLeaderFill(trade, userId).catch(() => {})
-    ).catch(() => {});
+      broadcastLeaderFill(trade, userId).catch((e: any) => logger.warn(`[digitTrader] copy broadcast failed for trade ${trade.id}:`, e?.message || e))
+    ).catch((e: any) => logger.warn(`[digitTrader] copy broadcast import failed for trade ${trade?.id}:`, e?.message || e));
   } catch (e: any) {
     console.error(
       `[digitTrader] CRITICAL: contract ${buy.buy.contract_id} was bought on Deriv but the DB save failed for user ${userId}. Retrying once...`,
@@ -275,8 +279,8 @@ async function placeAutoTrade(userId: number, conn: any, symbol: string, read: D
       });
       console.log(`[digitTrader] Retry succeeded for contract ${buy.buy.contract_id}`);
       import("./copyTrader").then(({ broadcastLeaderFill }) =>
-        broadcastLeaderFill(retriedTrade, userId).catch(() => {})
-      ).catch(() => {});
+        broadcastLeaderFill(retriedTrade, userId).catch((e: any) => logger.warn(`[digitTrader] copy broadcast failed for trade ${retriedTrade.id}:`, e?.message || e))
+      ).catch((e: any) => logger.warn(`[digitTrader] copy broadcast import failed:`, e?.message || e));
     } catch (retryErr: any) {
       console.error(
         `[digitTrader] CRITICAL: retry also failed for contract ${buy.buy.contract_id}. Contract orphaned on Deriv.`,
@@ -409,6 +413,11 @@ async function persistReadsForTicks(
  * into the ledger, and settle every open read whose decision tick has passed.
  */
 export async function scanAndPersistForUser(userId: number, symbol: string): Promise<DigitScanResult> {
+  if (!isSyntheticIndexSymbol(symbol)) {
+    throw new Error(
+      `Digit-pattern analysis is only valid on synthetic indices — "${symbol}" prices are not digit-uniform, so any read would be a statistical artifact.`
+    );
+  }
   const ticks = await getTickHistory(symbol, FETCH_COUNT);
   const nowEpoch = Math.floor(Date.now() / 1000);
   const { snapshot, persisted, emitted } = await persistReadsForTicks(userId, symbol, digitsToEpochs(ticks), nowEpoch, false);
@@ -551,6 +560,11 @@ const digitsToEpochs = (ticks: Array<{ price: number; timestamp: number }>): Tic
   ticks.map((t) => ({ price: Number(t.price), epoch: Math.floor(Number(t.timestamp) / 1000) }));
 
 export async function getDigitSnapshot(symbol: string): Promise<DigitSnapshot> {
+  if (!isSyntheticIndexSymbol(symbol)) {
+    throw new Error(
+      `Digit-pattern analysis is only valid on synthetic indices — "${symbol}" prices are not digit-uniform, so any read would be a statistical artifact.`
+    );
+  }
   const ticks = await getTickHistory(symbol, FETCH_COUNT);
   return buildDigitSnapshot(symbol, digitsToEpochs(ticks));
 }

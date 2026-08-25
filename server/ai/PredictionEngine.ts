@@ -1,6 +1,6 @@
 import { AIPrediction } from "./types";
 import { lastDigitOf, getDecimalPlaces } from "@shared/lastDigit";
-import { getSymbolDisplayName } from "@shared/symbols";
+import { getSymbolDisplayName, isSyntheticIndexSymbol } from "@shared/symbols";
 
 /**
  * PredictionEngine v2 — evaluates EVERY Derive family the app can trade
@@ -85,13 +85,17 @@ export class PredictionEngine {
     const n = prices.length;
     if (n < 26) return null;
 
+    // Digit-derived contract families (Even/Odd, Matches/Differs, Over/Under)
+    // are only statistically valid on synthetic indices. On real-market symbols
+    // only the price-based Rise/Fall family is scored.
+    const synthetic = isSyntheticIndexSymbol(symbol);
     const decimals = getDecimalPlaces(symbol);
     const digits = prices.map((p) => lastDigitOf(Number(p), decimals));
     const name = getSymbolDisplayName(symbol);
     const windowN = n - 1; // first pair is the reference for Rise/Fall
     if (windowN < 25) return null;
 
-    const contracts = buildContracts();
+    const contracts = buildContracts().filter((c) => synthetic || c.family === "Rise/Fall");
 
     // Score EVERY contract side on the same window — no family bias.
     let best: Contract | null = null;
@@ -114,6 +118,11 @@ export class PredictionEngine {
 
     if (!best) {
       const evens = evenRate(digits, 1);
+      // For real-market symbols, report the observed 1-tick price-rise rate
+      // (not the even-digit rate, which carries no meaning there).
+      let riseWins = 0;
+      for (let i = 1; i < n; i++) if (prices[i] > prices[i - 1]) riseWins++;
+      const riseRate = riseWins / windowN;
       return {
         symbol,
         prediction: "NO CLEAR LEAN",
@@ -124,13 +133,17 @@ export class PredictionEngine {
         plain: `${name} looks balanced — no contract type showed a clear lean over the last ${windowN} ticks. Waiting costs nothing.`,
         recommendation: "No lean to act on — hold off until a bias is measurably stronger than chance.",
         reasoning: [
-          "Every Rise/Fall, Even/Odd, Matches/Differs and Over/Under side landed below the minimum meaningful edge.",
-          `Even digits printed ${evens.pct}% of ticks for reference (fair 50%).`,
+          synthetic
+            ? "Every Rise/Fall, Even/Odd, Matches/Differs and Over/Under side landed below the minimum meaningful edge."
+            : `${name} is a real-market symbol, so only price-based Rise/Fall contracts were scored (digit contracts carry no statistical meaning here).`,
+          synthetic
+            ? `Even digits printed ${evens.pct}% of ticks for reference (fair 50%).`
+            : `Price rose after ${(riseRate * 100).toFixed(1)}% of ticks (fair ~50%) — below the minimum meaningful edge.`,
           "That reads as a plain 50/50 — any 1-tick contract is a coin flip right now.",
         ],
-        observed: round1(evens.rate),
+        observed: synthetic ? round1(evens.rate) : round1(riseRate),
         baseline: 0.5,
-        edgePct: round1((evens.rate - 0.5) * 100),
+        edgePct: round1(((synthetic ? evens.rate : riseRate) - 0.5) * 100),
         sampleN: windowN,
         timestamp: now,
       };

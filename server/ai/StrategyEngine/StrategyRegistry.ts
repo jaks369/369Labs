@@ -26,12 +26,12 @@ export class StrategyRegistry {
   ensureInitialized(): void {
     if (this.initialized) return;
     this.initialized = true;
-    try {
-      const { registerDefaultStrategies } = require("./Strategies/registerStrategies");
-      registerDefaultStrategies();
-    } catch {
-      // fallback: strategies registered elsewhere
-    }
+    // ESM-safe lazy load (require() throws under "type": "module")
+    void import("./Strategies/registerStrategies")
+      .then(({ registerDefaultStrategies }) => registerDefaultStrategies())
+      .catch(() => {
+        // fallback: strategies registered elsewhere
+      });
   }
 
   register(strategy: BaseStrategy): void {

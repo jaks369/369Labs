@@ -85,7 +85,15 @@ export default function Markets() {
     setInitialLoading(false);
   }, [historyQuery.data]);
 
+  // Re-subscribe only when the symbol list CONTENT changes, not on every
+  // active_symbols refresh (which produces a new array identity each time).
+  const symbolKey = useMemo(() => SYMBOLS.join(","), [SYMBOLS]);
+
   useEffect(() => {
+    // Symbols load asynchronously from Deriv's active_symbols reply; wait for
+    // them before subscribing. (A []-deps run subscribed to zero symbols and
+    // the live feed never started until a remount.)
+    if (!symbolKey) return;
     const subs = SYMBOLS.map((sym) => derivWS.subscribe(sym));
 
     const listener = {
@@ -111,7 +119,8 @@ export default function Markets() {
     };
     derivWS.addListener(listener);
     return () => { derivWS.removeListener(listener); subs.forEach((id) => derivWS.unsubscribe(id)); if (rafIdRef.current) cancelAnimationFrame(rafIdRef.current); };
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [symbolKey]);
 
   useEffect(() => {
     if (historyQuery.isError) setInitialLoading(false);

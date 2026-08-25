@@ -156,7 +156,15 @@ export class SettlementTracker {
     const isSold = c.is_sold === 1 || c.status === "sold" || c.status === "won" || c.status === "lost";
     if (!isSold) return;
 
-    const profit = parseFloat(c.profit) || 0;
+    // A sold contract MUST carry a parseable profit. Garbage/missing values
+    // used to coerce to 0 and settle as a "win" — fabricating ledger entries
+    // from malformed API responses. Throw instead so the trade retries and a
+    // heartbeat records the bad payload.
+    const parsedProfit = parseFloat(c.profit);
+    const profit = Number.isFinite(parsedProfit) ? parsedProfit : NaN;
+    if (!Number.isFinite(profit)) {
+      throw new Error(`malformed_contract_profit (${trade.contractId}: ${JSON.stringify(c.profit)})`);
+    }
     const outcome: "win" | "loss" = profit >= 0 ? "win" : "loss";
     const exitTick = c.exit_tick != null ? parseInt(c.exit_tick) : null;
     const exitPrice = c.sell_price != null ? String(c.sell_price) : exitTick != null ? String(exitTick) : "0";
@@ -217,7 +225,9 @@ export class SettlementTracker {
         console.warn(`[SettlementTracker] strategy tracker import failed for trade ${trade.id}:`, e?.message || e);
       }
       try {
-        db.recordStrategyStat(trade.strategyId, outcome, profit).catch(() => {});
+        // Silent failure here would silently degrade strategy-performance
+        // weighting (consensus confidence) with zero trace — log it.
+        db.recordStrategyStat(trade.strategyId, outcome, profit).catch((e: any) => console.warn(`[SettlementTracker] strategy stat write failed for trade ${trade.id}:`, e?.message || e));
       } catch (e: any) {
         console.warn(`[SettlementTracker] strategy stat failed for trade ${trade.id}:`, e?.message || e);
       }

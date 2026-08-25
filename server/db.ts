@@ -85,6 +85,9 @@ import {
 import { ENV } from "./_core/env";
 import { encrypt, decrypt } from "./_core/encryption";
 import { logger } from "./_core/logger";
+import { calibrateConfidence, type CalibrationBucket } from "./signalStats";
+
+export type { CalibrationBucket };
 
 function parseDbUrl(url: string) {
   const parsed = new URL(url);
@@ -129,20 +132,28 @@ class AsyncMutex {
     while (this.locks.has(key)) {
       await this.locks.get(key);
     }
-    let release: () => void;
-    const promise = new Promise<void>((resolve) => { release = resolve; });
+    let resolvePromise!: () => void;
+    const promise = new Promise<void>((resolve) => { resolvePromise = resolve; });
     this.locks.set(key, promise);
-    this.resolvers.set(key, release!);
-    return release!;
+    let released = false;
+    // The returned release MUST remove the map entries before resolving.
+    // Resolving alone leaves `locks.has(key)` true forever, so every later
+    // lock(key) spins on an already-resolved promise and starves the event
+    // loop (a second saveTrade for the same userId+contractId would freeze
+    // the whole server).
+    const release = () => {
+      if (released) return;
+      released = true;
+      if (this.locks.get(key) === promise) this.locks.delete(key);
+      if (this.resolvers.get(key) === release) this.resolvers.delete(key);
+      resolvePromise();
+    };
+    this.resolvers.set(key, release);
+    return release;
   }
 
   unlock(key: string): void {
-    const release = this.resolvers.get(key);
-    if (release) {
-      release();
-      this.locks.delete(key);
-      this.resolvers.delete(key);
-    }
+    this.resolvers.get(key)?.();
   }
 }
 
@@ -3372,6 +3383,33 @@ export async function digitReadAccuracy(userId: number, limit = 250): Promise<{ 
     };
   } catch {
     return { total: 0, wins: 0, losses: 0, expired: 0, winRatePct: 0, byStrength: {}, bySymbol: {} };
+  }
+}
+
+export interface DigitReadCalibration {
+  total: number; // settled reads scored
+  brierScore: number | null; // null when nothing settled yet
+  buckets: CalibrationBucket[];
+}
+
+/**
+ * Reliability calibration for the Digit Trader prediction ledger: do stated
+ * confidence percentages match observed win rates? Buckets settled reads by
+ * their stated confidence and compares each against the observed rate with a
+ * Wilson 95% CI, plus an overall Brier score (lower is better, 0.25 = chance
+ * for a 50/50 contract).
+ */
+export async function digitReadCalibration(userId: number, limit = 500): Promise<DigitReadCalibration> {
+  const empty: DigitReadCalibration = { total: 0, brierScore: null, buckets: [] };
+  const db = await getDb();
+  if (!db) return empty;
+  try {
+    const pooled = await listDigitReads(userId, limit);
+    const settled = pooled.filter((s) => (s.status === "win" || s.status === "loss") && typeof s.confidence === "number");
+    if (settled.length === 0) return empty;
+    return calibrateConfidence(settled.map((s) => ({ confidence: s.confidence, win: s.status === "win" })));
+  } catch {
+    return empty;
   }
 }
 

@@ -1,5 +1,26 @@
 import { lastDigitOf, getDecimalPlaces } from "@shared/lastDigit";
 import { actionToContractType, calcPnl, simulateOutcome, PAYOUT_RATE } from "@shared/contractSim";
+import { isSyntheticIndexSymbol } from "@shared/symbols";
+
+const DIGIT_INDICATORS: ReadonlySet<string> = new Set([
+  "digit_over",
+  "digit_under",
+  "digit_even",
+  "digit_odd",
+  "parity",
+  "last_digit",
+]);
+
+// Recursively walk a rule object and report whether ANY condition node uses a
+// digit-based indicator. Digit conditions are only statistically valid on
+// synthetic indices (see isSyntheticIndexSymbol in @shared/symbols).
+function ruleUsesDigitConditions(node: unknown): boolean {
+  if (!node || typeof node !== "object") return false;
+  if (Array.isArray(node)) return node.some(ruleUsesDigitConditions);
+  const obj = node as Record<string, unknown>;
+  if (typeof obj.indicator === "string" && DIGIT_INDICATORS.has(obj.indicator)) return true;
+  return Object.values(obj).some(ruleUsesDigitConditions);
+}
 
 function evaluateCondition(rule: any, prices: number[], digits: number[], idx: number): boolean {
   const cond = rule.condition;
@@ -47,6 +68,20 @@ function evaluateCondition(rule: any, prices: number[], digits: number[], idx: n
 }
 
 export async function runBacktest(ticks: { price: number; timestamp: number }[], rule: any, stake: number, symbol?: string) {
+  if (symbol && !isSyntheticIndexSymbol(symbol) && ruleUsesDigitConditions(rule)) {
+    return {
+      totalTrades: 0,
+      wins: 0,
+      losses: 0,
+      draws: 0,
+      winRate: 0,
+      totalPnl: 0,
+      maxDrawdown: 0,
+      profitFactor: 0,
+      valid: false as const,
+      interpretation: `Invalid backtest: digit-based conditions (${[...DIGIT_INDICATORS].join(", ")}) are only statistically valid on synthetic indices (R_, 1HZ, BOOM, CRASH). "${symbol}" is a real-market symbol whose digits carry no exploitable structure — any win rate computed here would be a statistical artifact.`,
+    };
+  }
   const decimals = symbol ? getDecimalPlaces(symbol) : 2;
   const prices = ticks.map((t) => Number(t.price));
   const digits = prices.map((p) => lastDigitOf(p, decimals));

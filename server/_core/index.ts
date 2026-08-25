@@ -26,15 +26,24 @@ process.on("uncaughtException", (err) => {
   process.exit(1);
 });
 
-function logStartupChecks() {
+function logStartupChecks(): string[] {
   const missing: string[] = [];
   if (!process.env.DATABASE_URL) missing.push("DATABASE_URL");
   if (!ENV.cookieSecret) missing.push("JWT_SECRET");
   if (!ENV.ENCRYPTION_KEY) missing.push("ENCRYPTION_KEY");
 
-  if (missing.length > 0) {
+  if (missing.length > 0 && process.env.NODE_ENV === "production") {
+    // Fail closed in production: a misconfigured deploy must refuse to start
+    // (the process manager restarts it and the deploy is marked failed) instead
+    // of binding the port "healthy" and failing every DB/auth request.
+    logger.error(
+      `[Startup] FATAL: Missing required environment variables in production: ${missing.join(", ")}. Refusing to start.`,
+    );
+    setTimeout(() => process.exit(1), 100); // let the logger flush
+  } else if (missing.length > 0) {
     logger.warn(`[Startup] WARNING: Missing required environment variables: ${missing.join(", ")}. The app may not function correctly.`);
   }
+  return missing;
 }
 
 export async function createApp() {
@@ -129,8 +138,11 @@ setInterval(() => {
 
 async function initRedis(): Promise<void> {
   try {
-    // Use require to allow optional Redis dependency at compile time
-    const RedisClient = require("ioredis");
+    // Dynamic import via variable: ioredis is an OPTIONAL dependency that may
+    // not be installed. require() throws outright in ESM bundles, and a literal
+    // import would fail both tsc and the prod bundle when the package is absent.
+    const optionalModule = "ioredis";
+    const { default: RedisClient } = await import(optionalModule);
     redisClient = new RedisClient({
       host: process.env.REDIS_HOST || "localhost",
       port: parseInt(process.env.REDIS_PORT || "6379"),
@@ -505,13 +517,18 @@ const RATE = (limit: number, windowMs: number) => async (req: any, res: any, nex
   // Global error handler
   app.use((err: any, _req: any, res: any, _next: any) => {
     const correlationId = _req.correlationId;
-    logger.error("[ErrorHandler]", { 
-      error: err?.message || err, 
+    logger.error("[ErrorHandler]", {
+      error: err?.message || err,
       stack: err?.stack,
-      correlationId 
+      correlationId
     });
     const status = err?.status || err?.statusCode || 500;
-    res.status(status).json({ error: err?.message || "Internal server error", correlationId });
+    // 4xx messages are client-actionable and safe to return; 5xx details
+    // (DB errors, paths, driver internals) must not leak — log keeps the
+    // message, the client gets a generic one plus the correlationId.
+    const message =
+      status < 500 ? err?.message || "Request failed" : "Internal server error";
+    res.status(status).json({ error: message, correlationId });
   });
 
   return app;

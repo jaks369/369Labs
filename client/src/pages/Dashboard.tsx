@@ -93,9 +93,12 @@ export default function Dashboard() {
   const [newAlertDir, setNewAlertDir] = useState<"above" | "below">("above");
   const [newAlertPrice, setNewAlertPrice] = useState("");
 
-  const tradesQuery = trpc.trades.list.useQuery({ limit: 20 }, { refetchInterval: 5000, refetchIntervalInBackground: true });
+  // No refetchIntervalInBackground: hidden tabs must not hammer the API.
+  const tradesQuery = trpc.trades.list.useQuery({ limit: 20 }, { refetchInterval: 5000 });
   const signalsQuery = trpc.signals.list.useQuery(void 0, { refetchInterval: 30000 });
-  const botRunsQuery = trpc.bot.getRuns.useQuery();
+  // Polled (not invalidated) so the running-bot badge stays truthful when a bot
+  // is started/stopped from another page, tab, or via Concierge.
+  const botRunsQuery = trpc.bot.getRuns.useQuery(undefined, { refetchInterval: 30000 });
   const tokenQuery = trpc.deriv.getToken.useQuery();
   const healthQuery = trpc.trades.health.useQuery(void 0, { refetchInterval: 30000 });
   const saveTradeMutation = trpc.trades.save.useMutation();
@@ -512,7 +515,7 @@ export default function Dashboard() {
         accountType: (acct?.account_type || b.account_type || "").toString().toLowerCase(),
       });
     });
-    return () => {};
+    return unsub;
   }, []);
 
   useEffect(() => {
@@ -527,11 +530,12 @@ export default function Dashboard() {
 
   useEffect(() => {
     const unsub = derivWS.onTokenError((msg) => setTokenError(msg));
-    const interval = setInterval(() => {
+    const poll = setInterval(() => {
       if (derivWS.isAuthorized() && tokenError) setTokenError(null);
     }, 1000);
     return () => {
-      clearInterval(interval);
+      unsub();
+      clearInterval(poll);
     };
   }, [tokenError]);
 
@@ -570,7 +574,7 @@ export default function Dashboard() {
     const unsub = derivWS.onSymbols((syms) => {
       setSymbols(syms);
     });
-    return () => {};
+    return unsub;
   }, []);
 
   useEffect(() => {

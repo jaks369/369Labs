@@ -50,6 +50,19 @@ export interface GuidingSignalCandidate {
   details: IndicatorDetail[];
   /** Market regime at signal time */
   regime?: RegimeInfo;
+  /**
+   * Surfaced caution case: the momentum layer and the price-action layer
+   * disagree on direction (e.g. "indicators say up, but price just broke
+   * structure down"). When present, confidence is capped and strength
+   * downgraded — a conflict is never silently resolved by picking a winner.
+   */
+  conflict?: {
+    momentumDirection: GuideDirection;
+    priceActionDirection: GuideDirection;
+    momentumScore: number;
+    priceActionScore: number;
+    note: string;
+  };
   /** Optional backtest results for validation — populated by scanIndicatorTicks */
   backtest?: {
     confidence: number;
@@ -81,6 +94,33 @@ export function strengthFor(confidence: number): GuideStrength {
   if (confidence >= 70) return "STRONG";
   if (confidence >= 58) return "MEDIUM";
   return "WEAK";
+}
+
+/**
+ * CONFLICT DETECTION — momentum and price action disagreeing is its own
+ * caution case, not something to silently average away. "Indicators say up,
+ * but price just broke structure down" must be surfaced as such.
+ */
+export function detectMomentumPaConflict(
+  momentum: { direction: GuideDirection; score: number; votes: { total: number } },
+  priceAction: { direction: GuideDirection; score: number; votes: { total: number } }
+): GuidingSignalCandidate["conflict"] | undefined {
+  if (
+    momentum.votes.total <= 0 ||
+    priceAction.votes.total <= 0 ||
+    momentum.direction === priceAction.direction
+  ) {
+    return undefined;
+  }
+  return {
+    momentumDirection: momentum.direction,
+    priceActionDirection: priceAction.direction,
+    momentumScore: momentum.score,
+    priceActionScore: priceAction.score,
+    note:
+      `CONFLICT: momentum indicators lean ${momentum.direction} while price action leans ${priceAction.direction} ` +
+      `(structure/patterns vs oscillator disagreement). Confidence capped and strength downgraded until the layers agree.`,
+  };
 }
 
 const CANDLE_LOOKBACK = 40; // enough for EMA(9)/EMA(21) AND MACD EMA(26)+signal(9) to warm
@@ -132,12 +172,18 @@ export function scanSignalForSymbol(symbol: string, rawTicks: TickLike[]): ScanR
 
   // Combine momentum + price action into final score
   // Weight: 60% momentum, 40% price action (PA has fewer indicators, so lower weight)
-  const combinedScore = paConfluence.votes.total > 0
+  const combinedScoreRaw = paConfluence.votes.total > 0
     ? Math.round(confluence.score * 0.6 + paConfluence.score * 0.4)
     : confluence.score;
   const combinedDirection = paConfluence.votes.total > 0
     ? (confluence.score >= paConfluence.score ? confluence.direction : paConfluence.direction)
     : confluence.direction;
+
+  const conflict = detectMomentumPaConflict(confluence, paConfluence);
+
+  // A conflicted signal is downgraded one honesty notch: cap confidence below
+  // STRONG and never emit it as more than MEDIUM.
+  const combinedScore = conflict ? Math.min(combinedScoreRaw, 64) : combinedScoreRaw;
 
   // Detect market regime
   const regimeInfo = detectRegime(candles);
@@ -146,7 +192,8 @@ export function scanSignalForSymbol(symbol: string, rawTicks: TickLike[]): ScanR
 
   // Do not emit a tradeable card from a bare coin-flip observation. WEAK is
   // only emitted when there is real (if thin) directional agreement.
-  const paStrength = strengthFor(combinedScore);
+  let paStrength = strengthFor(combinedScore);
+  if (conflict && paStrength === "STRONG") paStrength = "MEDIUM";
   const signal: GuidingSignalCandidate | null =
     paStrength === "WEAK" && confluence.reasons.length === 1 && paConfluence.votes.total === 0
       ? null
@@ -168,8 +215,10 @@ export function scanSignalForSymbol(symbol: string, rawTicks: TickLike[]): ScanR
           plain: explanation,
           details: [...confluence.details, ...paConfluence.details],
           regime: regimeWithAlignment,
+          conflict,
           reasons: [
             `${Math.max(confluence.votes.up + paConfluence.votes.up, confluence.votes.down + paConfluence.votes.down)}/${confluence.votes.total + paConfluence.votes.total} indicators agree`,
+            ...(conflict ? [conflict.note] : []),
             ...confluence.reasons,
             ...paConfluence.reasons,
             `Regime: ${regimeWithAlignment.regime} (${regimeWithAlignment.reason}) · ${regimeAligned ? 'aligned' : 'misaligned'}`,

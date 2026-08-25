@@ -307,6 +307,28 @@ export interface IndicatorDetail {
 }
 
 /**
+ * Epistemic status of a price-action signal component.
+ *
+ *  - "structural": provably-true market structure, computable from the price
+ *    series alone (BOS/CHoCH bias, swing divergence, candlestick shapes).
+ *    The claim is definitional — given the detector's rules, the pattern IS
+ *    present in the data.
+ *  - "approximate": a NAMED HEURISTIC standing in for a concept a price-only
+ *    feed cannot actually observe (SMC zones / order blocks / liquidity
+ *    sweeps approximate institutional order flow without measuring it).
+ *    Consumers (369AI included) must not speak about these with the same
+ *    confidence as structural reads.
+ *
+ * This is enforced by the compiler: every detail emitted by
+ * scorePriceActionConfluence MUST declare its source.
+ */
+export type SignalSource = "structural" | "approximate";
+
+export interface PriceActionDetail extends IndicatorDetail {
+  source: SignalSource;
+}
+
+/**
  * Deterministic confluence over the latest candle:
  *   + EMA9>EMA21 trend agree, + RSI>55 (up) / <45 (down), + MACD histogram
  *   sign agree, + close within upper/lower Bollinger half agree, + momentum
@@ -461,7 +483,7 @@ export interface PriceActionScore {
   score: number;
   direction: "up" | "down";
   votes: { up: number; down: number; total: number; agreement: number };
-  details: IndicatorDetail[];
+  details: PriceActionDetail[];
   reasons: string[];
 }
 
@@ -473,7 +495,7 @@ export function scorePriceActionConfluence(candles: Candle[]): PriceActionScore 
   let up = 0;
   let down = 0;
   let computable = 0;
-  const details: IndicatorDetail[] = [];
+  const details: PriceActionDetail[] = [];
   const reasons: string[] = [];
 
   // 1. Candle patterns
@@ -485,7 +507,7 @@ export function scorePriceActionConfluence(candles: Candle[]): PriceActionScore 
     if (bullish > bearish) { up++; reasons.push(`${candlePats.length} candle pattern(s) bullish`); }
     else if (bearish > bullish) { down++; reasons.push(`${candlePats.length} candle pattern(s) bearish`); }
     else { reasons.push(`${candlePats.length} candle pattern(s) mixed`); }
-    details.push({ name: "Candle patterns", value: `${bullish}B/${bearish}S`, verdict: bullish > bearish ? "up" : bearish > bullish ? "down" : "neutral" });
+    details.push({ name: "Candle patterns", value: `${bullish}B/${bearish}S`, verdict: bullish > bearish ? "up" : bearish > bullish ? "down" : "neutral", source: "structural" });
   }
 
   // 2. Market structure
@@ -494,7 +516,7 @@ export function scorePriceActionConfluence(candles: Candle[]): PriceActionScore 
     computable++;
     if (structure.currentBias === "bullish") { up++; reasons.push("Market structure bullish"); }
     else { down++; reasons.push("Market structure bearish"); }
-    details.push({ name: "Market structure", value: structure.currentBias, verdict: structure.currentBias === "bullish" ? "up" : "down" });
+    details.push({ name: "Market structure", value: structure.currentBias, verdict: structure.currentBias === "bullish" ? "up" : "down", source: "structural" });
   }
 
   // 3. Divergence
@@ -504,7 +526,7 @@ export function scorePriceActionConfluence(candles: Candle[]): PriceActionScore 
     const recent = divs[0];
     if (recent.direction === "bullish") { up++; reasons.push(`Divergence: ${recent.type.replace(/_/g, " ")}`); }
     else { down++; reasons.push(`Divergence: ${recent.type.replace(/_/g, " ")}`); }
-    details.push({ name: "Divergence", value: recent.type.replace(/_/g, " "), verdict: recent.direction === "bullish" ? "up" : "down" });
+    details.push({ name: "Divergence", value: recent.type.replace(/_/g, " "), verdict: recent.direction === "bullish" ? "up" : "down", source: "structural" });
   }
 
   // 4. SMC zones
@@ -516,7 +538,9 @@ export function scorePriceActionConfluence(candles: Candle[]): PriceActionScore 
     const bearishZones = unfilled.filter((z) => z.direction === "bearish").length;
     if (bullishZones > bearishZones) { up++; reasons.push(`${unfilled.length} unfilled bullish SMC zone(s)`); }
     else if (bearishZones > bullishZones) { down++; reasons.push(`${unfilled.length} unfilled bearish SMC zone(s)`); }
-    details.push({ name: "SMC zones", value: `${bullishZones}B/${bearishZones}S unfilled`, verdict: bullishZones > bearishZones ? "up" : bearishZones > bullishZones ? "down" : "neutral" });
+    // SMC zones stand in for order blocks / liquidity concepts the price-only
+    // feed cannot observe — always flagged approximate.
+    details.push({ name: "SMC zones", value: `${bullishZones}B/${bearishZones}S unfilled`, verdict: bullishZones > bearishZones ? "up" : bearishZones > bullishZones ? "down" : "neutral", source: "approximate" });
   }
 
   // 5. Chart patterns
@@ -526,7 +550,7 @@ export function scorePriceActionConfluence(candles: Candle[]): PriceActionScore 
     const recent = chartPats[0];
     if (recent.direction === "bullish") { up++; reasons.push(`Chart pattern: ${recent.type.replace(/_/g, " ")}`); }
     else { down++; reasons.push(`Chart pattern: ${recent.type.replace(/_/g, " ")}`); }
-    details.push({ name: "Chart patterns", value: recent.type.replace(/_/g, " "), verdict: recent.direction === "bullish" ? "up" : "down" });
+    details.push({ name: "Chart patterns", value: recent.type.replace(/_/g, " "), verdict: recent.direction === "bullish" ? "up" : "down", source: "structural" });
   }
 
   const total = computable;

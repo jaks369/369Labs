@@ -405,8 +405,11 @@ class DerivWebSocketService {
       if (!msg.includes("subscribe")) console.error("[Deriv WS] API Error:", msg);
       const isTokenError = /token|authoriz|session/i.test(msg);
       if (isTokenError) {
-        // Notify listeners so the app can redirect/re-auth instead of silently failing
-        this.notifyError(new Error(msg));
+        // Mid-session auth failures (expired/invalidated token) must reach the
+        // token-error listeners — the status pill and re-auth prompts listen
+        // there, not on tick errors. Previously this only notified tick
+        // listeners, so the UI showed "connected" while every trade failed.
+        this.notifyTokenError(msg);
         return;
       }
       const reqId = data.req_id;
@@ -551,7 +554,10 @@ class DerivWebSocketService {
   public fetchBalance() {
     if (!this.ws) return;
     try {
-      this.ws.send(JSON.stringify({ balance: 1, req_id: this.msgId++ }));
+      // subscribe:1 turns the one-shot read into a live stream so balance
+      // updates from ANY source (this tab, another device, open contracts
+      // settling) push immediately instead of drifting stale.
+      this.ws.send(JSON.stringify({ balance: 1, subscribe: 1, req_id: this.msgId++ }));
     } catch (error) {
       console.error("[Deriv WS] Failed to fetch balance:", error);
     }
@@ -1073,7 +1079,7 @@ class DerivWebSocketService {
   public getAccountType(): string {
     return this.lastAccountType;
   }
-  public onBalance(cb: (b: any) => void): void {
+  public onBalance(cb: (b: any) => void): () => void {
     this.balanceListeners.add(cb);
     if (this.lastBalance) {
       try {
@@ -1081,6 +1087,7 @@ class DerivWebSocketService {
       } catch {}
     }
     if (this.authorized) this.fetchBalance();
+    return () => this.balanceListeners.delete(cb);
   }
   public onSymbols(cb: (symbols: DerivSymbol[]) => void): () => void {
     this.symbolListeners.add(cb);

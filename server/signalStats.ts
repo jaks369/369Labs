@@ -155,3 +155,63 @@ export function assignTier(
   if (wf.holdCount >= WALK_FORWARD_REQUIRED) return "strong";
   return "watch";
 }
+
+export interface CalibrationBucket {
+  label: string;
+  statedPct: number; // midpoint of the stated-confidence bucket
+  total: number;
+  wins: number;
+  observedWinRatePct: number;
+  wilsonLowPct: number;
+  wilsonHighPct: number;
+}
+
+export interface CalibrationResult {
+  total: number;
+  brierScore: number;
+  buckets: CalibrationBucket[];
+}
+
+/**
+ * Reliability calibration: do stated confidence percentages match observed
+ * win rates? Buckets settled predictions by stated confidence, compares each
+ * against the observed rate with a Wilson 95% CI, and computes an overall
+ * Brier score (lower is better; 0.25 = chance for a ~50/50 contract).
+ *
+ * Confidence on digit reads is deliberately capped near ~58, so buckets cover
+ * that honest range without empty high bins.
+ */
+export function calibrateConfidence(reads: Array<{ confidence: number; win: boolean }>): CalibrationResult {
+  const EDGES: Array<{ label: string; lo: number; hi: number; mid: number }> = [
+    { label: "50–51%", lo: 50, hi: 51.99, mid: 51 },
+    { label: "52–53%", lo: 52, hi: 53.99, mid: 53 },
+    { label: "54–55%", lo: 54, hi: 55.99, mid: 55 },
+    { label: "56–57%", lo: 56, hi: 57.99, mid: 57 },
+    { label: "58%+", lo: 58, hi: Infinity, mid: 58.5 },
+  ];
+
+  let brierSum = 0;
+  for (const r of reads) {
+    const p = r.confidence / 100;
+    brierSum += Math.pow(p - (r.win ? 1 : 0), 2);
+  }
+
+  const buckets: CalibrationBucket[] = [];
+  for (const edge of EDGES) {
+    const inBucket = reads.filter((r) => r.confidence >= edge.lo && r.confidence <= edge.hi);
+    if (inBucket.length === 0) continue;
+    const wins = inBucket.filter((r) => r.win).length;
+    const ci = wilsonInterval(wins, inBucket.length);
+    buckets.push({
+      label: edge.label,
+      statedPct: edge.mid,
+      total: inBucket.length,
+      wins,
+      observedWinRatePct: Math.round(ci.point * 100),
+      wilsonLowPct: Math.round(ci.low * 100),
+      wilsonHighPct: Math.round(ci.high * 100),
+    });
+  }
+
+  return { total: reads.length, brierScore: brierSum / reads.length, buckets };
+}

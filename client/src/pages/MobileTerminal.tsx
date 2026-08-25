@@ -99,7 +99,7 @@ export default function MobileTerminal() {
     const unsub = derivWS.onSymbols((syms) => {
       if (syms.length > 0) setLiveSymbols(syms);
     });
-    return () => {};
+    return unsub;
   }, []);
 
   useEffect(() => {
@@ -109,12 +109,12 @@ export default function MobileTerminal() {
       setBalance(parseFloat(acct?.balance != null ? acct.balance : acct?.display_balance || "0") || 0);
       setBalanceInfo({ currency: acct?.currency || "USD", accountType: (acct?.account_type || b.account_type || "").toString().toLowerCase() });
     });
-    return () => {};
+    return unsub;
   }, []);
 
   useEffect(() => {
     const unsub = derivWS.onTokenError((msg) => setTokenError(msg));
-    return () => {};
+    return unsub;
   }, []);
 
   const subRef = useRef<number | null>(null);
@@ -258,7 +258,7 @@ export default function MobileTerminal() {
   })();
 
   return (
-    <div className="min-h-full bg-[var(--bg)] text-[var(--text-primary)] lg:hidden">
+    <div className="min-h-full bg-[var(--bg)] text-[var(--text-primary)] lg:hidden pb-[calc(56px+env(safe-area-inset-bottom,0px))]">
       {/* Header: symbol · live price · LIVE */}
       <div className="sticky top-0 z-30 bg-[var(--bg)] border-b border-[var(--border)] px-4 pt-3 pb-2 shadow-lg">
         <div className="flex items-center justify-between gap-3">

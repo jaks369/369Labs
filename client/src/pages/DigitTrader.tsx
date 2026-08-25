@@ -106,10 +106,20 @@ export default function DigitTrader() {
   }, [settingsQ.data]);
 
   const snapshot = trpc.digitTrader.snapshot.useQuery({ symbol: activeSymbol }, { enabled: isAuthenticated, refetchInterval: 10000 });
-  // Create queries for each followed symbol
-  const followedSnapshots = followed.map((sym) => trpc.digitTrader.snapshot.useQuery({ symbol: sym }, { enabled: isAuthenticated, refetchInterval: 10000 }));
+  // One batched query for all followed symbols. (Hooks must never be created
+  // inside .map() — the followed list changes length when symbols are
+  // added/removed, which crashed React's rules-of-hooks.)
+  const followedSnapshotsQ = trpc.digitTrader.snapshots.useQuery(
+    { symbols: followed.length ? followed : ["R_100"] },
+    { enabled: isAuthenticated, refetchInterval: 10000 }
+  );
+  const followedSnapshots = (followedSnapshotsQ.data || []).map((r) => ({
+    isLoading: followedSnapshotsQ.isLoading,
+    data: { symbol: r.symbol, reads: r.reads },
+  }));
   const history = trpc.digitTrader.history.useQuery({ limit: 40 }, { enabled: isAuthenticated });
   const accuracy = trpc.digitTrader.accuracy.useQuery(undefined, { enabled: isAuthenticated });
+  const calibration = trpc.digitTrader.calibration.useQuery(undefined, { enabled: isAuthenticated, refetchInterval: 60000 });
   const autoTrades = trpc.digitTrader.trades.useQuery({ limit: 30 }, { enabled: isAuthenticated, refetchInterval: 10000 });
   const autoStatusQ = trpc.digitTrader.autoStatus.useQuery(undefined, { enabled: isAuthenticated, refetchInterval: 5000 });
   const dailyUsageQ = trpc.digitTrader.dailyUsage.useQuery(undefined, { enabled: isAuthenticated, refetchInterval: 5000 });
@@ -531,6 +541,52 @@ export default function DigitTrader() {
                   ))}
                 </div>
               </div>
+            )}
+          </Card>
+
+          {/* Calibration — stated confidence vs observed outcomes */}
+          <Card title="Calibration" icon={<Target className="w-4 h-4 text-[var(--accent)]" />}>
+            {calibration.isLoading ? <Loader2 className="w-5 h-5 animate-spin text-[var(--accent)]" /> : calibration.data && calibration.data.total > 0 ? (
+              <div className="space-y-3">
+                <div className="grid grid-cols-2 gap-2">
+                  <Metric label="Scored" value={calibration.data.total} />
+                  <Metric
+                    label="Brier score"
+                    value={calibration.data.brierScore != null ? calibration.data.brierScore.toFixed(4) : "—"}
+                    accent={calibration.data.brierScore != null && calibration.data.brierScore <= 0.25 ? "text-[var(--green)]" : "text-[var(--red)]"}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  {calibration.data.buckets.map((b) => {
+                    const honest = b.observedWinRatePct >= b.statedPct - 3;
+                    return (
+                      <div key={b.label} className="flex items-center gap-2 text-xs">
+                        <span className="w-14 shrink-0 font-mono text-[var(--text-muted)]">{b.label}</span>
+                        <div className="relative flex-1 h-2 bg-[var(--surface-elevated)] border border-[var(--border)] rounded-full overflow-hidden">
+                          <div
+                            className={`h-full rounded-full ${honest ? "bg-[var(--green)]" : "bg-[var(--red)]"}`}
+                            style={{ width: `${Math.min(100, Math.max(2, b.observedWinRatePct))}%` }}
+                          />
+                          {/* Stated-confidence marker */}
+                          <div
+                            className="absolute top-0 bottom-0 w-0.5 bg-white/70"
+                            style={{ left: `${b.statedPct}%` }}
+                            title={`Stated: ${b.statedPct}%`}
+                          />
+                        </div>
+                        <span className="w-32 shrink-0 text-right text-[var(--text-muted)]" title={`Wilson 95% CI: ${b.wilsonLowPct}–${b.wilsonHighPct}%`}>
+                          {b.observedWinRatePct}% <span className="opacity-60">({b.wilsonLowPct}–{b.wilsonHighPct})</span> · n={b.total}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+                <p className="text-[11px] text-[var(--text-muted)]">
+                  Bar = observed win rate per stated-confidence bucket (white tick = what we claimed, whiskers = Wilson 95% CI). Brier ≤ 0.25 means the ledger is at least as honest as chance. Lower is better.
+                </p>
+              </div>
+            ) : (
+              <p className="text-xs text-[var(--text-muted)]">No settled predictions yet — calibration appears once the ledger has resolved reads to compare against stated confidence.</p>
             )}
           </Card>
         </div>

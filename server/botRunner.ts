@@ -1,6 +1,7 @@
 import { notifyUser } from "./_core/notification";
 import * as db from "./db";
 import { derivManager } from "./derivConnection";
+import { fireWebhookEvent } from "./webhookExecutor";
 
 // Simple per-key mutex to prevent race conditions on Map operations
 class AsyncMutex {
@@ -11,20 +12,28 @@ class AsyncMutex {
     while (this.locks.has(key)) {
       await this.locks.get(key);
     }
-    let release: () => void;
-    const promise = new Promise<void>(resolve => { release = resolve; });
+    let resolvePromise!: () => void;
+    const promise = new Promise<void>(resolve => { resolvePromise = resolve; });
     this.locks.set(key, promise);
-    this.resolvers.set(key, release!);
-    return release!;
+    let released = false;
+    // The returned release MUST remove the map entries before resolving.
+    // Resolving alone leaves `locks.has(key)` true forever, so every later
+    // lock(key) spins on an already-resolved promise and starves the event
+    // loop (found by concurrent stress test: any second start/stop on the
+    // same bot id froze the process).
+    const release = () => {
+      if (released) return;
+      released = true;
+      if (this.locks.get(key) === promise) this.locks.delete(key);
+      if (this.resolvers.get(key) === release) this.resolvers.delete(key);
+      resolvePromise();
+    };
+    this.resolvers.set(key, release);
+    return release;
   }
 
   unlock(key: string): void {
-    const release = this.resolvers.get(key);
-    if (release) {
-      release();
-      this.locks.delete(key);
-      this.resolvers.delete(key);
-    }
+    this.resolvers.get(key)?.();
   }
 }
 
@@ -38,6 +47,37 @@ interface BotSafety {
   allowedHours?: [number, number];
   confidenceThreshold?: number;
   maxConsecutiveLosses?: number;
+}
+
+/**
+ * Platform-enforced safety floor (product decision: limits are MANDATORY).
+ *
+ * A bot must never run with zero risk controls just because the caller
+ * (user prompt or Concierge) omitted them. If a limit is unset — or set to a
+ * falsy "unlimited" value — the platform default below is applied. Users may
+ * raise a limit above the default explicitly; they cannot opt out entirely.
+ */
+export const MANDATORY_SAFETY_FLOORS = {
+  maxDailyLoss: 50, // USD of realized loss per UTC day
+  maxDailyTrades: 100, // trades per UTC day
+  maxConsecutiveLosses: 10, // pause after this many losses in a row
+} as const;
+
+function withMandatorySafetyFloors(safety: BotSafety | undefined): Required<Pick<BotSafety, "maxDailyLoss" | "maxDailyTrades" | "maxConsecutiveLosses">> & BotSafety {
+  const s = safety || {};
+  return {
+    ...s,
+    maxDailyLoss:
+      s.maxDailyLoss && s.maxDailyLoss > 0 ? s.maxDailyLoss : MANDATORY_SAFETY_FLOORS.maxDailyLoss,
+    maxDailyTrades:
+      s.maxDailyTrades && s.maxDailyTrades > 0
+        ? Math.floor(s.maxDailyTrades)
+        : MANDATORY_SAFETY_FLOORS.maxDailyTrades,
+    maxConsecutiveLosses:
+      s.maxConsecutiveLosses && s.maxConsecutiveLosses > 0
+        ? Math.floor(s.maxConsecutiveLosses)
+        : MANDATORY_SAFETY_FLOORS.maxConsecutiveLosses,
+  };
 }
 
 interface BotDefinition {
@@ -80,7 +120,7 @@ class BotRunner {
           name: opts.name,
           strategy: opts.strategy,
           strategyId: opts.strategyId,
-          safety: opts.safety || {},
+          safety: withMandatorySafetyFloors(opts.safety),
           startedAt: Date.now(),
         },
         status: "running",
@@ -136,7 +176,6 @@ class BotRunner {
       if (status === "error") {
         notifyUser(userId, "botError", "Bot Error", `Bot "${bot.def.name}" stopped due to an error. ${reason || ""}`, bot.lastError || reason || "Unknown error");
         try {
-          const { fireWebhookEvent } = require("./webhookExecutor");
           fireWebhookEvent(userId, "bot.error", {
             botId: id,
             botName: bot.def.name,

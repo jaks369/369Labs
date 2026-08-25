@@ -5,6 +5,7 @@ import { getAITradingCopilot } from "./AITradingCopilot";
 import { getAIExplainabilityEngine } from "./AIExplainability";
 import { lastDigitOf, getDecimalPlaces } from "@shared/lastDigit";
 import { getAllSymbols, getSymbolDisplayName } from "@shared/symbols";
+import { isSyntheticIndexSymbol } from "@shared/symbols";
 
 /* = App + Deriv knowledge base (injected into the LLM system prompt) = */
 // Written in plain language so the model can answer "how do I..." and
@@ -383,6 +384,19 @@ async function handlePattern(userId: number, symbol: string, message: string): P
   const m = message.toLowerCase();
   const display = getSymbolDisplayName(symbol) || symbol;
 
+  // Digit-pattern statistics (streaks vs fair baselines, parity, over/under)
+  // are only valid on synthetic indices whose digits are engineered uniform.
+  // On real-market symbols they would fabricate spurious "edges".
+  if (!isSyntheticIndexSymbol(symbol)) {
+    return {
+      answer: `Digit-pattern analysis isn't available for ${display} (${symbol}) — those statistics (streaks, parity, over/under frequencies vs fair baselines) are only meaningful on synthetic indices like Volatility 100 or Boom/Crash, where the last digit is engineered to be uniformly random. For ${symbol}, ask me about trend, indicators, or price-action structure instead.`,
+      confidence: 95,
+      evidence,
+      enginesUsed: engines,
+      timestamp: Date.now(),
+    };
+  }
+
   let ticks: { price: string; epoch: number }[] = [];
   try {
     ticks = await db.getTickHistory(symbol, 500);
@@ -550,7 +564,7 @@ async function handleMarket(userId: number, message: string): Promise<ChatRespon
     return handlePattern(userId, targetSymbol, message);
   }
 
-  if (targetSymbol && /\b(digit|hottest|probability|percent|even|odd|last)\b/.test(m)) {
+  if (targetSymbol && isSyntheticIndexSymbol(targetSymbol) && /\b(digit|hottest|probability|percent|even|odd|last)\b/.test(m)) {
     try {
       const decimals = getDecimalPlaces(targetSymbol);
       const ticks = await db.getTickHistory(targetSymbol, 100);

@@ -434,11 +434,13 @@ describe("Status Edge Cases", () => {
     expect(mockSettleTrade).toHaveBeenCalledWith(1, expect.objectContaining({ profitLoss: "5.50000000" }));
   });
 
-  it("handles NaN profit — defaults to 0 (win)", async () => {
+  it("handles NaN profit — rejects for retry instead of fabricating a win", async () => {
+    // Changed from the old behavior (NaN coerced to 0 and settled as a "win"):
+    // a sold contract with an unparseable profit is a malformed response, so
+    // reconcile throws and the trade retries rather than writing a fake ledger win.
     mockGetContractStatus.mockResolvedValue(makeContractResponse({ profit: "abc" }));
-    mockSettleTrade.mockResolvedValue(makeTrade());
-    await (tracker as any).reconcile(makeTrade());
-    expect(mockSettleTrade).toHaveBeenCalledWith(1, expect.objectContaining({ result: "win", profitLoss: "0.00000000" }));
+    await expect((tracker as any).reconcile(makeTrade())).rejects.toThrow(/malformed_contract_profit/);
+    expect(mockSettleTrade).not.toHaveBeenCalled();
   });
 
   it("handles large profit values", async () => {
