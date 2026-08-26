@@ -215,3 +215,33 @@ export function calibrateConfidence(reads: Array<{ confidence: number; win: bool
 
   return { total: reads.length, brierScore: brierSum / reads.length, buckets };
 }
+
+export interface PooledOutcomeStats {
+  total: number;
+  wins: number;
+  observedWinRatePct: number;
+  wilsonLowPct: number;
+  wilsonHighPct: number;
+}
+
+/**
+ * Pooled win-rate stats with Wilson CI for ONE homogeneous group of outcomes.
+ *
+ * CRITICAL: callers must only pool outcomes sharing the same fair baseline.
+ * Mixing contract types (e.g. Differs ~90% fair with Even/Odd ~50% fair)
+ * produces a meaningless blended rate that can masquerade as an edge — the
+ * whole reason Kelly sizing must be computed PER CONTRACT TYPE.
+ */
+export function pooledOutcomeStats(reads: Array<{ win: boolean }>): PooledOutcomeStats | null {
+  const n = reads.length;
+  if (n === 0) return null;
+  const wins = reads.filter((r) => r.win).length;
+  const ci = wilsonInterval(wins, n);
+  return {
+    total: n,
+    wins,
+    observedWinRatePct: Math.round(ci.point * 100),
+    wilsonLowPct: Math.round(ci.low * 100),
+    wilsonHighPct: Math.round(ci.high * 100),
+  };
+}

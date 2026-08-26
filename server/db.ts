@@ -85,7 +85,8 @@ import {
 import { ENV } from "./_core/env";
 import { encrypt, decrypt } from "./_core/encryption";
 import { logger } from "./_core/logger";
-import { calibrateConfidence, type CalibrationBucket } from "./signalStats";
+import { calibrateConfidence, pooledOutcomeStats, type CalibrationBucket } from "./signalStats";
+import { readBaseline } from "@shared/digits";
 
 export type { CalibrationBucket };
 
@@ -3390,6 +3391,17 @@ export interface DigitReadCalibration {
   total: number; // settled reads scored
   brierScore: number | null; // null when nothing settled yet
   buckets: CalibrationBucket[];
+  /** Per (readType,barrier) pooled stats — Kelly sizing MUST use these, never the blended buckets, because fair rates differ per contract type. */
+  byRead: Array<{
+    readType: string;
+    barrier: number | null;
+    baselinePct: number;
+    total: number;
+    wins: number;
+    observedWinRatePct: number;
+    wilsonLowPct: number;
+    wilsonHighPct: number;
+  }>;
 }
 
 /**
@@ -3400,14 +3412,42 @@ export interface DigitReadCalibration {
  * for a 50/50 contract).
  */
 export async function digitReadCalibration(userId: number, limit = 500): Promise<DigitReadCalibration> {
-  const empty: DigitReadCalibration = { total: 0, brierScore: null, buckets: [] };
+  const empty: DigitReadCalibration = { total: 0, brierScore: null, buckets: [], byRead: [] };
   const db = await getDb();
   if (!db) return empty;
   try {
     const pooled = await listDigitReads(userId, limit);
     const settled = pooled.filter((s) => (s.status === "win" || s.status === "loss") && typeof s.confidence === "number");
     if (settled.length === 0) return empty;
-    return calibrateConfidence(settled.map((s) => ({ confidence: s.confidence, win: s.status === "win" })));
+    const blended = calibrateConfidence(settled.map((s) => ({ confidence: s.confidence, win: s.status === "win" })));
+
+    // Per-contract-type pooling with each type's own fair baseline. Kelly
+    // sizing must use THESE — blending Differs (~90% fair) with Even/Odd
+    // (~50% fair) would fabricate an edge from chance-level wins.
+    const groups = new Map<string, { readType: string; barrier: number | null; reads: Array<{ win: boolean }> }>();
+    for (const s of settled) {
+      const key = `${s.readType}:${s.barrier ?? ""}`;
+      if (!groups.has(key)) groups.set(key, { readType: s.readType, barrier: s.barrier ?? null, reads: [] });
+      groups.get(key)!.reads.push({ win: s.status === "win" });
+    }
+    const byRead = [...groups.values()]
+      .map((g) => {
+        const stats = pooledOutcomeStats(g.reads);
+        return stats ? {
+          readType: g.readType,
+          barrier: g.barrier,
+          baselinePct: readBaseline(g.readType as any, g.barrier),
+          total: stats.total,
+          wins: stats.wins,
+          observedWinRatePct: stats.observedWinRatePct,
+          wilsonLowPct: stats.wilsonLowPct,
+          wilsonHighPct: stats.wilsonHighPct,
+        } : null;
+      })
+      .filter((x): x is NonNullable<typeof x> => x !== null)
+      .sort((a, b) => b.total - a.total);
+
+    return { ...blended, byRead };
   } catch {
     return empty;
   }

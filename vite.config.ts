@@ -5,7 +5,14 @@ import path from "node:path";
 import { defineConfig } from "vite";
 import { vitePluginManusRuntime } from "vite-plugin-manus-runtime";
 
-const plugins = [react(), tailwindcss(), jsxLocPlugin(), vitePluginManusRuntime()];
+// Dev-only tooling: the Manus plugins inject JSX data-loc attributes and a
+// runtime/debug collector into the bundle. Shipping them in production put an
+// inline script on every page that our own CSP then blocked, and added dead
+// weight to the client bundle. Production builds get react + tailwind only.
+const isProduction = process.env.NODE_ENV === "production" || process.argv.includes("--mode=production") || process.argv.includes("build");
+const devPlugins = isProduction ? [] : [jsxLocPlugin(), vitePluginManusRuntime()];
+
+const plugins = [react(), tailwindcss(), ...devPlugins];
 
 export default defineConfig({
   plugins,

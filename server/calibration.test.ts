@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { calibrateConfidence } from "./signalStats";
+import { calibrateConfidence, pooledOutcomeStats } from "./signalStats";
 
 // Deterministic PRNG so the test is reproducible.
 function mulberry32(seed: number): () => number {
@@ -49,5 +49,19 @@ describe("calibrateConfidence â€” reliability of stated confidence vs outcomes",
     expect(oneBucket.buckets).toHaveLength(1);
     expect(oneBucket.buckets[0].observedWinRatePct).toBe(100);
     expect(oneBucket.buckets[0].wilsonLowPct).toBeLessThan(100);
+  });
+});
+
+describe("pooledOutcomeStats — per-contract-type pooling", () => {
+  it("computes Wilson CI over one homogeneous group", () => {
+    const s = pooledOutcomeStats(Array.from({ length: 200 }, (_, i) => ({ win: i % 4 !== 0 })));
+    expect(s!.total).toBe(200);
+    expect(s!.wins).toBe(150);
+    expect(s!.observedWinRatePct).toBe(75);
+    expect(s!.wilsonLowPct).toBeLessThan(75);
+  });
+
+  it("returns null for empty groups instead of a zero-edge guess", () => {
+    expect(pooledOutcomeStats([])).toBeNull();
   });
 });

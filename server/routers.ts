@@ -1033,15 +1033,7 @@ export const appRouter = router({
       }),
 
     // --- Control-center endpoints (server-owned live connection) ---
-
-    // Current account + open positions + PnL snapshot. Drives the portfolio
-    // view and gives 369AI real account awareness.
-    getState: protectedProcedure.query(async ({ ctx }) => {
-      const { derivManager } = await import("./derivConnection");
-      const conn = await derivManager.ensureConnected(ctx.user.id);
-      if (!conn) return { connected: false, authorized: false, account: null, positions: [], openPositionCount: 0, totalUnrealizedPnl: 0, connectedToDeriv: false };
-      return { ...conn.getSnapshot(), connectedToDeriv: true };
-    }),
+    // deriv.getState / refresh / tickHistory removed: zero client callers.
 
     getAccount: protectedProcedure.query(async ({ ctx }) => {
       const { derivManager } = await import("./derivConnection");
@@ -1072,24 +1064,6 @@ export const appRouter = router({
       }),
 
     // Live tick history for a symbol via the server connection.
-    tickHistory: protectedProcedure
-      .input(z.object({ symbol: z.string(), count: z.number().default(100) }))
-      .query(async ({ ctx, input }) => {
-        const { derivManager } = await import("./derivConnection");
-        const conn = await derivManager.ensureConnected(ctx.user.id);
-        if (!conn) return [];
-        try { return await conn.getTickHistory(input.symbol, Math.min(input.count, 2000)); }
-        catch { return []; }
-      }),
-
-    // Refresh account/portfolio (re-pull balance + open positions).
-    refresh: protectedProcedure.mutation(async ({ ctx }) => {
-      const { derivManager } = await import("./derivConnection");
-      const conn = await derivManager.ensureConnected(ctx.user.id);
-      if (!conn) return { connected: false };
-      // trigger re-fetch by requesting state after a balance/portfolio pull
-      return conn.getSnapshot();
-    }),
   }),
 
   // Strategy Management
@@ -1175,58 +1149,9 @@ export const appRouter = router({
         }
       }),
 
-    review: protectedProcedure
-      .input(z.object({ id: z.number() }))
-      .query(async ({ ctx, input }) => {
-        try {
-          const strategy = await db.getStrategyById(input.id, ctx.user.id);
-          if (!strategy) throw new TRPCError({ code: "NOT_FOUND", message: "Strategy not found" });
-          const { strategyIntelligence } = await import("./ai/StrategyIntelligence");
-          return strategyIntelligence.review(strategy, ctx.user.id);
-        } catch (error) {
-          if (error instanceof TRPCError) throw error;
-          throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Failed to review strategy" });
-        }
-      }),
-
-    evaluateConfig: protectedProcedure
-      .input(z.object({ name: z.string(), config: z.record(z.string(), z.any()) }))
-      .query(async ({ ctx, input }) => {
-        const { strategyIntelligence } = await import("./ai/StrategyIntelligence");
-        return strategyIntelligence.review({
-          id: 0,
-          userId: ctx.user.id,
-          name: input.name,
-          config: input.config,
-        } as any, ctx.user.id);
-      }),
-
-    history: protectedProcedure
-      .input(z.object({ strategyId: z.number() }))
-      .query(async ({ ctx, input }) => {
-        const { AIKnowledgeType } = await import("./ai/knowledgeTypes");
-        return db.getAiKnowledge(ctx.user.id, AIKnowledgeType.STRATEGY_REVIEW, 50)
-          .then(reviews => reviews.filter(r => r.relatedStrategyId === input.strategyId));
-      }),
-
-    publish: protectedProcedure
-      .input(z.object({ id: z.number(), published: z.boolean().default(true) }))
-      .mutation(async ({ ctx, input }) => {
-        try {
-          const strategy = await db.setStrategyPublished(input.id, ctx.user.id, input.published);
-          if (!strategy) {
-            throw new TRPCError({ code: "NOT_FOUND", message: "Strategy not found" });
-          }
-          db.saveAuditLog({ userId: ctx.user.id, action: "strategy.publish", target: String(input.id), detail: { published: input.published } }).catch(() => {});
-          return strategy;
-        } catch (error) {
-          if (error instanceof TRPCError) throw error;
-          throw new TRPCError({
-            code: "INTERNAL_SERVER_ERROR",
-            message: "Failed to publish strategy",
-          });
-        }
-      }),
+    // review / evaluateConfig / history / publish / exportRule removed:
+    // zero client callers (verified). Publishing pipeline was half-built and
+    // its marketplace consumer was removed earlier.
 
     duplicate: protectedProcedure
       .input(z.object({ id: z.number() }))
@@ -1292,14 +1217,6 @@ export const appRouter = router({
     templates: protectedProcedure.query(async () => {
       return STRATEGY_TEMPLATES;
     }),
-
-    exportRule: protectedProcedure
-      .input(z.object({ id: z.number() }))
-      .query(async ({ ctx, input }) => {
-        const strategy = await db.getStrategyById(input.id, ctx.user.id);
-        if (!strategy) throw new TRPCError({ code: "NOT_FOUND", message: "Strategy not found" });
-        return { json: JSON.stringify(strategy.config, null, 2), name: strategy.name };
-      }),
 
     importRule: protectedProcedure
       .input(z.object({
@@ -1795,23 +1712,7 @@ save: protectedProcedure
       }));
     }),
 
-    getStatus: protectedProcedure
-      .input(z.object({ id: z.number() }))
-      .query(async ({ ctx, input }) => {
-        const { botRunner } = await import("./botRunner");
-        const rt = botRunner.getStatus(String(input.id), ctx.user.id);
-        if (!rt) return null;
-        return {
-          id: rt.def.id,
-          name: rt.def.name,
-          status: rt.status,
-          totalTrades: rt.totalTrades,
-          totalProfitLoss: rt.totalProfitLoss,
-          lossStreak: rt.lossStreak,
-          hasOpenTrade: rt.hasOpenTrade,
-          symbol: rt.def.strategy.symbol,
-        };
-      }),
+    // bot.getStatus / bot.stopAll removed: zero client callers.
 
     stopRun: protectedProcedure
       .input(z.object({
@@ -1972,22 +1873,6 @@ save: protectedProcedure
           return await db.getChatHistory(ctx.user.id, input.chatId, input.limit);
         } catch {
           return [];
-        }
-      }),
-
-    saveMessage: protectedProcedure
-      .input(z.object({
-        chatId: z.string().default("main"),
-        role: z.enum(["user", "ai"]),
-        content: z.string().min(1),
-        steps: z.any().optional(),
-      }))
-      .mutation(async ({ ctx, input }) => {
-        try {
-          await db.addChatMessage(ctx.user.id, input.chatId, input.role, input.content, input.steps);
-          return { ok: true };
-        } catch {
-          return { ok: false };
         }
       }),
 
@@ -2646,6 +2531,7 @@ watch: protectedProcedure
           }
         }
       }),
+    // USED by client/src/pages/Workflow.tsx (multiline trpc call — keep).
     checkTrigger: protectedProcedure
       .input(z.object({ symbol: z.string(), trigger: z.string(), fastPeriod: z.number().default(9), slowPeriod: z.number().default(21) }))
       .query(async ({ input }) => {
@@ -2806,71 +2692,10 @@ watch: protectedProcedure
     }),
   }),
 
-  aiExplainability: router({
-    timeline: protectedProcedure
-      .input(z.object({
-        page: z.number().default(1),
-        pageSize: z.number().default(20),
-        type: z.string().optional(),
-        search: z.string().optional(),
-      }))
-      .query(async ({ ctx, input }) => {
-        const { getAIExplainabilityEngine } = await import("./ai/AIExplainability");
-        return getAIExplainabilityEngine().getTimeline(ctx.user.id, input.pageSize);
-      }),
-    eventDetail: protectedProcedure
-      .input(z.object({ eventId: z.string() }))
-      .query(async ({ ctx, input }) => {
-        const { getAIExplainabilityEngine } = await import("./ai/AIExplainability");
-        return getAIExplainabilityEngine().getEventDetail(ctx.user.id, input.eventId);
-      }),
-    confidenceHistory: protectedProcedure.query(async ({ ctx }) => {
-      const { getAIExplainabilityEngine } = await import("./ai/AIExplainability");
-      return getAIExplainabilityEngine().getConfidenceHistory(ctx.user.id);
-    }),
-    export: protectedProcedure.query(async ({ ctx }) => {
-      const { getAIExplainabilityEngine } = await import("./ai/AIExplainability");
-      return getAIExplainabilityEngine().getExport(ctx.user.id);
-    }),
-  }),
-
-  aiCopilot: router({
-    preTradeChecklist: protectedProcedure
-      .input(z.object({ symbol: z.string(), contractType: z.string().optional(), stake: z.number().optional() }))
-      .query(async ({ ctx, input }) => {
-        const { getAITradingCopilot } = await import("./ai/AITradingCopilot");
-        return getAITradingCopilot().preTradeChecklist(ctx.user.id, input.symbol, input.contractType, input.stake);
-      }),
-    livePositionAssistant: protectedProcedure
-      .input(z.object({ positionId: z.number() }))
-      .query(async ({ ctx, input }) => {
-        const { getAITradingCopilot } = await import("./ai/AITradingCopilot");
-        return getAITradingCopilot().livePositionAssistant(ctx.user.id, input.positionId);
-      }),
-    sessionCoach: protectedProcedure.query(async ({ ctx }) => {
-      const { getAITradingCopilot } = await import("./ai/AITradingCopilot");
-      return getAITradingCopilot().sessionCoach(ctx.user.id);
-    }),
-    smartAlerts: protectedProcedure.query(async ({ ctx }) => {
-      const { getAITradingCopilot } = await import("./ai/AITradingCopilot");
-      return getAITradingCopilot().smartAlerts(ctx.user.id);
-    }),
-    decisionComparison: protectedProcedure
-      .input(z.object({ tradeId: z.number() }))
-      .query(async ({ ctx, input }) => {
-        const { getAITradingCopilot } = await import("./ai/AITradingCopilot");
-        return getAITradingCopilot().decisionComparison(ctx.user.id, input.tradeId);
-      }),
-    sessionSummary: protectedProcedure.query(async ({ ctx }) => {
-      const { getAITradingCopilot } = await import("./ai/AITradingCopilot");
-      return getAITradingCopilot().sessionSummary(ctx.user.id);
-    }),
-    startSession: protectedProcedure.mutation(async ({ ctx }) => {
-      const { getAITradingCopilot } = await import("./ai/AITradingCopilot");
-      getAITradingCopilot().startSession(ctx.user.id);
-      return { ok: true };
-    }),
-  }),
+  // aiExplainability router removed: all 4 procedures had zero client callers.
+  // aiCopilot router removed: all 7 procedures had zero client callers (the
+  // used sessionCoach/smartAlerts live on the concierge router and call
+  // getAITradingCopilot() directly).
 
   globalSearch: protectedProcedure
     .input(z.object({ query: z.string().min(1), limit: z.number().optional() }))
@@ -3358,17 +3183,9 @@ aiMarket: router({
         const { marketRegimeDetector } = await import("./ai/StrategyEngine");
         return marketRegimeDetector.detect(input.symbol);
       }),
-    regimes: protectedProcedure.query(async () => {
-      const { marketRegimeDetector } = await import("./ai/StrategyEngine");
-      return marketRegimeDetector.detectAll();
-    }),
     rankings: protectedProcedure.query(async ({ ctx }) => {
       const { aiStrategyLearning } = await import("./ai/StrategyEngine");
       return aiStrategyLearning.getRankings(ctx.user.id);
-    }),
-    recommendation: protectedProcedure.query(async ({ ctx }) => {
-      const { aiStrategyLearning } = await import("./ai/StrategyEngine");
-      return aiStrategyLearning.getRecommendation(ctx.user.id);
     }),
     performances: protectedProcedure.query(async ({ ctx }) => {
       const { strategyPerformanceTracker } = await import("./ai/StrategyEngine");
@@ -3395,16 +3212,6 @@ aiMarket: router({
       const { getAITradingCopilot } = await import("./ai/AITradingCopilot");
       return getAITradingCopilot().smartAlerts(ctx.user.id);
     }),
-    sessionSummary: protectedProcedure.query(async ({ ctx }) => {
-      const { getAITradingCopilot } = await import("./ai/AITradingCopilot");
-      return getAITradingCopilot().sessionSummary(ctx.user.id);
-    }),
-    preTradeChecklist: protectedProcedure
-      .input(z.object({ symbol: z.string(), contractType: z.string().optional(), stake: z.number().optional() }))
-      .query(async ({ ctx, input }) => {
-        const { getAITradingCopilot } = await import("./ai/AITradingCopilot");
-        return getAITradingCopilot().preTradeChecklist(ctx.user.id, input.symbol, input.contractType, input.stake);
-      }),
     marketContext: protectedProcedure
       .input(z.object({ symbol: z.string() }))
       .query(async ({ input }) => {
@@ -3433,10 +3240,6 @@ aiMarket: router({
       }),
     accuracy: protectedProcedure.query(async ({ ctx }) => {
       return db.guidingSignalAccuracy(ctx.user.id);
-    }),
-    latest: protectedProcedure.query(async ({ ctx }) => {
-      const rows = await db.listGuidingSignals(ctx.user.id, 1);
-      return rows[0] ?? null;
     }),
     scanNow: protectedProcedure.mutation(async ({ ctx }) => {
       const { scanAndPersistForUser } = await import("./concierge");
@@ -3653,11 +3456,9 @@ aiMarket: router({
     mirrors: protectedProcedure.query(async ({ ctx }) => {
       return db.listCopyMirrors(ctx.user.id, 100);
     }),
-    leaderTrades: protectedProcedure
-      .input(z.object({ leaderUserId: z.number(), limit: z.number().default(20) }))
-      .query(async ({ input }) => {
-        return db.getTradesByUserId(input.leaderUserId, Math.min(input.limit, 50));
-      }),
+    // leaderTrades removed: zero client callers AND it returned arbitrary
+    // users' trades by ID with no relationship check — an IDOR-style leak.
+
     peers: protectedProcedure.query(async ({ ctx }) => {
       const users = (await db.listAllUsers()).filter((u) => u.id !== ctx.user.id);
       const withStats = await Promise.all(users.slice(0, 12).map(async (u) => {
@@ -3729,28 +3530,29 @@ return withStats.filter((p) => p.tradeCount > 0).sort((a, b) => b.pnl - a.pnl);
 
   kelly: router({
     // Quarter-Kelly stake suggestion derived from the user's own settled
-    // prediction ledger (the calibration buckets). Honest by construction:
-    // without enough samples or a CI-low clearing the fair rate it refuses.
+    // prediction ledger, PER CONTRACT TYPE with each type's own fair baseline
+    // (blending Differs ~90% fair with Even/Odd ~50% fair would fabricate an
+    // edge from chance-level wins). Honest by construction: without enough
+    // samples or a CI-low clearing that type's fair rate it refuses.
     fromLedger: protectedProcedure.query(async ({ ctx }) => {
       try {
         const cal = await db.digitReadCalibration(ctx.user.id);
-        const eligible = cal.buckets.filter((b) => b.total >= 100);
-        const best = [...eligible].sort((a, b) => b.total - a.total)[0];
+        const eligible = (cal.byRead || []).filter((r) => r.total >= 100);
+        const best = eligible[0]; // pre-sorted by total desc in the calibration query
         if (!best) {
           return {
             ok: false as const,
-            reason: "No confidence band has 100+ settled predictions yet — keep the ledger running before asking for sizing advice",
+            reason: "No contract type has 100+ settled predictions yet — keep the ledger running before asking for sizing advice",
             fractionOfBalance: 0,
             fullKellyFraction: 0,
             basis: "",
           };
         }
         const { kellyStakeSuggestion } = await import("./kellySizing");
-        // Digit Over/Under/Even/Odd contracts carry a ~50% fair rate.
         return kellyStakeSuggestion({
           winRate: best.observedWinRatePct / 100,
           ciLow: best.wilsonLowPct / 100,
-          baseline: 0.5,
+          baseline: best.baselinePct / 100,
           payoutRatio: PAYOUT_RATE,
           sampleSize: best.total,
         });
