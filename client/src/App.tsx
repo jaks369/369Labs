@@ -50,6 +50,7 @@ import BackupRestore from "./pages/BackupRestore";
 import PaperTrading from "./pages/PaperTrading";
 import OrderBook from "./pages/OrderBook";
 import ThemePreview from "./pages/ThemePreview";
+import ServerStatusBanner from "./components/ServerStatusBanner";
 
 const LazyBacktesting = lazy(() => import("./pages/Backtesting"));
 const LazyAnalytics = lazy(() => import("./pages/Analytics"));
@@ -188,6 +189,7 @@ function App() {
     <ErrorBoundary>
       <ThemeProvider defaultTheme="dark" switchable>
         <TooltipProvider>
+          <ServerStatusBanner />
           <Toaster />
           <Router />
           <CommandPalette />

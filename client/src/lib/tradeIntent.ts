@@ -9,6 +9,7 @@
 import type { ContractSelection } from "@/components/ContractTypeSelector";
 import type { DurationUnit } from "@/components/DurationSelector";
 import type { DigitRead } from "../../../shared/digits";
+import { broadcastTabMessage } from "./tabSync";
 
 export interface TradeIntent {
   symbol: string;
@@ -58,4 +59,7 @@ export function pushTradeIntent(intent: TradeIntent): void {
   }
   // Late listeners get a chance to react even if /dashboard is already mounted.
   window.dispatchEvent(new CustomEvent("369labs:trade-intent", { detail: intent }));
+  // And other tabs get the same prefill — previously the intent landed only
+  // in the tab that created it.
+  broadcastTabMessage("trade-intent", intent);
 }

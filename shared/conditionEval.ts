@@ -87,37 +87,93 @@ function indicatorTrue(ind: LeafCondition, ctx: EvalContext, idx: number): boole
  * 60s candles built from the tick stream, matching live-execution behavior
  * exactly (including the index-based pseudo-epochs when real epochs are not
  * supplied — the shape of the candle series is identical either way).
+ *
+ * PERF: multiple bots on the same symbol would each rebuild candles + full
+ * indicator series for the identical price window on every evaluation. A small
+ * snapshot cache keyed by the window's identity (length, first/last epoch,
+ * first/last close) dedupes that work per tick. Append-only buffers plus
+ * head-trim guarantee any interior change also changes the key endpoints.
  */
-function indicatorConditionTrue(cond: LeafCondition & { indicator: "ema_trend" | "rsi" | "macd_histogram" }, ctx: EvalContext, idx: number): boolean {
+
+interface IndicatorSnapshot {
+  usable: boolean; // false = gates failed (insufficient data)
+  emaUp?: boolean;
+  rsiVal?: number | null;
+  curHist?: number | null;
+  prevHist?: number | null;
+}
+
+const SNAP_CACHE_MAX = 1024;
+const snapCache = new Map<string, IndicatorSnapshot>();
+
+function windowKey(ctx: EvalContext, idx: number): string {
+  const p = ctx.prices;
+  const e = ctx.epochs;
+  return `${p.length}|${p[0]}|${p[idx]}|${e ? e[0] : ""}|${e ? e[idx] : idx}`;
+}
+
+function getIndicatorSnapshot(ctx: EvalContext, idx: number): IndicatorSnapshot {
+  const key = `${windowKey(ctx, idx)}|v1`;
+  const hit = snapCache.get(key);
+  if (hit) return hit;
+
+  const snap: IndicatorSnapshot = { usable: false };
   const pricesUpToIdx = ctx.prices.slice(0, idx + 1);
-  if (pricesUpToIdx.length < 30) return false;
-  const epochs = ctx.epochs ? ctx.epochs.slice(0, idx + 1) : pricesUpToIdx.map((_, i) => i);
-  const tickLikes = pricesUpToIdx.map((p, i) => ({ price: p, epoch: epochs[i] }));
-  const candles = buildCandles(tickLikes, 60);
-  if (candles.length < 15) return false;
-  const closes = candles.map((c) => c.close);
+  if (pricesUpToIdx.length >= 30) {
+    const epochs = ctx.epochs ? ctx.epochs.slice(0, idx + 1) : pricesUpToIdx.map((_, i) => i);
+    const tickLikes = pricesUpToIdx.map((p, i) => ({ price: p, epoch: epochs[i] }));
+    const candles = buildCandles(tickLikes, 60);
+    if (candles.length >= 15) {
+      const closes = candles.map((c) => c.close);
+      const fast = ema(closes, 9);
+      const slow = ema(closes, 21);
+      const last = closes.length - 1;
+      snap.emaUp = !(Number.isNaN(fast[last]) || Number.isNaN(slow[last])) ? fast[last] > slow[last] : undefined;
+      const rsiVal = closes.length >= 15 ? rsi(closes, 14) : null;
+      snap.rsiVal = rsiVal ?? null;
+      if (closes.length >= 28) {
+        const { histogram: curHist } = macd(closes);
+        const { histogram: prevHist } = macd(closes.slice(0, -1));
+        snap.curHist = curHist ?? null;
+        snap.prevHist = prevHist ?? null;
+      }
+      snap.usable = true;
+    }
+  }
+
+  snapCache.set(key, snap);
+  if (snapCache.size > SNAP_CACHE_MAX) {
+    // Evict oldest entries (insertion order) down to half capacity.
+    const toDelete = snapCache.size - SNAP_CACHE_MAX / 2;
+    let i = 0;
+    for (const k of snapCache.keys()) {
+      if (i++ >= toDelete) break;
+      snapCache.delete(k);
+    }
+  }
+  return snap;
+}
+
+function indicatorConditionTrue(cond: LeafCondition & { indicator: "ema_trend" | "rsi" | "macd_histogram" }, ctx: EvalContext, idx: number): boolean {
+  const snap = getIndicatorSnapshot(ctx, idx);
+  if (!snap.usable) return false;
 
   if (cond.indicator === "ema_trend") {
-    const fast = ema(closes, 9);
-    const slow = ema(closes, 21);
-    const last = closes.length - 1;
-    if (Number.isNaN(fast[last]) || Number.isNaN(slow[last])) return false;
-    const emaUp = fast[last] > slow[last];
-    return cond.comparison === "up" ? emaUp : !emaUp;
+    if (snap.emaUp === undefined) return false;
+    return cond.comparison === "up" ? snap.emaUp : !snap.emaUp;
   }
 
   if (cond.indicator === "rsi") {
-    const rsiVal = rsi(closes, 14);
+    const rsiVal = snap.rsiVal;
     if (rsiVal === null || rsiVal === undefined) return false;
     const barrier = cond.barrier ?? 30;
     return cond.comparison === "below" ? rsiVal < barrier : rsiVal > barrier;
   }
 
   // macd_histogram
-  if (closes.length < 28) return false;
-  const { histogram: curHist } = macd(closes);
-  const { histogram: prevHist } = macd(closes.slice(0, -1));
-  if (curHist === null || prevHist === null) return false;
+  const curHist = snap.curHist;
+  const prevHist = snap.prevHist;
+  if (curHist === null || curHist === undefined || prevHist === null || prevHist === undefined) return false;
   const barrier = cond.barrier ?? 0;
   if (cond.comparison === "crosses_above") return prevHist <= barrier && curHist > barrier;
   if (cond.comparison === "crosses_below") return prevHist >= barrier && curHist < barrier;

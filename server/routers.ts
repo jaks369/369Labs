@@ -2253,117 +2253,8 @@ Return ONLY the JSON.`;
 
   // 369AI Live Intelligence Feed — powers the dashboard AI panel.
   aiLive: router({
-    feed: protectedProcedure.query(async () => {
-      const { aiOrchestrator } = await import("./ai/AIOrchestrator");
-      return aiOrchestrator.getFeed();
-    }),
-    health: protectedProcedure.query(async () => {
-      const { aiOrchestrator } = await import("./ai/AIOrchestrator");
-      return aiOrchestrator.getHealth();
-    }),
-    healthFor: protectedProcedure
-      .input(z.object({ symbol: z.string() }))
-      .query(async ({ input }) => {
-        const { aiOrchestrator } = await import("./ai/AIOrchestrator");
-        return aiOrchestrator.getHealthFor(input.symbol);
-      }),
-    riskAdvisory: protectedProcedure
-      .input(z.object({ symbol: z.string().optional() }).optional())
-      .query(async ({ input }) => {
-        const { aiOrchestrator } = await import("./ai/AIOrchestrator");
-        if (input?.symbol) return aiOrchestrator.getRiskAdvisoryFor(input.symbol);
-        return aiOrchestrator.getRiskAdvisories();
-      }),
-    userRisk: protectedProcedure
-      .input(z.object({ symbol: z.string() }))
-      .query(async ({ ctx, input }) => {
-        // Prefer the live cached advisory the AI orchestrator computes from real
-        // tick data (market health, volatility, trend, prediction confidence).
-        const { aiOrchestrator } = await import("./ai/AIOrchestrator");
-        const advisory = aiOrchestrator.getRiskAdvisoryFor(input.symbol);
-        if (advisory) {
-          return {
-            symbol: input.symbol,
-            riskLevel: advisory.riskLevel,
-            score: advisory.score,
-            factors: advisory.factors,
-            recommendation: advisory.recommendation,
-            timestamp: advisory.timestamp,
-          };
-        }
-        // No advisory yet (orchestrator still warming up) — fall back to a
-        // transparent "not yet computed" signal instead of a fake LOW/20.
-        return {
-          symbol: input.symbol,
-          riskLevel: "MEDIUM" as const,
-          score: 50,
-          factors: ["Risk model warming up — advisory will appear once live market data is ingested."],
-          recommendation: "Insufficient live data to assess risk yet. Check back shortly.",
-          timestamp: Date.now(),
-        };
-      }),
-    accuracyStats: protectedProcedure
-      .input(z.object({ symbol: z.string().optional() }).optional())
-      .query(async ({ ctx, input }) => {
-        const { aiMemory } = await import("./ai/AIMemory");
-        return aiMemory.getAccuracyStats(ctx.user.id, input?.symbol);
-      }),
-    marketPatterns: protectedProcedure
-      .input(z.object({ symbol: z.string().optional() }).optional())
-      .query(async ({ input }) => {
-        const { aiMemory } = await import("./ai/AIMemory");
-        return aiMemory.getMarketPatterns(input?.symbol);
-      }),
-    performanceSummary: protectedProcedure.query(async ({ ctx }) => {
-      const { aiMemory } = await import("./ai/AIMemory");
-      return aiMemory.getPerformanceSummary(ctx.user.id);
-    }),
-    tradeReview: protectedProcedure
-      .input(z.object({ contractId: z.number() }))
-      .query(async ({ ctx, input }) => {
-        return db.getAiKnowledgeByRelatedTradeId(ctx.user.id, input.contractId);
-      }),
-    tradeReviews: protectedProcedure
-      .input(z.object({ limit: z.number().default(20) }))
-      .query(async ({ ctx, input }) => {
-        const { tradeReviewEngine } = await import("./ai/TradeReviewEngine");
-        const trades = await db.getTradesByUserId(ctx.user.id, input.limit);
-        const settled = trades.filter((t: any) => t.result === "win" || t.result === "loss");
-        const reviews = await Promise.all(
-          settled.map(async (trade: any) => {
-            const review = await tradeReviewEngine.review(
-              {
-                id: trade.id,
-                symbol: trade.symbol,
-                contractType: trade.contractType,
-                stake: trade.stake,
-                profitLoss: trade.profitLoss,
-                result: trade.result,
-                entryTime: trade.entryTime,
-                exitTime: trade.exitTime,
-                strategyId: trade.strategyId,
-                botRunId: trade.botRunId,
-                contractId: trade.contractId,
-                entryPrice: trade.entryPrice,
-                exitPrice: trade.exitPrice,
-              },
-              ctx.user.id
-            );
-            return {
-              tradeId: trade.id,
-              symbol: trade.symbol,
-              contractType: trade.contractType,
-              stake: trade.stake,
-              profitLoss: trade.profitLoss,
-              result: trade.result,
-              entryTime: trade.entryTime,
-              exitTime: trade.exitTime,
-              review: review.review,
-            };
-          })
-        );
-        return reviews;
-      }),
+    // 13 zero-client-caller procedures removed (feed/health/healthFor/riskAdvisory/userRisk/accuracyStats/marketPatterns/performanceSummary/tradeReview/tradeReviews/intelligenceSummary/tradeContexts/patterns).
+    // The client uses ONLY aiLive.state, which stays.
     state: protectedProcedure.query(async () => {
       const { aiOrchestrator } = await import("./ai/AIOrchestrator");
       const state = aiOrchestrator.getState();
@@ -2377,22 +2268,7 @@ Return ONLY the JSON.`;
         active: state.active,
       };
     }),
-    intelligenceSummary: protectedProcedure.query(async ({ ctx }) => {
-      const { aiIntelligenceHub } = await import("./ai/AIIntelligenceHub");
-      return aiIntelligenceHub.getIntelligenceSummary(ctx.user.id);
-    }),
-    tradeContexts: protectedProcedure
-      .input(z.object({ limit: z.number().optional() }).optional())
-      .query(async ({ ctx, input }) => {
-        const { aiMemory } = await import("./ai/AIMemory");
-        return aiMemory.getTradeContexts(ctx.user.id, input?.limit ?? 100);
-      }),
-    patterns: protectedProcedure.query(async ({ ctx }) => {
-      const { patternDiscovery } = await import("./ai/PatternDiscovery");
-      return patternDiscovery.getLatestPatterns(ctx.user.id);
-    }),
   }),
-
   signals: router({
     list: protectedProcedure
       .input(z.object({ symbol: z.string().optional() }).optional())

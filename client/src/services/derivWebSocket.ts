@@ -1,4 +1,5 @@
 import { buildLimitOrder } from "@shared/slTp";
+import { broadcastTabMessage, onTabMessage } from "@/lib/tabSync";
 
 export interface Tick {
   symbol: string;
@@ -85,7 +86,7 @@ class DerivWebSocketService {
   private maxReconnectAttempts = 8;
   private baseReconnectDelay = 800;
   private msgId = 1;
-  private apiToken: string | null = null;
+  public apiToken: string | null = null;
   private authorized = false;
   private cachedOtpUrl: string | null = null;
   private subscribedSymbols: Set<string> = new Set();
@@ -1155,6 +1156,9 @@ class DerivWebSocketService {
       if (token) localStorage.setItem("deriv_token", token);
       else localStorage.removeItem("deriv_token");
     } catch {}
+    // Other tabs: re-auth (or drop to public) with the same token — previously
+    // a login/logout in one tab left the others on a stale connection.
+    broadcastTabMessage("deriv-token-changed", { hasToken: !!token });
     if (!token) {
       this.connectPublic();
       return;
@@ -1212,3 +1216,23 @@ class DerivWebSocketService {
 }
 
 export const derivWS = new DerivWebSocketService();
+
+// Cross-tab token coherence: when another tab saves/removes the Deriv token,
+// re-auth this tab's connection with the same stored credential (or drop to
+// public). Debounced so a burst of changes triggers one reconnect.
+let tokenSyncTimer: ReturnType<typeof setTimeout> | null = null;
+onTabMessage((type) => {
+  if (type !== "deriv-token-changed") return;
+  if (tokenSyncTimer) clearTimeout(tokenSyncTimer);
+  tokenSyncTimer = setTimeout(() => {
+    let stored: string | null = null;
+    try {
+      stored = localStorage.getItem("deriv_token");
+    } catch {}
+    if (stored && stored !== derivWS.apiToken) {
+      void derivWS.setApiToken(stored);
+    } else if (!stored && derivWS.isAuthorized()) {
+      void derivWS.setApiToken("");
+    }
+  }, 400);
+});

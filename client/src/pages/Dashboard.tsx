@@ -9,6 +9,7 @@ import { PageSection } from "@/components/PageSection";
 import { Loader2, Activity, Zap, ChevronDown, Wallet, BarChart3, Bot, Brain, Star, Search, Clock, History } from "lucide-react";
 import { useLocation, useSearch } from "wouter";
 import { useIsMobile } from "@/hooks/useMobile";
+import { onTabMessage } from "@/lib/tabSync";
 import MobileTerminal from "@/pages/MobileTerminal";
 import TickChart from "@/components/TickChart";
 import { derivWS, DerivSymbol } from "@/services/derivWebSocket";
@@ -563,7 +564,15 @@ export default function Dashboard() {
     apply(undefined);
     const handler = (e: Event) => apply((e as CustomEvent).detail);
     window.addEventListener("369labs:trade-intent", handler);
-    return () => window.removeEventListener("369labs:trade-intent", handler);
+    // Other tabs broadcasting the same intent (BroadcastChannel) — previously
+    // a prefill created in tab B never reached this terminal in tab A.
+    const unsubTab = onTabMessage((type, payload) => {
+      if (type === "trade-intent") apply(payload as any);
+    });
+    return () => {
+      window.removeEventListener("369labs:trade-intent", handler);
+      unsubTab();
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

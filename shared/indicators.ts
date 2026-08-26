@@ -487,10 +487,30 @@ export interface PriceActionScore {
   reasons: string[];
 }
 
+// Short-lived memo for scorePriceActionConfluence: the full five-detector
+// chain (candle patterns, structure, divergence, SMC, chart patterns) is
+// expensive relative to its inputs. Multiple consumers can ask about the
+// identical candle window within seconds (scanner + on-demand queries).
+// Keyed by window identity; TTL keeps stale reads impossible beyond 5s.
+const PA_CACHE_TTL_MS = 5000;
+const PA_CACHE_MAX = 256;
+const paCache = new Map<string, { at: number; result: PriceActionScore }>();
+
+function paCacheKey(candles: Candle[]): string {
+  const first = candles[0];
+  const last = candles[candles.length - 1];
+  return `${candles.length}|${first?.time ?? 0}|${last?.time ?? 0}|${last?.close ?? 0}`;
+}
+
 export function scorePriceActionConfluence(candles: Candle[]): PriceActionScore {
   if (!candles || candles.length < 15) {
     return { score: 50, direction: "up", votes: { up: 0, down: 0, total: 0, agreement: 0 }, details: [], reasons: [] };
   }
+
+  const key = paCacheKey(candles);
+  const now = Date.now();
+  const hit = paCache.get(key);
+  if (hit && now - hit.at < PA_CACHE_TTL_MS) return hit.result;
 
   let up = 0;
   let down = 0;
@@ -559,11 +579,27 @@ export function scorePriceActionConfluence(candles: Candle[]): PriceActionScore 
   const agreement = total > 0 ? Math.max(up, down) / total : 0;
   const score = Math.min(86, 50 + Math.round(agreement * 28));
 
-  return {
+  const result: PriceActionScore = {
     score,
     direction,
     votes: { up, down, total, agreement },
     details,
     reasons: reasons.length ? reasons : ["No price action patterns detected"],
   };
+
+  paCache.set(key, { at: now, result });
+  if (paCache.size > PA_CACHE_MAX) {
+    // Drop expired first, then oldest, down to half capacity.
+    for (const [k, v] of paCache) {
+      if (paCache.size <= PA_CACHE_MAX / 2) break;
+      if (now - v.at >= PA_CACHE_TTL_MS) paCache.delete(k);
+    }
+    let i = 0;
+    for (const k of paCache.keys()) {
+      if (i++ >= paCache.size - PA_CACHE_MAX / 2) break;
+      paCache.delete(k);
+    }
+  }
+
+  return result;
 }

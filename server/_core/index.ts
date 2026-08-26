@@ -93,7 +93,10 @@ export async function createApp() {
       "script-src 'self' https://*.deriv.com https://*.tradingview.com https://apis.google.com; " +
       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; " +
       "img-src 'self' data: https: blob:; " +
-      "connect-src 'self' https://*.deriv.com wss://*.deriv.com https://api.telegram.org https://apis.google.com https://oauth2.googleapis.com https://www.googleapis.com https://api.github.com; " +
+      // derivws.com IS Deriv's API domain (distinct from deriv.com marketing
+      // site) — without it the browser cannot reach Deriv at all, which the
+      // E2E run caught as a blocked wss connection.
+      "connect-src 'self' https://*.deriv.com wss://*.deriv.com https://*.derivws.com wss://*.derivws.com https://api.telegram.org https://apis.google.com https://oauth2.googleapis.com https://www.googleapis.com https://api.github.com; " +
       "font-src 'self' data: https://fonts.gstatic.com; " +
       "frame-src https://*.deriv.com https://*.tradingview.com https://accounts.google.com; " +
       "object-src 'none'; " +
