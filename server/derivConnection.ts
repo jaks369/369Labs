@@ -16,6 +16,48 @@ interface PendingRequest {
   timer: ReturnType<typeof setTimeout>;
 }
 
+// --- Typed Deriv response shapes (money paths) ------------------------------
+// Deriv serialises most numeric fields as STRINGS. These interfaces make that
+// explicit so consumers parse deliberately instead of guessing.
+export interface DerivErrorShape { code: string; message: string }
+
+export interface DerivProposalResponse {
+  msg_type: "proposal";
+  error?: DerivErrorShape;
+  proposal?: {
+    id: string;
+    ask_price: string;   // string per Deriv docs
+    spot: string;
+    payout: string;
+    display_value: string;
+  };
+}
+
+export interface DerivBuyResponse {
+  msg_type: "buy";
+  error?: DerivErrorShape;
+  buy?: {
+    contract_id: number;
+    transaction_id: number;
+    buy_price: string;
+    payout: string;
+    balance_after?: string;
+  };
+}
+
+export interface DerivContractStatus {
+  contract_id?: number;
+  status?: string;          // "open" | "won" | "lost" | "sold" ...
+  is_sold?: number;         // 0/1
+  profit?: string | number; // usually a STRING per Deriv docs; tolerate number
+  buy_price?: string;
+  sell_price?: string | null;
+  entry_tick?: string | null;
+  current_tick?: string | null;
+  exit_tick?: string | null;
+  duration?: string;
+}
+
 interface Position {
   contractId: number;
   symbol: string;
@@ -234,18 +276,29 @@ class DerivConnection {
     if (!pos.isOpen) this._positions = this._positions.filter(p => p.isOpen);
   }
 
-  private async sendRaw(msg: Record<string, unknown>): Promise<any> {
+  private async sendRaw<T = Record<string, any>>(msg: Record<string, unknown>): Promise<T> {
     if (!this.ws || this.ws.readyState !== WebSocket.OPEN) throw new Error("Not connected");
     const reqId = this.msgId++;
-    return new Promise<any>((resolve, reject) => {
+    return new Promise<T>((resolve, reject) => {
       const timer = setTimeout(() => {
         this.pending.delete(reqId);
         reject(new Error("Deriv request timed out"));
       }, REQUEST_TIMEOUT);
-      this.pending.set(reqId, { resolve, reject, timer });
+      this.pending.set(reqId, { resolve: resolve as (v: unknown) => void, reject, timer });
       try { this.ws!.send(JSON.stringify({ ...msg, req_id: reqId })); }
       catch (e) { clearTimeout(timer); this.pending.delete(reqId); reject(e); }
     });
+  }
+
+  // --- Typed response shapes for the money-moving calls -------------------
+  // Deriv returns numeric fields as STRINGS in most responses; these types
+  // say so explicitly instead of letting consumers guess.
+  async getProposal(payload: { amount: number; currency: string; contract_type: string; duration: number; duration_unit: string; underlying_symbol: string; barrier?: string; limit_order?: unknown }): Promise<DerivProposalResponse> {
+    return this.sendRaw<DerivProposalResponse>({ proposal: 1, basis: "stake", ...payload });
+  }
+
+  async buyContract(proposalId: string, askPrice: string | number): Promise<DerivBuyResponse> {
+    return this.sendRaw<DerivBuyResponse>({ buy: proposalId, price: String(askPrice) });
   }
 
   async ensureConnected(): Promise<this> {
@@ -293,9 +346,9 @@ class DerivConnection {
     return prices.map((p, i) => ({ price: p, timestamp: times[i] * 1000 }));
   }
 
-  async getContractStatus(contractId: number): Promise<any> {
+  async getContractStatus(contractId: number): Promise<DerivContractStatus | null> {
     await this.ensureConnected();
-    const res = await this.sendRaw({ proposal_open_contract: 1, contract_id: contractId });
+    const res = await this.sendRaw<{ error?: DerivErrorShape; proposal_open_contract?: DerivContractStatus }>({ proposal_open_contract: 1, contract_id: contractId });
     if (res?.error) throw new Error(res.error.message);
     return res?.proposal_open_contract || null;
   }

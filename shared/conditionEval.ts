@@ -220,3 +220,38 @@ export function evaluateRuleCondition(rule: any, ctxIn: EvalContext): boolean {
 export function legacyConditionToNode(c: LeafCondition): ConditionNode {
   return { ...c };
 }
+
+// ---------------------------------------------------------------------------
+// Strategy rule / config shapes — the thing bots actually execute on. These
+// were previously untyped JSON accessed via `(config as any)?.rule` at ~35
+// call sites, so a renamed field failed silently in production.
+// ---------------------------------------------------------------------------
+
+export interface RuleParams {
+  stake?: string | number;
+  stopLoss?: string | number;
+  takeProfit?: string | number;
+  duration?: number;
+  /** Strategy Builder may attach further params; typed access stays safe. */
+  [k: string]: unknown;
+}
+
+export interface TradingRule {
+  symbol?: string;
+  /** Direction. Historically both a plain string ("buy") and an object ({ tradeType }) occur in stored configs. */
+  action?: string | { tradeType?: string; [k: string]: unknown };
+  params?: RuleParams;
+  condition?: LeafCondition;
+  conditions?: ConditionNode;
+  ensemble?: { rules: TradingRule[]; vote?: "all" | "any" | "majority" };
+  [k: string]: unknown;
+}
+
+/**
+ * The JSON stored in strategies.config. `rule` is the executable part;
+ * builder UIs may persist additional blocks alongside it.
+ */
+export interface StrategyConfig {
+  rule?: TradingRule;
+  [k: string]: unknown;
+}

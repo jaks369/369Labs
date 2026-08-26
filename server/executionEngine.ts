@@ -186,11 +186,9 @@ async function executeBotCycleInner(): Promise<void> {
         logger.warn("Portfolio heat check failed (allowing per-bot limits to govern)", { error: heatErr?.message || heatErr });
       }
 
-      // Use Deriv proposal/buy flow to place the actual trade
+      // Use Deriv proposal/buy flow (typed methods) to place the actual trade
       const proposalPayload: Record<string, any> = {
-        proposal: 1,
         amount: stake,
-        basis: "stake",
         contract_type: contractType,
         currency,
         duration: 1,
@@ -204,7 +202,7 @@ async function executeBotCycleInner(): Promise<void> {
       // proposal, so the bot would silently never trade.
       const limitOrder = buildLimitOrder(contractType, Number(rule.params?.stopLoss), Number(rule.params?.takeProfit));
       if (limitOrder.limit_order) proposalPayload.limit_order = limitOrder.limit_order;
-      const proposal = await (conn as any).sendRaw(proposalPayload).catch((e: any) => {
+      const proposal = await (conn as any).getProposal(proposalPayload).catch((e: any) => {
         logger.warn("Deriv proposal failed", { userId: bot.def.userId, botId: bot.def.id, error: e?.message || e });
         return null;
       });
@@ -214,10 +212,7 @@ async function executeBotCycleInner(): Promise<void> {
       }
 
       const buy = await (conn as any)
-        .sendRaw({
-          buy: proposal.proposal.id,
-          price: proposal.proposal.ask_price,
-        })
+        .buyContract(proposal.proposal.id, proposal.proposal.ask_price)
         .catch((e: any) => {
           logger.warn("Deriv buy failed", { userId: bot.def.userId, botId: bot.def.id, error: e?.message || e });
           return null;

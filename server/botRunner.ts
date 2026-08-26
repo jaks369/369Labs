@@ -316,7 +316,7 @@ class BotRunner {
         const strategy = await db.getStrategyById(run.strategyId, run.userId);
         if (!strategy) continue;
         
-        const rule = (strategy.config as any)?.rule || strategy.config;
+        const rule = strategy.config?.rule || strategy.config;
         if (!rule?.condition) continue;
         
         // Restore safety config from DB

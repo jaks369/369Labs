@@ -203,9 +203,7 @@ async function placeAutoTrade(userId: number, conn: any, symbol: string, read: D
   const { contractType, barrier } = readToContract(read);
 
   const proposalPayload: Record<string, any> = {
-    proposal: 1,
     amount: settings.stake,
-    basis: "stake",
     contract_type: contractType,
     currency,
     duration: 1,
@@ -220,7 +218,7 @@ async function placeAutoTrade(userId: number, conn: any, symbol: string, read: D
   const limitOrder = buildLimitOrder(contractType, settings.stopLoss, settings.takeProfit);
   if (limitOrder.limit_order) proposalPayload.limit_order = limitOrder.limit_order;
 
-  const proposal = await (conn as any).sendRaw(proposalPayload).catch((e: any) => {
+  const proposal = await (conn as any).getProposal(proposalPayload).catch((e: any) => {
     console.warn(`[digitTrader] Deriv proposal failed (${symbol} ${read.label}): ${e?.message || e}`);
     return null;
   });
@@ -229,7 +227,7 @@ async function placeAutoTrade(userId: number, conn: any, symbol: string, read: D
     return false;
   }
 
-  const buy = await (conn as any).sendRaw({ buy: proposal.proposal.id, price: proposal.proposal.ask_price }).catch((e: any) => {
+  const buy = await (conn as any).buyContract(proposal.proposal.id, proposal.proposal.ask_price).catch((e: any) => {
     console.warn(`[digitTrader] Deriv buy failed (${symbol} ${read.label}): ${e?.message || e}`);
     return null;
   });

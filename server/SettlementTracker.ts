@@ -156,14 +156,15 @@ export class SettlementTracker {
     const isSold = c.is_sold === 1 || c.status === "sold" || c.status === "won" || c.status === "lost";
     if (!isSold) return;
 
-    // A sold contract MUST carry a parseable profit. Garbage/missing values
+    // A sold contract MUST carry a parseable profit. Garbage or MISSING values
     // used to coerce to 0 and settle as a "win" — fabricating ledger entries
     // from malformed API responses. Throw instead so the trade retries and a
     // heartbeat records the bad payload.
-    const parsedProfit = parseFloat(c.profit);
+    const rawProfit: string | number | undefined = c.profit;
+    const parsedProfit = typeof rawProfit === "number" ? rawProfit : typeof rawProfit === "string" ? parseFloat(rawProfit) : NaN;
     const profit = Number.isFinite(parsedProfit) ? parsedProfit : NaN;
     if (!Number.isFinite(profit)) {
-      throw new Error(`malformed_contract_profit (${trade.contractId}: ${JSON.stringify(c.profit)})`);
+      throw new Error(`malformed_contract_profit (${trade.contractId}: ${JSON.stringify(rawProfit)})`);
     }
     const outcome: "win" | "loss" = profit >= 0 ? "win" : "loss";
     const exitTick = c.exit_tick != null ? parseInt(c.exit_tick) : null;

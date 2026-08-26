@@ -158,7 +158,7 @@ async function runTool(name: string, args: any, ctxUser?: any) {
         const { botRunner } = await import("./botRunner");
         const strategy = await db.getStrategyById(args.strategyId, ctxUser.id);
         if (!strategy) return { error: "Strategy not found" };
-        const rule = (strategy.config as any)?.rule;
+        const rule = strategy.config?.rule;
         if (!rule || !rule.symbol) return { error: "Strategy has no executable rule" };
         const safety = {
             maxRiskPerTrade: args.maxRiskPerTrade,
@@ -226,14 +226,14 @@ async function runTool(name: string, args: any, ctxUser?: any) {
         const { nlToStrategy, validateStrategy, strategyToNL } = await import("./strategyConvert");
         const existing = await db.getStrategyById(args.id, ctxUser.id);
         if (!existing) return { error: "Strategy not found" };
-        const prevRule = (existing.config as any)?.rule || {};
+        const prevRule = existing.config?.rule || {};
         const rule = nlToStrategy({
           symbol: args.symbol ?? prevRule.symbol,
           indicator: args.indicator ?? prevRule.condition?.indicator,
           comparison: args.comparison ?? prevRule.condition?.comparison,
           count: args.count ?? prevRule.condition?.count,
           barrier: args.barrier ?? prevRule.condition?.barrier,
-          tradeType: args.tradeType ?? prevRule.action?.tradeType,
+          tradeType: args.tradeType ?? (typeof prevRule.action === "object" ? prevRule.action?.tradeType : undefined),
           stake: args.stake ?? prevRule.params?.stake,
           stopLoss: args.stopLoss ?? prevRule.params?.stopLoss,
           takeProfit: args.takeProfit ?? prevRule.params?.takeProfit,
@@ -259,7 +259,7 @@ async function runTool(name: string, args: any, ctxUser?: any) {
         const { strategyToNL } = await import("./strategyConvert");
         const s = await db.getStrategyById(args.id, ctxUser.id);
         if (!s) return { error: "Strategy not found" };
-        const rule = (s.config as any)?.rule;
+        const rule = s.config?.rule;
         return {
           data: {
             id: s.id,
@@ -307,7 +307,7 @@ async function runTool(name: string, args: any, ctxUser?: any) {
           data: {
             deriv: { connected: pf.connected, authorized: pf.authorized, account: { balance: String(pf.balance), equity: String(pf.equity), currency: pf.currency }, openPositions: (snap?.positions || []).filter((p: any) => p.isOpen), unrealizedPnl: pf.unrealizedPnl },
             portfolio: pf,
-            activeStrategies: strategies.map((s: any) => ({ id: s.id, name: s.name, symbol: (s.config as any)?.rule?.symbol })),
+            activeStrategies: strategies.map((s: any) => ({ id: s.id, name: s.name, symbol: s.config?.rule?.symbol })),
             runningBots: bots,
             recentTrades: trades.map((t: any) => ({ result: t.result, stake: t.stake, pnl: t.profitLoss, symbol: t.symbol, contractId: t.contractId })),
           },
@@ -317,7 +317,7 @@ async function runTool(name: string, args: any, ctxUser?: any) {
         if (!ctxUser) return { error: "Not authenticated" };
         const strategy = await db.getStrategyById(args.strategyId, ctxUser.id);
         if (!strategy) return { error: "Strategy not found" };
-        const rule = (strategy.config as any)?.rule;
+        const rule = strategy.config?.rule;
         if (!rule || !rule.symbol) return { error: "Strategy has no executable rule" };
         // Use live Deriv tick history via aitools (no auth required for public tick history)
         let ticks: { price: number; timestamp: number }[] = [];
@@ -355,7 +355,7 @@ async function runTool(name: string, args: any, ctxUser?: any) {
         const { botRunner } = await import("./botRunner");
         const strategy = await db.getStrategyById(args.strategyId, ctxUser.id);
         if (!strategy) return { error: "Strategy not found" };
-        const rule = (strategy.config as any)?.rule;
+        const rule = strategy.config?.rule;
         if (!rule) return { error: "Strategy has no executable rule" };
         // Get safety config from the existing bot run
         const existingRun = await db.getBotRunById(args.runId, ctxUser.id);
@@ -373,7 +373,7 @@ async function runTool(name: string, args: any, ctxUser?: any) {
         await botRunner.stop(String(args.runId), ctxUser.id, "restarting");
         const strategy = await db.getStrategyById(args.strategyId, ctxUser.id);
         if (!strategy) return { error: "Strategy not found" };
-        const rule = (strategy.config as any)?.rule;
+        const rule = strategy.config?.rule;
         if (!rule) return { error: "Strategy has no executable rule" };
         const botRun = await db.saveBotRun({ userId: ctxUser.id, strategyId: args.strategyId, status: "running", safety });
         await botRunner.start({ id: String(botRun.id), userId: ctxUser.id, name: strategy.name, strategy: rule, safety });
@@ -391,7 +391,7 @@ async function runTool(name: string, args: any, ctxUser?: any) {
         if (!copy) return { error: "Clone failed" };
         let runId: number | undefined;
         if (args.start) {
-          const rule = (copy.config as any)?.rule;
+          const rule = copy.config?.rule;
           if (rule) {
             // Use safety config from the source bot
             const safety = rt.def.safety || {};
@@ -1737,7 +1737,7 @@ save: protectedProcedure
         try {
           const strategy = await db.getStrategyById(input.strategyId, ctx.user.id);
           if (!strategy) throw new TRPCError({ code: "NOT_FOUND", message: "Strategy not found" });
-          const rule = (strategy.config as any)?.rule as any;
+          const rule = strategy.config?.rule;
           if (!rule || !rule.symbol) throw new TRPCError({ code: "BAD_REQUEST", message: "Strategy has no executable rule" });
 
           const botRun = await db.saveBotRun({
@@ -2131,10 +2131,10 @@ save: protectedProcedure
                 trades: b.totalTrades, pnl: b.totalProfitLoss,
               })),
               activeStrategies: strategies.slice(0, 12).map((s: any) => ({
-                id: s.id, name: s.name, symbol: (s.config as any)?.rule?.symbol,
-                stake: (s.config as any)?.rule?.params?.stake,
-                stopLoss: (s.config as any)?.rule?.params?.stopLoss,
-                takeProfit: (s.config as any)?.rule?.params?.takeProfit,
+                id: s.id, name: s.name, symbol: s.config?.rule?.symbol,
+                stake: s.config?.rule?.params?.stake,
+                stopLoss: s.config?.rule?.params?.stopLoss,
+                takeProfit: s.config?.rule?.params?.takeProfit,
               })),
               recentPerformance: totalTrades > 0 ? {
                 totalTrades, wins, losses: totalTrades - wins,

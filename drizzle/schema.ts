@@ -76,7 +76,7 @@ export const strategies = mysqlTable("strategies", {
   userId: int("userId").notNull().references(() => users.id, { onDelete: "cascade" }),
   name: varchar("name", { length: 255 }).notNull(),
   description: text("description"),
-  config: json("config").notNull(), // JSON config of the strategy blocks
+  config: json("config").$type<import("../shared/conditionEval").StrategyConfig>().notNull(), // Typed strategy config (rule/conditions/blocks)
   isActive: boolean("isActive").default(true).notNull(),
   published: boolean("published").default(false).notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
