@@ -700,7 +700,7 @@ export async function getTradeByContractId(userId: number, contractId: string): 
     if (!pool) return undefined;
     try {
       const [rows] = await pool.execute(
-        "SELECT id, userId, botRunId, strategyId, entryTime, exitTime, entryPrice, exitPrice, stake, profitLoss, contractType, result, contractId, source, discoveredAt, reconciled, updatedAt FROM trades WHERE userId=? AND contractId=? LIMIT 1",
+        "SELECT id, userId, botRunId, strategyId, entryTime, exitTime, entryPrice, exitPrice, stake, profitLoss, symbol, contractType, result, contractId, source, discoveredAt, reconciled, updatedAt FROM trades WHERE userId=? AND contractId=? LIMIT 1",
         [userId, contractId],
       );
       return (rows as any[])[0] || undefined;
@@ -1079,7 +1079,7 @@ export async function getPendingTrades(): Promise<Trade[]> {
     if (!pool) throw new Error("getPendingTrades: drizzle failed and no raw pool");
     try {
       const [rows] = await pool.execute(
-        "SELECT id, userId, botRunId, strategyId, entryTime, exitTime, entryPrice, exitPrice, stake, profitLoss, contractType, result, contractId, updatedAt FROM trades WHERE result = 'pending' AND contractId IS NOT NULL ORDER BY entryTime ASC LIMIT 200",
+        "SELECT id, userId, botRunId, strategyId, entryTime, exitTime, entryPrice, exitPrice, stake, profitLoss, symbol, contractType, result, contractId, source, discoveredAt, reconciled, updatedAt FROM trades WHERE result = 'pending' AND contractId IS NOT NULL ORDER BY entryTime ASC LIMIT 200",
       );
       return rows as Trade[];
     } catch (rawErr: any) {
@@ -1100,7 +1100,7 @@ export async function getPendingTradesForUser(userId: number): Promise<Trade[]> 
   if (pool) {
     try {
       const [rows] = await pool.execute(
-        "SELECT id, userId, botRunId, strategyId, entryTime, exitTime, entryPrice, exitPrice, stake, profitLoss, contractType, result, contractId, source, discoveredAt, reconciled, updatedAt FROM trades WHERE result = 'pending' AND contractId IS NOT NULL AND userId = ? ORDER BY entryTime ASC LIMIT 200",
+        "SELECT id, userId, botRunId, strategyId, entryTime, exitTime, entryPrice, exitPrice, stake, profitLoss, symbol, contractType, result, contractId, source, discoveredAt, reconciled, updatedAt FROM trades WHERE result = 'pending' AND contractId IS NOT NULL AND userId = ? ORDER BY entryTime ASC LIMIT 200",
         [userId],
       );
       return rows as Trade[];
@@ -1183,7 +1183,7 @@ export async function settleTrade(
         tradeId,
       ]);
       const [rows] = await pool.execute(
-        "SELECT id, userId, botRunId, strategyId, entryTime, exitTime, entryPrice, exitPrice, stake, profitLoss, contractType, result, contractId, updatedAt FROM trades WHERE id=?",
+        "SELECT id, userId, botRunId, strategyId, entryTime, exitTime, entryPrice, exitPrice, stake, profitLoss, symbol, contractType, result, contractId, updatedAt FROM trades WHERE id=?",
         [tradeId],
       );
       return (rows as any[])[0] || null;
@@ -1203,7 +1203,7 @@ export async function getTradeById(tradeId: number): Promise<Trade | undefined> 
     if (!pool) return undefined;
     try {
       const [rows] = await pool.execute(
-        "SELECT id, userId, botRunId, strategyId, entryTime, exitTime, entryPrice, exitPrice, stake, profitLoss, contractType, result, contractId, updatedAt FROM trades WHERE id=?",
+        "SELECT id, userId, botRunId, strategyId, entryTime, exitTime, entryPrice, exitPrice, stake, profitLoss, symbol, contractType, result, contractId, updatedAt FROM trades WHERE id=?",
         [tradeId],
       );
       return (rows as any[])[0] || undefined;
@@ -1246,7 +1246,7 @@ export async function getTradesByUserId(userId: number, limit: number = 50, offs
       }
       params.push(limit, offset);
       const [rows] = await pool.execute(
-        `SELECT id, userId, botRunId, strategyId, entryTime, exitTime, entryPrice, exitPrice, stake, profitLoss, contractType, result, contractId, source, discoveredAt, reconciled, updatedAt FROM trades WHERE ${whereSql} ORDER BY updatedAt DESC LIMIT ? OFFSET ?`,
+        `SELECT id, userId, botRunId, strategyId, entryTime, exitTime, entryPrice, exitPrice, stake, profitLoss, symbol, contractType, result, contractId, source, discoveredAt, reconciled, updatedAt FROM trades WHERE ${whereSql} ORDER BY updatedAt DESC LIMIT ? OFFSET ?`,
         params,
       );
       return rows as Trade[];
@@ -1272,7 +1272,7 @@ export async function getDigitTraderTradesByUserId(userId: number, limit: number
     if (!pool) return [];
     try {
       const [rows] = await pool.execute(
-        "SELECT id, userId, botRunId, strategyId, entryTime, exitTime, entryPrice, exitPrice, stake, profitLoss, contractType, result, contractId, source, discoveredAt, reconciled, updatedAt FROM trades WHERE userId=? AND source='digitTrader' ORDER BY entryTime DESC LIMIT ?",
+        "SELECT id, userId, botRunId, strategyId, entryTime, exitTime, entryPrice, exitPrice, stake, profitLoss, symbol, contractType, result, contractId, source, discoveredAt, reconciled, updatedAt FROM trades WHERE userId=? AND source='digitTrader' ORDER BY entryTime DESC LIMIT ?",
         [userId, limit],
       );
       return rows as Trade[];

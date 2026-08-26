@@ -85,7 +85,7 @@ const STATS = [
   { label: "Total Trades", value: "—", demo: true },
   { label: "Avg Payout", value: "—", demo: true },
   { label: "Signals Today", value: "—", demo: true },
-  { label: "Uptime", value: "99.9%", demo: false },
+  { label: "Uptime", value: "99.9%", demo: true },
 ];
 
 function getInitialSlide() {

@@ -3647,65 +3647,13 @@ return withStats.filter((p) => p.tradeCount > 0).sort((a, b) => b.pnl - a.pnl);
     }),
   }),
 
-  botMarketplace: router({
-    list: protectedProcedure.query(async () => {
-      const { getVerifiedBots } = await import("./botMarketplace");
-      return getVerifiedBots();
-    }),
-    clone: protectedProcedure
-      .input(z.object({
-        botId: z.string(),
-        customRiskSettings: z.object({
-          stake: z.number().optional(),
-          maxDailyLoss: z.number().optional(),
-          maxDailyTrades: z.number().optional(),
-          maxOpenPositions: z.number().optional(),
-        }).optional(),
-      }))
-      .mutation(async ({ ctx, input }) => {
-        const { cloneBotToUser } = await import("./botMarketplace");
-        return cloneBotToUser(ctx.user.id, input.botId, input.customRiskSettings);
-      }),
-    submit: protectedProcedure
-      .input(z.object({
-        name: z.string().min(1),
-        description: z.string(),
-        strategyId: z.number(),
-        trackRecord: z.object({
-          startDate: z.string(),
-          endDate: z.string(),
-          accountType: z.enum(['demo', 'real']),
-          initialBalance: z.number(),
-          finalBalance: z.number(),
-          totalTrades: z.number(),
-          winRate: z.number(),
-          profitFactor: z.number(),
-          maxDrawdown: z.number(),
-          sharpeRatio: z.number(),
-          monthlyReturns: z.array(z.number()),
-        }),
-        riskSettings: z.object({
-          stake: z.number(),
-          maxDailyLoss: z.number(),
-          maxDailyTrades: z.number(),
-          maxOpenPositions: z.number(),
-        }),
-        tags: z.array(z.string()).optional(),
-      }))
-      .mutation(async ({ ctx, input }) => {
-        const { submitBotForVerification } = await import("./botMarketplace");
-        return submitBotForVerification(ctx.user.id, {
-          name: input.name,
-          description: input.description,
-          strategyId: input.strategyId,
-          trackRecord: input.trackRecord,
-          riskSettings: input.riskSettings,
-          tags: input.tags || [],
-        });
-      }),
-  }),
-
 });
+
+// NOTE: the botMarketplace router was removed. Its seed data contained
+// fabricated "verified bot" track records (invented win rates/Sharpe ratios)
+// for a real-money trading product, and no client ever called it. If a real
+// marketplace is built later it must derive track records from actual
+// settled trades, never hand-authored numbers.
 
 // Render the user's remembered profile into a compact string for the AI system prompt.
 export function formatMemoryForPrompt(mem: Record<string, any> | null | undefined): string {

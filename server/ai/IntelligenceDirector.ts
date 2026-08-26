@@ -33,14 +33,17 @@ export interface ConditionView {
   observedPct: number;
   baselinePct: number;
   edgePp: number;
-  ciLowPct: number;
-  ciHighPct: number;
-  pValue: number;
+  // Statistical fields are NULL when no backtest exists. They previously fell
+  // back to invented values (CI = confidence±10, p=0.05) which put fabricated
+  // statistics on the wire dressed as real ones.
+  ciLowPct: number | null;
+  ciHighPct: number | null;
+  pValue: number | null;
   fdrAdjusted: boolean;
   inSample: number;
   holds: number;
   walks: number;
-  oosAvgPct: number;
+  oosAvgPct: number | null;
   oosTotal: number;
   describe: string;
   triggerText: string;
@@ -383,14 +386,14 @@ function decideIndicator(
     observedPct: bt ? +(bt.observed * 100).toFixed(1) : signal.confidence,
     baselinePct: bt ? +(bt.baseline * 100).toFixed(1) : 50,
     edgePp: bt ? bt.edgePp : +(signal.confidence - 50).toFixed(1),
-    ciLowPct: bt ? +(bt.ciLow * 100).toFixed(1) : +(signal.confidence - 10).toFixed(1),
-    ciHighPct: bt ? +(bt.ciHigh * 100).toFixed(1) : +(signal.confidence + 10).toFixed(1),
-    pValue: bt ? bt.pValue : 0.05,
+    ciLowPct: bt ? +(bt.ciLow * 100).toFixed(1) : null,
+    ciHighPct: bt ? +(bt.ciHigh * 100).toFixed(1) : null,
+    pValue: bt ? bt.pValue : null,
     fdrAdjusted: bt ? bt.fdrAdjusted : false,
     inSample: bt ? bt.inSampleSize : 0,
     holds: bt ? bt.walks.filter((w) => w.rate > 0.5).length : 0,
     walks: bt ? bt.walks.length : 0,
-    oosAvgPct: bt ? +(bt.oosAvg * 100).toFixed(1) : signal.confidence,
+    oosAvgPct: bt ? +(bt.oosAvg * 100).toFixed(1) : null,
     oosTotal: bt ? bt.oosTotal : 0,
     describe: signal.plain.what,
     triggerText: bt

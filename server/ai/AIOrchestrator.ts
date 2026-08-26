@@ -6,7 +6,7 @@ import { riskIntelligence } from "./RiskIntelligence";
 import { aiMemory } from "./AIMemory";
 import * as db from "../db";
 import { AIInsight, MarketHealth, AIPrediction, LiveFeedEntry, AIState, RiskAdvisory } from "./types";
-import { getAllVolatilitySymbols } from "@shared/symbols";
+import { getAllVolatilitySymbols, getSymbolDisplayName } from "@shared/symbols";
 import { marketRegimeDetector } from "./StrategyEngine";
 import { logger } from "../_core/logger";
 
@@ -155,7 +155,7 @@ export class AIOrchestrator {
               id: generateFeedId(),
               symbol,
               timestamp: now,
-              message: `Risk alert: ${symbol} — ${risk.warnings[0] || "Unstable conditions"}`,
+              message: `Risk alert: ${health?.displayName ?? getSymbolDisplayName(symbol)} — ${risk.warnings[0] || "Unstable conditions"}`,
               confidence: risk.confidence,
               reasoning: [`Volatility: ${risk.volatility}`, `Trend quality: ${risk.trendQuality}%`, risk.recommendation],
               type: "risk",
@@ -173,7 +173,7 @@ export class AIOrchestrator {
                 id: generateFeedId(),
                 symbol,
                 timestamp: Date.now(),
-                message: `Probability analysis: ${prediction.prediction} on ${symbol} (${prediction.confidence}% confidence)`,
+                message: `Probability analysis: ${prediction.prediction} on ${getSymbolDisplayName(symbol)} (${prediction.confidence}% confidence)`,
                 confidence: prediction.confidence,
                 reasoning: prediction.reasoning,
                 type: "prediction",
@@ -190,7 +190,7 @@ export class AIOrchestrator {
               id: generateFeedId(),
               symbol,
               timestamp: Date.now(),
-              message: `Risk advisory: ${symbol} — ${advisory.recommendation}`,
+              message: `Risk advisory: ${getSymbolDisplayName(symbol)} — ${advisory.recommendation}`,
               confidence: advisory.confidence,
               reasoning: advisory.factors,
               type: "warning",

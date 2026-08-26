@@ -34,14 +34,14 @@ interface ConditionView {
   observedPct: number;
   baselinePct: number;
   edgePp: number;
-  ciLowPct: number;
-  ciHighPct: number;
-  pValue: number;
+  ciLowPct: number | null;
+  ciHighPct: number | null;
+  pValue: number | null;
   fdrAdjusted: boolean;
   inSample: number;
   holds: number;
   walks: number;
-  oosAvgPct: number;
+  oosAvgPct: number | null;
   oosTotal: number;
   describe: string;
   triggerText: string;
