@@ -88,6 +88,7 @@ import { logger } from "./_core/logger";
 import { calibrateConfidence, pooledOutcomeStats, type CalibrationBucket } from "./signalStats";
 import { readBaseline } from "@shared/digits";
 import { noteDrizzleFallback } from "./dbFallbackStats";
+import { tickRetentionCutoffSec as tickRetentionCutoffSecEnv, tickRetentionDays } from "./dbRetention";
 
 export type { CalibrationBucket };
 
@@ -2686,8 +2687,34 @@ export async function recomputeLastDigits(): Promise<number> {
 }
 // One-time data hygiene: during a past bug, ticks were stored with lastDigit=0.
 // Remove those rows so digit stats / scanners aren't skewed by bad data.
-export async function pruneBadTicks(): Promise<number> {
-  if (process.env.PRUNE_BAD_TICKS !== "1") {
+/**
+ * Tick-history retention (TiDB free-tier quota relief). Policy helpers live in
+ * dbRetention.ts; this executes the prune. Nothing in the app queries ticks
+ * older than a couple of days: bot evaluation uses the live in-memory buffer,
+ * settlement reads ~200 recent ticks, and deep backtests pull history from
+ * Deriv's API — not this table.
+ */
+export function tickRetentionCutoffSec(nowSec: number = Math.floor(Date.now() / 1000)): number | null {
+  return tickRetentionCutoffSecEnv(nowSec, process.env);
+}
+
+export async function pruneOldTicks(nowSec: number = Math.floor(Date.now() / 1000)): Promise<number> {
+  const cutoff = tickRetentionCutoffSec(nowSec);
+  if (cutoff == null) return 0;
+  const pool = getRawPool();
+  if (!pool) return 0;
+  try {
+    const [res]: any = await pool.execute("DELETE FROM tickHistory WHERE epoch < ?", [cutoff]);
+    const removed = res?.affectedRows ?? 0;
+    if (removed > 0) console.log(`[pruneOldTicks] removed ${removed} tick rows older than ${tickRetentionDays()} days`);
+    return removed;
+  } catch (e: any) {
+    console.error("[pruneOldTicks] failed", e?.message || e);
+    return 0;
+  }
+}
+
+export async function pruneBadTicks(): Promise<number> {  if (process.env.PRUNE_BAD_TICKS !== "1") {
     console.log("[pruneBadTicks] skipped (set PRUNE_BAD_TICKS=1 to run once)");
     return 0;
   }

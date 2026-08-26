@@ -141,6 +141,20 @@ async function fetchActiveSymbols(): Promise<string[]> {
           }
         }
         console.log(`[tickCollector] subscribing to ${syms.length} symbols (markets: ${[...new Set(syms.map(s => symbolMarketStatus.get(s)?.market))].join(", ") || "none"})`);
+        // QUOTA: optional dev trim. TICK_SUBSCRIBE_SYMBOLS="R_100,R_50,1HZ100V"
+        // restricts the live feed (and therefore buffer/scanner coverage) to
+        // exactly these symbols — production leaves it unset for full coverage.
+        const override = process.env.TICK_SUBSCRIBE_SYMBOLS;
+        if (override) {
+          const allow = new Set(override.split(",").map((s) => s.trim().toUpperCase()).filter(Boolean));
+          const filtered = syms.filter((s) => allow.has(s.toUpperCase()));
+          if (filtered.length > 0) {
+            console.log(`[tickCollector] TICK_SUBSCRIBE_SYMBOLS override: ${filtered.length}/${syms.length} symbols`);
+            resolve(filtered);
+            return;
+          }
+          console.warn("[tickCollector] TICK_SUBSCRIBE_SYMBOLS matched nothing — using full list");
+        }
         resolve(syms);
       } catch (e) {
         console.error("[tickCollector] fetchActiveSymbols parse error", e);

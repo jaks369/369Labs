@@ -4,7 +4,7 @@ import { createExpressMiddleware } from "@trpc/server/adapters/express";
 import { appRouter } from "../routers";
 import { createContext } from "./context";
 import { serveStatic } from "./staticServe";
-import { getDb, pruneBadTicks, ensureSignalExpiryColumn, ensureSignalOosColumns, ensureSignalBaselineColumn, ensureSettlementHeartbeatTable, ensureSignalsTable, ensureNotificationSettingsColumns, ensureAuditLogsTable, ensureIpWhitelistTable, ensureTradesTable, ensureTradesStuckResult, ensureTradesLedgerColumns, ensureTradesContractIndex, ensureTradesQueryIndexes, ensureReconcilerRunsTable, ensureStrategiesTable, ensurePriceAlertsTable, ensureTickHistoryTable, recomputeLastDigits, ensureUserMemoryTable, ensurePluginsTable, ensureWebhooksTable, ensureAiKnowledgeTable, ensureUsersColumns, ensureSessionsTable, ensureSubscriptionsTable, ensureVerificationTokensTable, ensurePasswordResetTokensTable, ensureBotLogsTable, ensureBotRunsTable, ensureGuidingSignalsTable, ensureStrategyStatsTable, ensureCopyRelationsTable, ensureCopyMirrorsTable, ensureDigitReadsTable } from "../db";
+import { getDb, pruneBadTicks, pruneOldTicks, ensureSignalExpiryColumn, ensureSignalOosColumns, ensureSignalBaselineColumn, ensureSettlementHeartbeatTable, ensureSignalsTable, ensureNotificationSettingsColumns, ensureAuditLogsTable, ensureIpWhitelistTable, ensureTradesTable, ensureTradesStuckResult, ensureTradesLedgerColumns, ensureTradesContractIndex, ensureTradesQueryIndexes, ensureReconcilerRunsTable, ensureStrategiesTable, ensurePriceAlertsTable, ensureTickHistoryTable, recomputeLastDigits, ensureUserMemoryTable, ensurePluginsTable, ensureWebhooksTable, ensureAiKnowledgeTable, ensureUsersColumns, ensureSessionsTable, ensureSubscriptionsTable, ensureVerificationTokensTable, ensurePasswordResetTokensTable, ensureBotLogsTable, ensureBotRunsTable, ensureGuidingSignalsTable, ensureStrategyStatsTable, ensureCopyRelationsTable, ensureCopyMirrorsTable, ensureDigitReadsTable } from "../db";
 import { users } from "../../drizzle/schema";
 import { startTickCollector } from "../tickCollector";
 import { runWatch } from "../signalScanner";
@@ -432,6 +432,12 @@ const RATE = (limit: number, windowMs: number) => async (req: any, res: any, nex
       try { await ensureTickHistoryTable(); } catch (e) { logger.error("[startup] ensureTickHistoryTable failed", { error: String(e) }); }
       try { await ensurePriceAlertsTable(); } catch (e) { logger.error("[startup] ensurePriceAlertsTable failed", { error: String(e) }); }
       try { await pruneBadTicks(); } catch (e) { logger.error("[startup] pruneBadTicks failed", { error: String(e) }); }
+      // Tick retention: keep tickHistory bounded (TiDB free-tier quota relief).
+      try {
+        await pruneOldTicks();
+        const pruneTimer = setInterval(() => { void pruneOldTicks(); }, 24 * 60 * 60_000);
+        pruneTimer.unref?.();
+      } catch (e) { logger.error("[startup] pruneOldTicks failed", { error: String(e) }); }
       try { await recomputeLastDigits(); } catch (e) { logger.error("[startup] recomputeLastDigits failed", { error: String(e) }); }
       try { await ensureUserMemoryTable(); } catch (e) { logger.error("[startup] ensureUserMemoryTable failed", { error: String(e) }); }
       try { await ensurePluginsTable(); } catch (e) { logger.error("[startup] ensurePluginsTable failed", { error: String(e) }); }

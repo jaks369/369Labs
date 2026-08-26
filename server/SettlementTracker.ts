@@ -16,7 +16,18 @@ const STUCK_AFTER_MS = 30 * 60_000; // 30 min grace (5-tick + guard latch)
 // when the process keeps running (previously only the signals side-channel showed
 // up; a dead tracker looked identical). The write is fire-and-forget: a failure
 // here must never take the tick loop down.
-function writeHeartbeat(stats: { pending: number; settled: number; errors: number; derivOk: boolean; lastError: string | null }) {
+//
+// QUOTA: at 2s poll cadence this was ~43k DB writes/day for a debug-only
+// feature. Throttled to one write per HEARTBEAT_MIN_INTERVAL_MS (default 60s,
+// env-tunable) — liveness granularity of a minute costs nothing and answers
+// the same question.
+const HEARTBEAT_MIN_INTERVAL_MS = Math.max(5_000, Number(process.env.SETTLEMENT_HEARTBEAT_MS) || 60_000);
+let lastHeartbeatAt = 0;
+
+function writeHeartbeat(stats: { pending: number; settled: number; errors: number; derivOk: boolean; lastError: string | null }): void {
+  const now = Date.now();
+  if (now - lastHeartbeatAt < HEARTBEAT_MIN_INTERVAL_MS) return;
+  lastHeartbeatAt = now;
   try {
     if (typeof (db as any).saveSettlementHeartbeat === "function") {
       (db as any).saveSettlementHeartbeat({

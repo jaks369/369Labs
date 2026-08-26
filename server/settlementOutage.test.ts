@@ -78,9 +78,10 @@ describe("SettlementTracker under sustained DB outage", () => {
       expect(stats).toEqual({ processed: 0, settled: 0, errors: 0 });
     }
 
-    // Every failed tick still wrote a heartbeat flagging the failure.
-    expect(mockSaveHeartbeat).toHaveBeenCalledTimes(50);
-    const last = mockSaveHeartbeat.mock.calls[49][0];
+    // Heartbeats are now throttled to one per minute (quota relief) — 50 fast
+    // ticks collapse to a single write, and it still carries the failure.
+    expect(mockSaveHeartbeat).toHaveBeenCalledTimes(1);
+    const last = mockSaveHeartbeat.mock.calls[0][0];
     expect(last.lastError).toMatch(/tick_failed/);
   });
 
