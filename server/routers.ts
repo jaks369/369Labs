@@ -544,6 +544,15 @@ export const appRouter = router({
   auth: router({
     me: publicProcedure.query(opts => opts.ctx.user),
 
+    // Which optional integrations are actually configured? Booleans only —
+    // no secrets. The login page uses this to hide buttons that would 503,
+    // instead of showing every visitor dead OAuth/reset controls.
+    integrationStatus: publicProcedure.query(() => ({
+      google: !!(ENV.googleClientId && ENV.googleClientSecret),
+      github: !!(ENV.githubClientId && ENV.githubClientSecret),
+      email: !!ENV.resendApiKey,
+    })),
+
     signup: publicProcedure
       .input(z.object({
         email: z.string().email(),
