@@ -18,7 +18,7 @@ import { lastDigitOf, getDecimalPlaces } from "@shared/lastDigit";
 import { getAllSymbols, isSyntheticIndexSymbol, getSymbolDisplayName } from "@shared/symbols";
 import { and, eq, gt } from "drizzle-orm";
 import { signals } from "../drizzle/schema";
-import { isMarketOpen } from "./tickCollector";
+import { isMarketOpen, getRecentTicks } from "./tickCollector";
 import {
   runAnalysis,
   PatternResult,
@@ -84,12 +84,31 @@ async function scanDigitPatterns(opts: ScanOptions): Promise<PatternResult[]> {
   const symbol = normalizeSymbol(opts.symbol);
   const decimals = getDecimalPlaces(symbol);
   const sample = Math.min(4000, Math.max(120, opts.sampleSize || 1000));
-  const ticks = await getTickHistory(symbol, sample); // [{price, timestamp(ms)}] old->new
+  const ticks = await fetchTicksForScan(symbol, sample); // [{price, timestamp(ms)}] old->new
   if (ticks.length < 40) return [];
 
   const digits = ticks.map((t) => lastDigitOf(Number(t.price), decimals));
   const epochs = ticks.map((t) => Math.floor(Number(t.timestamp) / 1000));
   return runAnalysis({ digits, epochs, ctx: { symbol, nowSec: Math.floor(Date.now() / 1000) } });
+}
+
+/**
+ * Tick source for the scanner: prefer the in-memory buffer tickCollector
+ * maintains (bounded, fresh, zero network) and only fall back to the live
+ * Deriv history request when the buffer can't fully satisfy the request —
+ * cold start right after boot, feed drop, or sample sizes beyond the buffer
+ * cap. Same tick count either way, so pattern statistics are unchanged; what
+ * changes is that a warm scan cycle is bounded by local memory instead of an
+ * external API round-trip.
+ */
+async function fetchTicksForScan(symbol: string, sample: number): Promise<Array<{ price: number; timestamp: number }>> {
+  const buffered = getRecentTicks(symbol, sample);
+  const lastEpoch = buffered.length ? buffered[buffered.length - 1].epoch : 0;
+  const warm = buffered.length >= sample && Date.now() / 1000 - lastEpoch <= 60;
+  if (warm) {
+    return buffered.map((t) => ({ price: t.price, timestamp: t.epoch * 1000 }));
+  }
+  return getTickHistory(symbol, sample);
 }
 
 /**

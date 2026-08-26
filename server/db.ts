@@ -87,6 +87,7 @@ import { encrypt, decrypt } from "./_core/encryption";
 import { logger } from "./_core/logger";
 import { calibrateConfidence, pooledOutcomeStats, type CalibrationBucket } from "./signalStats";
 import { readBaseline } from "@shared/digits";
+import { noteDrizzleFallback } from "./dbFallbackStats";
 
 export type { CalibrationBucket };
 
@@ -1076,6 +1077,7 @@ export async function getPendingTrades(): Promise<Trade[]> {
       .orderBy(asc(trades.entryTime))
       .limit(200);
   } catch (err) {
+    noteDrizzleFallback("getPendingTrades");
     const pool = getRawPool();
     if (!pool) throw new Error("getPendingTrades: drizzle failed and no raw pool");
     try {
@@ -1119,6 +1121,7 @@ export async function getPendingTradesForUser(userId: number): Promise<Trade[]> 
       .orderBy(asc(trades.entryTime))
       .limit(200);
   } catch (e: any) {
+    noteDrizzleFallback("getPendingTradesForUser");
     logger.error("getPendingTradesForUser drizzle failed", { userId, error: e?.message || e });
     return [];
   }
@@ -1234,6 +1237,7 @@ export async function getTradesByUserId(userId: number, limit: number = 50, offs
   try {
     return await db.select().from(trades).where(and(...conds)).orderBy(desc(trades.updatedAt)).limit(limit).offset(offset);
   } catch {
+    noteDrizzleFallback("getTradesByUserId");
     const pool = getRawPool();
     if (!pool) return [];
     try {
@@ -1933,7 +1937,10 @@ export async function getUserMemory(userId: number): Promise<Record<string, any>
     }
     return raw as Record<string, any>;
   } catch (e: any) {
-    if (e?.errno !== 1146) console.error("[getUserMemory] failed", e?.message || e);
+    if (e?.errno !== 1146) {
+      noteDrizzleFallback("getUserMemory");
+      console.error("[getUserMemory] failed", e?.message || e);
+    }
     return null;
   }
 }
@@ -3332,6 +3339,17 @@ export async function listDigitReads(userId: number, limit: number = 100): Promi
     return await db.select().from(digitReads).where(eq(digitReads.userId, userId))
       .orderBy(desc(digitReads.generatedAt)).limit(limit);
   } catch {
+    noteDrizzleFallback("listDigitReads");
+    const pool = getRawPool();
+    if (pool) {
+      try {
+        const [rows] = await pool.execute(
+          "SELECT id, userId, symbol, readType, barrier, label, confidence, strength, sample, freq, baseline, deltaPp, reasons, decisionEpoch, status, generatedAt, outcomeEpoch FROM digitReads WHERE userId=? ORDER BY generatedAt DESC LIMIT ?",
+          [userId, limit],
+        );
+        return rows as DigitRead[];
+      } catch { /* fall through to empty */ }
+    }
     return [];
   }
 }

@@ -1,7 +1,7 @@
 import * as db from "./db";
 import { botRunner } from "./botRunner";
 import { derivManager } from "./derivConnection";
-import { getRecentTicks, isFeedStale, isMarketOpen } from "./tickCollector";
+import { getRecentTicks, isFeedStale, isMarketOpen, tickEvents } from "./tickCollector";
 import { fireWebhookEvent } from "./webhookExecutor";
 import { actionToContractType, isDigitContract } from "@shared/contractSim";
 import { isSyntheticIndexSymbol } from "@shared/symbols";
@@ -11,7 +11,7 @@ import { logger } from "./_core/logger";
 import { computePortfolioHeat } from "./portfolioRisk";
 import { getForexSessionInfo } from "@shared/forexSessions";
 
-const POLL_INTERVAL = 500; // 500ms — near-live bot evaluation
+const POLL_INTERVAL = 2000; // fallback sweep only - primary trigger is per-tick events (see startExecutionEngine) // 500ms — near-live bot evaluation
 const MAX_PIPELINE_TRADES = 50; // max trades in one cycle globally
 const MAX_CONCURRENT_BOTS_PER_USER = 10; // max concurrent running bots per user
 
@@ -36,7 +36,7 @@ async function executeBotCycle(): Promise<void> {
   }
 }
 
-async function executeBotCycleInner(): Promise<void> {
+async function executeBotCycleInner(symbolFilter?: string): Promise<void> {
   if (isFeedStale()) return;
 
   const allBots = botRunner.listAll();
@@ -72,6 +72,8 @@ async function executeBotCycleInner(): Promise<void> {
     if (!rule?.condition) continue;
 
     const symbol = rule.symbol || "R_100";
+    // Event-driven path: only bots watching the symbol that actually ticked.
+    if (symbolFilter && symbol !== symbolFilter) continue;
 
     // Market-open check: skip bots on closed markets. This is expected, not a
     // failure — the bot should resume when the market reopens.
@@ -286,9 +288,38 @@ async function executeBotCycleInner(): Promise<void> {
   }
 }
 
+// --- Event-driven evaluation -------------------------------------------------
+// Primary trigger: when a tick lands for symbol S, evaluate only the bots
+// watching S — zero latency between price move and evaluation, and no wasted
+// sweeps over quiet symbols. The 2s interval sweep remains purely as a safety
+// net (e.g., a bot added between ticks).
+const symbolEvalRunning = new Set<string>();
+const lastSymbolEvalAt = new Map<string, number>();
+const SYMBOL_EVAL_MIN_GAP_MS = 200; // throttle bursts of ticks for one symbol
+
+export async function evaluateOnTick(symbol: string): Promise<void> {
+  const now = Date.now();
+  if (now - (lastSymbolEvalAt.get(symbol) || 0) < SYMBOL_EVAL_MIN_GAP_MS) return;
+  lastSymbolEvalAt.set(symbol, now);
+  // Serialize with the fallback sweep through the same guard: two paths must
+  // never place trades concurrently for overlapping bots.
+  if (cycleRunning) return;
+  cycleRunning = true;
+  try {
+    await executeBotCycleInner(symbol);
+  } catch (e: any) {
+    logger.error("Tick-driven evaluation error", { symbol, error: e?.message || e });
+  } finally {
+    cycleRunning = false;
+  }
+}
+
 export function startExecutionEngine(): void {
   if (intervalId) return;
-  logger.info("ExecutionEngine starting", { pollInterval: POLL_INTERVAL });
+  logger.info("ExecutionEngine starting", { pollInterval: POLL_INTERVAL, trigger: "tick-events + fallback sweep" });
+  tickEvents.on("tick", (symbol: string) => {
+    void evaluateOnTick(symbol);
+  });
   intervalId = setInterval(() => {
     executeBotCycle().catch((e) => logger.error("Cycle error", { error: e?.message || e }));
   }, POLL_INTERVAL);

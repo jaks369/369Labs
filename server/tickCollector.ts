@@ -1,7 +1,16 @@
 import { WebSocket } from "ws";
+import { EventEmitter } from "events";
 import { saveTickHistoryBatch } from "./db";
 import { getAllVolatilitySymbols } from "@shared/symbols";
 import { getDecimalPlaces, lastDigitOf } from "@shared/lastDigit";
+
+/**
+ * Emitted: "tick" (symbol: string) — once per accepted tick, after the buffer
+ * is updated. Lets consumers (execution engine) evaluate event-driven instead
+ * of polling. Never awaited; handlers must not throw.
+ */
+export const tickEvents = new EventEmitter();
+tickEvents.setMaxListeners(0);
 
 const DERIV_WS_PUBLIC = "wss://api.derivws.com/trading/v1/options/ws/public";
 const VOLATILITY_PREFIXES = getAllVolatilitySymbols();
@@ -268,6 +277,9 @@ export function startTickCollector() {
         const buf = tickBuffer.get(symbol)!;
         buf.push({ price: parseFloat(quote), epoch, lastDigit });
         if (buf.length > MAX_TICKS_PER_SYMBOL) buf.splice(0, buf.length - MAX_TICKS_PER_SYMBOL);
+        // Event-driven consumers (execution engine evaluates bots watching
+        // this symbol the moment a tick lands instead of on a poll).
+        tickEvents.emit("tick", symbol);
       } catch {}
     });
     ws.on("error", (e: any) => console.warn("[tickCollector] error:", e?.message || e));
