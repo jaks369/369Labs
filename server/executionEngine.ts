@@ -9,6 +9,7 @@ import { buildCandles, ema, rsi, macd } from "@shared/indicators";
 import { buildLimitOrder } from "@shared/slTp";
 import { logger } from "./_core/logger";
 import { computePortfolioHeat } from "./portfolioRisk";
+import { getForexSessionInfo } from "@shared/forexSessions";
 
 const POLL_INTERVAL = 500; // 500ms — near-live bot evaluation
 const MAX_PIPELINE_TRADES = 50; // max trades in one cycle globally
@@ -156,6 +157,15 @@ async function executeBotCycleInner(): Promise<void> {
     // Market-open check: skip bots on closed markets. This is expected, not a
     // failure — the bot should resume when the market reopens.
     if (!isMarketOpen(symbol)) continue;
+
+    // Session-liquidity gate (real-market symbols only): synthetic indices
+    // trade 24/7 with constant liquidity, but forex/crypto thin windows
+    // (NY close → Sydney open) produce gappy prints and unreliable fills.
+    // A signal with identical statistics carries different real risk there.
+    if (!isSyntheticIndexSymbol(symbol) && getForexSessionInfo().liquidity === "thin") {
+      logger.info("Bot trade skipped: thin FX liquidity window", { userId: bot.def.userId, botId: bot.def.id, symbol });
+      continue;
+    }
 
     const stake = parseFloat(rule.params?.stake || "1");
     if (isNaN(stake) || stake <= 0) continue;

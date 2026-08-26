@@ -192,6 +192,9 @@ export default function Concierge() {
   const settingsQ = trpc.concierge.getSettings.useQuery(undefined, { enabled: isAuthenticated });
   const loopStatus = trpc.concierge.loopStatus.useQuery(undefined, { enabled: isAuthenticated, refetchInterval: 5000 });
   const marketContext = trpc.concierge.marketContext.useQuery({ symbol: ctxSymbol }, { enabled: isAuthenticated });
+  // Behavioral tilt check — refreshed periodically so the warning is current
+  // at the moment the trader is about to act, not a stale once-per-session read.
+  const tilt = trpc.tilt.check.useQuery(undefined, { enabled: isAuthenticated, refetchInterval: 30000 });
 
   const scanNow = trpc.concierge.scanNow.useMutation();
   const settle = trpc.concierge.settle.useMutation();
@@ -384,6 +387,19 @@ export default function Concierge() {
               <p className="text-sm text-[var(--text-secondary)] mt-3">{brief.summary}</p>
             )}
             <p className="text-[11px] text-[var(--text-disabled)] mt-3">{brief.disclaimer}</p>
+          </div>
+        )}
+
+        {/* Tilt warning — surfaced BEFORE the next trade, not after the damage. */}
+        {tilt.data?.severity === "warning" && (
+          <div className="rounded-xl border border-[var(--red)]/50 bg-[var(--red)]/10 p-4 space-y-1">
+            <p className="text-sm font-bold text-[var(--red)] flex items-center gap-2">
+              <AlertTriangle className="w-4 h-4" /> Tilt pattern detected
+            </p>
+            {tilt.data.messages.map((m: string, i: number) => (
+              <p key={i} className="text-xs text-[var(--text-secondary)]">{m}</p>
+            ))}
+            <p className="text-[10px] text-[var(--text-disabled)]">Advisory only — nothing is blocked. Based on your last {tilt.data.evidence.tradesAnalyzed} settled trades.</p>
           </div>
         )}
 

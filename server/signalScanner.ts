@@ -15,7 +15,7 @@ import { getDb, saveSignal as dbSaveSignal } from "./db";
 import { getTickHistory, getTickHistoryDeep, normalizeSymbol } from "./aitools";
 import { notifyUser } from "./_core/notification";
 import { lastDigitOf, getDecimalPlaces } from "@shared/lastDigit";
-import { getAllSymbols, isSyntheticIndexSymbol } from "@shared/symbols";
+import { getAllSymbols, isSyntheticIndexSymbol, getSymbolDisplayName } from "@shared/symbols";
 import { and, eq, gt } from "drizzle-orm";
 import { signals } from "../drizzle/schema";
 import { isMarketOpen } from "./tickCollector";
@@ -26,7 +26,7 @@ import {
   ContractSupport,
 } from "./signalEngine";
 import { scanSignalForSymbol, GuidingSignalCandidate } from "./indicatorSignal";
-import { wilsonInterval, binomialPvsBaseline, benjaminiHochbergFDR, walkForwardSummary, WALK_FORWARD_WINDOWS, MIN_OOS_SAMPLES, MIN_WINDOW_SAMPLES, assignTier, type SignalTier, type WalkForwardResult } from "./signalStats";
+import { wilsonInterval, binomialPvsBaseline, benjaminiHochbergFDR, walkForwardSummary, WALK_FORWARD_WINDOWS, WALK_FORWARD_REQUIRED, MIN_OOS_SAMPLES, MIN_WINDOW_SAMPLES, assignTier, type SignalTier, type WalkForwardResult } from "./signalStats";
 import { buildCandles, medianTickGapSec, type TickLike } from "@shared/indicators";
 
 // Pattern categories remain from the v1 API so routers/agents keep compiling.
@@ -345,7 +345,9 @@ export async function runWatch(opts: ScanOptions): Promise<any[]> {
     const symbol = normalizeSymbol(opts.symbol);
     const edgeText = `${r.edgePp > 0 ? "+" : ""}${r.edgePp} pp`;
     const wfText = `${r.holds}/${r.walks.length} OOS windows held (avg ${(r.oosAvg * 100).toFixed(1)}%)`;
-    const title = `${symbol} · ${r.supportsLabel}`;
+    // Human-readable title; the raw code stays in `symbol` for lookups.
+    const displayName = getSymbolDisplayName(symbol) || symbol;
+    const title = `${displayName} · ${r.supportsLabel}`;
     const description =
       `${r.describe} Baseline ${(r.baseline * 100).toFixed(1)}%, observed ${(r.observed * 100).toFixed(1)}% (edge ${edgeText}). ` +
       `${wfText}. ${r.fdrAdjusted ? "FDR-adjusted p=" + r.pValue.toFixed(4) : "Not FDR-significant."} Verified ${new Date(r.discoveredAt * 1000).toUTCString()}.`;
@@ -388,7 +390,12 @@ export async function runWatch(opts: ScanOptions): Promise<any[]> {
         baselineWinRate: (r.baseline * 100).toFixed(2),
         oosWinRate: (r.oosAvg * 100).toFixed(2),
         oosSampleSize: r.walks.reduce((sum, w) => sum + w.n, 0),
-        oosValidated: "true",
+        // Honest verdict, not a hardcoded flag: validated only when enough
+        // forward data exists AND the CI clears baseline out-of-sample.
+        oosValidated:
+          r.walks.reduce((s, w) => s + w.n, 0) >= MIN_OOS_SAMPLES && r.ciLow > r.baseline && r.holds >= WALK_FORWARD_REQUIRED
+            ? "true"
+            : "false",
         discoveredAt: r.discoveredAt,
         startEpoch: r.window.startEpoch,
         endEpoch: r.window.endEpoch,
@@ -458,7 +465,9 @@ async function persistResultsForUser(results: PatternResult[], symbol: string, u
     if (r.oosInsufficient) continue;
     const edgeText = `${r.edgePp > 0 ? "+" : ""}${r.edgePp} pp`;
     const wfText = `${r.holds}/${r.walks.length} OOS windows held (avg ${(r.oosAvg * 100).toFixed(1)}%)`;
-    const title = `${symbol} · ${r.supportsLabel}`;
+    // Human-readable title; the raw code stays in `symbol` for lookups.
+    const displayName = getSymbolDisplayName(symbol) || symbol;
+    const title = `${displayName} · ${r.supportsLabel}`;
     const description =
       `${r.describe} Baseline ${(r.baseline * 100).toFixed(1)}%, observed ${(r.observed * 100).toFixed(1)}% (edge ${edgeText}). ` +
       `${wfText}. ${r.fdrAdjusted ? "FDR-adjusted p=" + r.pValue.toFixed(4) : "Not FDR-significant."} Verified ${new Date(r.discoveredAt * 1000).toUTCString()}.`;
@@ -496,7 +505,11 @@ async function persistResultsForUser(results: PatternResult[], symbol: string, u
         baselineWinRate: (r.baseline * 100).toFixed(2),
         oosWinRate: (r.oosAvg * 100).toFixed(2),
         oosSampleSize: r.walks.reduce((sum, w) => sum + w.n, 0),
-        oosValidated: "true",
+        // Honest verdict, not a hardcoded flag (same criterion as the digit scanner).
+        oosValidated:
+          r.walks.reduce((s, w) => s + w.n, 0) >= MIN_OOS_SAMPLES && r.ciLow > r.baseline && r.holds >= WALK_FORWARD_REQUIRED
+            ? "true"
+            : "false",
         discoveredAt: r.discoveredAt,
         startEpoch: r.window.startEpoch,
         endEpoch: r.window.endEpoch,

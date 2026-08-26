@@ -2518,6 +2518,34 @@ Return ONLY the JSON.`;
           return [];
         }
       }),
+    // Edge-aware stake suggestion (quarter-Kelly) for a persisted signal.
+    // Only speaks when the signal's own validated statistics justify size;
+    // otherwise returns an explicit refusal reason. Suggestion only — never
+    // auto-applied.
+    stakeSuggestion: protectedProcedure
+      .input(z.object({ signalId: z.number() }))
+      .query(async ({ ctx, input }) => {
+        try {
+          const list = await db.getSignalsByUserId(ctx.user.id);
+          const sig = list.find((s: any) => s.id === input.signalId) as any;
+          if (!sig) return { ok: false as const, reason: "Signal not found", fractionOfBalance: 0 };
+          const { kellyStakeSuggestion } = await import("./kellySizing");
+          // Prefer the out-of-sample rate when present; fall back to in-sample.
+          const winRate = Number(sig.oosWinRate ?? sig.winRate ?? 0) / 100;
+          const ciLow = Number(sig.ciLowPct ?? sig.oosWinRate ?? sig.winRate ?? 0) / 100;
+          return {
+            ...kellyStakeSuggestion({
+              winRate,
+              ciLow,
+              baseline: Number(sig.baselineWinRate ?? 50) / 100,
+              payoutRatio: Number(sig.payoutRatio || 0.95),
+              sampleSize: Number(sig.sampleSize ?? 0),
+            }),
+          };
+        } catch (e: any) {
+          return { ok: false as const, reason: e?.message || "sizing unavailable", fractionOfBalance: 0 };
+        }
+      }),
 watch: protectedProcedure
       .input(z.object({ symbol: z.string(), durationMinutes: z.number().default(30), patternType: z.enum(["any", "digit_streak", "digit_bias", "even_odd_run", "even_odd", "over_under", "match_diff", "momentum_after_digit"]).default('any'), minWinRate: z.number().default(55) }))
       .mutation(async ({ ctx, input }) => {
