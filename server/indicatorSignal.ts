@@ -15,6 +15,7 @@
  */
 
 import { scoreConfluence, explainConfluence, scorePriceActionConfluence, ema, rsi, macd, buildCandles, medianTickGapSec, TickLike, Candle, IndicatorDetail, atr, bollingerBands, adx } from "@shared/indicators";
+import { higherTimeframeBias } from "./multiTimeframe";
 
 export type GuideStrength = "STRONG" | "MEDIUM" | "WEAK";
 export type GuideDirection = "up" | "down";
@@ -50,6 +51,18 @@ export interface GuidingSignalCandidate {
   details: IndicatorDetail[];
   /** Market regime at signal time */
   regime?: RegimeInfo;
+  /**
+   * Higher-timeframe confirmation: trend bias computed ONLY from closed
+   * higher-timeframe candles (anti-lookahead). `available: false` means
+   * insufficient data — no opinion. When available and misaligned with the
+   * candidate direction, strength is capped at MEDIUM.
+   */
+  htf?: {
+    timeframeSec: number;
+    bias: "up" | "down" | "neutral";
+    aligned: boolean | null; // null = no opinion (insufficient data / neutral bias)
+    reason: string;
+  };
   /**
    * Surfaced caution case: the momentum layer and the price-action layer
    * disagree on direction (e.g. "indicators say up, but price just broke
@@ -190,10 +203,21 @@ export function scanSignalForSymbol(symbol: string, rawTicks: TickLike[]): ScanR
   const regimeAligned = isRegimeAligned(regimeInfo.regime, confluence.direction);
   const regimeWithAlignment = { ...regimeInfo, aligned: regimeAligned };
 
+  // Higher-timeframe confirmation: bias from CLOSED HTF candles only.
+  const htfInfo = higherTimeframeBias(ticks, timeframeSec);
+  const htfAligned: boolean | null =
+    !htfInfo.available || htfInfo.bias === "neutral"
+      ? null
+      : htfInfo.bias === (combinedDirection === "up" ? "up" : "down");
+
   // Do not emit a tradeable card from a bare coin-flip observation. WEAK is
   // only emitted when there is real (if thin) directional agreement.
   let paStrength = strengthFor(combinedScore);
   if (conflict && paStrength === "STRONG") paStrength = "MEDIUM";
+  // Multi-timeframe discipline: a STRONG read against the higher timeframe is
+  // demoted — lower-TF confluence without HTF agreement is exactly the
+  // false-break pattern this filter exists to catch.
+  if (paStrength === "STRONG" && htfAligned === false) paStrength = "MEDIUM";
   const signal: GuidingSignalCandidate | null =
     paStrength === "WEAK" && confluence.reasons.length === 1 && paConfluence.votes.total === 0
       ? null
@@ -216,9 +240,16 @@ export function scanSignalForSymbol(symbol: string, rawTicks: TickLike[]): ScanR
           details: [...confluence.details, ...paConfluence.details],
           regime: regimeWithAlignment,
           conflict,
+          htf: {
+            timeframeSec: htfInfo.timeframeSec,
+            bias: htfInfo.bias,
+            aligned: htfAligned,
+            reason: htfInfo.reason,
+          },
           reasons: [
             `${Math.max(confluence.votes.up + paConfluence.votes.up, confluence.votes.down + paConfluence.votes.down)}/${confluence.votes.total + paConfluence.votes.total} indicators agree`,
             ...(conflict ? [conflict.note] : []),
+            `HTF: ${htfInfo.reason}${htfAligned === false ? " — signal demoted (higher timeframe disagrees)" : ""}`,
             ...confluence.reasons,
             ...paConfluence.reasons,
             `Regime: ${regimeWithAlignment.regime} (${regimeWithAlignment.reason}) · ${regimeAligned ? 'aligned' : 'misaligned'}`,

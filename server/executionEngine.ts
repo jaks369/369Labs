@@ -8,6 +8,7 @@ import { isSyntheticIndexSymbol } from "@shared/symbols";
 import { buildCandles, ema, rsi, macd } from "@shared/indicators";
 import { buildLimitOrder } from "@shared/slTp";
 import { logger } from "./_core/logger";
+import { computePortfolioHeat } from "./portfolioRisk";
 
 const POLL_INTERVAL = 500; // 500ms — near-live bot evaluation
 const MAX_PIPELINE_TRADES = 50; // max trades in one cycle globally
@@ -231,6 +232,31 @@ async function executeBotCycleInner(): Promise<void> {
       // Deriv or prices the contract incorrectly for non-USD accounts.
       const account = (conn as any)?.getSnapshot?.()?.account;
       const currency = account?.currency || "USD";
+
+      // PORTFOLIO HEAT GATE — aggregate open-risk cap across everything this
+      // user has running. Per-bot limits cannot see each other; this can.
+      // Unknown balance → not gateable → existing per-bot limits still apply.
+      try {
+        const openPending = await db.getPendingTradesForUser(bot.def.userId);
+        const heat = computePortfolioHeat(
+          openPending.map((t) => parseFloat(String(t.stake))).filter(Number.isFinite),
+          Number(account?.balance),
+        );
+        if (Number.isFinite(account?.balance) && !heat.wouldAllowNew(stake)) {
+          logger.warn("Portfolio heat cap reached — bot trade suppressed", {
+            userId: bot.def.userId,
+            botId: bot.def.id,
+            heatPct: Math.round(heat.heatPct * 10) / 10,
+            capPct: heat.capPct,
+            stake,
+          });
+          continue;
+        }
+      } catch (heatErr: any) {
+        // Heat check must never be the reason a trade loop dies.
+        logger.warn("Portfolio heat check failed (allowing per-bot limits to govern)", { error: heatErr?.message || heatErr });
+      }
+
       // Use Deriv proposal/buy flow to place the actual trade
       const proposalPayload: Record<string, any> = {
         proposal: 1,

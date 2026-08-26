@@ -4,6 +4,7 @@ import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, router, protectedProcedure, adminProcedure, adminStepUpProcedure } from "./_core/trpc";
 import { z } from "zod";
 import * as db from "./db";
+import { detectTilt } from "./tiltDetection";
 import { TRPCError } from "@trpc/server";
 import { hashPassword, verifyPassword, createSessionToken, sanitizeUser, regenerateSession } from "./_core/auth";
 import { ENV } from "./_core/env";
@@ -3644,6 +3645,19 @@ aiMarket: router({
         };
       }));
 return withStats.filter((p) => p.tradeCount > 0).sort((a, b) => b.pnl - a.pnl);
+    }),
+  }),
+
+  tilt: router({
+    // Behavioral tilt ("revenge trading") check over the user's recent trade
+    // history. Advisory: returns detected signals + plain-language messages
+    // for the UI. Never blocks — the mechanical counterpart is the
+    // maxConsecutiveLosses safety floor.
+    check: protectedProcedure.query(async ({ ctx }) => {
+      const trades = await db.getTradesByUserId(ctx.user.id, 60);
+      return detectTilt(
+        trades.map((t) => ({ id: t.id, result: t.result, stake: t.stake, entryTime: t.entryTime })),
+      );
     }),
   }),
 

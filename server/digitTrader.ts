@@ -17,6 +17,7 @@ import { buildDigitSnapshot, settleDigitRead, digitsFromTicks, DigitRead, DigitS
 import { getDecimalPlaces } from "@shared/lastDigit";
 import { buildLimitOrder } from "@shared/slTp";
 import { getStandardVolatilitySymbols, isSyntheticIndexSymbol } from "@shared/symbols";
+import { computePortfolioHeat } from "./portfolioRisk";
 import { derivManager } from "./derivConnection";
 import { getRecentTicks, isFeedStale } from "./tickCollector";
 import { fireWebhookEvent } from "./webhookExecutor";
@@ -494,6 +495,30 @@ async function autoCycle(): Promise<void> {
         if (openContracts >= MAX_OPEN_CONTRACTS_PER_USER) {
           console.warn(`[digitTrader] User ${userId}: ${openContracts} open auto contracts at the ${MAX_OPEN_CONTRACTS_PER_USER} cap. Skipping this cycle.`);
           continue;
+        }
+        // PORTFOLIO HEAT GATE — same aggregate open-risk cap the bot engine
+        // enforces. Digit Trader must not be the path that quietly stacks a
+        // user past their total exposure limit.
+        try {
+          const account = (conn as any)?.getSnapshot?.()?.account;
+          if (Number.isFinite(Number(account?.balance)) && Number(account?.balance) > 0) {
+            const openPending = await db.getPendingTradesForUser(userId);
+            const heat = computePortfolioHeat(
+              openPending.map((t) => parseFloat(String(t.stake))).filter(Number.isFinite),
+              Number(account?.balance),
+            );
+            const nextStake = settings.stake;
+            if (!heat.wouldAllowNew(nextStake)) {
+              fireWebhookEvent(userId, "digitTrader.paused", {
+                reason: "portfolio_heat_cap",
+                heatPct: Math.round(heat.heatPct * 10) / 10,
+                capPct: heat.capPct,
+              }).catch(() => {});
+              continue;
+            }
+          }
+        } catch (heatErr: any) {
+          console.warn(`[digitTrader] portfolio heat check failed for user ${userId} (per-user limits govern):`, (heatErr as any)?.message || heatErr);
         }
         for (const symbol of settings.symbols.slice(0, MAX_AUTO_SYMBOLS)) {
           if (settings.maxDailyTrades && placedToday >= settings.maxDailyTrades) break;
