@@ -2074,6 +2074,60 @@ export async function upsertSubscription(
   }
 }
 
+// Encrypted Deriv API tokens. Startup token scans query this on every boot —
+// it previously had NO creator at all and only worked because old clusters
+// pre-dated the migration system (fresh DB => "derivTokens doesn't exist").
+export async function ensureDerivTokensTable(): Promise<void> {
+  const pool = getRawPool();
+  if (!pool) return;
+  try {
+    await pool.execute(`CREATE TABLE IF NOT EXISTS derivTokens (
+      id int NOT NULL AUTO_INCREMENT,
+      userId int NOT NULL,
+      token text NOT NULL,
+      accountId varchar(64),
+      accountType varchar(32),
+      isActive tinyint(1) NOT NULL DEFAULT 1,
+      createdAt timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updatedAt timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+      PRIMARY KEY(id),
+      KEY derivTokens_userId_idx (userId)
+    )`);
+    console.log("[ensureDerivTokensTable] ready");
+  } catch (e: any) {
+    if (e?.errno !== 1050) console.error("[ensureDerivTokensTable] failed", e?.message || e);
+  }
+}
+
+// Base users table. On a FRESH database this must exist before
+// ensureUsersColumns (which only ALTERs) — previously the column migration
+// ran against a missing table and every user-related feature failed.
+export async function ensureUsersTable(): Promise<void> {
+  const pool = getRawPool();
+  if (!pool) return;
+  try {
+    await pool.execute(`CREATE TABLE IF NOT EXISTS users (
+      id int NOT NULL AUTO_INCREMENT,
+      email varchar(320) NOT NULL,
+      passwordHash varchar(255) NOT NULL DEFAULT '',
+      name text,
+      role enum('user','admin') NOT NULL DEFAULT 'user',
+      createdAt timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updatedAt timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+      lastSignedIn timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      emailVerified tinyint(1) NOT NULL DEFAULT 0,
+      twoFASecret text,
+      twoFactorEnabled tinyint(1) NOT NULL DEFAULT 0,
+      avatarUrl text,
+      PRIMARY KEY(id),
+      UNIQUE KEY users_email_unique (email)
+    )`);
+    console.log("[ensureUsersTable] ready");
+  } catch (e: any) {
+    if (e?.errno !== 1050) console.error("[ensureUsersTable] failed", e?.message || e);
+  }
+}
+
 export async function ensureUsersColumns(): Promise<void> {
   const pool = getRawPool();
   if (!pool) return;
@@ -2132,6 +2186,33 @@ export async function ensureSignalsTable(): Promise<void> {
   try {
     await db.execute(sql`CREATE INDEX IF NOT EXISTS signals_symbol_idx ON signals (symbol)`);
   } catch {}
+}
+
+// Base notificationSettings table (fresh-DB support — the column migration
+// below assumes this exists).
+export async function ensureNotificationSettingsTable(): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+  try {
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS notificationSettings (
+        id int NOT NULL AUTO_INCREMENT,
+        userId int NOT NULL,
+        emailEnabled tinyint(1) NOT NULL DEFAULT 1,
+        tradeExecuted tinyint(1) NOT NULL DEFAULT 1,
+        takeProfitHit tinyint(1) NOT NULL DEFAULT 1,
+        stopLossHit tinyint(1) NOT NULL DEFAULT 1,
+        botError tinyint(1) NOT NULL DEFAULT 1,
+        signalDetected tinyint(1) NOT NULL DEFAULT 1,
+        createdAt timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updatedAt timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        PRIMARY KEY(id),
+        UNIQUE KEY notificationSettings_userId_unique (userId)
+      )
+    `);
+  } catch (e: any) {
+    if (e?.errno !== 1050) console.error("[ensureNotificationSettingsTable] failed", e?.message || e);
+  }
 }
 
 export async function ensureNotificationSettingsColumns(): Promise<void> {
@@ -2909,10 +2990,17 @@ export async function ensureWebhooksTable(): Promise<void> {
     `);
     // Add the signing-secret column to databases created before it existed.
     // MySQL < 8.0 has no ADD COLUMN IF NOT EXISTS, so ignore duplicate-column.
+    // NOTE: drizzle wraps driver errors, so the real code/errno live on
+    // `.cause` — checking only the top-level error made this log a failure on
+    // EVERY boot even when it was a harmless duplicate-column.
     try {
       await db.execute(sql`ALTER TABLE webhooks ADD COLUMN secret varchar(64) NULL`);
     } catch (e: any) {
-      if (e?.errno !== 1060 && e?.code !== "ER_DUP_FIELDNAME") console.warn("[ensureWebhooksTable] add secret column failed", e?.message || e);
+      const errno = e?.errno ?? e?.cause?.errno;
+      const code = e?.code ?? e?.cause?.code;
+      if (errno !== 1060 && code !== "ER_DUP_FIELDNAME" && !String(e?.message || "").includes("Duplicate column name")) {
+        console.warn("[ensureWebhooksTable] add secret column failed", e?.message || e);
+      }
     }
   } catch (e: any) {
     console.error("[ensureWebhooksTable] failed", e?.message || e);

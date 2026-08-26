@@ -4,7 +4,7 @@ import { createExpressMiddleware } from "@trpc/server/adapters/express";
 import { appRouter } from "../routers";
 import { createContext } from "./context";
 import { serveStatic } from "./staticServe";
-import { getDb, pruneBadTicks, pruneOldTicks, ensureSignalExpiryColumn, ensureSignalOosColumns, ensureSignalBaselineColumn, ensureSettlementHeartbeatTable, ensureSignalsTable, ensureNotificationSettingsColumns, ensureAuditLogsTable, ensureIpWhitelistTable, ensureTradesTable, ensureTradesStuckResult, ensureTradesLedgerColumns, ensureTradesContractIndex, ensureTradesQueryIndexes, ensureReconcilerRunsTable, ensureStrategiesTable, ensurePriceAlertsTable, ensureTickHistoryTable, recomputeLastDigits, ensureUserMemoryTable, ensurePluginsTable, ensureWebhooksTable, ensureAiKnowledgeTable, ensureUsersColumns, ensureSessionsTable, ensureSubscriptionsTable, ensureVerificationTokensTable, ensurePasswordResetTokensTable, ensureBotLogsTable, ensureBotRunsTable, ensureGuidingSignalsTable, ensureStrategyStatsTable, ensureCopyRelationsTable, ensureCopyMirrorsTable, ensureDigitReadsTable } from "../db";
+import { getDb, pruneBadTicks, pruneOldTicks, ensureDerivTokensTable, ensureUsersTable, ensureSignalExpiryColumn, ensureSignalOosColumns, ensureSignalBaselineColumn, ensureSettlementHeartbeatTable, ensureSignalsTable, ensureNotificationSettingsTable, ensureNotificationSettingsColumns, ensureAuditLogsTable, ensureIpWhitelistTable, ensureTradesTable, ensureTradesStuckResult, ensureTradesLedgerColumns, ensureTradesContractIndex, ensureTradesQueryIndexes, ensureReconcilerRunsTable, ensureStrategiesTable, ensurePriceAlertsTable, ensureTickHistoryTable, recomputeLastDigits, ensureUserMemoryTable, ensurePluginsTable, ensureWebhooksTable, ensureAiKnowledgeTable, ensureUsersColumns, ensureSessionsTable, ensureSubscriptionsTable, ensureVerificationTokensTable, ensurePasswordResetTokensTable, ensureBotLogsTable, ensureBotRunsTable, ensureGuidingSignalsTable, ensureStrategyStatsTable, ensureCopyRelationsTable, ensureCopyMirrorsTable, ensureDigitReadsTable } from "../db";
 import { users } from "../../drizzle/schema";
 import { startTickCollector } from "../tickCollector";
 import { runWatch } from "../signalScanner";
@@ -402,16 +402,15 @@ const RATE = (limit: number, windowMs: number) => async (req: any, res: any, nex
 
     // Non-critical startup work - fully isolated so a failure can never
     // take the server (and its open port) down.
+    //
+    // ORDER MATTERS on a fresh database: ALL schema migrations must complete
+    // before any subsystem that writes (tickCollector, scanner, engines) is
+    // started. Previously the collector started FIRST, so a brand-new empty
+    // DB got "table doesn't exist" insert failures during the migration window.
     (async () => {
-      try { 
-        if (process.env.NODE_ENV !== "development") {
-          startTickCollector(); 
-        }
-      } catch (e) { logger.error("[startup] startTickCollector failed", { error: String(e) }); }
-      try { 
-        const { startAlwaysOnScanner } = await import("../signalScanner");
-        startAlwaysOnScanner(); 
-      } catch (e) { logger.error("[startup] startAlwaysOnScanner failed", { error: String(e) }); }
+      // Fresh-DB order: base tables FIRST (users is the parent of nearly everything).
+      try { await ensureUsersTable(); } catch (e) { logger.error("[startup] ensureUsersTable failed", { error: String(e) }); }
+      try { await ensureDerivTokensTable(); } catch (e) { logger.error("[startup] ensureDerivTokensTable failed", { error: String(e) }); }
       try { await ensureSessionsTable(); } catch (e) { logger.error("[startup] ensureSessionsTable failed", { error: String(e) }); }
       try { await ensureSubscriptionsTable(); } catch (e) { logger.error("[startup] ensureSubscriptionsTable failed", { error: String(e) }); }
       try { await ensureUsersColumns(); } catch (e) { logger.error("[startup] ensureUsersColumns failed", { error: String(e) }); }
@@ -420,6 +419,7 @@ const RATE = (limit: number, windowMs: number) => async (req: any, res: any, nex
       try { await ensureSignalOosColumns(); } catch (e) { logger.error("[startup] ensureSignalOosColumns failed", { error: String(e) }); }
       try { await ensureSignalBaselineColumn(); } catch (e) { logger.error("[startup] ensureSignalBaselineColumn failed", { error: String(e) }); }
       try { await ensureSettlementHeartbeatTable(); } catch (e) { logger.error("[startup] ensureSettlementHeartbeatTable failed", { error: String(e) }); }
+      try { await ensureNotificationSettingsTable(); } catch (e) { logger.error("[startup] ensureNotificationSettingsTable failed", { error: String(e) }); }
       try { await ensureNotificationSettingsColumns(); } catch (e) { logger.error("[startup] ensureNotificationSettingsColumns failed", { error: String(e) }); }
       try { await ensureAuditLogsTable(); } catch (e) { logger.error("[startup] ensureAuditLogsTable failed", { error: String(e) }); }
       try { await ensureIpWhitelistTable(); } catch (e) { logger.error("[startup] ensureIpWhitelistTable failed", { error: String(e) }); }
@@ -453,6 +453,16 @@ const RATE = (limit: number, windowMs: number) => async (req: any, res: any, nex
       try { await ensureDigitReadsTable(); } catch (e) { logger.error("[startup] ensureDigitReadsTable failed", { error: String(e) }); }
       try { await ensureTradesQueryIndexes(); } catch (e) { logger.error("[startup] ensureTradesQueryIndexes failed", { error: String(e) }); }
       try { await ensureBotRunsTable(); } catch (e) { logger.error("[startup] ensureBotRunsTable failed", { error: String(e) }); }
+      // Schema is now complete — safe to start subsystems that write.
+      try {
+        if (process.env.NODE_ENV !== "development") {
+          startTickCollector();
+        }
+      } catch (e) { logger.error("[startup] startTickCollector failed", { error: String(e) }); }
+      try {
+        const { startAlwaysOnScanner } = await import("../signalScanner");
+        startAlwaysOnScanner();
+      } catch (e) { logger.error("[startup] startAlwaysOnScanner failed", { error: String(e) }); }
       try {
         const { aiOrchestrator } = await import("../ai/AIOrchestrator");
         aiOrchestrator.start();
