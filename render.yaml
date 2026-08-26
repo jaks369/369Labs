@@ -2,7 +2,10 @@ services:
   - type: web
     name: 369labs
     runtime: node
-    buildCommand: pnpm install --no-frozen-lockfile && pnpm db:push && pnpm check && pnpm build
+    # No db:push here: the app self-migrates on boot (ensure*Table chain) and
+    # a failing migration step used to abort deploys, leaving the previous
+    # container running against whatever old DATABASE_URL it had.
+    buildCommand: pnpm install --no-frozen-lockfile && pnpm check && pnpm build
     startCommand: NODE_ENV=production node dist/index.js
     envVars:
       - key: DATABASE_URL
