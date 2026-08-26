@@ -5,5 +5,4 @@ export { ConsensusEngine, consensusEngine } from "./ConsensusEngine";
 export { StrategyPerformanceTracker, strategyPerformanceTracker } from "./StrategyPerformanceTracker";
 export { AIStrategyLearning, aiStrategyLearning } from "./AIStrategyLearning";
 export { registerDefaultStrategies } from "./Strategies/registerStrategies";
-export { registerAllStrategies } from "./Strategies/registerAll";
 export * from "./StrategyTypes";
