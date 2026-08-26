@@ -5,7 +5,7 @@ import { getRecentTicks, isFeedStale, isMarketOpen } from "./tickCollector";
 import { fireWebhookEvent } from "./webhookExecutor";
 import { actionToContractType, isDigitContract } from "@shared/contractSim";
 import { isSyntheticIndexSymbol } from "@shared/symbols";
-import { buildCandles, ema, rsi, macd } from "@shared/indicators";
+import { evaluateRuleCondition } from "@shared/conditionEval";
 import { buildLimitOrder } from "@shared/slTp";
 import { logger } from "./_core/logger";
 import { computePortfolioHeat } from "./portfolioRisk";
@@ -18,91 +18,10 @@ const MAX_CONCURRENT_BOTS_PER_USER = 10; // max concurrent running bots per user
 let intervalId: ReturnType<typeof setInterval> | null = null;
 let cycleRunning = false;
 
+// Live execution uses the CANONICAL shared evaluator — identical semantics to
+// server/client backtests, so what users validate IS what trades.
 function evaluateCondition(rule: any, prices: number[], digits: number[], idx: number, symbol?: string): boolean {
-  const cond = rule?.condition;
-  if (!cond) return false;
-
-  // Defense-in-depth: digit-pattern indicators are only valid on Deriv synthetic indices
-  // (R_*, 1HZ*, BOOM*, CRASH*). If a digit condition is paired with a non-synthetic
-  // symbol (forex/crypto/stocks), refuse to evaluate rather than silently returning false.
-  const DIGIT_INDICATORS = ["digit_over", "digit_under", "digit_even", "digit_odd", "parity", "last_digit"];
-  if (DIGIT_INDICATORS.includes(cond.indicator) && symbol && !isSyntheticIndexSymbol(symbol)) {
-    return false;
-  }
-
-  // Indicator-based conditions (ema_trend, rsi, macd_histogram) — these work on
-  // candle data built from the tick stream, not individual ticks.
-  if (cond.indicator === "ema_trend" || cond.indicator === "rsi" || cond.indicator === "macd_histogram") {
-    if (prices.length < 30) return false;
-    // Build candles from the tick prices — use 1-minute timeframe as default
-    const tickLikes = prices.map((p, i) => ({ price: p, epoch: i }));
-    const candles = buildCandles(tickLikes, 60);
-    if (candles.length < 15) return false;
-    const closes = candles.map((c) => c.close);
-
-    if (cond.indicator === "ema_trend") {
-      const fast = ema(closes, 9);
-      const slow = ema(closes, 21);
-      const last = closes.length - 1;
-      if (Number.isNaN(fast[last]) || Number.isNaN(slow[last])) return false;
-      const emaUp = fast[last] > slow[last];
-      return cond.comparison === "up" ? emaUp : !emaUp;
-    }
-
-    if (cond.indicator === "rsi") {
-      const rsiVal = rsi(closes, 14);
-      if (rsiVal === null || rsiVal === undefined) return false;
-      const barrier = cond.barrier ?? 30;
-      return cond.comparison === "below" ? rsiVal < barrier : rsiVal > barrier;
-    }
-
-    if (cond.indicator === "macd_histogram") {
-      if (closes.length < 28) return false;
-      const { histogram: curHist } = macd(closes);
-      const { histogram: prevHist } = macd(closes.slice(0, -1));
-      if (curHist === null || prevHist === null) return false;
-      const barrier = cond.barrier ?? 0;
-      if (cond.comparison === "crosses_above") return prevHist <= barrier && curHist > barrier;
-      if (cond.comparison === "crosses_below") return prevHist >= barrier && curHist < barrier;
-      return curHist > barrier;
-    }
-  }
-
-  const checkIndex = (i: number): boolean => {
-    const d = digits[i];
-    switch (cond.indicator) {
-      case "digit_over":
-        return d > (cond.barrier ?? 5);
-      case "digit_under":
-        return d < (cond.barrier ?? 5);
-      case "digit_even":
-        return d % 2 === 0;
-      case "digit_odd":
-        return d % 2 === 1;
-      case "parity":
-        return cond.barrier === 1 ? d % 2 === 1 : d % 2 === 0;
-      case "last_digit":
-        if (cond.comparison === "greater_than") return d > (cond.barrier ?? 5);
-        if (cond.comparison === "less_than") return d < (cond.barrier ?? 5);
-        return d === (cond.barrier ?? 0);
-      case "consecutive_rise":
-        return i > 0 && prices[i] > prices[i - 1];
-      case "consecutive_fall":
-        return i > 0 && prices[i] < prices[i - 1];
-      default:
-        return false;
-    }
-  };
-  const count = cond.count ?? 1;
-  if (idx + 1 < count) return false;
-  if (cond.comparison === "appears_consecutively") {
-    for (let i = idx + 1 - count; i <= idx; i++) if (!checkIndex(i)) return false;
-    return true;
-  }
-  const windowStart = Math.max(0, idx - 20);
-  let occ = 0;
-  for (let i = windowStart; i <= idx; i++) if (checkIndex(i)) occ++;
-  return occ >= count;
+  return evaluateRuleCondition(rule, { prices, digits, idx, symbol });
 }
 
 async function executeBotCycle(): Promise<void> {

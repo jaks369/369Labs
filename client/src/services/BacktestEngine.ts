@@ -1,4 +1,4 @@
-import { evaluateNode, ConditionNode, EvalContext, lastDigitOf } from "./conditionEval";
+import { evaluateRuleCondition } from "@shared/conditionEval";
 import { Tick, DerivContractType } from "./derivWebSocket";
 import { getDecimalPlaces } from "@shared/lastDigit";
 import { actionToContractType, calcPnl, simulateOutcome } from "@shared/contractSim";
@@ -24,59 +24,12 @@ export interface BacktestResult {
   equityCurve: number[];
 }
 
+// Client backtests use the CANONICAL shared evaluator — identical semantics
+// to live execution, so client-validated strategies behave the same live.
 function evaluateCondition(rule: any, tick: Tick, history: Tick[], decimals: number): boolean {
   const prices = history.map((t) => Number(t.price));
-  const digits = prices.map((p) => lastDigitOf(p, decimals));
-  const ctx: EvalContext = { prices, digits, window: 20 };
-  if (rule.ensemble && rule.ensemble.rules.length > 0) {
-    const en = rule.ensemble;
-    const votes = en.rules.filter((r: any) => evaluateCondition(r, tick, history, decimals)).length;
-    if (en.vote === "all") return votes === en.rules.length;
-    if (en.vote === "any") return votes >= 1;
-    return votes >= Math.ceil(en.rules.length / 2);
-  }
-  if (rule.conditions) return evaluateNode(rule.conditions as ConditionNode, ctx);
-  const indicator = rule.condition.indicator;
-  const count = rule.condition.count;
-  if (history.length < count) return false;
-  const checkIndex = (idx: number): boolean => {
-    const t = history[idx];
-    const d = lastDigitOf(t.price, decimals);
-    switch (indicator) {
-      case "digit_over":
-        return d > (rule.condition.barrier ?? 5);
-      case "digit_under":
-        return d < (rule.condition.barrier ?? 5);
-      case "digit_even":
-        return d % 2 === 0;
-      case "digit_odd":
-        return d % 2 === 1;
-      case "parity":
-        return rule.condition.barrier === 1 ? d % 2 === 1 : d % 2 === 0;
-      case "last_digit":
-        if (rule.condition.comparison === "greater_than") return d > (rule.condition.barrier ?? 5);
-        if (rule.condition.comparison === "less_than") return d < (rule.condition.barrier ?? 5);
-        return d === (rule.condition.barrier ?? 0);
-      case "consecutive_rise":
-        return idx > 0 && t.price > history[idx - 1].price;
-      case "consecutive_fall":
-        return idx > 0 && t.price < history[idx - 1].price;
-      default:
-        return false;
-    }
-  };
-  if (rule.condition.comparison === "appears_consecutively") {
-    for (let i = history.length - count; i < history.length; i++) {
-      if (!checkIndex(i)) return false;
-    }
-    return true;
-  }
-  const windowStart = Math.max(0, history.length - 20);
-  let occurrences = 0;
-  for (let i = windowStart; i < history.length; i++) {
-    if (checkIndex(i)) occurrences++;
-  }
-  return occurrences >= count;
+  // idx defaults to the newest element = trailing-window semantics, exactly as before.
+  return evaluateRuleCondition(rule, { prices, decimals });
 }
 
 export async function runBacktest(ticks: Tick[], strategy: any, stake: number, symbol?: string): Promise<BacktestResult> {

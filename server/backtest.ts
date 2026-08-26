@@ -1,6 +1,7 @@
 import { lastDigitOf, getDecimalPlaces } from "@shared/lastDigit";
 import { actionToContractType, calcPnl, simulateOutcome, PAYOUT_RATE } from "@shared/contractSim";
 import { isSyntheticIndexSymbol } from "@shared/symbols";
+import { evaluateRuleCondition } from "@shared/conditionEval";
 
 const DIGIT_INDICATORS: ReadonlySet<string> = new Set([
   "digit_over",
@@ -22,49 +23,10 @@ function ruleUsesDigitConditions(node: unknown): boolean {
   return Object.values(obj).some(ruleUsesDigitConditions);
 }
 
+// Backtests use the CANONICAL shared evaluator — identical semantics to live
+// execution, so validated win rates describe the strategy that actually trades.
 function evaluateCondition(rule: any, prices: number[], digits: number[], idx: number): boolean {
-  const cond = rule.condition;
-  if (!cond) return false;
-
-  const checkIndex = (i: number): boolean => {
-    const d = digits[i];
-    switch (cond.indicator) {
-      case "digit_over":
-        return d > (cond.barrier ?? 5);
-      case "digit_under":
-        return d < (cond.barrier ?? 5);
-      case "digit_even":
-        return d % 2 === 0;
-      case "digit_odd":
-        return d % 2 === 1;
-      case "parity":
-        return cond.barrier === 1 ? d % 2 === 1 : d % 2 === 0;
-      case "last_digit":
-        if (cond.comparison === "greater_than") return d > (cond.barrier ?? 5);
-        if (cond.comparison === "less_than") return d < (cond.barrier ?? 5);
-        return d === (cond.barrier ?? 0);
-      case "consecutive_rise":
-        return i > 0 && prices[i] > prices[i - 1];
-      case "consecutive_fall":
-        return i > 0 && prices[i] < prices[i - 1];
-      default:
-        return false;
-    }
-  };
-
-  const count = cond.count ?? 1;
-  const n = idx + 1;
-  if (n < count) return false;
-
-  if (cond.comparison === "appears_consecutively") {
-    for (let i = n - count; i <= idx; i++) if (!checkIndex(i)) return false;
-    return true;
-  }
-
-  const windowStart = Math.max(0, idx - 20);
-  let occ = 0;
-  for (let i = windowStart; i <= idx; i++) if (checkIndex(i)) occ++;
-  return occ >= count;
+  return evaluateRuleCondition(rule, { prices, digits, idx });
 }
 
 export async function runBacktest(ticks: { price: number; timestamp: number }[], rule: any, stake: number, symbol?: string) {
