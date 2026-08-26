@@ -195,6 +195,8 @@ export default function Concierge() {
   // Behavioral tilt check — refreshed periodically so the warning is current
   // at the moment the trader is about to act, not a stale once-per-session read.
   const tilt = trpc.tilt.check.useQuery(undefined, { enabled: isAuthenticated, refetchInterval: 30000 });
+  // Backs the "Kelly Criterion" sizing option with real math from the ledger.
+  const kellySuggestion = trpc.kelly.fromLedger.useQuery(undefined, { enabled: isAuthenticated && sizingMethod === "kelly" });
 
   const scanNow = trpc.concierge.scanNow.useMutation();
   const settle = trpc.concierge.settle.useMutation();
@@ -772,6 +774,18 @@ export default function Concierge() {
                   <p className="text-[11px] font-semibold text-white mb-2">Position Sizing Preview</p>
                   <div className="space-y-1 text-[11px]">
                     <p>Account: <span className="text-white font-bold">{balance > 0 ? `$${balance.toFixed(2)}` : '—'}</span></p>
+                    {sizingMethod === "kelly" && (
+                      kellySuggestion.isLoading ? (
+                        <p className="text-[var(--text-muted)]">Kelly suggestion: computing from your settled ledger…</p>
+                      ) : kellySuggestion.data?.ok ? (
+                        <>
+                          <p>Suggested stake: <span className="text-[var(--green)] font-bold">{balance > 0 ? `$${(balance * (kellySuggestion.data.fractionOfBalance || 0)).toFixed(2)}` : `${((kellySuggestion.data.fractionOfBalance || 0) * 100).toFixed(2)}%`}</span> of balance</p>
+                          <p className="text-[var(--text-muted)]">{kellySuggestion.data.basis}</p>
+                        </>
+                      ) : (
+                        <p className="text-[var(--amber)]">No Kelly advice yet: {kellySuggestion.data?.reason ?? "unavailable"}. Falling back to your fixed setting is correct.</p>
+                      )
+                    )}
                     <p>Risk setting: <span className="text-white font-bold">{settings.stakePct}%</span> = <span className="text-white font-bold">{balance > 0 ? `$${(balance * (settings.stakePct / 100) * 0.25).toFixed(2)}` : '—'}</span></p>
                     <p className="text-[var(--text-muted)]">Max per trade (5% cap): {balance > 0 ? `$${(balance * 0.05).toFixed(2)}` : '—'}</p>
                     <p className="text-[var(--text-muted)]">Daily loss limit: {settings.maxDailyLoss ? `$${settings.maxDailyLoss}` : 'off'}</p>

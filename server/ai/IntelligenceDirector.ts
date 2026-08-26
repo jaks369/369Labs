@@ -1,4 +1,5 @@
 import { getAllSymbols, getSymbolDisplayName, isSyntheticIndexSymbol } from "@shared/symbols";
+import { getForexSessionInfo } from "@shared/forexSessions";
 import { PatternResult } from "../signalEngine";
 import { scanTicks, scanIndicatorTicks } from "../signalScanner";
 import { GuidingSignalCandidate } from "../indicatorSignal";
@@ -373,6 +374,12 @@ function decideIndicator(
   const hasPA = paReasons.length > 0;
   const paText = hasPA ? ` Price action: ${paReasons.join("; ")}.` : "";
 
+  // Execution-conditions honesty: identical statistics carry different real
+  // risk depending on FX session liquidity. Synthetics trade 24/7 — no note.
+  const sessionNote = !isSyntheticIndexSymbol(symbol)
+    ? ` Execution conditions: ${getForexSessionInfo().note}`
+    : "";
+
   const conditionView: ConditionView = {
     symbol,
     displayName,
@@ -404,7 +411,7 @@ function decideIndicator(
       : `${signal.votes.up}/${signal.votes.total} indicators agree${hasPA ? ` · ${paReasons.length} PA pattern(s)` : ""}`,
     discoveredAt: Math.floor(Date.now() / 1000),
     evidence: signal.reasons,
-    interpretation: `${signal.plain.what} ${signal.plain.why} ${signal.plain.strength}${paText} Risk: ${signal.plain.risk}${bt ? ` Backtest: ${(bt.observed * 100).toFixed(0)}% win rate, CI [${(bt.ciLow * 100).toFixed(0)}%, ${(bt.ciHigh * 100).toFixed(0)}%], OOS avg ${(bt.oosAvg * 100).toFixed(0)}% (${bt.oosTotal} samples).` : ""}`,
+    interpretation: `${signal.plain.what} ${signal.plain.why} ${signal.plain.strength}${paText} Risk: ${signal.plain.risk}${sessionNote}${bt ? ` Backtest: ${(bt.observed * 100).toFixed(0)}% win rate, CI [${(bt.ciLow * 100).toFixed(0)}%, ${(bt.ciHigh * 100).toFixed(0)}%], OOS avg ${(bt.oosAvg * 100).toFixed(0)}% (${bt.oosTotal} samples).` : ""}`,
   };
 
   return {

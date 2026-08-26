@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
-import { Loader2, ChevronDown, TrendingUp, TrendingDown, Zap, Wallet, ShieldCheck, X, Activity, Search, History } from "lucide-react";
+import { Loader2, ChevronDown, TrendingUp, TrendingDown, Zap, Wallet, ShieldCheck, X, Activity, Search, History, AlertTriangle } from "lucide-react";
 import { FilterPill } from "@/components/ui/filter-pill";
 import { derivWS, DerivSymbol } from "@/services/derivWebSocket";
 import { useDerivStatus } from "@/hooks/useDerivStatus";
@@ -50,11 +50,20 @@ export default function MobileTerminal() {
   const [showPositions, setShowPositions] = useState(false);
   const [tokenError, setTokenError] = useState<string | null>(null);
   const [showPriceHistory, setShowPriceHistory] = useState(false);
+  const [showTiltDetail, setShowTiltDetail] = useState(false);
 
   const tradesQuery = trpc.trades.list.useQuery({ limit: 50 });
   const saveTradeMutation = trpc.trades.save.useMutation();
   const tokenQuery = trpc.deriv.getToken.useQuery();
   const memoryQuery = trpc.memory.get.useQuery();
+  // Risk awareness where auto-exec users actually live: tilt state and
+  // aggregate portfolio heat, both computed server-side.
+  const tiltQuery = trpc.tilt.check.useQuery(undefined, { refetchInterval: 60000 });
+  const heatQuery = trpc.portfolio.heat.useQuery(undefined, { refetchInterval: 30000 });
+  // Heat proximity chip: amber when within 75% of the aggregate cap.
+  const heatPct = heatQuery.data?.gateable ? heatQuery.data.heatPct ?? 0 : 0;
+  const capPct = heatQuery.data?.capPct ?? 20;
+  const heatHot = heatPct >= capPct * 0.75;
   const historyQuery = trpc.market.getHistory.useQuery(
     { symbol, limit: 200 },
     { enabled: showPriceHistory && Boolean(symbol), staleTime: 30000, gcTime: 120000 },
@@ -259,6 +268,24 @@ export default function MobileTerminal() {
 
   return (
     <div className="min-h-full bg-[var(--bg)] text-[var(--text-primary)] lg:hidden pb-[calc(56px+env(safe-area-inset-bottom,0px))]">
+      {/* Tilt warning — compact, above everything tradeable. */}
+      {tiltQuery.data?.severity === "warning" && (
+        <button
+          onClick={() => setShowTiltDetail((v) => !v)}
+          className="w-full text-left px-4 py-2 bg-[var(--red)]/15 border-b border-[var(--red)]/40 flex items-center gap-2"
+        >
+          <AlertTriangle className="w-4 h-4 text-[var(--red)] shrink-0" />
+          <span className="text-[11px] font-bold text-[var(--red)]">Tilt pattern detected — tap for details</span>
+        </button>
+      )}
+      {showTiltDetail && tiltQuery.data?.severity === "warning" && (
+        <div className="px-4 py-3 bg-[var(--red)]/10 border-b border-[var(--red)]/30 space-y-1">
+          {tiltQuery.data.messages.map((m: string, i: number) => (
+            <p key={i} className="text-[11px] text-[var(--text-secondary)]">{m}</p>
+          ))}
+          <p className="text-[10px] text-[var(--text-disabled)]">Advisory only — nothing is blocked (last {tiltQuery.data.evidence.tradesAnalyzed} settled trades).</p>
+        </div>
+      )}
       {/* Header: symbol · live price · LIVE */}
       <div className="sticky top-0 z-30 bg-[var(--bg)] border-b border-[var(--border)] px-4 pt-3 pb-2 shadow-lg">
         <div className="flex items-center justify-between gap-3">
@@ -282,6 +309,14 @@ export default function MobileTerminal() {
             <span className="text-[10px] font-bold px-2 py-1 rounded-md aurora-glass text-[var(--green)]">
               {accountBadge}
             </span>
+            {heatHot && (
+              <span
+                className="text-[10px] font-bold px-2 py-1 rounded-md bg-[var(--amber)]/15 text-[var(--amber)] border border-[var(--amber)]/40"
+                title={`Portfolio heat ${heatPct}% of ${capPct}% cap`}
+              >
+                HEAT {heatPct}%
+              </span>
+            )}
             <button
               onClick={() => setShowPriceHistory((v) => !v)}
               className="p-2 rounded-md aurora-glass text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors shrink-0"

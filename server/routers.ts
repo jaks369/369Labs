@@ -5,6 +5,8 @@ import { publicProcedure, router, protectedProcedure, adminProcedure, adminStepU
 import { z } from "zod";
 import * as db from "./db";
 import { detectTilt } from "./tiltDetection";
+import { computePortfolioHeat } from "./portfolioRisk";
+import { derivManager } from "./derivConnection";
 import { TRPCError } from "@trpc/server";
 import { hashPassword, verifyPassword, createSessionToken, sanitizeUser, regenerateSession } from "./_core/auth";
 import { ENV } from "./_core/env";
@@ -12,6 +14,7 @@ import { sendEmail, buildResetEmail, buildVerificationEmail } from "./_core/emai
 import { getTickHistory, getActiveSymbols, getDigitStats, getTrend, suggestStrategy, TOOL_DEFS, buildActionIntent, normalizeSymbol, detectWatchIntent } from "./aitools";
 import type { PatternType } from "./signalScanner";
 import { lastDigitOf, getDecimalPlaces } from "@shared/lastDigit";
+import { PAYOUT_RATE } from "@shared/contractSim";
 import { equityCurve, type TradeLike } from "@shared/portfolio";
 import { createHmac, timingSafeEqual, randomBytes } from "crypto";
 import { logger } from "./_core/logger";
@@ -3686,6 +3689,74 @@ return withStats.filter((p) => p.tradeCount > 0).sort((a, b) => b.pnl - a.pnl);
       return detectTilt(
         trades.map((t) => ({ id: t.id, result: t.result, stake: t.stake, entryTime: t.entryTime })),
       );
+    }),
+  }),
+
+  portfolio: router({
+    // Aggregate open-risk ("heat") across ALL pending contracts vs account
+    // balance. The same quantity the execution engines enforce server-side,
+    // surfaced so the trader can see it coming.
+    heat: protectedProcedure.query(async ({ ctx }) => {
+      try {
+        const openPending = await db.getPendingTradesForUser(ctx.user.id);
+        let balance = NaN;
+        try {
+          const conn = await derivManager.ensureConnected(ctx.user.id);
+          const account = (conn as any)?.getSnapshot?.()?.account;
+          balance = Number(account?.balance);
+        } catch {
+          /* no connection — heat reported without balance context */
+        }
+        const heat = computePortfolioHeat(
+          openPending.map((t) => t.stake),
+          balance,
+        );
+        // Strip the closure-valued helpers — not serializable over RPC.
+        return {
+          balance: Number.isFinite(heat.balance) ? heat.balance : null,
+          openStake: heat.openStake,
+          openCount: heat.openCount,
+          heatPct: Math.round(heat.heatPct * 10) / 10,
+          capPct: heat.capPct,
+          remainingStakeCapacity: Number.isFinite(heat.remainingStakeCapacity) ? Math.round(heat.remainingStakeCapacity * 100) / 100 : null,
+          gateable: Number.isFinite(balance) && balance > 0,
+        };
+      } catch {
+        return { balance: null, openStake: 0, openCount: 0, heatPct: 0, capPct: computePortfolioHeat([], 1000).capPct, remainingStakeCapacity: null, gateable: false };
+      }
+    }),
+  }),
+
+  kelly: router({
+    // Quarter-Kelly stake suggestion derived from the user's own settled
+    // prediction ledger (the calibration buckets). Honest by construction:
+    // without enough samples or a CI-low clearing the fair rate it refuses.
+    fromLedger: protectedProcedure.query(async ({ ctx }) => {
+      try {
+        const cal = await db.digitReadCalibration(ctx.user.id);
+        const eligible = cal.buckets.filter((b) => b.total >= 100);
+        const best = [...eligible].sort((a, b) => b.total - a.total)[0];
+        if (!best) {
+          return {
+            ok: false as const,
+            reason: "No confidence band has 100+ settled predictions yet — keep the ledger running before asking for sizing advice",
+            fractionOfBalance: 0,
+            fullKellyFraction: 0,
+            basis: "",
+          };
+        }
+        const { kellyStakeSuggestion } = await import("./kellySizing");
+        // Digit Over/Under/Even/Odd contracts carry a ~50% fair rate.
+        return kellyStakeSuggestion({
+          winRate: best.observedWinRatePct / 100,
+          ciLow: best.wilsonLowPct / 100,
+          baseline: 0.5,
+          payoutRatio: PAYOUT_RATE,
+          sampleSize: best.total,
+        });
+      } catch (e: any) {
+        return { ok: false as const, reason: e?.message || "sizing unavailable", fractionOfBalance: 0, fullKellyFraction: 0, basis: "" };
+      }
     }),
   }),
 
