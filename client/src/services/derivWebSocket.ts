@@ -79,8 +79,6 @@ const FEED_STALE_MS = 15000;
 
 class DerivWebSocketService {
   private ws: WebSocket | null = null;
-  private tickWs: WebSocket | null = null;
-  private tickWsReady = false;
   private listeners: Set<TickStreamListener> = new Set();
   private reconnectAttempts = 0;
   private maxReconnectAttempts = 8;
@@ -211,11 +209,9 @@ class DerivWebSocketService {
     this.intentionallyDisconnected = false;
     try {
       this.ws = new WebSocket(url);
-      if (authenticated) this.ensureTickWs();
       this.ws.onopen = () => {
         console.log(`[Deriv WS] Connected (${authenticated ? "authenticated" : "public"})`);
         this.reconnectAttempts = 0;
-        this.tickReconnectAttempts = 0;
         this.subErrors.clear();
         this.processPendingSubscriptions();
         this.resubscribeAllTicks();
@@ -419,11 +415,10 @@ class DerivWebSocketService {
         this.subErrors.set(sym, msg);
         this.subscribedSymbols.delete(sym);
         if (this.authorized && msg.includes("Input validation")) {
-          this.ensureTickWs();
           if (!this.pendingSubscriptionSymbols.includes(sym)) {
             this.pendingSubscriptionSymbols.push(sym);
           }
-          if (this.tickWsReady) this.processPendingSubscriptions();
+          this.processPendingSubscriptions();
         }
         this.listeners.forEach((l) => {
           try {
@@ -447,63 +442,6 @@ class DerivWebSocketService {
       console.error("[Deriv WS] Failed to fetch active symbols:", error);
     }
   }
-
-  private ensureTickWs() {
-    if (this.tickWs && this.tickWs.readyState === WebSocket.OPEN) return;
-    if (this.tickWs) {
-      this.tickWs.close();
-      this.tickWs = null;
-    }
-    try {
-      this.tickWs = new WebSocket(DERIV_WS_PUBLIC);
-      this.tickWs.onopen = () => {
-        this.tickWsReady = true;
-        this.processPendingSubscriptions();
-        this.resubscribeAllTicks();
-        this.startKeepAlive(this.tickWs!, "tick");
-      };
-      this.tickWs.onmessage = (event) => {
-        try {
-          const data = JSON.parse(event.data);
-          if (data.tick) {
-            this.notifyTick({
-              symbol: data.tick.symbol || "UNKNOWN",
-              price: data.tick.quote || 0,
-              timestamp: (data.tick.epoch || Date.now() / 1000) * 1000,
-              bid: data.tick.bid,
-              ask: data.tick.ask,
-            });
-          }
-        } catch {}
-      };
-      this.tickWs.onerror = (event) => {
-        const err = event as Event & { message?: string; error?: Error };
-        console.warn("[Deriv WS] Tick feed connection error", {
-          message: err?.message || (err?.error?.message ?? ""),
-        });
-      };
-      this.tickWs.onclose = (event) => {
-        console.log(
-          `[Deriv WS] Tick feed disconnected (code=${event.code}, reason=${JSON.stringify(event.reason)})`
-        );
-        this.tickWsReady = false;
-        this.tickWs = null;
-        // The tick feed is what keeps charts/prices alive. If it drops, the
-        // auth socket can still report "connected" while the market appears
-        // frozen — so reconnect the feed instead of leaving it dead.
-        if (!this.intentionallyDisconnected) {
-          this.tickReconnectAttempts++;
-          const delay = Math.min(this.baseReconnectDelay * 2 ** (this.tickReconnectAttempts - 1), 15000);
-          setTimeout(() => this.ensureTickWs(), delay);
-        }
-      };
-      this.startKeepAlive(this.tickWs, "tick");
-    } catch (e) {
-      console.error("[Deriv WS] Tick WS setup failed:", e);
-    }
-  }
-
-  private tickReconnectAttempts = 0;
 
   private keepAliveTimers: ReturnType<typeof setInterval>[] = [];
 
@@ -544,7 +482,7 @@ class DerivWebSocketService {
     for (const symbol of pending) {
       if (!symbol || typeof symbol !== "string") continue;
       try {
-        const target = this.authorized ? (this.tickWsReady ? this.tickWs : this.ws) : this.ws;
+        const target = this.ws;
         target?.send(JSON.stringify({ ticks: symbol, subscribe: 1, req_id: this.msgId++ }));
       } catch (error) {
         console.error("[Deriv WS] Failed to subscribe:", error);
@@ -914,16 +852,14 @@ class DerivWebSocketService {
   }
 
   private wsForTicks(): WebSocket | null {
-    return this.authorized && this.tickWsReady ? this.tickWs : this.ws;
+    return this.ws;
   }
 
   public subscribe(symbol: string): number {
     if (this.subscribedSymbols.has(symbol)) {
       this.subRefCount.set(symbol, (this.subRefCount.get(symbol) || 0) + 1);
-      // Return a dummy subId since we're not sending a new request
       return this.msgId++;
     }
-    if (this.authorized) this.ensureTickWs();
     const reqId = this.msgId++;
     this.subSymbolById.set(reqId, symbol);
     this.subscribedSymbols.add(symbol);
@@ -950,7 +886,6 @@ class DerivWebSocketService {
       this.subRefCount.set(symbol, (this.subRefCount.get(symbol) || 0) + 1);
       return;
     }
-    if (this.authorized) this.ensureTickWs();
     const reqId = this.msgId++;
     this.subSymbolById.set(reqId, symbol);
     this.subscribedSymbols.add(symbol);
@@ -1063,16 +998,14 @@ class DerivWebSocketService {
   }
   /**
    * Feed health reflects whether live prices are actually flowing, not just
-   * whether a socket is open. When the dedicated tick socket is down (or has
-   * gone quiet for more than FEED_STALE_MS), the market is effectively frozen
-   * even though the auth socket may still report "connected".
+   * whether a socket is open. When the socket has gone quiet for more than
+   * FEED_STALE_MS, the market is effectively frozen.
    */
-  public getFeedHealth(): { alive: boolean; lastTickAt: number; reconnecting: boolean } {
-    const reconnecting = this.tickReconnectAttempts > 0 || (this.authorized && this.tickWsReady === false);
+  public getFeedHealth(): { alive: boolean; lastTickAt: number } {
     const stale = this.lastTickAt > 0 && Date.now() - this.lastTickAt > FEED_STALE_MS;
     const hasFeed = this.subscribedSymbols.size > 0 || this.backgroundSymbols.size > 0;
     const alive = this.lastTickAt > 0 && !stale && hasFeed;
-    return { alive, lastTickAt: this.lastTickAt, reconnecting };
+    return { alive, lastTickAt: this.lastTickAt };
   }
   public isAuthorized(): boolean {
     return this.authorized;
@@ -1135,11 +1068,6 @@ class DerivWebSocketService {
     if (this.ws) {
       this.ws.close();
       this.ws = null;
-    }
-    if (this.tickWs) {
-      this.tickWs.close();
-      this.tickWs = null;
-      this.tickWsReady = false;
     }
     this.authorized = false;
     this.contractListeners.clear();

@@ -16,7 +16,7 @@ export function useDerivStatus(): { status: DerivStatus; accountType: string } {
     if (!derivWS.isConnected()) return "disconnected";
     if (!derivWS.isAuthorized()) return "needs_token";
     const feed = derivWS.getFeedHealth();
-    if (!feed.alive || feed.reconnecting) return "reconnecting";
+    if (!feed.alive) return "reconnecting";
     return "connected";
   };
   const [status, setStatus] = useState<DerivStatus>(compute);
