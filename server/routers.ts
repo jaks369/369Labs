@@ -19,6 +19,8 @@ import { equityCurve, type TradeLike } from "@shared/portfolio";
 import { createHmac, timingSafeEqual, randomBytes } from "crypto";
 import { logger } from "./_core/logger";
 import { STRATEGY_TEMPLATES } from "./strategyTemplates";
+import { activateKillSwitch, deactivateKillSwitch, isSystemKilled, getKillSwitchState } from "@shared/killSwitch";
+import { DEFAULT_MODEL_CARD } from "@shared/modelCard";
 
 function hexToBase32(hex: string): string {
   const base32Chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
@@ -540,6 +542,24 @@ function checkRateLimit(ip: string): void {
 
 export const appRouter = router({
   system: systemRouter,
+
+  // Emergency kill-switch: immediate system shutdown
+  killSwitch: router({
+    state: publicProcedure.query(() => getKillSwitchState()),
+    activate: protectedProcedure
+      .input(z.object({ reason: z.string().min(1) }))
+      .mutation(({ input, ctx }) => {
+        return activateKillSwitch(input.reason, ctx.user?.email || "unknown");
+      }),
+    deactivate: protectedProcedure.mutation(() => {
+      return deactivateKillSwitch();
+    }),
+  }),
+
+  // AI system model card: EU AI Act Article 50 transparency
+  modelCard: router({
+    get: publicProcedure.query(() => DEFAULT_MODEL_CARD),
+  }),
 
   auth: router({
     me: publicProcedure.query(opts => opts.ctx.user),
