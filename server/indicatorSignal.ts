@@ -16,6 +16,7 @@
 
 import { scoreConfluence, explainConfluence, scorePriceActionConfluence, ema, rsi, macd, buildCandles, medianTickGapSec, TickLike, Candle, IndicatorDetail, atr, bollingerBands, adx } from "@shared/indicators";
 import { higherTimeframeBias } from "./multiTimeframe";
+import { computeStructureTrade, StructureTradeParams, StructureTradeOptions } from "@shared/structureTrade";
 
 export type GuideStrength = "STRONG" | "MEDIUM" | "WEAK";
 export type GuideDirection = "up" | "down";
@@ -76,6 +77,13 @@ export interface GuidingSignalCandidate {
     priceActionScore: number;
     note: string;
   };
+  /**
+   * Structure-based trade parameters: stop-loss beyond invalidating structure,
+   * take-profit targeting opposing liquidity, and premium/discount zone filter.
+   * Computed from detected SMC zones (FVG, order blocks, liquidity sweeps)
+   * and market structure (BOS/CHoCH, swing points).
+   */
+  structureTrade?: StructureTradeParams;
   /** Optional backtest results for validation — populated by scanIndicatorTicks */
   backtest?: {
     confidence: number;
@@ -210,6 +218,16 @@ export function scanSignalForSymbol(symbol: string, rawTicks: TickLike[]): ScanR
       ? null
       : htfInfo.bias === (combinedDirection === "up" ? "up" : "down");
 
+  // Structure-based HTF gate: when the higher timeframe's BOS/CHoCH direction
+  // clearly opposes the proposed trade, the signal is blocked — not just demoted.
+  // This is the professional multi-timeframe discipline: don't fight the HTF structure.
+  const htfStructureOpposes =
+    htfInfo.available &&
+    htfInfo.structureBias !== "neutral" &&
+    ((combinedDirection === "up" && htfInfo.structureBias === "bearish") ||
+     (combinedDirection === "down" && htfInfo.structureBias === "bullish"));
+  htfInfo.structureOpposes = htfStructureOpposes;
+
   // Do not emit a tradeable card from a bare coin-flip observation. WEAK is
   // only emitted when there is real (if thin) directional agreement.
   let paStrength = strengthFor(combinedScore);
@@ -218,6 +236,16 @@ export function scanSignalForSymbol(symbol: string, rawTicks: TickLike[]): ScanR
   // demoted — lower-TF confluence without HTF agreement is exactly the
   // false-break pattern this filter exists to catch.
   if (paStrength === "STRONG" && htfAligned === false) paStrength = "MEDIUM";
+  // HARD GATE: when the higher timeframe's structure (BOS/CHoCH) clearly
+  // opposes the proposed trade direction, block the signal entirely.
+  // Professional discipline: don't fight the HTF structure.
+  if (htfStructureOpposes) {
+    paStrength = "WEAK";
+  }
+
+  // Structure-based trade parameters: SL beyond invalidating structure, TP from liquidity
+  const structureTrade = computeStructureTrade(candles.slice(-CANDLE_LOOKBACK), combinedDirection, last.close);
+
   const signal: GuidingSignalCandidate | null =
     paStrength === "WEAK" && confluence.reasons.length === 1 && paConfluence.votes.total === 0
       ? null
@@ -240,6 +268,7 @@ export function scanSignalForSymbol(symbol: string, rawTicks: TickLike[]): ScanR
           details: [...confluence.details, ...paConfluence.details],
           regime: regimeWithAlignment,
           conflict,
+          structureTrade,
           htf: {
             timeframeSec: htfInfo.timeframeSec,
             bias: htfInfo.bias,
@@ -249,10 +278,13 @@ export function scanSignalForSymbol(symbol: string, rawTicks: TickLike[]): ScanR
           reasons: [
             `${Math.max(confluence.votes.up + paConfluence.votes.up, confluence.votes.down + paConfluence.votes.down)}/${confluence.votes.total + paConfluence.votes.total} indicators agree`,
             ...(conflict ? [conflict.note] : []),
-            `HTF: ${htfInfo.reason}${htfAligned === false ? " — signal demoted (higher timeframe disagrees)" : ""}`,
+            `HTF: ${htfInfo.reason}${htfAligned === false ? " — signal demoted (higher timeframe disagrees)" : ""}${htfStructureOpposes ? " — BLOCKED: HTF structure opposes trade direction" : ""}`,
             ...confluence.reasons,
             ...paConfluence.reasons,
             `Regime: ${regimeWithAlignment.regime} (${regimeWithAlignment.reason}) · ${regimeAligned ? 'aligned' : 'misaligned'}`,
+            ...(structureTrade.stopLoss !== null ? [`Structure SL: ${structureTrade.stopLoss.toFixed(4)} (${structureTrade.slSource?.type ?? "unknown"})`] : []),
+            ...(structureTrade.takeProfit !== null ? [`Structure TP: ${structureTrade.takeProfit.toFixed(4)} (${structureTrade.tpSource?.type ?? "unknown"})`] : []),
+            ...structureTrade.reasoning,
             `Observed over ${candles.length} ${timeframeSec}s candles · ${available.join("+")} · PA patterns · technical read, not a guaranteed edge`,
           ],
           entryPrice: last.close,

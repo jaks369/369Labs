@@ -173,7 +173,7 @@ export default function Concierge() {
   useEffect(() => {
     const unsub = derivWS.onBalance((b) => {
       const list = Array.isArray(b.balance) ? b.balance : b.accounts || [b];
-      const acct = list[0];
+      const acct = list[0] || b;
       setBalance(parseFloat(acct?.balance != null ? acct.balance : acct?.display_balance || "0") || 0);
     });
     if (derivWS.isAuthorized()) derivWS.fetchBalance();
@@ -218,6 +218,7 @@ export default function Concierge() {
     setDraftStopLoss(settingsQ.data.stopLoss.toString());
     setDraftTakeProfit(settingsQ.data.takeProfit.toString());
     setDraftMaxDailyLoss((settingsQ.data.maxDailyLoss || 0).toString());
+    setSizingMethod(settingsQ.data.sizingMethod || 'fixed');
   }, [settingsQ.data]);
 
   const syncSymbol = (sym: string) => {
@@ -729,7 +730,7 @@ export default function Concierge() {
                     <p className="text-[11px] text-[var(--text-muted)]">Forward STRONG signals to your Telegram</p>
                   </div>
                   <button
-                    onClick={() => patchSettings.mutate({ telegramBriefings: !settings.telegramBriefings }, { onSuccess: refresh })}
+                    onClick={() => patchSettings.mutate({ telegramBriefings: !settings.telegramBriefings }, { onSuccess: () => { refresh(); settingsQ.refetch(); } })}
                     className={`relative w-11 h-6 rounded-full transition-colors ${settings.telegramBriefings ? "bg-[var(--accent)]" : "bg-[var(--surface-elevated)] border border-[var(--border)]"}`}
                     title={settings.telegramBriefings ? "Tap to turn off" : "Tap to turn on"}
                   >
@@ -744,7 +745,7 @@ export default function Concierge() {
                     <p className="text-[11px] text-[var(--text-muted)]">Place REAL trades automatically when a STRONG signal is found</p>
                   </div>
                   <button
-                    onClick={() => patchSettings.mutate({ autoExec: !settings.autoExec }, { onSuccess: refresh })}
+                    onClick={() => patchSettings.mutate({ autoExec: !settings.autoExec }, { onSuccess: () => { refresh(); settingsQ.refetch(); } })}
                     className={`relative w-11 h-6 rounded-full transition-colors ${settings.autoExec ? "bg-[var(--amber)]" : "bg-[var(--surface-elevated)] border border-[var(--border)]"}`}
                     title={settings.autoExec ? "Tap to turn off" : "Tap to turn on"}
                   >
@@ -786,7 +787,7 @@ export default function Concierge() {
                         <p className="text-[var(--amber)]">No Kelly advice yet: {kellySuggestion.data?.reason ?? "unavailable"}. Falling back to your fixed setting is correct.</p>
                       )
                     )}
-                    <p>Risk setting: <span className="text-white font-bold">{settings.stakePct}%</span> = <span className="text-white font-bold">{balance > 0 ? `$${(balance * (settings.stakePct / 100) * 0.25).toFixed(2)}` : '—'}</span></p>
+                    <p>Risk setting: <span className="text-white font-bold">{settings.stakePct}%</span> = <span className="text-white font-bold">{balance > 0 ? `$${(balance * (settings.stakePct / 100) * (sizingMethod === 'kelly' ? 0.25 : 1)).toFixed(2)}` : '—'}</span></p>
                     <p className="text-[var(--text-muted)]">Max per trade (5% cap): {balance > 0 ? `$${(balance * 0.05).toFixed(2)}` : '—'}</p>
                     <p className="text-[var(--text-muted)]">Daily loss limit: {settings.maxDailyLoss ? `$${settings.maxDailyLoss}` : 'off'}</p>
                   </div>

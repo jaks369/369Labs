@@ -15,12 +15,17 @@
  */
 
 import { buildCandles, ema, type TickLike, type Candle } from "@shared/indicators";
+import { labelStructure, type Bias } from "@shared/marketStructure";
 
 export interface HigherTimeframeBias {
   /** Higher timeframe analyzed, in seconds (base × HTF_MULTIPLE). */
   timeframeSec: number;
   /** Trend bias from closed HTF candles: fast EMA above/below slow EMA. */
   bias: "up" | "down" | "neutral";
+  /** Structural bias from BOS/CHoCH on the higher timeframe. */
+  structureBias: Bias;
+  /** Whether the HTF structure clearly opposes the proposed trade direction. */
+  structureOpposes: boolean;
   /** Number of CLOSED candles the verdict rests on. */
   closedCandles: number;
   /** False when not enough data — callers must treat as "no opinion". */
@@ -43,6 +48,8 @@ export function higherTimeframeBias(ticks: TickLike[], baseTimeframeSec: number)
   const unavailable = (reason: string): HigherTimeframeBias => ({
     timeframeSec: htfSec,
     bias: "neutral",
+    structureBias: "neutral",
+    structureOpposes: false,
     closedCandles: 0,
     available: false,
     reason,
@@ -67,12 +74,21 @@ export function higherTimeframeBias(ticks: TickLike[], baseTimeframeSec: number)
   if (!Number.isFinite(f) || !Number.isFinite(s)) return unavailable("EMA warm-up incomplete");
 
   const bias = f > s ? "up" : f < s ? "down" : "neutral";
+
+  // Structure-based bias: BOS/CHoCH on the higher timeframe
+  const structure = labelStructure(closed);
+  const structureBias = structure.currentBias;
+
   const dirWord = bias === "up" ? "above" : bias === "down" ? "below" : "level with";
+  const structWord = structureBias === "bullish" ? "bullish BOS" : structureBias === "bearish" ? "bearish BOS" : "no clear structure";
+
   return {
     timeframeSec: htfSec,
     bias,
+    structureBias,
+    structureOpposes: false, // caller sets this based on trade direction
     closedCandles: closed.length,
     available: true,
-    reason: `${htfSec}s trend bias ${bias} (EMA${FAST} ${dirWord} EMA${SLOW} over ${closed.length} closed candles)`,
+    reason: `${htfSec}s trend bias ${bias} (EMA${FAST} ${dirWord} EMA${SLOW}) · structure: ${structWord} · ${closed.length} closed candles`,
   };
 }
