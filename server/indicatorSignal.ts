@@ -20,6 +20,7 @@ import { computeStructureTrade, StructureTradeParams, StructureTradeOptions } fr
 import { estimateExecutionCost, computeNetConfidence, expectedMovePips, type CostEstimate } from "@shared/costModel";
 import { computeSessionWeight, applySessionWeight, type SessionWeight } from "@shared/sessionWeight";
 import { evaluatePromotion, type PaperTrade, type PaperStageResult, DEFAULT_PAPER_STAGE_CONFIG } from "@shared/paperStage";
+import { computeDxyContext, type DxyContext } from "@shared/intermarketContext";
 
 export type GuideStrength = "STRONG" | "MEDIUM" | "WEAK";
 export type GuideDirection = "up" | "down";
@@ -101,6 +102,8 @@ export interface GuidingSignalCandidate {
   sessionWeight?: SessionWeight;
   /** Paper stage result: whether this signal needs paper validation before live. */
   paperStageResult?: PaperStageResult;
+  /** DXY intermarket context: USD strength alignment check for forex pairs. */
+  dxyContext?: DxyContext;
   /** Optional backtest results for validation — populated by scanIndicatorTicks */
   backtest?: {
     confidence: number;
@@ -177,7 +180,7 @@ export interface ScanResult {
   diagnostics: { candles: number; medianGapSec: number | null; available: string[] };
 }
 
-export function scanSignalForSymbol(symbol: string, rawTicks: TickLike[]): ScanResult {
+export function scanSignalForSymbol(symbol: string, rawTicks: TickLike[], dxyPrices: number[] = []): ScanResult {
   if (!rawTicks || rawTicks.length < 30) {
     return { signal: null, candles: [], diagnostics: { candles: 0, medianGapSec: null, available: [] } };
   }
@@ -287,6 +290,15 @@ export function scanSignalForSymbol(symbol: string, rawTicks: TickLike[]): ScanR
     ? combinedScore  // synthetic indices unaffected by session timing
     : applySessionWeight(combinedScore, sessionWeight);
 
+  // DXY intermarket context: USD strength alignment for forex pairs
+  const isForexPair = !symbol.startsWith("R_") && !symbol.startsWith("1HZ") && !symbol.startsWith("BOOM") && !symbol.startsWith("CRASH");
+  let dxyContext: DxyContext | undefined;
+  if (isForexPair && combinedDirection && dxyPrices.length > 0) {
+    const signalDir = combinedDirection === "up" ? "rise" : "fall";
+    const ctx = computeDxyContext(dxyPrices, signalDir, symbol);
+    if (ctx) dxyContext = ctx;
+  }
+
   // If net confidence is below minimum, downgrade strength or block signal
   let adjustedStrength = paStrength;
   if (netConfidence < 50 && paStrength !== "WEAK") {
@@ -322,6 +334,7 @@ export function scanSignalForSymbol(symbol: string, rawTicks: TickLike[]): ScanR
           paperStageResult: netConfidence < 60
             ? { status: "paper", trades: [], winRate: 0, netProfit: 0, tradesCompleted: 0, reason: `Net confidence ${netConfidence.toFixed(1)}% below 60% — needs paper validation` }
             : undefined,
+          dxyContext,
           htf: {
             timeframeSec: htfInfo.timeframeSec,
             bias: htfInfo.bias,
