@@ -1396,6 +1396,20 @@ export const appRouter = router({
       }
     }),
 
+    /** Tamper-evident audit chain: view your own decision trail. */
+    auditChain: protectedProcedure
+      .input(z.object({ limit: z.number().default(100) }))
+      .query(async ({ ctx, input }) => {
+        try {
+          const entries = await db.getAuditChain(ctx.user.id, input.limit);
+          const verification = await db.verifyAuditChain(ctx.user.id);
+          return { entries, verification };
+        } catch (error) {
+          console.error("[trades.auditChain] Error:", error);
+          return { entries: [], verification: { valid: true, totalEntries: 0 } };
+        }
+      }),
+
     /**
      * R-multiple / expectancy / MAE-MFE analytics. Enforces the 30-trade
      * minimum sample discipline: below it, no expectancy verdict is shown.
@@ -2903,6 +2917,18 @@ aiMarket: router({
       .input(z.object({ limit: z.number().default(100) }))
       .query(async ({ input }) => {
         return { logs: await db.getAllAuditLogs(input.limit) };
+      }),
+    /** Tamper-evident audit chain: verify integrity + list entries. */
+    auditChain: adminProcedure
+      .input(z.object({ userId: z.number().optional(), limit: z.number().default(200) }))
+      .query(async ({ input }) => {
+        const entries = await db.getAuditChain(input.userId, input.limit);
+        return { entries };
+      }),
+    auditChainVerify: adminProcedure
+      .input(z.object({ userId: z.number() }))
+      .query(async ({ input }) => {
+        return db.verifyAuditChain(input.userId);
       }),
     systemHealth: adminProcedure.query(async () => {
       const { execSync } = await import("child_process");

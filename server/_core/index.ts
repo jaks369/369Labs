@@ -4,7 +4,8 @@ import { createExpressMiddleware } from "@trpc/server/adapters/express";
 import { appRouter } from "../routers";
 import { createContext } from "./context";
 import { serveStatic } from "./staticServe";
-import { getDb, pruneBadTicks, pruneOldTicks, ensureDerivTokensTable, ensureUsersTable, ensureSignalExpiryColumn, ensureSignalOosColumns, ensureSignalBaselineColumn, ensureSettlementHeartbeatTable, ensureSignalsTable, ensureNotificationSettingsTable, ensureNotificationSettingsColumns, ensureAuditLogsTable, ensureIpWhitelistTable, ensureTradesTable, ensureTradesStuckResult, ensureTradesLedgerColumns, ensureTradesContractIndex, ensureTradesQueryIndexes, ensureReconcilerRunsTable, ensureStrategiesTable, ensurePriceAlertsTable, ensureTickHistoryTable, recomputeLastDigits, ensureUserMemoryTable, ensurePluginsTable, ensureWebhooksTable, ensureAiKnowledgeTable, ensureUsersColumns, ensureSessionsTable, ensureSubscriptionsTable, ensureVerificationTokensTable, ensurePasswordResetTokensTable, ensureBotLogsTable, ensureBotRunsTable, ensureGuidingSignalsTable, ensureStrategyStatsTable, ensureCopyRelationsTable, ensureCopyMirrorsTable, ensureDigitReadsTable } from "../db";
+import { getDb, pruneBadTicks, pruneOldTicks, ensureDerivTokensTable, ensureUsersTable, ensureSignalExpiryColumn, ensureSignalOosColumns, ensureSignalBaselineColumn, ensureSettlementHeartbeatTable, ensureSignalsTable, ensureNotificationSettingsTable, ensureNotificationSettingsColumns, ensureAuditLogsTable, ensureIpWhitelistTable, ensureTradesTable, ensureTradesStuckResult, ensureTradesLedgerColumns, ensureTradesContractIndex, ensureTradesQueryIndexes, ensureReconcilerRunsTable, ensureStrategiesTable, ensurePriceAlertsTable, ensureTickHistoryTable, recomputeLastDigits, ensureUserMemoryTable, ensurePluginsTable, ensureWebhooksTable, ensureAiKnowledgeTable, ensureUsersColumns, ensureSessionsTable, ensureSubscriptionsTable, ensureVerificationTokensTable, ensurePasswordResetTokensTable, ensureBotLogsTable, ensureBotRunsTable, ensureGuidingSignalsTable, ensureStrategyStatsTable, ensureCopyRelationsTable, ensureCopyMirrorsTable, 
+ensureDigitReadsTable, ensureAuditChainTable } from "../db";
 import { users } from "../../drizzle/schema";
 import { startTickCollector } from "../tickCollector";
 import { runWatch } from "../signalScanner";
@@ -422,6 +423,7 @@ const RATE = (limit: number, windowMs: number) => async (req: any, res: any, nex
       try { await ensureNotificationSettingsTable(); } catch (e) { logger.error("[startup] ensureNotificationSettingsTable failed", { error: String(e) }); }
       try { await ensureNotificationSettingsColumns(); } catch (e) { logger.error("[startup] ensureNotificationSettingsColumns failed", { error: String(e) }); }
       try { await ensureAuditLogsTable(); } catch (e) { logger.error("[startup] ensureAuditLogsTable failed", { error: String(e) }); }
+      try { await ensureAuditChainTable(); } catch (e) { logger.error("[startup] ensureAuditChainTable failed", { error: String(e) }); }
       try { await ensureIpWhitelistTable(); } catch (e) { logger.error("[startup] ensureIpWhitelistTable failed", { error: String(e) }); }
       try { await ensureTradesTable(); } catch (e) { logger.error("[startup] ensureTradesTable failed", { error: String(e) }); }
       try { await ensureTradesStuckResult(); } catch (e) { logger.error("[startup] ensureTradesStuckResult failed", { error: String(e) }); }

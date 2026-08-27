@@ -259,6 +259,31 @@ export const auditLogs = mysqlTable("auditLogs", {
 export type AuditLog = typeof auditLogs.$inferSelect;
 export type InsertAuditLog = typeof auditLogs.$inferInsert;
 
+// Tamper-evident hash-chain audit log: every decision gets a sequential entry
+// with prevHash + hash linking it to the previous entry. Breaking the chain
+// requires recomputing all subsequent hashes — computationally infeasible
+// without knowledge of every intervening entry.
+export const auditChain = mysqlTable("auditChain", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull().references(() => users.id, { onDelete: "cascade" }),
+  action: varchar("action", { length: 48 }).notNull(),
+  target: varchar("target", { length: 64 }),
+  detail: json("detail"),
+  correlationId: varchar("correlationId", { length: 64 }),
+  chainSeq: int("chainSeq").notNull(),
+  prevHash: varchar("prevHash", { length: 64 }).notNull(),
+  hash: varchar("hash", { length: 64 }).notNull(),
+  tsMs: bigint("tsMs", { mode: "number" }).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, (table) => ({
+  userIdIdx: index("auditChain_userId_idx").on(table.userId),
+  correlationIdIdx: index("auditChain_correlationId_idx").on(table.correlationId),
+  chainSeqIdx: index("auditChain_chainSeq_idx").on(table.chainSeq),
+}));
+
+export type AuditChain = typeof auditChain.$inferSelect;
+export type InsertAuditChain = typeof auditChain.$inferInsert;
+
 // AI Memory: persistent user preferences/context so agents remember trader profile
 // (favorite symbols, risk %, no-martingale rule, trading style, notes). Keyed per user.
 export const userMemory = mysqlTable("userMemory", {

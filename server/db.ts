@@ -81,6 +81,7 @@ import {
   copyMirrors,
   CopyMirror,
   InsertCopyMirror,
+  auditChain,
 } from "../drizzle/schema";
 import { ENV } from "./_core/env";
 import { encrypt, decrypt } from "./_core/encryption";
@@ -2249,6 +2250,133 @@ export async function ensureAuditLogsTable(): Promise<void> {
   } catch (e: any) {
     console.error("[ensureAuditLogsTable] create failed", e?.message || e);
   }
+}
+
+// ── Hash-chain audit log (tamper-evident) ────────────────────────────────────
+
+export async function ensureAuditChainTable(): Promise<void> {
+  const pool = getRawPool();
+  if (!pool) return;
+  try {
+    await pool.execute(`CREATE TABLE IF NOT EXISTS auditChain (
+      id int AUTO_INCREMENT NOT NULL,
+      userId int NOT NULL,
+      action varchar(48) NOT NULL,
+      target varchar(64),
+      detail json,
+      correlationId varchar(64),
+      chainSeq int NOT NULL,
+      prevHash varchar(64) NOT NULL,
+      hash varchar(64) NOT NULL,
+      tsMs bigint NOT NULL,
+      createdAt timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      CONSTRAINT auditChain_id PRIMARY KEY(id),
+      INDEX auditChain_userId_idx (userId),
+      INDEX auditChain_correlationId_idx (correlationId),
+      INDEX auditChain_chainSeq_idx (chainSeq)
+    )`);
+    console.log("[ensureAuditChainTable] created auditChain table");
+  } catch (e: any) {
+    console.error("[ensureAuditChainTable] create failed", e?.message || e);
+  }
+}
+
+/**
+ * Append a new entry to the tamper-evident audit chain.
+ * Reads the previous entry's hash and computes the chain link.
+ */
+export async function appendAuditChainEntry(entry: {
+  userId: number;
+  action: string;
+  target?: string;
+  detail?: any;
+  correlationId?: string;
+}): Promise<{ seq: number; hash: string } | null> {
+  const db = await getDb();
+  if (!db) return null;
+  try {
+    const lastRows = await db.select().from(auditChain).orderBy(desc(auditChain.chainSeq)).limit(1);
+    const last = lastRows[0];
+    const prevHash = last ? last.hash : "0".repeat(64);
+    const seq = last ? last.chainSeq + 1 : 1;
+    const tsMs = Date.now();
+
+    const fields = [
+      seq,
+      entry.userId,
+      entry.action,
+      entry.target ?? null,
+      JSON.stringify(entry.detail ?? null),
+      entry.correlationId ?? null,
+      prevHash,
+      tsMs,
+    ];
+    const { createHash } = await import("crypto");
+    const hash = createHash("sha256").update(JSON.stringify(fields)).digest("hex");
+
+    await db.insert(auditChain).values({
+      userId: entry.userId,
+      action: entry.action,
+      target: entry.target ?? null,
+      detail: entry.detail ?? null,
+      correlationId: entry.correlationId ?? null,
+      chainSeq: seq,
+      prevHash,
+      hash,
+      tsMs,
+    });
+    return { seq, hash };
+  } catch (e: any) {
+    console.error("[appendAuditChainEntry] failed", e?.message || e);
+    return null;
+  }
+}
+
+/**
+ * Get the audit chain for a user (or all users if no userId), ordered chronologically.
+ */
+export async function getAuditChain(userId?: number, limit: number = 200): Promise<any[]> {
+  const db = await getDb();
+  if (!db) return [];
+  try {
+    const cond = userId ? eq(auditChain.userId, userId) : undefined;
+    return db.select().from(auditChain).where(cond).orderBy(asc(auditChain.chainSeq)).limit(limit);
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Verify the hash chain integrity for a user's audit entries.
+ * Returns { valid, brokenAt, reason } on first break, or { valid: true } if intact.
+ */
+export async function verifyAuditChain(userId: number): Promise<{ valid: boolean; brokenAt?: number; reason?: string; totalEntries: number }> {
+  const entries = await getAuditChain(userId, 10000);
+  if (entries.length === 0) return { valid: true, totalEntries: 0 };
+
+  const { createHash } = await import("crypto");
+  for (let i = 0; i < entries.length; i++) {
+    const e = entries[i];
+    const expectedPrev = i === 0 ? "0".repeat(64) : entries[i - 1].hash;
+    if (e.prevHash !== expectedPrev) {
+      return { valid: false, brokenAt: i, reason: `prevHash broken at seq ${e.chainSeq}`, totalEntries: entries.length };
+    }
+    const fields = [
+      e.chainSeq,
+      e.userId,
+      e.action,
+      e.target,
+      JSON.stringify(e.detail),
+      e.correlationId,
+      e.prevHash,
+      e.tsMs,
+    ];
+    const expectedHash = createHash("sha256").update(JSON.stringify(fields)).digest("hex");
+    if (e.hash !== expectedHash) {
+      return { valid: false, brokenAt: i, reason: `hash broken at seq ${e.chainSeq}`, totalEntries: entries.length };
+    }
+  }
+  return { valid: true, totalEntries: entries.length };
 }
 
 export async function ensureIpWhitelistTable(): Promise<void> {
