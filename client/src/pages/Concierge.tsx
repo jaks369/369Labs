@@ -581,6 +581,22 @@ export default function Concierge() {
                   <Metric label="Brier score" value={calibration.data.brierScore.toFixed(4)} accent={calibration.data.brierScore < 0.25 ? "text-[var(--green)]" : "text-[var(--red)]"} />
                   <Metric label="ECE" value={calibration.data.expectedCalibrationError.toFixed(4)} accent={calibration.data.expectedCalibrationError < 0.05 ? "text-[var(--green)]" : "text-[var(--red)]"} />
                 </div>
+                {/* Held-out validation gate */}
+                <div className={`rounded-lg border p-3 ${calibration.data.heldOutValidation.passed ? "border-[var(--green)]/30 bg-[var(--green)]/5" : "border-[var(--amber)]/30 bg-[var(--amber)]/5"}`}>
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className={`text-xs font-bold ${calibration.data.heldOutValidation.passed ? "text-[var(--green)]" : "text-[var(--amber)]"}`}>
+                      {calibration.data.heldOutValidation.passed ? "VALIDATED" : "NOT VALIDATED"}
+                    </span>
+                    <span className="text-[10px] text-[var(--text-muted)]">80/20 held-out gate</span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 text-[11px]">
+                    <span className="text-[var(--text-secondary)]">Calibration gap: <span className="text-white font-semibold">{calibration.data.heldOutValidation.calibrationGapPp.toFixed(1)} pp</span></span>
+                    <span className="text-[var(--text-secondary)]">Overfit check: <span className={`font-semibold ${calibration.data.heldOutValidation.notOverfit ? "text-[var(--green)]" : "text-[var(--red)]"}`}>{calibration.data.heldOutValidation.notOverfit ? "PASS" : "FAIL"}</span></span>
+                  </div>
+                  {calibration.data.heldOutValidation.failures.length > 0 && (
+                    <p className="text-[10px] text-[var(--amber)] mt-1">Failures: {calibration.data.heldOutValidation.failures.join(", ")}</p>
+                  )}
+                </div>
                 <div className="space-y-2">
                   {calibration.data.reliabilityDiagram.map((bin: any, i: number) => (
                     <div key={i} className="flex items-center justify-between text-xs">
@@ -593,7 +609,7 @@ export default function Concierge() {
                   ))}
                 </div>
                 <p className="text-[10px] text-[var(--text-disabled)] leading-relaxed">
-                  Brier score: lower is better (0 = perfect). ECE (Expected Calibration Error): {"<"}5% is well-calibrated. Each bin shows predicted vs actual frequency — should sit on the diagonal.
+                  Brier score: lower is better (0 = perfect). ECE (Expected Calibration Error): {"<"}5% is well-calibrated. Held-out gate: 80/20 train/test split checks that stated confidence matches observed win rates and the model isn't overfit.
                 </p>
               </div>
             )}

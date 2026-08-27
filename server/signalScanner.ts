@@ -27,6 +27,7 @@ import {
 } from "./signalEngine";
 import { scanSignalForSymbol, GuidingSignalCandidate } from "./indicatorSignal";
 import { wilsonInterval, binomialPvsBaseline, benjaminiHochbergFDR, walkForwardSummary, WALK_FORWARD_WINDOWS, WALK_FORWARD_REQUIRED, MIN_OOS_SAMPLES, MIN_WINDOW_SAMPLES, assignTier, type SignalTier, type WalkForwardResult } from "./signalStats";
+import { validateHeldOut, type ValidationGateResult } from "../shared/heldOutValidation";
 import { buildCandles, medianTickGapSec, type TickLike } from "@shared/indicators";
 import { estimateExecutionCost, computeNetConfidence, expectedMovePips } from "@shared/costModel";
 
@@ -147,6 +148,13 @@ export async function scanIndicatorTicks(opts: ScanOptions): Promise<GuidingSign
       oosTotal: backtest.oosTotal,
       oosInsufficient: backtest.oosInsufficient,
       walks: backtest.walks,
+      validation: {
+        passed: backtest.validation.passed,
+        calibrationGapPp: backtest.validation.calibrationGapPp,
+        calibrated: backtest.validation.calibrated,
+        notOverfit: backtest.validation.notOverfit,
+        failures: backtest.validation.failures,
+      },
     };
   }
 
@@ -175,6 +183,8 @@ export interface IndicatorBacktestResult {
   oosTotal: number;
   oosInsufficient: boolean;
   windowTicks: number;
+  /** Held-out validation gate result — required for VALIDATED badge. */
+  validation: ValidationGateResult;
 }
 
 /**
@@ -275,6 +285,11 @@ export function backtestIndicatorSignal(
     movePips,
   );
 
+  // Held-out validation gate: 80/20 split + calibration check
+  const validation = validateHeldOut(
+    signals.map((s) => ({ confidence: Math.round(observed * 100), win: s.win })),
+  );
+
   return {
     symbol,
     direction,
@@ -295,6 +310,7 @@ export function backtestIndicatorSignal(
     oosTotal: eff.oosTotal,
     oosInsufficient: eff.oosTotal < MIN_OOS_SAMPLES || eff.settledCount === 0,
     windowTicks,
+    validation,
   };
 }
 

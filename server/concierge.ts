@@ -940,6 +940,15 @@ export interface CalibrationResult {
     count: number;
     resolvedCount: number;
   }>;
+  /** Held-out validation gate: 80/20 split + calibration check. */
+  heldOutValidation: {
+    passed: boolean;
+    calibrationGapPp: number;
+    calibrated: boolean;
+    notOverfit: boolean;
+    failures: string[];
+    reasoning: string[];
+  };
 }
 
 function binConfidence(confidence: number): { bin: string; midpoint: number } {
@@ -970,6 +979,14 @@ export async function computeSignalCalibration(userId: number): Promise<Calibrat
       resolvedPredictions: 0,
       reliabilityDiagram: [],
       byStrength: {},
+      heldOutValidation: {
+        passed: false,
+        calibrationGapPp: 0,
+        calibrated: false,
+        notOverfit: false,
+        failures: ["insufficient_data"],
+        reasoning: ["No resolved signals to validate"],
+      },
     };
   }
 
@@ -1035,6 +1052,14 @@ export async function computeSignalCalibration(userId: number): Promise<Calibrat
     };
   }
 
+  // Held-out validation gate: 80/20 split + calibration check
+  const { validateHeldOut } = await import("../shared/heldOutValidation");
+  const outcomes = resolved.map((s) => ({
+    confidence: typeof s.confidence === "number" ? s.confidence : 50,
+    win: s.status === "win",
+  }));
+  const heldOutResult = validateHeldOut(outcomes);
+
   return {
     brierScore: Math.round((totalBrier / resolved.length) * 10000) / 10000,
     logLoss: Math.round((totalLogLoss / resolved.length) * 10000) / 10000,
@@ -1044,5 +1069,13 @@ export async function computeSignalCalibration(userId: number): Promise<Calibrat
     resolvedPredictions: resolved.length,
     reliabilityDiagram,
     byStrength,
+    heldOutValidation: {
+      passed: heldOutResult.passed,
+      calibrationGapPp: heldOutResult.calibrationGapPp,
+      calibrated: heldOutResult.calibrated,
+      notOverfit: heldOutResult.notOverfit,
+      failures: heldOutResult.failures,
+      reasoning: heldOutResult.reasoning,
+    },
   };
 }

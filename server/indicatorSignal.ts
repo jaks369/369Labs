@@ -111,6 +111,14 @@ export interface GuidingSignalCandidate {
     oosTotal: number;
     oosInsufficient: boolean;
     walks: { wins: number; n: number; rate: number }[];
+    /** Held-out validation gate result — required for VALIDATED badge. */
+    validation?: {
+      passed: boolean;
+      calibrationGapPp: number;
+      calibrated: boolean;
+      notOverfit: boolean;
+      failures: string[];
+    };
   };
 }
 
