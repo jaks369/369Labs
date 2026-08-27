@@ -1,4 +1,3 @@
-import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ToastViewport, useToast } from "@/components/Toast";
 import { useState, useEffect, useRef, lazy, Suspense } from "react";
@@ -190,7 +189,6 @@ function App() {
       <ThemeProvider defaultTheme="dark" switchable>
         <TooltipProvider>
           <ServerStatusBanner />
-          <Toaster />
           <Router />
           <CommandPalette />
           <ToastViewport items={toasts} onDismiss={(id) => setToasts((prev) => prev.filter((x) => x.id !== id))} />

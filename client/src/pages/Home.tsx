@@ -30,19 +30,19 @@ import {
 import { useCallback, useEffect, useState } from "react";
 
 const GLASS_CARD: React.CSSProperties = {
-  background: "linear-gradient(160deg, rgba(255,255,255,0.10) 0%, rgba(10,14,23,0.6) 100%)",
-  backdropFilter: "blur(20px) saturate(1.3)",
-  WebkitBackdropFilter: "blur(20px) saturate(1.3)",
-  border: "1px solid rgba(255,255,255,0.12)",
-  boxShadow: "0 8px 32px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.08)",
+  background: "linear-gradient(160deg, var(--glass-fill-strong) 0%, var(--bg-base) 100%)",
+  backdropFilter: "blur(var(--glass-blur)) saturate(1.3)",
+  WebkitBackdropFilter: "blur(var(--glass-blur)) saturate(1.3)",
+  border: "1px solid var(--glass-border)",
+  boxShadow: "var(--glass-shadow), var(--glass-inner-highlight)",
 };
 
 const GLASS_PILL: React.CSSProperties = {
-  background: "rgba(10,14,23,0.55)",
-  backdropFilter: "blur(20px) saturate(1.3)",
-  WebkitBackdropFilter: "blur(20px) saturate(1.3)",
-  border: "1px solid rgba(255,255,255,0.14)",
-  boxShadow: "0 8px 32px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.08)",
+  background: "var(--glass-fill)",
+  backdropFilter: "blur(var(--glass-blur)) saturate(1.3)",
+  WebkitBackdropFilter: "blur(var(--glass-blur)) saturate(1.3)",
+  border: "1px solid var(--glass-border)",
+  boxShadow: "var(--glass-shadow), var(--glass-inner-highlight)",
 };
 
 const TEXT_SHADOW: React.CSSProperties = { textShadow: "0 2px 12px rgba(0,0,0,0.6)" };

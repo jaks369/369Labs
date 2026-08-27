@@ -102,6 +102,12 @@
   --red-soft: rgba(244, 63, 94, 0.10);
   --red-border: rgba(244, 63, 94, 0.24);
 
+  /* Amber / Warning palette */
+  --amber: #f59e0b;
+  --amber-rgb: 245, 158, 11;
+  --amber-soft: rgba(245, 158, 11, 0.10);
+  --amber-border: rgba(245, 158, 11, 0.24);
+
   /* Typography scale — modular scale (1.25 ratio) */
   --text-xs: 0.625rem;    /* 10px */
   --text-sm: 0.75rem;     /* 12px */
@@ -676,14 +682,17 @@
   .select:focus { border-color: var(--accent); outline: none; box-shadow: 0 0 0 2px var(--accent-soft); }
 
   /* ─── Native <select> dropdown fix ────────────────────────── */
-  /* Force dark color-scheme on all selects and their option popups
-     so Windows/Chrome/Edge native dropdowns don't render white-on-white. */
-  select, select option {
+  /* Force dark color-scheme on selects only in dark mode so native
+     dropdowns don't render white-on-white. Light mode gets its own scheme. */
+  .dark select, .dark select option {
     color-scheme: dark;
   }
-  select option {
+  .dark select option {
     background-color: #1a1d23;
     color: #EDEFF3;
+  }
+  select, select option {
+    color-scheme: light;
   }
 
   /* ─── Tables ────────────────────────────────────────────── */

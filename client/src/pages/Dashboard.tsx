@@ -16,6 +16,7 @@ import { derivWS, DerivSymbol } from "@/services/derivWebSocket";
 import { useDerivStatus } from "@/hooks/useDerivStatus";
 import DerivTokenModal from "@/components/DerivTokenModal";
 import { ContractSelection } from "@/components/ContractTypeSelector";
+import { getAvailableCategories, type ContractCategory } from "@shared/contractAvailability";
 import { VOLATILITY_SYMBOLS, getSymbolDisplayName } from "@/lib/symbols";
 import { getDecimalPlaces, lastDigitOf } from "@shared/lastDigit";
 import TerminalContextPanel from "@/components/TerminalContextPanel";
@@ -55,6 +56,14 @@ export default function Dashboard() {
   const [tokenError, setTokenError] = useState<string | null>(null);
   const [tokenSaved, setTokenSaved] = useState(false);
   const [contract, setContract] = usePersistentState<ContractSelection>("369labs.terminal.contract", { category: "rise_fall", direction: "rise" });
+
+  // Auto-switch contract category when symbol changes and current category is unavailable
+  const availableCategories = useMemo(() => getAvailableCategories(selectedSymbol), [selectedSymbol]);
+  useEffect(() => {
+    if (!availableCategories.includes(contract.category as ContractCategory)) {
+      setContract({ category: "rise_fall", direction: "rise" });
+    }
+  }, [availableCategories, contract.category, setContract]);
   const [stake, setStake] = usePersistentState<number>("369labs.terminal.stake", 1);
   const [duration, setDuration] = usePersistentState<number>("369labs.terminal.duration", 5);
   const [durationUnit, setDurationUnit] = usePersistentState<DurationUnit>("369labs.terminal.durationUnit", "t");
@@ -854,7 +863,9 @@ export default function Dashboard() {
                 { id: "even_odd", label: "Even/Odd" },
                 { id: "digits", label: "Digits" },
                 { id: "accumulator", label: "Accumulators" },
-              ] as const).map((t) => (
+              ] as const)
+                .filter((t) => availableCategories.includes(t.id as ContractCategory))
+                .map((t) => (
                 <button
                   key={t.id}
                   onClick={() => {
@@ -1113,7 +1124,9 @@ export default function Dashboard() {
                 { id: "even_odd", label: "Even / Odd", desc: "Last digit is even or odd" },
                 { id: "digits", label: "Matches / Differs", desc: "Last digit matches or differs" },
                 { id: "accumulator", label: "Accumulator", desc: "Compounding tick trades" },
-              ] as const).map((t) => (
+              ] as const)
+                .filter((t) => availableCategories.includes(t.id as ContractCategory))
+                .map((t) => (
                 <button
                   key={t.id}
                   onClick={() => {
