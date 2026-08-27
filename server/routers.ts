@@ -1396,6 +1396,64 @@ export const appRouter = router({
       }
     }),
 
+    /**
+     * R-multiple / expectancy / MAE-MFE analytics. Enforces the 30-trade
+     * minimum sample discipline: below it, no expectancy verdict is shown.
+     */
+    analytics: protectedProcedure.query(async ({ ctx }) => {
+      try {
+        const { computeExpectancy, computeExcursion, summarizeExcursions, analyzeSymbols, MIN_ANALYTICS_SAMPLE } = await import("./tradeAnalytics");
+        const rows = await db.getTradesByUserId(ctx.user.id, 2000);
+        const trades = rows
+          .filter((t) => t.result === "win" || t.result === "loss")
+          .map((t) => ({
+            id: t.id,
+            symbol: t.symbol || "UNKNOWN",
+            contractType: t.contractType || "CALL",
+            result: t.result!,
+            stake: Number(t.stake) || 0,
+            profitLoss: t.profitLoss != null ? Number(t.profitLoss) : null,
+            entryPrice: Number(t.entryPrice) || 0,
+            exitPrice: t.exitPrice != null ? Number(t.exitPrice) : null,
+          }));
+
+        const overall = computeExpectancy(trades);
+
+        // MAE/MFE excursion analysis — compute for settled trades with exit
+        // times, capped to control cost. Tolerates tick-history failures.
+        const excursionTrades = trades.filter((t) => t.exitPrice != null).slice(-15);
+        const excursions: Array<{ trade: any; maePct: number | null; mfePct: number | null }> = [];
+        for (const t of excursionTrades) {
+          try {
+            const row = rows.find((r) => r.id === t.id);
+            const exitEpoch = row?.exitTime ? Math.floor(new Date(row.exitTime).getTime() / 1000) : undefined;
+            const ticks = exitEpoch ? await db.getTickHistory(t.symbol, 200, exitEpoch) : [];
+            const filtered = ticks
+              .map((tk: any) => ({ price: Number(tk.price), epoch: Number(tk.epoch) }))
+              .filter((tk: any) => !isNaN(tk.price) && tk.price > 0 && row?.entryTime && tk.epoch >= Math.floor(new Date(row.entryTime).getTime() / 1000));
+            const exc = computeExcursion(t as any, filtered);
+            if (exc.maePrice !== null) {
+              excursions.push({ trade: t as any, maePct: exc.maePrice, mfePct: exc.mfePrice });
+            }
+          } catch {
+            /* skip trade on tick fetch failure */
+          }
+        }
+        const excursionStats = summarizeExcursions(excursions);
+
+        return {
+          minSample: MIN_ANALYTICS_SAMPLE,
+          overall,
+          bySymbol: analyzeSymbols(trades),
+          excursion: excursionStats,
+          excursionTradeCount: excursions.length,
+        };
+      } catch (error) {
+        console.error("[trades.analytics] Error:", error);
+        return null;
+      }
+    }),
+
     exportCsv: protectedProcedure      .query(async ({ ctx }) => {
         try {
           const trades = await db.getTradesByUserId(ctx.user.id, 5000);

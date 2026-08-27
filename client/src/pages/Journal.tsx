@@ -76,9 +76,9 @@ export default function Journal() {
   const journalDeleteMutation = trpc.ai.journalDelete.useMutation();
   const saveManualMutation = trpc.ai.journalSaveManual.useMutation();
   const importCsvMutation = trpc.trades.importCsv.useMutation();
-  const tradesQuery = trpc.trades.list.useQuery({ limit: 100 }, { enabled: showStats });
   const uploadImageMutation = trpc.ai.journalUploadImage.useMutation();
   const linkTradeMutation = trpc.trades.linkToJournal.useMutation();
+  const analyticsQuery = trpc.trades.analytics.useQuery(undefined, { enabled: isAuthenticated && showStats });
 
   if (!isAuthenticated) { navigate("/login"); return null; }
 
@@ -148,59 +148,110 @@ export default function Journal() {
 
         {showStats && (
           <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-6">
-            <h2 className="text-sm font-bold text-white mb-4 flex items-center gap-2"><BarChart3 className="w-4 h-4 text-[var(--accent)]" /> Trade Statistics</h2>
-            {(() => {
-              const allTrades = (tradesQuery.data || []) as any[];
-              const wins = allTrades.filter((t) => t.result === "win").length;
-              const losses = allTrades.filter((t) => t.result === "loss").length;
-              const total = wins + losses;
-              const winRate = total > 0 ? ((wins / total) * 100).toFixed(1) : "0";
-              const totalPnl = allTrades.reduce((s, t) => s + parseFloat(t.profitLoss?.toString() || "0"), 0);
-              const avgWin = wins > 0 ? allTrades.filter((t) => t.result === "win").reduce((s, t) => s + parseFloat(t.profitLoss?.toString() || "0"), 0) / wins : 0;
-              const avgLoss = losses > 0 ? Math.abs(allTrades.filter((t) => t.result === "loss").reduce((s, t) => s + parseFloat(t.profitLoss?.toString() || "0"), 0)) / losses : 0;
-              const profitFactor = avgLoss > 0 ? avgWin / avgLoss : avgWin > 0 ? 99 : 0;
-              const bySym: Record<string, { wins: number; losses: number; pnl: number }> = {};
-              allTrades.forEach((t) => {
-                const sym = t.symbol || "Unknown";
-                if (!bySym[sym]) bySym[sym] = { wins: 0, losses: 0, pnl: 0 };
-                if (t.result === "win") bySym[sym].wins++;
-                else if (t.result === "loss") bySym[sym].losses++;
-                bySym[sym].pnl += parseFloat(t.profitLoss?.toString() || "0");
-              });
+            <h2 className="text-sm font-bold text-white mb-4 flex items-center gap-2"><BarChart3 className="w-4 h-4 text-[var(--accent)]" /> Trade Analytics — R-Multiple &amp; Expectancy</h2>
+            {analyticsQuery.isLoading ? (
+              <div className="flex items-center justify-center py-8"><Loader2 className="w-5 h-5 animate-spin text-[var(--accent)]" /></div>
+            ) : analyticsQuery.isError || !analyticsQuery.data ? (
+              <p className="text-xs text-[var(--red)] italic">Failed to load analytics.</p>
+            ) : (() => {
+              const a = analyticsQuery.data;
+              const o = a.overall;
               return (
-                <div className="space-y-4">
+                <div className="space-y-5">
+                  {/* Sample-size discipline gate */}
+                  {!o.sufficient && (
+                    <div className="rounded-lg border border-[var(--amber)]/30 bg-[var(--amber)]/10 p-3 text-[11px] text-[var(--amber)]">
+                      Only {o.sampleCount} settled trade{o.sampleCount === 1 ? "" : "s"} analyzed. Expectancy conclusions require at least {a.minSample} settled trades — the numbers below are provisional and not a reliable estimate of edge.
+                    </div>
+                  )}
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                     <div className="bg-black/20 rounded-lg p-3 text-center">
-                      <p className="text-micro">Total Trades</p>
-                      <p className="text-lg font-bold text-white">{total}</p>
+                      <p className="text-micro">Settled Trades</p>
+                      <p className="text-lg font-bold text-white">{o.sampleCount}</p>
+                    </div>
+                    <div className="bg-black/20 rounded-lg p-3 text-center">
+                      <p className="text-micro">Expectancy / Trade</p>
+                      <p className={`text-lg font-bold ${o.expectancyPerTradeUsd >= 0 ? "text-[var(--green)]" : "text-[var(--red)]"}`}>{formatSignedMoney(o.expectancyPerTradeUsd)}</p>
+                    </div>
+                    <div className="bg-black/20 rounded-lg p-3 text-center">
+                      <p className="text-micro">Avg R</p>
+                      <p className={`text-lg font-bold ${o.avgR >= 0 ? "text-[var(--green)]" : "text-[var(--red)]"}`}>{o.avgR.toFixed(2)}R</p>
                     </div>
                     <div className="bg-black/20 rounded-lg p-3 text-center">
                       <p className="text-micro">Win Rate</p>
-                      <p className="text-lg font-bold text-[var(--green)]">{winRate}%</p>
-                    </div>
-                    <div className="bg-black/20 rounded-lg p-3 text-center">
-                      <p className="text-micro">Net P&L</p>
-                      <p className={`text-lg font-bold ${totalPnl >= 0 ? "text-[var(--green)]" : "text-[var(--red)]"}`}>{formatSignedMoney(totalPnl)}</p>
+                      <p className="text-lg font-bold text-white">{o.winRatePct}% <span className="text-[10px] text-[var(--text-muted)]">(low {o.wilsonLowPct}%)</span></p>
                     </div>
                     <div className="bg-black/20 rounded-lg p-3 text-center">
                       <p className="text-micro">Profit Factor</p>
-                      <p className={`text-lg font-bold ${profitFactor >= 1.5 ? "text-[var(--green)]" : profitFactor >= 1 ? "text-[var(--accent)]" : "text-[var(--red)]"}`}>{profitFactor.toFixed(2)}</p>
+                      <p className={`text-lg font-bold ${o.profitFactor === Infinity ? "text-[var(--green)]" : o.profitFactor >= 1.5 ? "text-[var(--green)]" : o.profitFactor >= 1 ? "text-[var(--accent)]" : "text-[var(--red)]"}`}>{o.profitFactor === Infinity ? "∞" : o.profitFactor.toFixed(2)}</p>
+                    </div>
+                    <div className="bg-black/20 rounded-lg p-3 text-center">
+                      <p className="text-micro">Avg Win / Avg Loss</p>
+                      <p className="text-lg font-bold text-white">{o.rStats.avgWinR.toFixed(2)}R <span className="text-[10px] text-[var(--text-muted)]">/ {o.rStats.avgLossR.toFixed(2)}R</span></p>
+                    </div>
+                    <div className="bg-black/20 rounded-lg p-3 text-center">
+                      <p className="text-micro">Max DD</p>
+                      <p className="text-lg font-bold text-[var(--red)]">{o.maxDrawdownR.toFixed(2)}R</p>
+                    </div>
+                    <div className="bg-black/20 rounded-lg p-3 text-center">
+                      <p className="text-micro">Net P&amp;L</p>
+                      <p className={`text-lg font-bold ${o.totalProfitUsd >= 0 ? "text-[var(--green)]" : "text-[var(--red)]"}`}>{formatSignedMoney(o.totalProfitUsd)}</p>
                     </div>
                   </div>
-                  {Object.keys(bySym).length > 0 && (
+
+                  {/* Excursions */}
+                  {a.excursion ? (
+                    <div className="bg-black/20 rounded-lg p-3">
+                      <p className="text-xs font-bold text-[var(--text-muted)] mb-2">MAE / MFE excursion (last {a.excursion.tradeCount} closed trades)</p>
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                        <div>
+                          <p className="text-micro">Avg adverse</p>
+                          <p className="text-sm font-bold text-[var(--red)]">{a.excursion.maeAvgPct != null ? a.excursion.maeAvgPct.toFixed(3) : "—"}%</p>
+                        </div>
+                        <div>
+                          <p className="text-micro">Max adverse</p>
+                          <p className="text-sm font-bold text-[var(--red)]">{a.excursion.maeMaxPct != null ? a.excursion.maeMaxPct.toFixed(3) : "—"}%</p>
+                        </div>
+                        <div>
+                          <p className="text-micro">Avg favorable</p>
+                          <p className="text-sm font-bold text-[var(--green)]">{a.excursion.mfeAvgPct != null ? a.excursion.mfeAvgPct.toFixed(3) : "—"}%</p>
+                        </div>
+                        <div>
+                          <p className="text-micro">Max favorable</p>
+                          <p className="text-sm font-bold text-[var(--green)]">{a.excursion.mfeMaxPct != null ? a.excursion.mfeMaxPct.toFixed(3) : "—"}%</p>
+                        </div>
+                      </div>
+                      {(a.excursion.prematureExits > 0 || a.excursion.lateEntries > 0) && (
+                        <p className="text-[10px] text-[var(--text-muted)] mt-2">
+                          {a.excursion.prematureExits} winner(s) gave back ≥0.3% after peaking (exit discipline) · {a.excursion.lateEntries} trade(s) went ≥0.5% adverse (late entry).
+                        </p>
+                      )}
+                    </div>
+                  ) : (
+                    <p className="text-[10px] text-[var(--text-muted)]">No excursion data yet (needs closed trades with tick history).</p>
+                  )}
+
+                  {/* By symbol */}
+                  {a.bySymbol.length > 0 && (
                     <div>
-                      <p className="text-xs text-[var(--text-muted)] font-bold mb-2">By Symbol</p>
-                      <div className="space-y-1 max-h-40 overflow-y-auto">
-                        {Object.entries(bySym).sort((a, b) => b[1].pnl - a[1].pnl).map(([sym, d]) => (
-                          <div key={sym} className="flex justify-between text-xs p-2 bg-black/20 rounded-lg">
-                            <span className="text-[var(--text-secondary)] font-bold">{getSymbolDisplayName(sym)}</span>
-                            <span className="text-[var(--text-muted)]">{d.wins}W / {d.losses}L</span>
-                            <span className={d.pnl >= 0 ? "text-[var(--green)]" : "text-[var(--red)]"}>{formatSignedMoney(d.pnl)}</span>
+                      <p className="text-xs font-bold text-[var(--text-muted)] mb-2">By symbol</p>
+                      <div className="space-y-1">
+                        {a.bySymbol.map((s: any) => (
+                          <div key={s.symbol} className="flex justify-between items-center text-xs p-2 bg-black/20 rounded-lg">
+                            <span className="text-[var(--text-secondary)] font-bold">{getSymbolDisplayName(s.symbol)}</span>
+                            <span className="text-[var(--text-muted)]">{s.expectancy.sampleCount} trades</span>
+                            <span className={`font-bold ${s.expectancy.avgR >= 0 ? "text-[var(--green)]" : "text-[var(--red)]"}`}>
+                              {s.expectancy.sufficient ? `${s.expectancy.avgR.toFixed(2)}R` : "insufficient"}
+                            </span>
                           </div>
                         ))}
                       </div>
                     </div>
                   )}
+
+                  <p className="text-[10px] text-[var(--text-muted)] leading-relaxed">
+                    R-multiple = profit / risk per trade (binary: full stake at risk). Expectancy is mean edge per trade; positive is the only reason to trade. Max DD tracked in R units. Wilson low = honest lower bound on win rate.
+                  </p>
                 </div>
               );
             })()}
