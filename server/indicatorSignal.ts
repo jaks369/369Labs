@@ -18,6 +18,7 @@ import { scoreConfluence, explainConfluence, scorePriceActionConfluence, ema, rs
 import { higherTimeframeBias } from "./multiTimeframe";
 import { computeStructureTrade, StructureTradeParams, StructureTradeOptions } from "@shared/structureTrade";
 import { estimateExecutionCost, computeNetConfidence, expectedMovePips, type CostEstimate } from "@shared/costModel";
+import { computeSessionWeight, applySessionWeight, type SessionWeight } from "@shared/sessionWeight";
 
 export type GuideStrength = "STRONG" | "MEDIUM" | "WEAK";
 export type GuideDirection = "up" | "down";
@@ -95,6 +96,8 @@ export interface GuidingSignalCandidate {
   netConfidence?: number;
   /** Execution cost estimate used for the net confidence computation. */
   costEstimate?: CostEstimate;
+  /** Session liquidity weight: peak=1.0, thin=0.7. Applied to confidence for forex. */
+  sessionWeight?: SessionWeight;
   /** Optional backtest results for validation — populated by scanIndicatorTicks */
   backtest?: {
     confidence: number;
@@ -275,6 +278,12 @@ export function scanSignalForSymbol(symbol: string, rawTicks: TickLike[]): ScanR
     movePips,
   );
 
+  // Kill-zone session weighting: weight confidence by liquidity quality
+  const sessionWeight = computeSessionWeight();
+  const sessionAdjustedConfidence = symbol.startsWith("R_") || symbol.startsWith("1HZ") || symbol.startsWith("BOOM") || symbol.startsWith("CRASH")
+    ? combinedScore  // synthetic indices unaffected by session timing
+    : applySessionWeight(combinedScore, sessionWeight);
+
   // If net confidence is below minimum, downgrade strength or block signal
   let adjustedStrength = paStrength;
   if (netConfidence < 50 && paStrength !== "WEAK") {
@@ -306,6 +315,7 @@ export function scanSignalForSymbol(symbol: string, rawTicks: TickLike[]): ScanR
           structureTrade,
           netConfidence,
           costEstimate,
+          sessionWeight,
           htf: {
             timeframeSec: htfInfo.timeframeSec,
             bias: htfInfo.bias,
