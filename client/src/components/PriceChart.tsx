@@ -16,6 +16,8 @@ interface PriceChartProps {
   compact?: boolean;
   color?: string;
   mode?: "candle" | "line" | "area";
+  /** Default mode for synthetic indices: line (Deriv-style live tick). */
+  defaultMode?: "candle" | "line" | "area";
   timeframes?: number[];
   timeframe?: number;
   onTimeframeChange?: (t: number) => void;
@@ -79,11 +81,13 @@ export default function PriceChart({
   decimalPlaces = 3,
   compact = false,
   color = "var(--accent)",
-  mode: initialMode = "candle",
+  mode: initialModeProp,
+  defaultMode = "candle",
   timeframes,
   timeframe,
   onTimeframeChange,
   maxBars = 2000,
+  fitOnDataChange = false,
   heightClass,
   showStats = !compact,
   followLabel = "Return to live",
@@ -92,7 +96,7 @@ export default function PriceChart({
   const containerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
   const seriesRef = useRef<ISeriesApi<any, Time> | null>(null);
-  const [mode, setMode] = useState<"candle" | "line" | "area">(initialMode);
+  const [mode, setMode] = useState<"candle" | "line" | "area">(initialModeProp ?? defaultMode);
   const [fullscreen, setFullscreen] = useState(false);
 
   const ohlc = (() => {
@@ -171,56 +175,80 @@ export default function PriceChart({
     };
   }, []);
 
-  // Sync data to chart
+  // Sync data to chart — incremental updates, not full re-creation
+  const prevDataLenRef = useRef(0);
   useEffect(() => {
     const chart = chartRef.current;
     if (!chart) return;
 
-    // Remove old series
+    // Create series once per mode
+    if (!seriesRef.current) {
+      if (mode === "candle") {
+        const candleData = aggregateToCandles(data, 5);
+        const candleSeries = chart.addSeries(CandlestickSeries, {
+          upColor: "#34e0a1",
+          downColor: "#f43f5e",
+          borderVisible: false,
+          wickUpColor: "#34e0a1",
+          wickDownColor: "#f43f5e",
+        });
+        candleSeries.setData(candleData);
+        seriesRef.current = candleSeries;
+      } else {
+        const lineData: LineData<Time>[] = data.map((d, i) => ({
+          time: (Math.floor(new Date(`2000-01-01T${d.time}`).getTime() / 1000) + i) as Time,
+          value: d.price,
+        }));
+        const seen = new Set<number>();
+        const deduped = lineData.filter((d) => {
+          if (seen.has(d.time as number)) return false;
+          seen.add(d.time as number);
+          return true;
+        });
+        const lineSeries = chart.addSeries(LineSeries, {
+          color: "#2dd4bf",
+          lineWidth: 2,
+          crosshairMarkerVisible: true,
+          crosshairMarkerRadius: 4,
+        });
+        lineSeries.setData(deduped);
+        seriesRef.current = lineSeries;
+      }
+      prevDataLenRef.current = data.length;
+      chart.timeScale().scrollToRealTime();
+      return;
+    }
+
+    // Only the last point changed → incrementally update (smooth like Deriv)
+    if (data.length === prevDataLenRef.current + 1 && data.length > 0) {
+      const latest = data[data.length - 1];
+      const epoch = Math.floor(new Date(`2000-01-01T${latest.time}`).getTime() / 1000) + prevDataLenRef.current;
+      if (mode === "candle") {
+        // Update the latest candle with the current tick price
+        const candleData = aggregateToCandles(data.slice(-5), 5); // last few ticks make the last candle
+        if (candleData.length > 0) {
+          seriesRef.current.update(candleData[candleData.length - 1]);
+        }
+      } else {
+        seriesRef.current.update({ time: epoch as Time, value: latest.price });
+      }
+      prevDataLenRef.current = data.length;
+      chart.timeScale().scrollToRealTime();
+    }
+  }, [data, mode, decimalPlaces]);
+
+  // Full re-create on mode change (removes all series, starts fresh)
+  useEffect(() => {
+    const chart = chartRef.current;
+    if (!chart) return;
     if (seriesRef.current) {
       chart.removeSeries(seriesRef.current);
       seriesRef.current = null;
     }
-
     if (!data.length) return;
-
-    if (mode === "candle") {
-      const candleData = aggregateToCandles(data, 5); // 5-second candles
-      const candleSeries = chart.addSeries(CandlestickSeries, {
-        upColor: "#34e0a1",
-        downColor: "#f43f5e",
-        borderVisible: false,
-        wickUpColor: "#34e0a1",
-        wickDownColor: "#f43f5e",
-      });
-      candleSeries.setData(candleData);
-      seriesRef.current = candleSeries;
-    } else {
-      const lineData: LineData<Time>[] = data.map((d, i) => ({
-        time: (Math.floor(new Date(`2000-01-01T${d.time}`).getTime() / 1000) + i) as Time,
-        value: d.price,
-      }));
-      // Deduplicate times (ticks can share the same second)
-      const seen = new Set<number>();
-      const deduped = lineData.filter((d) => {
-        if (seen.has(d.time as number)) return false;
-        seen.add(d.time as number);
-        return true;
-      });
-
-      const lineSeries = chart.addSeries(LineSeries, {
-        color: "#2dd4bf",
-        lineWidth: 2,
-        crosshairMarkerVisible: true,
-        crosshairMarkerRadius: 4,
-      });
-      lineSeries.setData(deduped);
-      seriesRef.current = lineSeries;
-    }
-
-    // Scroll to latest
-    chart.timeScale().scrollToRealTime();
-  }, [data, mode, decimalPlaces]);
+    // Trigger full build via the sync effect above
+    prevDataLenRef.current = data.length;
+  }, [mode]);
 
   // Mode toggle
   const handleModeChange = useCallback((newMode: "candle" | "line" | "area") => {

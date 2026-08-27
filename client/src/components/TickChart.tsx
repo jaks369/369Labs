@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { derivWS, Tick } from "@/services/derivWebSocket";
 import { trpc } from "@/lib/trpc";
 import PriceChart, { PriceChartPoint } from "@/components/PriceChart";
+import { isSyntheticIndexSymbol } from "@shared/symbols";
 
 interface TickChartProps {
   symbol: string;
@@ -155,6 +156,8 @@ export default function TickChart({ symbol, maxDataPoints = 100, compact = false
     }
   }, [timeframe]);
 
+  const isSynthetic = isSyntheticIndexSymbol(symbol);
+
   return (
     <PriceChart
       data={visibleData}
@@ -163,6 +166,7 @@ export default function TickChart({ symbol, maxDataPoints = 100, compact = false
       decimalPlaces={decimalPlaces}
       compact={compact}
       fillHeight={fillHeight}
+      defaultMode={isSynthetic ? "line" : "candle"}
       timeframes={[25, 50, 100, 200]}
       timeframe={timeframe}
       maxBars={MAX_BUFFER}
