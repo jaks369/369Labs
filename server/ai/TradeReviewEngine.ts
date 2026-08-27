@@ -1,4 +1,5 @@
 import * as db from "../db";
+import { getForexSessionInfo } from "@shared/forexSessions";
 
 interface TradeInput {
   id?: number;
@@ -23,6 +24,7 @@ interface MarketContext {
   momentum: number;
   recentTicks: number;
   recentPrediction?: { prediction: string; confidence: number };
+  sessionQuality?: "peak" | "good" | "normal" | "thin";
 }
 
 export interface TradeReview {
@@ -33,6 +35,10 @@ export interface TradeReview {
   riskAssessment: string;
   suggestedImprovements: string[];
   score: number;
+  /** Process grade: A-F rating of the trader's process, independent of outcome. */
+  processGrade: "A" | "B" | "C" | "D" | "F";
+  /** Process grade explanation. */
+  processExplanation: string;
 }
 
 function computeReview(trade: TradeInput, ctx: MarketContext): TradeReview {
@@ -51,6 +57,8 @@ function computeReview(trade: TradeInput, ctx: MarketContext): TradeReview {
     riskAssessment: "",
     suggestedImprovements: [],
     score: 50,
+    processGrade: "C",
+    processExplanation: "",
   };
 
   if (ctx.recentPrediction) {
@@ -132,6 +140,75 @@ function computeReview(trade: TradeInput, ctx: MarketContext): TradeReview {
     review.score = Math.max(10, 40 - Math.round(Math.abs(pnl) / stake * 20));
   }
 
+  // Process grade: evaluate the TRADER'S PROCESS, not the outcome.
+  // A good process can produce a loss; a bad process can produce a win.
+  // Grade factors: stake sizing, entry timing (session quality), exit discipline.
+  const processFactors: string[] = [];
+  let processPoints = 0;
+
+  // 1. Stake sizing (max 30 pts)
+  if (stake > 0 && stake <= 50) {
+    processPoints += 30;
+    processFactors.push("Appropriate stake size");
+  } else if (stake > 50 && stake <= 100) {
+    processPoints += 20;
+    processFactors.push("Stake slightly aggressive");
+  } else if (stake > 100) {
+    processPoints += 5;
+    processFactors.push("Stake too aggressive — exceeds recommended range");
+  }
+
+  // 2. Session quality at entry (max 30 pts)
+  const session = ctx.sessionQuality || "normal";
+  if (session === "peak") {
+    processPoints += 30;
+    processFactors.push("Entered during peak liquidity");
+  } else if (session === "good") {
+    processPoints += 25;
+    processFactors.push("Entered during good liquidity");
+  } else if (session === "normal") {
+    processPoints += 15;
+    processFactors.push("Entered during normal liquidity");
+  } else {
+    processPoints += 5;
+    processFactors.push("Entered during thin liquidity — riskier conditions");
+  }
+
+  // 3. Signal confidence at entry (max 20 pts)
+  const confidence = ctx.recentPrediction?.confidence ?? 0;
+  if (confidence >= 70) {
+    processPoints += 20;
+    processFactors.push(`Strong signal confidence (${confidence}%)`);
+  } else if (confidence >= 60) {
+    processPoints += 15;
+    processFactors.push(`Moderate signal confidence (${confidence}%)`);
+  } else {
+    processPoints += 5;
+    processFactors.push("Low or unknown signal confidence");
+  }
+
+  // 4. Risk-reward adherence (max 20 pts)
+  const rrRatio = pnl > 0 ? pnl / stake : -1;
+  if (rrRatio >= 0.5) {
+    processPoints += 20;
+    processFactors.push("Good risk-reward on win");
+  } else if (rrRatio >= 0) {
+    processPoints += 10;
+    processFactors.push("Moderate risk-reward");
+  } else {
+    processPoints += 5;
+    processFactors.push("Poor risk-reward on loss");
+  }
+
+  // Grade mapping
+  if (processPoints >= 80) review.processGrade = "A";
+  else if (processPoints >= 65) review.processGrade = "B";
+  else if (processPoints >= 50) review.processGrade = "C";
+  else if (processPoints >= 35) review.processGrade = "D";
+  else review.processGrade = "F";
+
+  review.processExplanation = processFactors.join(" · ");
+
   return review;
 }
 
@@ -190,7 +267,8 @@ export class TradeReviewEngine {
       /* non-critical */
     }
 
-    const marketContext: MarketContext = { healthScore, volatility, trend, momentum, recentTicks, recentPrediction };
+    const sessionInfo = getForexSessionInfo(trade.entryTime);
+    const marketContext: MarketContext = { healthScore, volatility, trend, momentum, recentTicks, recentPrediction, sessionQuality: sessionInfo.liquidity };
     const review = computeReview(trade, marketContext);
 
     return { review, marketContext };
