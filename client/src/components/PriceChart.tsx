@@ -4,6 +4,9 @@ import { CandlestickChart, LineChart, Maximize, Minimize } from "lucide-react";
 import { getSymbolDisplayName } from "@/lib/symbols";
 
 export interface PriceChartPoint {
+  /** Epoch seconds (e.g. 1712848000) — for chart positioning. */
+  epoch: number;
+  /** Display time string — for labels. */
   time: string;
   price: number;
 }
@@ -30,37 +33,25 @@ interface PriceChartProps {
 }
 
 /**
- * Aggregate raw ticks into OHLCV candlestick bars.
- * Groups ticks by time window (in seconds) to create realistic candles.
+ * Aggregate raw ticks into OHLCV candlestick bars using epoch seconds.
  */
 function aggregateToCandles(data: PriceChartPoint[], windowSec: number): CandlestickData<Time>[] {
   if (!data.length) return [];
-
-  const buckets = new Map<number, { open: number; high: number; low: number; close: number; count: number }>();
-
-  for (const point of data) {
-    const t = Math.floor(new Date(`2000-01-01T${point.time}`).getTime() / 1000);
-    const bucketKey = Math.floor(t / windowSec) * windowSec;
+  const buckets = new Map<number, { open: number; high: number; low: number; close: number }>();
+  for (const d of data) {
+    const bucketKey = Math.floor(d.epoch / windowSec) * windowSec;
     const existing = buckets.get(bucketKey);
     if (existing) {
-      existing.high = Math.max(existing.high, point.price);
-      existing.low = Math.min(existing.low, point.price);
-      existing.close = point.price;
-      existing.count++;
+      existing.high = Math.max(existing.high, d.price);
+      existing.low = Math.min(existing.low, d.price);
+      existing.close = d.price;
     } else {
-      buckets.set(bucketKey, { open: point.price, high: point.price, low: point.price, close: point.price, count: 1 });
+      buckets.set(bucketKey, { open: d.price, high: d.price, low: d.price, close: d.price });
     }
   }
-
   return Array.from(buckets.entries())
     .sort(([a], [b]) => a - b)
-    .map(([time, bar]) => ({
-      time: time as Time,
-      open: bar.open,
-      high: bar.high,
-      low: bar.low,
-      close: bar.close,
-    }));
+    .map(([time, bar]) => ({ time: time as Time, open: bar.open, high: bar.high, low: bar.low, close: bar.close }));
 }
 
 function niceScale(min: number, max: number, ticks: number) {
@@ -195,8 +186,8 @@ export default function PriceChart({
         candleSeries.setData(candleData);
         seriesRef.current = candleSeries;
       } else {
-        const lineData: LineData<Time>[] = data.map((d, i) => ({
-          time: (Math.floor(new Date(`2000-01-01T${d.time}`).getTime() / 1000) + i) as Time,
+        const lineData: LineData<Time>[] = data.map((d) => ({
+          time: d.epoch as Time,
           value: d.price,
         }));
         const seen = new Set<number>();
@@ -222,7 +213,22 @@ export default function PriceChart({
     // Only the last point changed → incrementally update (smooth like Deriv)
     if (data.length === prevDataLenRef.current + 1 && data.length > 0) {
       const latest = data[data.length - 1];
-      const epoch = Math.floor(new Date(`2000-01-01T${latest.time}`).getTime() / 1000) + prevDataLenRef.current;
+      if (mode === "candle") {
+        // Update the latest candle with the current tick price
+        const candleData = aggregateToCandles(data.slice(-5), 5);
+        if (candleData.length > 0) {
+          seriesRef.current.update(candleData[candleData.length - 1]);
+        }
+      } else {
+        seriesRef.current.update({ time: latest.epoch as Time, value: latest.price });
+      }
+      prevDataLenRef.current = data.length;
+      chart.timeScale().scrollToRealTime();
+    }
+
+    // Only the last point changed → incrementally update (smooth like Deriv)
+    if (data.length === prevDataLenRef.current + 1 && data.length > 0) {
+      const latest = data[data.length - 1];
       if (mode === "candle") {
         // Update the latest candle with the current tick price
         const candleData = aggregateToCandles(data.slice(-5), 5); // last few ticks make the last candle
@@ -230,7 +236,7 @@ export default function PriceChart({
           seriesRef.current.update(candleData[candleData.length - 1]);
         }
       } else {
-        seriesRef.current.update({ time: epoch as Time, value: latest.price });
+        seriesRef.current.update({ time: latest.epoch as Time, value: latest.price });
       }
       prevDataLenRef.current = data.length;
       chart.timeScale().scrollToRealTime();

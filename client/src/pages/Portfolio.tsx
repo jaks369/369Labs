@@ -219,7 +219,10 @@ export default function Portfolio() {
               <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-6">
                 <h2 className="text-sm font-bold text-white mb-4">Equity Curve</h2>
                 <PriceChart
-                  data={equityData.map((p, i) => ({ time: new Date(ordered[i]?.entryTime || 0).toLocaleDateString(), price: p.equity }))}
+                  data={equityData.map((p, i) => {
+                    const epochSec = Math.floor(new Date(ordered[i]?.entryTime || Date.now()).getTime() / 1000);
+                    return { epoch: epochSec, time: new Date(ordered[i]?.entryTime || Date.now()).toLocaleTimeString(), price: p.equity };
+                  })}
                   decimalPlaces={2}
                   color={totalPnl >= 0 ? "var(--green)" : "var(--red)"}
                   fitOnDataChange

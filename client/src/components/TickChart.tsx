@@ -48,10 +48,14 @@ export default function TickChart({ symbol, maxDataPoints = 100, compact = false
   const toPoints = useCallback((ticks: any[]): PriceChartPoint[] =>
     ticks
       .filter((t) => t && t.price != null)
-      .map((t) => ({
-        time: new Date((t.epoch || 0) * 1000 || (t.timestamp || Date.now())).toLocaleTimeString(),
-        price: Number(t.price),
-      })),
+      .map((t) => {
+        const epochSec = t.epoch || Math.floor((t.timestamp || Date.now()) / 1000);
+        return {
+          epoch: epochSec,
+          time: new Date(epochSec * 1000).toLocaleTimeString(),
+          price: Number(t.price),
+        };
+      }),
   []);
 
   // Fetch symbol-specific decimal places from Deriv active_symbols
@@ -92,10 +96,14 @@ export default function TickChart({ symbol, maxDataPoints = 100, compact = false
   useEffect(() => {
     const ticks = historyQuery.data?.ticks;
     if (!ticks || !ticks.length || initialLoad) return;
-    const hist = ticks.slice(-MAX_BUFFER).map((t) => ({
-      time: new Date((t.epoch || 0) * 1000).toLocaleTimeString(),
-      price: Number(t.price),
-    }));
+    const hist = ticks.slice(-MAX_BUFFER).map((t) => {
+      const epochSec = t.epoch || Math.floor((t.timestamp || Date.now()) / 1000);
+      return {
+        epoch: epochSec,
+        time: new Date(epochSec * 1000).toLocaleTimeString(),
+        price: Number(t.price),
+      };
+    });
     if (hist.length) {
       bufferRef.current = hist;
       rollingCache.set(symbol, hist);
@@ -125,7 +133,11 @@ export default function TickChart({ symbol, maxDataPoints = 100, compact = false
     const listener = {
       onTick: (tick: Tick) => {
         if (tick.symbol !== symbol) return;
-        const point = { time: new Date(tick.timestamp).toLocaleTimeString(), price: tick.price };
+        const point = {
+          epoch: Math.floor(new Date(tick.timestamp).getTime() / 1000),
+          time: new Date(tick.timestamp).toLocaleTimeString(),
+          price: tick.price,
+        };
         bufferRef.current = [...bufferRef.current, point].slice(-MAX_BUFFER);
         rollingCache.set(symbol, bufferRef.current);
         setVisibleData([...bufferRef.current].slice(-MAX_BUFFER));

@@ -227,9 +227,9 @@ export default function Analytics() {
                 <TrendingUp className="w-5 h-5 text-[var(--green)]" /> Equity Curve
               </h2>
               {equityCurve.length > 1 ? (
-                <PriceChart
-                  data={equityCurve.map(p => ({ time: p.date, price: p.value }))}
-                  decimalPlaces={2}
+<PriceChart
+                    data={equityCurve.map(p => ({ epoch: Math.floor(new Date(p.date).getTime() / 1000), time: new Date(p.date).toLocaleTimeString(), price: p.value }))}
+                    decimalPlaces={2}
                   color={eqColor}
                   fitOnDataChange
                   heightClass="h-60 md:h-72"
