@@ -561,17 +561,51 @@ export const appRouter = router({
       }))
       .mutation(async ({ ctx, input }) => {
         checkRateLimit(ctx.req.ip || "unknown");
-        const existing = await db.getUserByEmail(input.email);
+
+        let existing;
+        try {
+          existing = await db.getUserByEmail(input.email);
+          if (!existing && input.email) {
+            await new Promise(r => setTimeout(r, 3000));
+            existing = await db.getUserByEmail(input.email);
+          }
+        } catch (e: any) {
+          logger.error("[auth] getUserByEmail failed (signup)", { error: e?.message || e, email: input.email });
+          try {
+            await new Promise(r => setTimeout(r, 3000));
+            existing = await db.getUserByEmail(input.email);
+          } catch (e2: any) {
+            logger.error("[auth] getUserByEmail retry failed (signup)", { error: e2?.message || e2 });
+            throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Authentication service unavailable — database may be waking up. Please try again in 30 seconds." });
+          }
+        }
+
         if (existing) {
           throw new TRPCError({ code: "CONFLICT", message: "An account with this email already exists" });
         }
 
         const passwordHash = await hashPassword(input.password);
-        const user = await db.createUser({
-          email: input.email,
-          passwordHash,
-          name: input.name ?? null,
-        });
+        let user;
+        try {
+          user = await db.createUser({
+            email: input.email,
+            passwordHash,
+            name: input.name ?? null,
+          });
+        } catch (e: any) {
+          logger.error("[auth] createUser failed", { error: e?.message || e, email: input.email });
+          try {
+            await new Promise(r => setTimeout(r, 3000));
+            user = await db.createUser({
+              email: input.email,
+              passwordHash,
+              name: input.name ?? null,
+            });
+          } catch (e2: any) {
+            logger.error("[auth] createUser retry failed", { error: e2?.message || e2 });
+            throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Authentication service unavailable — database may be waking up. Please try again in 30 seconds." });
+          }
+        }
         db.saveAuditLog({ userId: user.id, action: "auth.signup", detail: { email: input.email } }).catch(() => {});
 
         const sessionId = randomBytes(16).toString("hex");
