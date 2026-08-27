@@ -19,6 +19,7 @@ import { higherTimeframeBias } from "./multiTimeframe";
 import { computeStructureTrade, StructureTradeParams, StructureTradeOptions } from "@shared/structureTrade";
 import { estimateExecutionCost, computeNetConfidence, expectedMovePips, type CostEstimate } from "@shared/costModel";
 import { computeSessionWeight, applySessionWeight, type SessionWeight } from "@shared/sessionWeight";
+import { evaluatePromotion, type PaperTrade, type PaperStageResult, DEFAULT_PAPER_STAGE_CONFIG } from "@shared/paperStage";
 
 export type GuideStrength = "STRONG" | "MEDIUM" | "WEAK";
 export type GuideDirection = "up" | "down";
@@ -98,6 +99,8 @@ export interface GuidingSignalCandidate {
   costEstimate?: CostEstimate;
   /** Session liquidity weight: peak=1.0, thin=0.7. Applied to confidence for forex. */
   sessionWeight?: SessionWeight;
+  /** Paper stage result: whether this signal needs paper validation before live. */
+  paperStageResult?: PaperStageResult;
   /** Optional backtest results for validation — populated by scanIndicatorTicks */
   backtest?: {
     confidence: number;
@@ -316,6 +319,9 @@ export function scanSignalForSymbol(symbol: string, rawTicks: TickLike[]): ScanR
           netConfidence,
           costEstimate,
           sessionWeight,
+          paperStageResult: netConfidence < 60
+            ? { status: "paper", trades: [], winRate: 0, netProfit: 0, tradesCompleted: 0, reason: `Net confidence ${netConfidence.toFixed(1)}% below 60% — needs paper validation` }
+            : undefined,
           htf: {
             timeframeSec: htfInfo.timeframeSec,
             bias: htfInfo.bias,
