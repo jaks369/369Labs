@@ -28,6 +28,7 @@ import {
 import { scanSignalForSymbol, GuidingSignalCandidate } from "./indicatorSignal";
 import { wilsonInterval, binomialPvsBaseline, benjaminiHochbergFDR, walkForwardSummary, WALK_FORWARD_WINDOWS, WALK_FORWARD_REQUIRED, MIN_OOS_SAMPLES, MIN_WINDOW_SAMPLES, assignTier, type SignalTier, type WalkForwardResult } from "./signalStats";
 import { buildCandles, medianTickGapSec, type TickLike } from "@shared/indicators";
+import { estimateExecutionCost, computeNetConfidence, expectedMovePips } from "@shared/costModel";
 
 // Pattern categories remain from the v1 API so routers/agents keep compiling.
 export type PatternType =
@@ -130,7 +131,7 @@ export async function scanIndicatorTicks(opts: ScanOptions): Promise<GuidingSign
     // If the backtest says the signal is no_edge or failed, don't emit it
     if (backtest.tier === "no_edge" || backtest.tier === "failed") return null;
     // Attach backtest-derived confidence and validation data
-    signal.confidence = backtest.confidence;
+    signal.confidence = backtest.netConfidence;  // use net-of-cost confidence as the canonical confidence
     signal.backtest = {
       confidence: backtest.confidence,
       tier: backtest.tier,
@@ -158,6 +159,7 @@ export interface IndicatorBacktestResult {
   symbol: string;
   direction: "up" | "down";
   confidence: number;
+  netConfidence: number;
   tier: SignalTier;
   baseline: number;
   observed: number;
@@ -262,10 +264,22 @@ export function backtestIndicatorSignal(
 
   const tier = assignTier(significant, ci.low > baseline, edgePp, eff.oosTotal, eff);
 
+  // Net-of-cost confidence: subtract estimated execution costs from gross edge
+  const costEst = estimateExecutionCost(symbol);
+  const movePips = expectedMovePips(symbol, windowTicks);
+  const { netConfidence } = computeNetConfidence(
+    Math.round(observed * 100),
+    baseline,
+    edgePp,
+    costEst.totalPips,
+    movePips,
+  );
+
   return {
     symbol,
     direction,
     confidence: Math.round(observed * 100),
+    netConfidence,
     tier,
     baseline,
     observed,

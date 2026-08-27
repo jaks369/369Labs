@@ -17,6 +17,7 @@
 import { scoreConfluence, explainConfluence, scorePriceActionConfluence, ema, rsi, macd, buildCandles, medianTickGapSec, TickLike, Candle, IndicatorDetail, atr, bollingerBands, adx } from "@shared/indicators";
 import { higherTimeframeBias } from "./multiTimeframe";
 import { computeStructureTrade, StructureTradeParams, StructureTradeOptions } from "@shared/structureTrade";
+import { estimateExecutionCost, computeNetConfidence, expectedMovePips, type CostEstimate } from "@shared/costModel";
 
 export type GuideStrength = "STRONG" | "MEDIUM" | "WEAK";
 export type GuideDirection = "up" | "down";
@@ -84,6 +85,16 @@ export interface GuidingSignalCandidate {
    * and market structure (BOS/CHoCH, swing points).
    */
   structureTrade?: StructureTradeParams;
+  /**
+   * Net-of-cost confidence: gross confidence adjusted for estimated execution
+   * costs (spread, slippage). Always <= gross confidence. When costs consume
+   * most of the edge, net confidence drops below the minimum and the signal
+   * is downgraded. This is the professional-grade number — never shown to
+   * users without this adjustment.
+   */
+  netConfidence?: number;
+  /** Execution cost estimate used for the net confidence computation. */
+  costEstimate?: CostEstimate;
   /** Optional backtest results for validation — populated by scanIndicatorTicks */
   backtest?: {
     confidence: number;
@@ -246,6 +257,22 @@ export function scanSignalForSymbol(symbol: string, rawTicks: TickLike[]): ScanR
   // Structure-based trade parameters: SL beyond invalidating structure, TP from liquidity
   const structureTrade = computeStructureTrade(candles.slice(-CANDLE_LOOKBACK), combinedDirection, last.close);
 
+  // Cost-aware net confidence: subtract estimated execution costs from gross edge
+  const costEstimate = estimateExecutionCost(symbol);
+  const movePips = expectedMovePips(symbol, windowTicksFor(symbol, gapSec));
+  const { netConfidence } = computeNetConfidence(
+    combinedScore, 0.5,  // baseline 50% for directional contracts
+    Math.max(0, combinedScore - 50),  // approximate edge in pp
+    costEstimate.totalPips,
+    movePips,
+  );
+
+  // If net confidence is below minimum, downgrade strength or block signal
+  let adjustedStrength = paStrength;
+  if (netConfidence < 50 && paStrength !== "WEAK") {
+    adjustedStrength = "WEAK";
+  }
+
   const signal: GuidingSignalCandidate | null =
     paStrength === "WEAK" && confluence.reasons.length === 1 && paConfluence.votes.total === 0
       ? null
@@ -255,7 +282,7 @@ export function scanSignalForSymbol(symbol: string, rawTicks: TickLike[]): ScanR
           direction: combinedDirection,
           contractType: combinedDirection === "up" ? "CALL" : "PUT",
           confidence: combinedScore,
-          strength: paStrength,
+          strength: adjustedStrength,
           votes: {
             up: confluence.votes.up + paConfluence.votes.up,
             down: confluence.votes.down + paConfluence.votes.down,
@@ -269,6 +296,8 @@ export function scanSignalForSymbol(symbol: string, rawTicks: TickLike[]): ScanR
           regime: regimeWithAlignment,
           conflict,
           structureTrade,
+          netConfidence,
+          costEstimate,
           htf: {
             timeframeSec: htfInfo.timeframeSec,
             bias: htfInfo.bias,

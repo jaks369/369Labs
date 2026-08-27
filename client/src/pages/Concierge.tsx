@@ -374,6 +374,11 @@ export default function Concierge() {
                   <Metric label="Direction" value={sig.direction === "up" ? "Rise" : "Fall"} accent={sig.direction === "up" ? "text-[var(--green)]" : "text-[var(--red)]"} />
                   <Metric label="Agreement" value={agreementText(sig.votes) || "—"} />
                 </div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  <Metric label="Gross confidence" value={`${sig.confidence}%`} />
+                  <Metric label="Net (after costs)" value={sig.netConfidence !== undefined ? `${sig.netConfidence}%` : "—"} accent={sig.netConfidence !== undefined && sig.netConfidence < sig.confidence ? "text-[var(--amber)]" : undefined} />
+                  <Metric label="Est. round-trip cost" value={sig.costEstimate ? `${sig.costEstimate.totalPips.toFixed(1)} pips` : "—"} />
+                </div>
                 {acc && acc.total > 0 && (
                   <div className="rounded-lg border border-[var(--border)] bg-[var(--surface-elevated)] p-3 text-[11px] text-[var(--text-secondary)]">
                     Current signal: <span className="text-white font-semibold">{agreementText(sig.votes) || "no computable indicators yet"}</span> — that's how many indicators agree, not your chance of winning. Your guided-signal history: <span className="text-white font-semibold">{acc.winRatePct}% win rate</span> over {acc.total} resolved signals. Judge performance by the history, not the score.
