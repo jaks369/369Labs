@@ -28,6 +28,7 @@ import {
 import { scanSignalForSymbol, GuidingSignalCandidate } from "./indicatorSignal";
 import { wilsonInterval, binomialPvsBaseline, benjaminiHochbergFDR, walkForwardSummary, WALK_FORWARD_WINDOWS, WALK_FORWARD_REQUIRED, MIN_OOS_SAMPLES, MIN_WINDOW_SAMPLES, assignTier, type SignalTier, type WalkForwardResult } from "./signalStats";
 import { validateHeldOut, type ValidationGateResult } from "../shared/heldOutValidation";
+import { getRequiredDisclosures } from "../shared/performanceDisclosure";
 import { buildCandles, medianTickGapSec, type TickLike } from "@shared/indicators";
 import { estimateExecutionCost, computeNetConfidence, expectedMovePips } from "@shared/costModel";
 
@@ -185,6 +186,8 @@ export interface IndicatorBacktestResult {
   windowTicks: number;
   /** Held-out validation gate result — required for VALIDATED badge. */
   validation: ValidationGateResult;
+  /** Compliance disclosures for this backtest result. */
+  disclosures: string[];
 }
 
 /**
@@ -311,6 +314,8 @@ export function backtestIndicatorSignal(
     oosInsufficient: eff.oosTotal < MIN_OOS_SAMPLES || eff.settledCount === 0,
     windowTicks,
     validation,
+    disclosures: getRequiredDisclosures(true, false, isSyntheticIndexSymbol(symbol))
+      .flatMap((d) => d.texts),
   };
 }
 
