@@ -439,7 +439,7 @@ export default function Marketplace() {
         ) : (
           <div className="space-y-4">
             {monitors.length > 0 && (
-              <div className="flex flex-wrap gap-2 items-center text-[10px] text-[var(--text-brown)]">
+              <div className="flex flex-wrap gap-2 items-center text-[10px]">
                 <span className="text-[var(--text-muted)]">Shown: {real.length} clear · Monitored without verified edge: {monitors.length}</span>
               </div>
             )}
