@@ -40,6 +40,64 @@ let dbFlushTimer: ReturnType<typeof setInterval> | null = null;
 const DB_FLUSH_INTERVAL_MS = 2000;
 const MAX_DB_BATCH = 200;
 
+// Tick sanity checking — protects downstream signal calculations from
+// corrupted data. This codebase has already been hit by bad ticks once
+// (pruneBadTicks comment: "during a past bug, ticks were stored with
+// lastDigit=0"). These checks prevent recurrence at the source.
+const PRICE_OUTLIER_STD_DEVS = 5;  // reject ticks >5 std devs from recent mean
+const ROLLING_STATS_WINDOW = 100;  // ticks to track for rolling mean/stddev
+interface RollingStats { sum: number; sumSq: number; count: number; min: number; max: number }
+const rollingStats = new Map<string, RollingStats>();
+
+function updateRollingStats(symbol: string, price: number): RollingStats {
+  let stats = rollingStats.get(symbol);
+  if (!stats) {
+    stats = { sum: 0, sumSq: 0, count: 0, min: price, max: price };
+    rollingStats.set(symbol, stats);
+  }
+  stats.sum += price;
+  stats.sumSq += price * price;
+  stats.count++;
+  stats.min = Math.min(stats.min, price);
+  stats.max = Math.max(stats.max, price);
+  // Keep a rolling window — once we exceed, subtract oldest
+  if (stats.count > ROLLING_STATS_WINDOW) {
+    // Approximate: reset stats periodically (every 200 ticks) to stay bounded
+    if (stats.count > ROLLING_STATS_WINDOW * 2) {
+      const keep = ROLLING_STATS_WINDOW;
+      stats.sum = price * keep;
+      stats.sumSq = price * price * keep;
+      stats.count = keep;
+      stats.min = price;
+      stats.max = price;
+    }
+  }
+  return stats;
+}
+
+function isPriceOutlier(symbol: string, price: number): boolean {
+  const stats = rollingStats.get(symbol);
+  if (!stats || stats.count < 20) return false;  // need enough data to judge
+  const mean = stats.sum / stats.count;
+  const variance = (stats.sumSq / stats.count) - (mean * mean);
+  const stddev = Math.sqrt(Math.max(0, variance));
+  if (stddev === 0) return false;  // all ticks same price — can't judge
+  const zScore = Math.abs(price - mean) / stddev;
+  return zScore > PRICE_OUTLIER_STD_DEVS;
+}
+
+/**
+ * Validate a tick's price. Returns { valid, reason } — callers should
+ * skip the tick if valid=false and log the reason.
+ */
+function validateTickPrice(symbol: string, quote: string): { valid: boolean; reason?: string } {
+  const price = Number(quote);
+  if (!Number.isFinite(price)) return { valid: false, reason: `non-finite price: ${quote}` };
+  if (price <= 0) return { valid: false, reason: `non-positive price: ${price}` };
+  if (isPriceOutlier(symbol, price)) return { valid: false, reason: `outlier price: ${price} (beyond ${PRICE_OUTLIER_STD_DEVS} stddev)` };
+  return { valid: true };
+}
+
 function flushDbWrites() {
   if (!pendingDbWrites.length) return;
   const batch = pendingDbWrites.splice(0, MAX_DB_BATCH);
@@ -265,9 +323,25 @@ export function startTickCollector() {
         const quote = String(msg.tick.quote);
         const epoch = Number(msg.tick.epoch) || Math.floor(Date.now() / 1000);
         const decimals = getDecimalPlaces(symbol);
-        const lastDigit = lastDigitOf(Number(quote), decimals);
+
+        // Out-of-order tick: reject entirely (don't write to buffer or DB).
+        // A warning-only approach previously let corrupted data flow downstream.
         const prev = lastTickEpoch[symbol] || 0;
-        const outOfOrder = prev && epoch < prev;
+        if (prev && epoch < prev) {
+          console.warn(`[tickCollector] REJECTED out-of-order tick for ${symbol}: ${epoch} < ${prev}`);
+          return;
+        }
+
+        // Validate price BEFORE any processing — NaN/zero/negative/outlier
+        // prices poison digit calculations, Wilson CI, and stored records.
+        const { valid, reason } = validateTickPrice(symbol, quote);
+        if (!valid) {
+          console.warn(`[tickCollector] REJECTED bad tick for ${symbol}: ${reason}`);
+          return;
+        }
+
+        const price = parseFloat(quote);
+        const lastDigit = lastDigitOf(price, decimals);
         const nowSec = Math.floor(Date.now() / 1000);
         const gap = nowSec - lastAnyTickEpoch;
         if (gap > STALE_THRESHOLD_SECONDS) {
@@ -281,15 +355,14 @@ export function startTickCollector() {
         }
         lastAnyTickEpoch = nowSec;
         lastTickEpoch[symbol] = epoch;
-        if (outOfOrder) {
-          console.warn(`[tickCollector] out-of-order tick for ${symbol}: ${epoch} < ${prev}`);
-        }
+        // Update rolling stats for outlier detection on next tick
+        updateRollingStats(symbol, price);
         // Batch for DB flush instead of fire-and-forget individual inserts.
         pendingDbWrites.push({ symbol, price: quote, lastDigit, epoch });
         // maintain in-memory buffer for strategy execution
         if (!tickBuffer.has(symbol)) tickBuffer.set(symbol, []);
         const buf = tickBuffer.get(symbol)!;
-        buf.push({ price: parseFloat(quote), epoch, lastDigit });
+        buf.push({ price, epoch, lastDigit });
         if (buf.length > MAX_TICKS_PER_SYMBOL) buf.splice(0, buf.length - MAX_TICKS_PER_SYMBOL);
         // Event-driven consumers (execution engine evaluates bots watching
         // this symbol the moment a tick lands instead of on a poll).

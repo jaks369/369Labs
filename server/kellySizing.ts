@@ -22,7 +22,7 @@ export const KELLY_MIN_SAMPLES = 100;
 /** Fraction of full Kelly used (quarter-Kelly). */
 export const KELLY_FRACTION = 0.25;
 /** Hard cap on suggested fraction of balance per trade. */
-export const KELLY_MAX_FRACTION = 0.05; // 5% of balance
+export const KELLY_MAX_FRACTION = 0.02; // 2% of balance — professional ceiling
 
 export interface KellyInput {
   /** Validated win probability estimate (0..1) — use OOS rate when available. */

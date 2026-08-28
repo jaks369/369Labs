@@ -1,6 +1,6 @@
 /**
  * Position Sizing - Mathematical, not guesswork
- * All methods include safety caps (max 5% balance per trade, min $0.35)
+ * All methods include safety caps (max 2% balance per trade, min $0.35)
  */
 
 export type SizingMethod = 'kelly' | 'fixed' | 'vol_adjusted';
@@ -26,7 +26,7 @@ export interface SizingResult {
 }
 
 const MIN_STAKE = 0.35;
-const MAX_BALANCE_PCT = 0.05; // 5% hard cap
+const MAX_BALANCE_PCT = 0.02; // 2% hard cap — Kotegawa-style professional ceiling
 
 /** Kelly Criterion: f = (bp - q) / b where b=payout, p=winRate, q=1-p */
 export function kellyStake(input: SizingInput): SizingResult {

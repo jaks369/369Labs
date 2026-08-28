@@ -52,7 +52,7 @@ export default function TickChart({ symbol, maxDataPoints = 100, compact = false
         const epochSec = t.epoch || Math.floor((t.timestamp || Date.now()) / 1000);
         return {
           epoch: epochSec,
-          time: new Date(epochSec * 1000).toLocaleTimeString(),
+          time: new Date(epochSec * 1000).toISOString().slice(11, 19),
           price: Number(t.price),
         };
       }),
@@ -135,7 +135,7 @@ export default function TickChart({ symbol, maxDataPoints = 100, compact = false
         if (tick.symbol !== symbol) return;
         const point = {
           epoch: Math.floor(new Date(tick.timestamp).getTime() / 1000),
-          time: new Date(tick.timestamp).toLocaleTimeString(),
+          time: new Date(tick.timestamp).toISOString().slice(11, 19),
           price: tick.price,
         };
         bufferRef.current = [...bufferRef.current, point].slice(-MAX_BUFFER);
