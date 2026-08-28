@@ -158,19 +158,45 @@ export function suggestStakeInput(balance: number, riskPct = 2): StakeSuggestion
   };
 }
 
-/** Suggested stake from the user's concierge settings: an explicit absolute
- *  stake wins if set, otherwise it falls back to the risk-adjusted % of the
- *  account balance. Either way the risk guard (3× the % baseline) caps the
- *  number so a typo can't recommend a reckless size. */
-export function suggestStakeForSettings(balance: number, settings: Pick<ConciergeSettings, "stakePct" | "stake">): StakeSuggestion {
+/** Suggested stake from the user's concierge settings. Uses the sizing method
+ *  chosen by the user (fixed, kelly, vol_adjusted) via shared/positionSizing.ts.
+ *  Falls back to fixed-risk % of balance when the method can't compute. */
+export function suggestStakeForSettings(balance: number, settings: Pick<ConciergeSettings, "stakePct" | "stake" | "sizingMethod">, winRate?: number, payout?: number): StakeSuggestion {
   const base = suggestStakeInput(balance, settings.stakePct);
-  const desired = Number(settings.stake) > 0 ? Number(settings.stake) : base.stake;
-  const stake = Math.round(Math.min(Math.max(desired, 0.35), base.maxStake) * 100) / 100;
-  return {
-    ...base,
-    stake,
-    note: `${base.riskPct}% of account = $${base.stake.toFixed(2)}; your set stake $${desired.toFixed(2)}${desired > base.maxStake ? ` was capped to the risk guard $${base.maxStake.toFixed(2)}` : ""}`,
-  };
+  // If user has an explicit stake set, use it (capped by risk guard, floored by platform minimum)
+  if (Number(settings.stake) > 0) {
+    const desired = Number(settings.stake);
+    const capped = Math.min(desired, base.maxStake);
+    const stake = Math.round(Math.max(capped, 0.35) * 100) / 100;
+    const wasCapped = desired > base.maxStake;
+    const wasFloored = desired < 0.35;
+    const note = wasCapped
+      ? `Fixed stake $${desired.toFixed(2)} was capped to the risk guard $${base.maxStake.toFixed(2)}`
+      : wasFloored
+        ? `Fixed stake $${desired.toFixed(2)} was raised to the platform minimum $0.35`
+        : `Fixed stake $${stake.toFixed(2)} (risk guard: $${base.maxStake.toFixed(2)})`;
+    return { ...base, stake, note };
+  }
+  // Otherwise, use the selected sizing method
+  const method = settings.sizingMethod || "fixed";
+  if (method === "kelly" && winRate != null && payout != null) {
+    const { getStake } = require("@shared/positionSizing");
+    const kellyResult = getStake({ balance, winRate, payout, riskPct: base.riskPct }, "kelly");
+    if (kellyResult && kellyResult.stake > 0) {
+      const stake = Math.round(Math.min(Math.max(kellyResult.stake, 0.35), base.maxStake) * 100) / 100;
+      return { ...base, stake, riskPct: base.riskPct, note: `Kelly sizing: ${(winRate * 100).toFixed(0)}% WR × ${payout.toFixed(2)} payout → $${stake.toFixed(2)} (2% cap: $${base.maxStake.toFixed(2)})` };
+    }
+  }
+  if (method === "vol_adjusted") {
+    const { getStake } = require("@shared/positionSizing");
+    const volResult = getStake({ balance, riskPct: base.riskPct }, "vol_adjusted");
+    if (volResult && volResult.stake > 0) {
+      const stake = Math.round(Math.min(Math.max(volResult.stake, 0.35), base.maxStake) * 100) / 100;
+      return { ...base, stake, riskPct: base.riskPct, note: `Volatility-adjusted: $${stake.toFixed(2)} (risk guard: $${base.maxStake.toFixed(2)})` };
+    }
+  }
+  // Default: fixed fractional
+  return base;
 }
 
 export function durationLabel(startMs: number): string {
@@ -536,6 +562,40 @@ export async function scanSymbolAndCache(symbol: string): Promise<GuidingSignalC
   try {
     const ticks = (await getTickHistoryDeep(symbol, 5000)).map((t) => ({ price: Number(t.price), epoch: Math.floor(Number(t.timestamp) / 1000) }));
     const res = scanSignalForSymbol(symbol, ticks);
+    if (res.signal) {
+      // Run backtest validation to check if this signal has historical edge
+      const { backtestIndicatorSignal } = await import("./signalScanner");
+      const backtest = backtestIndicatorSignal(symbol, ticks, res.signal.direction, res.signal.windowTicks);
+      if (backtest) {
+        if (backtest.tier === "no_edge" || backtest.tier === "failed") {
+          // Signal has no historical edge — downgrade to WEAK so it's not surfaced as actionable
+          res.signal.strength = "WEAK";
+        }
+        res.signal.backtest = {
+          confidence: backtest.confidence,
+          tier: backtest.tier,
+          baseline: backtest.baseline,
+          observed: backtest.observed,
+          edgePp: backtest.edgePp,
+          ciLow: backtest.ciLow,
+          ciHigh: backtest.ciHigh,
+          pValue: backtest.pValue,
+          fdrAdjusted: backtest.fdrAdjusted,
+          inSampleSize: backtest.inSampleSize,
+          oosAvg: backtest.oosAvg,
+          oosTotal: backtest.oosTotal,
+          oosInsufficient: backtest.oosInsufficient,
+          walks: backtest.walks,
+          validation: {
+            passed: backtest.validation.passed,
+            calibrationGapPp: backtest.validation.calibrationGapPp,
+            calibrated: backtest.validation.calibrated,
+            notOverfit: backtest.validation.notOverfit,
+            failures: backtest.validation.failures,
+          },
+        };
+      }
+    }
     scanCache.set(symbol, { at: Date.now(), signal: res.signal });
     return res.signal;
   } catch {
@@ -591,7 +651,7 @@ export async function buildBriefing(userId: number, balance?: number): Promise<B
   const top = candidates[0] ?? null;
   const budget = balance ?? 500;
   const settings = await getSettings(userId);
-  const stake = top ? suggestStakeForSettings(budget, settings) : null;
+  const stake = top ? suggestStakeForSettings(budget, settings, top.backtest?.confidence, 0.92) : null;
 
   let verdict = "NO TRADE";
   let headline = "No live candidate right now";
@@ -682,7 +742,7 @@ export async function scanAndPersistForUser(userId: number): Promise<ScanAndPers
       // filtering out the 1/3 and 2/3 coin-flips to minimize losses.
       if (!sig || sig.strength !== "STRONG") continue;
       if (recentKeys.has(`${sym}:${sig.direction}`)) continue;
-      const stake = suggestStakeForSettings(await userBalance(), settings).stake;
+      const stake = suggestStakeForSettings(await userBalance(), settings, sig.backtest?.confidence, 0.92).stake;
       const ok = await db.saveGuidingSignal({
         userId,
         symbol: sym,

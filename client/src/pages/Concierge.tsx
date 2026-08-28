@@ -319,6 +319,25 @@ export default function Concierge() {
 
   const tradeThis = (c: any) => {
     const stake = settings?.stake || 1;
+    const structureTrade = c.structureTrade || {};
+    const analysis = {
+      regime: c.regime?.regime || undefined,
+      reasoning: c.plain?.why || undefined,
+      indicators: (c.details || []).map((d: any) => ({
+        name: d.name,
+        verdict: d.verdict,
+        value: d.value,
+      })),
+      plain: c.plain || undefined,
+      entryPrice: c.entryPrice || undefined,
+      stopLossPrice: structureTrade.stopLoss || undefined,
+      takeProfitPrice: structureTrade.takeProfit || undefined,
+      slReasoning: structureTrade.reasoning?.join(" ") || structureTrade.slSource?.type || undefined,
+      tpReasoning: structureTrade.tpSource?.type || undefined,
+      riskReward: structureTrade.stopLoss && structureTrade.takeProfit
+        ? Math.abs(structureTrade.takeProfit - (c.entryPrice || 0)) / Math.abs((c.entryPrice || 0) - structureTrade.stopLoss)
+        : undefined,
+    };
     pushTradeIntent({
       symbol: c.symbol,
       contract: { category: "rise_fall", direction: c.direction === "up" ? "rise" : "fall" },
@@ -328,6 +347,7 @@ export default function Concierge() {
       label: `Concierge ${c.strength} ${agreementText(c.votes) || "no agreement yet"}`,
       ...(settings?.stopLoss ? { stopLoss: settings.stopLoss } : {}),
       ...(settings?.takeProfit ? { takeProfit: settings.takeProfit } : {}),
+      analysis,
     });
     toast(`Prefilled the terminal with ${getSymbolDisplayName(c.symbol)} at $${stake}`, "success");
     navigate("/dashboard");

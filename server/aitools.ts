@@ -51,6 +51,29 @@ export async function getTickHistory(symbol: string, count = 100) {
   return prices.map((p, i) => ({ price: p, timestamp: times[i] * 1000 }));
 }
 
+/**
+ * Fetch OHLC candles from Deriv via the public WebSocket (no auth required).
+ * @param symbol - Deriv symbol (e.g. "frxGBPUSD", "R_100")
+ * @param granularity - Candle width in seconds: 60 (1m), 300 (5m), 900 (15m), 3600 (1h)
+ * @param count - Number of candles to fetch
+ */
+export async function getCandles(symbol: string, granularity = 60, count = 200): Promise<{ epoch: number; open: number; high: number; low: number; close: number }[]> {
+  const sym = normalizeSymbol(symbol);
+  const res = await sendDeriv({ candles: sym, granularity, count, end: "latest" });
+  if (res.error) {
+    if (res.error.code === "InvalidSymbol" || String(res.error.message || "").includes("Invalid symbol")) return [];
+    throw new Error(res.error.message);
+  }
+  const candles: any[] = res.candles || [];
+  return candles.map((c: any) => ({
+    epoch: c.epoch,
+    open: parseFloat(c.open),
+    high: parseFloat(c.high),
+    low: parseFloat(c.low),
+    close: parseFloat(c.close),
+  }));
+}
+
 // Deriv caps ticks_history at 5,000 ticks per request. This paginates backward
 // using the `end` param so Priority-3 patterns (multi-digit sequences) can get
 // deeper history. Returns ticks oldest -> newest.

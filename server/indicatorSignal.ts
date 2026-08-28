@@ -452,3 +452,166 @@ export function isRegimeAligned(regime: MarketRegime, direction: GuideDirection)
   }
   return regime === 'trend_down' || regime === 'low_vol';
 }
+
+/**
+ * Analyze OHLC candles directly (no tick aggregation needed).
+ * Used when real candle data is available from Deriv's candles API.
+ */
+export function scanSignalFromCandles(symbol: string, candles: Candle[]): ScanResult {
+  if (!candles || candles.length < 8) {
+    return { signal: null, candles, diagnostics: { candles: candles.length, medianGapSec: null, available: [] } };
+  }
+
+  const closes = candles.slice(-CANDLE_LOOKBACK).map((c) => c.close);
+  const { macd: macdLine } = macd(closes);
+  const macdHist = macdLine === null ? null : macd(closes).histogram;
+  const emaUp = computeEmaUp(closes);
+  const rsiValue = closes.length >= 15 ? rsi(closes, 14) : null;
+
+  const available: string[] = [];
+  if (emaUp !== null) available.push("EMA");
+  if (rsiValue !== null) available.push("RSI");
+  if (macdHist !== null) available.push("MACD");
+  available.push("momentum");
+
+  const confluence = scoreConfluence(emaUp, rsiValue, macdHist, closes);
+  const explanation = explainConfluence(confluence);
+  const strength = strengthFor(confluence.score);
+  const last = candles[candles.length - 1];
+
+  const paConfluence = scorePriceActionConfluence(candles.slice(-CANDLE_LOOKBACK));
+
+  const combinedScoreRaw = paConfluence.votes.total > 0
+    ? Math.round(confluence.score * 0.6 + paConfluence.score * 0.4)
+    : confluence.score;
+  const combinedDirection = paConfluence.votes.total > 0
+    ? (confluence.score >= paConfluence.score ? confluence.direction : paConfluence.direction)
+    : confluence.direction;
+
+  const conflict = detectMomentumPaConflict(confluence, paConfluence);
+  const combinedScore = conflict ? Math.min(combinedScoreRaw, 64) : combinedScoreRaw;
+
+  const regimeInfo = detectRegime(candles);
+  const regimeAligned = isRegimeAligned(regimeInfo.regime, confluence.direction);
+  const regimeWithAlignment = { ...regimeInfo, aligned: regimeAligned };
+
+  // HTF bias from candles (use 4x timeframe — if candles are 5m, HTF is 20m)
+  const htfInfo = higherTimeframeBiasFromCandles(candles);
+  const htfAligned: boolean | null =
+    !htfInfo.available || htfInfo.bias === "neutral"
+      ? null
+      : htfInfo.bias === (combinedDirection === "up" ? "up" : "down");
+
+  const htfStructureOpposes =
+    htfInfo.available &&
+    htfInfo.structureBias !== "neutral" &&
+    ((combinedDirection === "up" && htfInfo.structureBias === "bearish") ||
+     (combinedDirection === "down" && htfInfo.structureBias === "bullish"));
+  htfInfo.structureOpposes = htfStructureOpposes;
+
+  let paStrength = strengthFor(combinedScore);
+  if (conflict && paStrength === "STRONG") paStrength = "MEDIUM";
+  if (paStrength === "STRONG" && htfAligned === false) paStrength = "MEDIUM";
+  if (htfStructureOpposes) paStrength = "WEAK";
+
+  const structureTrade = computeStructureTrade(candles.slice(-CANDLE_LOOKBACK), combinedDirection, last.close);
+
+  const costEstimate = estimateExecutionCost(symbol);
+  const movePips = expectedMovePips(symbol, 100);
+  const { netConfidence } = computeNetConfidence(
+    combinedScore, 0.5,
+    Math.max(0, combinedScore - 50),
+    costEstimate.totalPips,
+    movePips,
+  );
+
+  const sessionWeight = computeSessionWeight();
+  const isSynthetic = symbol.startsWith("R_") || symbol.startsWith("1HZ") || symbol.startsWith("BOOM") || symbol.startsWith("CRASH");
+  const sessionAdjustedConfidence = isSynthetic ? combinedScore : applySessionWeight(combinedScore, sessionWeight);
+
+  let adjustedStrength = paStrength;
+  if (netConfidence < 50 && paStrength !== "WEAK") adjustedStrength = "WEAK";
+
+  const signal: GuidingSignalCandidate | null =
+    paStrength === "WEAK" && confluence.reasons.length === 1 && paConfluence.votes.total === 0
+      ? null
+      : {
+          symbol,
+          family: "momentum_confluence",
+          direction: combinedDirection,
+          contractType: combinedDirection === "up" ? "CALL" : "PUT",
+          confidence: combinedScore,
+          strength: adjustedStrength,
+          votes: {
+            up: confluence.votes.up + paConfluence.votes.up,
+            down: confluence.votes.down + paConfluence.votes.down,
+            total: confluence.votes.total + paConfluence.votes.total,
+            agreement: (confluence.votes.total + paConfluence.votes.total) > 0
+              ? Math.max(confluence.votes.up + paConfluence.votes.up, confluence.votes.down + paConfluence.votes.down) / (confluence.votes.total + paConfluence.votes.total)
+              : 0,
+          },
+          plain: explanation,
+          details: [...confluence.details, ...paConfluence.details],
+          regime: regimeWithAlignment,
+          conflict,
+          structureTrade,
+          netConfidence,
+          costEstimate,
+          sessionWeight,
+          dxyContext: undefined,
+          htf: {
+            timeframeSec: htfInfo.timeframeSec,
+            bias: htfInfo.bias,
+            aligned: htfAligned,
+            reason: htfInfo.reason,
+          },
+          reasons: [
+            `${Math.max(confluence.votes.up + paConfluence.votes.up, confluence.votes.down + paConfluence.votes.down)}/${confluence.votes.total + paConfluence.votes.total} indicators agree`,
+            ...(conflict ? [conflict.note] : []),
+            `HTF: ${htfInfo.reason}${htfAligned === false ? " — signal demoted" : ""}${htfStructureOpposes ? " — BLOCKED: HTF structure opposes" : ""}`,
+            ...confluence.reasons,
+            ...paConfluence.reasons,
+            `Regime: ${regimeWithAlignment.regime} (${regimeWithAlignment.reason}) · ${regimeAligned ? 'aligned' : 'misaligned'}`,
+            ...(structureTrade.stopLoss !== null ? [`Structure SL: ${structureTrade.stopLoss.toFixed(4)} (${structureTrade.slSource?.type ?? "unknown"})`] : []),
+            ...(structureTrade.takeProfit !== null ? [`Structure TP: ${structureTrade.takeProfit.toFixed(4)} (${structureTrade.tpSource?.type ?? "unknown"})`] : []),
+            ...structureTrade.reasoning,
+            `Analyzed over ${candles.length} candles · ${available.join("+")} · PA patterns · technical read, not a guaranteed edge`,
+          ],
+          entryPrice: last.close,
+          entryEpoch: last.time + 300,
+          windowTicks: 100,
+        };
+
+  return { signal, candles, diagnostics: { candles: candles.length, medianGapSec: null, available } };
+}
+
+/** HTF bias from candles directly (no ticks needed). */
+function higherTimeframeBiasFromCandles(candles: Candle[]): { available: boolean; bias: "up" | "down" | "neutral"; structureBias: "bullish" | "bearish" | "neutral"; timeframeSec: number; reason: string; structureOpposes?: boolean } {
+  if (candles.length < 40) return { available: false, bias: "neutral", structureBias: "neutral", timeframeSec: 300, reason: "Insufficient candle data for HTF analysis" };
+  // Use every 4th candle as the "higher timeframe"
+  const htfCandles = candles.filter((_, i) => i % 4 === 0);
+  if (htfCandles.length < 10) return { available: false, bias: "neutral", structureBias: "neutral", timeframeSec: 1200, reason: "Insufficient HTF candles" };
+  const htfCloses = htfCandles.map((c) => c.close);
+  const fast = ema(htfCloses, 9);
+  const slow = ema(htfCloses, 21);
+  const i = htfCloses.length - 1;
+  if (Number.isNaN(fast[i]) || Number.isNaN(slow[i])) return { available: false, bias: "neutral", structureBias: "neutral", timeframeSec: 1200, reason: "HTF EMA notcomputable" };
+  const bias = fast[i] > slow[i] ? "up" : fast[i] < slow[i] ? "down" : "neutral";
+  // Simple structure bias: compare last two HTF swing highs/lows
+  let structureBias: "bullish" | "bearish" | "neutral" = "neutral";
+  if (htfCandles.length >= 6) {
+    const recentHigh = Math.max(...htfCandles.slice(-3).map((c) => c.high));
+    const prevHigh = Math.max(...htfCandles.slice(-6, -3).map((c) => c.high));
+    const recentLow = Math.min(...htfCandles.slice(-3).map((c) => c.low));
+    const prevLow = Math.min(...htfCandles.slice(-6, -3).map((c) => c.low));
+    if (recentHigh > prevHigh && recentLow > prevLow) structureBias = "bullish";
+    else if (recentHigh < prevHigh && recentLow < prevLow) structureBias = "bearish";
+  }
+  return {
+    available: true,
+    bias,
+    structureBias,
+    timeframeSec: 1200,
+    reason: `HTF EMA ${bias === "up" ? "bullish" : bias === "down" ? "bearish" : "neutral"} (EMA9 ${fast[i].toFixed(4)} vs EMA21 ${slow[i].toFixed(4)}) · Structure: ${structureBias}`,
+  };
+}

@@ -1,12 +1,12 @@
 import { useLocation } from "wouter";
-import { CandlestickChart, TrendingUp, GitBranch, Brain, Wallet } from "lucide-react";
+import { LayoutDashboard, Radar, Hash, Zap, Settings } from "lucide-react";
 
 const tabs = [
-  { icon: CandlestickChart, label: "Markets", path: "/markets" },
-  { icon: TrendingUp, label: "Dashboard", path: "/dashboard" },
-  { icon: GitBranch, label: "Strategies", path: "/strategy-builder" },
-  { icon: Brain, label: "AI", path: "/ai-assistant" },
-  { icon: Wallet, label: "Portfolio", path: "/portfolio" },
+  { icon: LayoutDashboard, label: "Terminal", path: "/dashboard" },
+  { icon: Radar, label: "Concierge", path: "/concierge" },
+  { icon: Hash, label: "Digits", path: "/digit-trader" },
+  { icon: Zap, label: "Strategy", path: "/strategy-builder" },
+  { icon: Settings, label: "Settings", path: "/settings" },
 ];
 
 export default function MobileTabBar() {

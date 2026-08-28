@@ -614,7 +614,42 @@ export default function DigitTrader() {
                               <span className={`px-1.5 py-0.5 rounded border text-[10px] font-bold ${strengthChip(read.strength)}`}>{read.strength}</span>
                               <span className="text-xs text-[var(--text-muted)]">{read.freq}% freq · {read.confidence}% conf · {read.sample} digits</span>
                             </div>
-                            <p className="text-[11px] text-[var(--text-secondary)] mt-1 line-clamp-2">{(read.reasons || []).slice(0, 2).join(" ")}</p>
+                            {/* Main explanation */}
+                            {read.reasons?.[0] && <p className="text-[11px] text-[var(--text-secondary)] mt-1">{read.reasons[0]}</p>}
+                            {/* Recent digits visualization */}
+                            {read.recentDigits && read.recentDigits.length > 0 && (
+                              <div className="flex items-center gap-1 mt-1.5 flex-wrap">
+                                <span className="text-[9px] text-[var(--text-muted)] mr-0.5">Recent:</span>
+                                {read.recentDigits.map((d: number, i: number) => {
+                                  const isActive = read.type === "MATCH" && d === read.barrier;
+                                  const isEven = read.type === "EVEN" && d % 2 === 0;
+                                  const isOdd = read.type === "ODD" && d % 2 !== 0;
+                                  const isOver = read.type === "OVER" && d > (read.barrier ?? 4);
+                                  const isUnder = read.type === "UNDER" && d < (read.barrier ?? 5);
+                                  const highlight = isActive || isEven || isOdd || isOver || isUnder;
+                                  return (
+                                    <span key={i} className={`inline-flex items-center justify-center w-5 h-5 rounded text-[9px] font-mono font-bold ${highlight ? "bg-[var(--accent)]/20 text-[var(--accent)]" : "bg-white/5 text-[var(--text-muted)]"}`}>
+                                      {d}
+                                    </span>
+                                  );
+                                })}
+                              </div>
+                            )}
+                            {/* Trend / streak */}
+                            {read.halfComparison && (
+                              <div className="flex items-center gap-2 mt-1 text-[10px]">
+                                {read.halfComparison.trend === "accelerating" && (
+                                  <span className="text-[var(--green)]">↗ Pattern accelerating ({read.halfComparison.firstHalfPct}% → {read.halfComparison.secondHalfPct}%)</span>
+                                )}
+                                {read.halfComparison.trend === "decelerating" && (
+                                  <span className="text-[var(--amber)]">↘ Pattern fading ({read.halfComparison.firstHalfPct}% → {read.halfComparison.secondHalfPct}%)</span>
+                                )}
+                                {read.halfComparison.trend === "steady" && (
+                                  <span className="text-[var(--text-muted)]">→ Steady ({read.halfComparison.firstHalfPct}% → {read.halfComparison.secondHalfPct}%)</span>
+                                )}
+                              </div>
+                            )}
+                            {/* Frequency bar */}
                             <div className="flex items-center gap-2 mt-1.5">
                               <div className="flex-1 h-1.5 bg-[var(--surface-elevated)] border border-[var(--border)] rounded-full overflow-hidden">
                                 <div className={`h-full rounded-full ${dir ? "bg-[var(--green)]" : "bg-[var(--red)]"}`} style={{ width: `${Math.min(100, Math.max(4, read.freq))}%` }} />

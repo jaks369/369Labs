@@ -26,6 +26,8 @@ import InsightsPopup from "@/components/InsightsPopup";
 import PopupPanel from "@/components/PopupPanel";
 import WatchlistPanel from "@/components/WatchlistPanel";
 import { usePersistentState } from "@/hooks/usePersistentState";
+import type { AnalysisMarker } from "@/components/PriceChart";
+import type { TradeAnalysis } from "@/lib/tradeIntent";
 
 const ALL_FALLBACK: DerivSymbol[] = VOLATILITY_SYMBOLS.map((s) => ({ ...s, decimalPlaces: 2 }));
 
@@ -71,6 +73,8 @@ export default function Dashboard() {
   const [takeProfit, setTakeProfit] = usePersistentState<number>("369labs.terminal.takeProfit", 0);
   const [tradeBusy, setTradeBusy] = useState(false);
   const [tradeLogs, setTradeLogs] = useState<{ kind: "ok" | "err"; text: string; time: Date }[]>([]);
+  // Analysis context from Concierge "Trade this" — shows markers on chart and explanation panel
+  const [activeAnalysis, setActiveAnalysis] = usePersistentState<TradeAnalysis | null>("369labs.terminal.analysis", null);
   const addTradeLog = (kind: "ok" | "err", text: string) => {
     setTradeLogs((prev) => [{ kind, text, time: new Date() }, ...prev].slice(0, 50));
   };
@@ -564,17 +568,23 @@ export default function Dashboard() {
         const symbol = localStorage.getItem("369labs.terminal.symbol");
         const contract = localStorage.getItem("369labs.terminal.contract");
         const stake = localStorage.getItem("369labs.terminal.stake");
+        const analysisRaw = localStorage.getItem("369labs.terminal.analysis");
         if (symbol) setSelectedSymbol(JSON.parse(symbol));
         if (contract) setContract(JSON.parse(contract));
         if (stake) setStake(Number(JSON.parse(stake)));
+        if (analysisRaw) {
+          try {
+            const analysis = JSON.parse(analysisRaw);
+            setActiveAnalysis(analysis);
+            localStorage.removeItem("369labs.terminal.analysis");
+          } catch { /* ignore corrupt analysis */ }
+        }
         if (intent?.label) addTradeLog("ok", `Terminal prefilled from ${intent.label}`);
       } catch { /* ignore corrupt prefill */ }
     };
     apply(undefined);
     const handler = (e: Event) => apply((e as CustomEvent).detail);
     window.addEventListener("369labs:trade-intent", handler);
-    // Other tabs broadcasting the same intent (BroadcastChannel) — previously
-    // a prefill created in tab B never reached this terminal in tab A.
     const unsubTab = onTabMessage((type, payload) => {
       if (type === "trade-intent") apply(payload as any);
     });
@@ -897,9 +907,98 @@ export default function Dashboard() {
             {/* Chart Plot */}
             <div className="flex-1 min-h-0 relative terminal-chart-panel">
               <div className="chart-plot h-full" style={{ background: 'transparent', minHeight: 0 }}>
-                <TickChart symbol={selectedSymbol} maxDataPoints={50} decimalPlaces={decimalPlaces} fillHeight connected={derivStatus === "connected"} />
+                <TickChart
+                  symbol={selectedSymbol}
+                  maxDataPoints={50}
+                  decimalPlaces={decimalPlaces}
+                  fillHeight
+                  connected={derivStatus === "connected"}
+                  markers={activeAnalysis ? [
+                    ...(activeAnalysis.entryPrice ? [{ price: activeAnalysis.entryPrice, label: "Entry", color: "#2dd4bf", style: "solid" as const }] : []),
+                    ...(activeAnalysis.stopLossPrice ? [{ price: activeAnalysis.stopLossPrice, label: "Stop Loss", color: "#f43f5e", style: "dashed" as const }] : []),
+                    ...(activeAnalysis.takeProfitPrice ? [{ price: activeAnalysis.takeProfitPrice, label: "Take Profit", color: "#34e0a1", style: "dashed" as const }] : []),
+                  ] : undefined}
+                />
               </div>
             </div>
+
+            {/* Analysis Panel — shows trade setup from the signal */}
+            {activeAnalysis && (
+              <div className="border-t border-[var(--border)] bg-[var(--card)] p-3 shrink-0">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="text-[10px] font-bold text-[var(--accent)] uppercase tracking-wider">Trade Setup</span>
+                      {activeAnalysis.regime && (
+                        <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold ${activeAnalysis.regime.includes("trend") ? "bg-[var(--green)]/15 text-[var(--green)]" : activeAnalysis.regime === "chop" ? "bg-[var(--amber)]/15 text-[var(--amber)]" : "bg-white/5 text-[var(--text-muted)]"}`}>
+                          {activeAnalysis.regime}
+                        </span>
+                      )}
+                      {activeAnalysis.riskReward && (
+                        <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold ${activeAnalysis.riskReward >= 2 ? "bg-[var(--green)]/15 text-[var(--green)]" : activeAnalysis.riskReward >= 1 ? "bg-[var(--amber)]/15 text-[var(--amber)]" : "bg-[var(--red)]/15 text-[var(--red)]"}`}>
+                          R:R {activeAnalysis.riskReward.toFixed(1)}
+                        </span>
+                      )}
+                    </div>
+                    {/* Trade levels */}
+                    <div className="flex items-center gap-3 mt-1.5 text-[11px]">
+                      {activeAnalysis.entryPrice && (
+                        <div className="flex items-center gap-1">
+                          <span className="text-[var(--text-muted)]">Entry:</span>
+                          <span className="font-mono font-bold text-[var(--accent)]">{activeAnalysis.entryPrice}</span>
+                        </div>
+                      )}
+                      {activeAnalysis.stopLossPrice && (
+                        <div className="flex items-center gap-1">
+                          <span className="text-[var(--text-muted)]">SL:</span>
+                          <span className="font-mono font-bold text-[var(--red)]">{activeAnalysis.stopLossPrice}</span>
+                        </div>
+                      )}
+                      {activeAnalysis.takeProfitPrice && (
+                        <div className="flex items-center gap-1">
+                          <span className="text-[var(--text-muted)]">TP:</span>
+                          <span className="font-mono font-bold text-[var(--green)]">{activeAnalysis.takeProfitPrice}</span>
+                        </div>
+                      )}
+                    </div>
+                    {/* SL/TP reasoning */}
+                    {(activeAnalysis.slReasoning || activeAnalysis.tpReasoning) && (
+                      <div className="mt-1 text-[10px] text-[var(--text-muted)]">
+                        {activeAnalysis.slReasoning && <span>SL source: {activeAnalysis.slReasoning} · </span>}
+                        {activeAnalysis.tpReasoning && <span>TP source: {activeAnalysis.tpReasoning}</span>}
+                      </div>
+                    )}
+                    {/* What/Why */}
+                    {activeAnalysis.plain?.what && (
+                      <p className="text-[11px] text-[var(--text-secondary)] mt-1.5">{activeAnalysis.plain.what}</p>
+                    )}
+                    {activeAnalysis.plain?.why && (
+                      <p className="text-[11px] text-[var(--text-muted)]">{activeAnalysis.plain.why}</p>
+                    )}
+                    {activeAnalysis.plain?.risk && (
+                      <p className="text-[10px] text-[var(--amber)] mt-1">Risk: {activeAnalysis.plain.risk}</p>
+                    )}
+                    {/* Indicator chips */}
+                    {activeAnalysis.indicators && activeAnalysis.indicators.length > 0 && (
+                      <div className="flex flex-wrap gap-1 mt-1.5">
+                        {activeAnalysis.indicators.map((ind, i) => (
+                          <span key={i} className={`px-1.5 py-0.5 rounded text-[9px] font-bold ${ind.verdict === "up" ? "bg-[var(--green)]/15 text-[var(--green)]" : ind.verdict === "down" ? "bg-[var(--red)]/15 text-[var(--red)]" : "bg-white/5 text-[var(--text-muted)]"}`}>
+                            {ind.name}: {ind.verdict}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  <button
+                    onClick={() => setActiveAnalysis(null)}
+                    className="text-[10px] text-[var(--text-muted)] hover:text-white shrink-0 px-1.5 py-0.5 rounded hover:bg-white/5"
+                    title="Dismiss analysis"
+                  >
+                    Dismiss
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Right: Trade Panel */}

@@ -346,6 +346,27 @@ class DerivConnection {
     return prices.map((p, i) => ({ price: p, timestamp: times[i] * 1000 }));
   }
 
+  /**
+   * Fetch OHLC candles from Deriv's candles endpoint.
+   * @param symbol - Deriv symbol (e.g. "frxGBPUSD", "R_100")
+   * @param granularity - Candle width in seconds: 60 (1m), 300 (5m), 900 (15m), 3600 (1h)
+   * @param count - Number of candles to fetch (max ~5000)
+   */
+  async getCandles(symbol: string, granularity = 60, count = 200): Promise<{ epoch: number; open: number; high: number; low: number; close: number }[]> {
+    await this.ensureConnected();
+    const sym = normalizeSymbol(symbol);
+    const res = await this.sendRaw({ candles: sym, granularity, count, end: "latest" });
+    if (res.error) throw new Error(res.error.message);
+    const candles: any[] = res.candles || [];
+    return candles.map((c: any) => ({
+      epoch: c.epoch,
+      open: parseFloat(c.open),
+      high: parseFloat(c.high),
+      low: parseFloat(c.low),
+      close: parseFloat(c.close),
+    }));
+  }
+
   async getContractStatus(contractId: number): Promise<DerivContractStatus | null> {
     await this.ensureConnected();
     const res = await this.sendRaw<{ error?: DerivErrorShape; proposal_open_contract?: DerivContractStatus }>({ proposal_open_contract: 1, contract_id: contractId });

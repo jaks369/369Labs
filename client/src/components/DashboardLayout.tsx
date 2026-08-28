@@ -70,14 +70,8 @@ const navGroups: NavGroup[] = [
     icon: Zap,
     items: [
       { icon: LayoutDashboard, label: "Dashboard", path: "/dashboard" },
-      { icon: CandlestickChart, label: "Markets", path: "/markets" },
-      { icon: Book, label: "Order Book", path: "/order-book" },
       { icon: Radar, label: "Concierge", path: "/concierge" },
       { icon: Hash, label: "Digit Trader", path: "/digit-trader" },
-      { icon: Star, label: "Watchlist", path: "/watchlist" },
-      { icon: Wallet, label: "Portfolio", path: "/portfolio" },
-      { icon: BarChart3, label: "Trade History", path: "/trades" },
-      { icon: Shield, label: "Paper Trading", path: "/paper-trading" },
     ],
   },
   {
@@ -85,33 +79,7 @@ const navGroups: NavGroup[] = [
     icon: Workflow,
     items: [
       { icon: Zap, label: "Strategy Builder", path: "/strategy-builder" },
-      { icon: Bot, label: "Bots", path: "/bots" },
       { icon: FlaskConical, label: "Backtesting", path: "/backtesting" },
-      { icon: RotateCcw, label: "Replay", path: "/replay" },
-      { icon: Workflow, label: "Workflow", path: "/workflow" },
-      { icon: Users, label: "Copy Trading", path: "/copy-trading" },
-    ],
-  },
-  {
-    title: "Intelligence",
-    icon: Brain,
-    items: [
-      { icon: Brain, label: "369AI", path: "/ai-assistant" },
-      { icon: Activity, label: "Market Intelligence", path: "/market-intelligence" },
-      { icon: CandlestickChart, label: "AI Signals", path: "/ai-signals" },
-      { icon: BarChart3, label: "AI Performance", path: "/ai-performance" },
-      { icon: Search, label: "AI Explainability", path: "/ai-explainability" },
-    ],
-  },
-  {
-    title: "Analyze",
-    icon: BarChart3,
-    items: [
-      { icon: BarChart3, label: "Analytics", path: "/analytics" },
-      { icon: BarChart3, label: "Strategy Comparison", path: "/strategy-comparison" },
-      { icon: Layers, label: "Strategy Gallery", path: "/strategy-gallery" },
-      { icon: Code2, label: "AI Coding", path: "/coding" },
-      { icon: Zap, label: "Plugins", path: "/plugins" },
     ],
   },
   {
@@ -119,20 +87,6 @@ const navGroups: NavGroup[] = [
     icon: Settings,
     items: [
       { icon: Settings, label: "Settings", path: "/settings" },
-      { icon: Users, label: "Team", path: "/team" },
-      { icon: Crown, label: "Subscription", path: "/subscription" },
-      { icon: HardDrive, label: "Backup", path: "/backup" },
-      { icon: BookText, label: "API Docs", path: "/api-docs" },
-      { icon: Palette, label: "Theme Preview", path: "/theme-preview" },
-    ],
-  },
-  {
-    title: "Resources",
-    icon: BookOpen,
-    items: [
-      { icon: BookOpen, label: "User Guide", path: "/user-guide" },
-      { icon: GitCommit, label: "Changelog", path: "/changelog" },
-      { icon: Megaphone, label: "Release Notes", path: "/release-notes" },
     ],
   },
 ];

@@ -2542,6 +2542,32 @@ watch: protectedProcedure
           }
         }
       }),
+    getCandles: publicProcedure
+      .input(z.object({ symbol: z.string(), granularity: z.number().default(60), count: z.number().default(200) }))
+      .query(async ({ input }) => {
+        try {
+          const { getCandles } = await import("./aitools");
+          const candles = await getCandles(input.symbol, input.granularity, input.count);
+          return { candles };
+        } catch {
+          return { candles: [] };
+        }
+      }),
+    analyzeCandles: publicProcedure
+      .input(z.object({ symbol: z.string(), granularity: z.number().default(300) }))
+      .query(async ({ input }) => {
+        try {
+          const { getCandles } = await import("./aitools");
+          const candleData = await getCandles(input.symbol, input.granularity, 200);
+          if (!candleData.length) return { signal: null };
+          const { scanSignalFromCandles } = await import("./indicatorSignal");
+          const candles = candleData.map((c) => ({ time: c.epoch, open: c.open, high: c.high, low: c.low, close: c.close }));
+          const result = scanSignalFromCandles(input.symbol, candles);
+          return { signal: result.signal, diagnostics: result.diagnostics };
+        } catch {
+          return { signal: null };
+        }
+      }),
     // USED by client/src/pages/Workflow.tsx (multiline trpc call — keep).
     checkTrigger: protectedProcedure
       .input(z.object({ symbol: z.string(), trigger: z.string(), fastPeriod: z.number().default(9), slowPeriod: z.number().default(21) }))

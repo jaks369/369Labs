@@ -20,6 +20,36 @@ export interface TradeIntent {
   label: string;
   stopLoss?: number;
   takeProfit?: number;
+  /** Analysis context from the signal generator. */
+  analysis?: TradeAnalysis;
+}
+
+export interface TradeAnalysis {
+  /** Regime description (e.g. "trend", "chop", "range"). */
+  regime?: string;
+  /** Why the signal was generated — plain-language explanation. */
+  reasoning?: string;
+  /** Indicator votes (e.g. ["RSI: up", "MACD: down"]). */
+  indicators?: { name: string; verdict: string; value?: string }[];
+  /** What the signal recommends. */
+  plain?: {
+    what?: string;
+    why?: string;
+    strength?: string;
+    risk?: string;
+  };
+  /** Entry price level (current price when signal was generated). */
+  entryPrice?: number;
+  /** Suggested stop-loss price level. */
+  stopLossPrice?: number;
+  /** Suggested take-profit price level. */
+  takeProfitPrice?: number;
+  /** Why the SL was placed there. */
+  slReasoning?: string;
+  /** Why the TP was placed there. */
+  tpReasoning?: string;
+  /** Risk/reward ratio. */
+  riskReward?: number;
 }
 
 /** Map a shared DigitRead to the terminal's contract shape. */
@@ -54,12 +84,10 @@ export function pushTradeIntent(intent: TradeIntent): void {
     localStorage.setItem("369labs.terminal.intentLabel", JSON.stringify(intent.label));
     if (intent.stopLoss != null) localStorage.setItem("369labs.terminal.stopLoss", JSON.stringify(intent.stopLoss));
     if (intent.takeProfit != null) localStorage.setItem("369labs.terminal.takeProfit", JSON.stringify(intent.takeProfit));
+    if (intent.analysis) localStorage.setItem("369labs.terminal.analysis", JSON.stringify(intent.analysis));
   } catch {
     /* storage unavailable — terminal simply keeps its last state */
   }
-  // Late listeners get a chance to react even if /dashboard is already mounted.
   window.dispatchEvent(new CustomEvent("369labs:trade-intent", { detail: intent }));
-  // And other tabs get the same prefill — previously the intent landed only
-  // in the tab that created it.
   broadcastTabMessage("trade-intent", intent);
 }

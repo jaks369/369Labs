@@ -32,6 +32,12 @@ export interface DigitRead {
   baseline: number; // fair baseline %
   deltaPp: number; // observed tilt in percentage points (freq - baseline)
   reasons: string[];
+  /** The actual last N digits, newest last. */
+  recentDigits?: number[];
+  /** Current streak info. */
+  streak?: DigitStreak;
+  /** How many times this digit/class appeared in the FIRST half vs SECOND half of the window. */
+  halfComparison?: { firstHalf: number; secondHalf: number; firstHalfPct: number; secondHalfPct: number; trend: "accelerating" | "steady" | "decelerating" };
 }
 
 export interface DigitStreak {
@@ -182,16 +188,37 @@ export function buildDigitReads(digits: number[], window: number = READ_WINDOW):
   }
 
   const reads: DigitRead[] = [];
+  const streak = streakOf(digits);
+  const half = Math.floor(win.length / 2);
+  const firstHalf = win.slice(0, half);
+  const secondHalf = win.slice(half);
+
   for (const spec of specs) {
     const baseline = readBaseline(spec.type, spec.barrier);
     const delta = spec.freq - baseline;
-    // Only return positive tilts (delta >= 5pp). This filters out small deviations
-    // and redundant, complementary negative-tilt (contrarian) recommendations.
     if (delta < 5) continue;
-    // Capped at ~58 so a tilt is never sold as an edge; scaled slower than
-    // the concierge's confluence so the digit read stays conservative.
     const confidence = Math.round(50 + Math.min(delta * 0.8, 8));
     const strength: DigitStrength = delta >= 10 && sample >= 80 ? "STRONG" : delta >= 6 ? "MEDIUM" : "WEAK";
+
+    // Compute half comparison: is the pattern accelerating or decelerating?
+    const countInHalf = (arr: number[], type: DigitReadType, barrier: number | null) => {
+      if (type === "EVEN") return arr.filter((d) => d % 2 === 0).length;
+      if (type === "ODD") return arr.filter((d) => d % 2 !== 0).length;
+      if (type === "OVER") return arr.filter((d) => d > (barrier ?? 4)).length;
+      if (type === "UNDER") return arr.filter((d) => d < (barrier ?? 5)).length;
+      if (type === "MATCH") return arr.filter((d) => d === barrier).length;
+      if (type === "DIFFER") return arr.filter((d) => d !== barrier).length;
+      return 0;
+    };
+    const firstCount = countInHalf(firstHalf, spec.type, spec.barrier);
+    const secondCount = countInHalf(secondHalf, spec.type, spec.barrier);
+    const firstHalfPct = firstHalf.length ? (firstCount / firstHalf.length) * 100 : 0;
+    const secondHalfPct = secondHalf.length ? (secondCount / secondHalf.length) * 100 : 0;
+    const halfDiff = secondHalfPct - firstHalfPct;
+    const trend: "accelerating" | "steady" | "decelerating" = halfDiff > 5 ? "accelerating" : halfDiff < -5 ? "decelerating" : "steady";
+
+    const halfComp = { firstHalf: firstCount, secondHalf: secondCount, firstHalfPct: Math.round(firstHalfPct * 10) / 10, secondHalfPct: Math.round(secondHalfPct * 10) / 10, trend };
+
     reads.push({
       type: spec.type,
       barrier: spec.barrier,
@@ -202,21 +229,58 @@ export function buildDigitReads(digits: number[], window: number = READ_WINDOW):
       freq: Math.round(spec.freq * 10) / 10,
       baseline,
       deltaPp: Math.round(delta * 10) / 10,
-      reasons: buildReason(spec, sample, delta),
+      reasons: buildReason(spec, sample, delta, streak, halfComp, win),
+      recentDigits: win.slice(-15),
+      streak,
+      halfComparison: halfComp,
     });
   }
   return reads.sort((a, b) => Math.abs(b.deltaPp) - Math.abs(a.deltaPp));
 }
 
-function buildReason(spec: { type: DigitReadType; barrier: number | null; label: string }, sample: number, delta: number): string[] {
-  const lean = delta >= 0 ? "leaning" : "contrarian";
-  const dir = delta >= 0 ? "appeared more" : "appeared less";
-  const base = readBaseline(spec.type, spec.barrier);
-  return [
-    `${spec.label} ${dir} than fair in the last ${sample} digits (${Math.abs(Math.round(delta * 10) / 10)}pp ${lean}).`,
-    `Observed ${dir === "appeared more" ? "frequency" : "frequency"} vs a ${Math.round(base)}% fair baseline — a tilt, not an edge.`,
-    "Volatility indices are near-random by design; this read decays on the very next tick.",
-  ];
+function buildReason(
+  spec: { type: DigitReadType; barrier: number | null; label: string },
+  sample: number,
+  delta: number,
+  streak: DigitStreak,
+  halfComp: { firstHalfPct: number; secondHalfPct: number; trend: string },
+  digits: number[],
+): string[] {
+  const reasons: string[] = [];
+
+  // 1. What happened — the actual observation
+  const lean = delta >= 0 ? "overrepresented" : "underrepresented";
+  reasons.push(`${spec.label} is ${lean} in the last ${sample} digits (${Math.abs(Math.round(delta * 10) / 10)}pp above fair).`);
+
+  // 2. What happened before — the recent digit sequence
+  if (digits.length >= 5) {
+    const last10 = digits.slice(-10).join(", ");
+    reasons.push(`Last ${Math.min(10, digits.length)} digits: ${last10}`);
+  }
+
+  // 3. Current streaks
+  if (spec.type === "EVEN" && streak.evenRun >= 2) {
+    reasons.push(`${streak.evenRun} consecutive even digits in a row.`);
+  } else if (spec.type === "ODD" && streak.oddRun >= 2) {
+    reasons.push(`${streak.oddRun} consecutive odd digits in a row.`);
+  } else if (spec.type === "MATCH" && streak.digitRun >= 2) {
+    reasons.push(`Digit ${streak.lastDigit} repeated ${streak.digitRun} times in a row.`);
+  } else if (spec.type === "UNDER" && streak.under5Run >= 3) {
+    reasons.push(`${streak.under5Run} consecutive digits below 5.`);
+  } else if (spec.type === "OVER" && streak.over5Run >= 3) {
+    reasons.push(`${streak.over5Run} consecutive digits above 5.`);
+  }
+
+  // 4. Is the pattern accelerating or decelerating?
+  if (halfComp.trend === "accelerating") {
+    reasons.push(`Pattern is accelerating: ${spec.label} was ${halfComp.firstHalfPct}% in the first half, now ${halfComp.secondHalfPct}% in the second half.`);
+  } else if (halfComp.trend === "decelerating") {
+    reasons.push(`Pattern is fading: ${spec.label} was ${halfComp.firstHalfPct}% in the first half, now ${halfComp.secondHalfPct}% in the second half.`);
+  } else {
+    reasons.push(`Pattern is steady across the window (${halfComp.firstHalfPct}% → ${halfComp.secondHalfPct}%).`);
+  }
+
+  return reasons;
 }
 
 /**

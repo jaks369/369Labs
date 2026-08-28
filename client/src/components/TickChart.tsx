@@ -1,49 +1,59 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { derivWS, Tick } from "@/services/derivWebSocket";
 import { trpc } from "@/lib/trpc";
-import PriceChart, { PriceChartPoint } from "@/components/PriceChart";
-import { isSyntheticIndexSymbol } from "@shared/symbols";
+import PriceChart, { PriceChartPoint, TIMEFRAME_OPTIONS, type AnalysisMarker, type TimeframeOption } from "@/components/PriceChart";
 
 interface TickChartProps {
   symbol: string;
   maxDataPoints?: number;
-  decimalPlaces?: number; // ignored - fetched from Deriv active_symbols
+  decimalPlaces?: number;
   compact?: boolean;
   fillHeight?: boolean;
-  /** When false (no Deriv connection), chart shows "Awaiting data" instead of
-   *  serving stale cached / historical ticks. */
   connected?: boolean;
+  markers?: AnalysisMarker[];
 }
 
 const MAX_BUFFER = 2000;
-
-// How many historical ticks to pull for the initial chart. This is NOT the
-// visible window — 25/50/100/200 are just presets. The full buffer is fetched
-// up front and streamed afterwards so wheel-zooming out / dragging back
-// actually has history behind the line instead of a wall of no-data.
 const HISTORY_LIMIT = 500;
-
-// Module-level rolling cache so price history survives page navigation without
-// restarting from scratch. Keyed by symbol, capped at MAX_BUFFER points; once
-// full the oldest point is dropped and the new one appended (a running window,
-// never a restart). TickChart consumers all share this so switching pages and
-// back keeps the exact same rolling history instead of re-fetching a stale
-// server snapshot that looks like it "starts from 1" every time.
 const rollingCache = new Map<string, PriceChartPoint[]>();
 
-export default function TickChart({ symbol, maxDataPoints = 100, compact = false, fillHeight = false, connected = true }: TickChartProps) {
+/** Aggregate ticks into OHLC candles at the given interval. */
+function aggregateCandles(ticks: PriceChartPoint[], intervalSec: number): { epoch: number; open: number; high: number; low: number; close: number }[] {
+  if (!ticks.length) return [];
+  const buckets = new Map<number, { open: number; high: number; low: number; close: number }>();
+  for (const t of ticks) {
+    const key = Math.floor(t.epoch / intervalSec) * intervalSec;
+    const existing = buckets.get(key);
+    if (existing) {
+      existing.high = Math.max(existing.high, t.price);
+      existing.low = Math.min(existing.low, t.price);
+      existing.close = t.price;
+    } else {
+      buckets.set(key, { open: t.price, high: t.price, low: t.price, close: t.price });
+    }
+  }
+  return Array.from(buckets.entries()).sort(([a], [b]) => a - b).map(([epoch, bar]) => ({ epoch, ...bar }));
+}
+
+export default function TickChart({ symbol, maxDataPoints = 100, compact = false, fillHeight = false, connected = true, markers }: TickChartProps) {
   const [timeframe, setTimeframe] = useState<number>(maxDataPoints || 100);
   const [error, setError] = useState<string | null>(null);
   const [decimalPlaces, setDecimalPlaces] = useState<number>(3);
   const [initialLoad, setInitialLoad] = useState(false);
 
-  // Visible buffer handed to PriceChart. Seeded from the module-level rolling
-  // cache (and derivWS's live tick buffer) so reopening the page continues the
-  // running window instead of restarting.
   const [visibleData, setVisibleData] = useState<PriceChartPoint[]>([]);
-
-  // Working buffer (mirrors the module-level rolling cache)
   const bufferRef = useRef<PriceChartPoint[]>([]);
+
+  // Time-based candle state — always active for all symbols
+  const [activeTimeframe, setActiveTimeframe] = useState<TimeframeOption>(TIMEFRAME_OPTIONS[1]); // default 5m
+
+  // Fetch real OHLC candles from Deriv (works for forex, crypto, AND synthetic)
+  const candleQuery = trpc.market.getCandles.useQuery(
+    { symbol, granularity: activeTimeframe.granularity, count: activeTimeframe.count },
+    { enabled: Boolean(symbol) && connected, refetchInterval: 30000 }
+  );
+
+  const serverCandles = candleQuery.data?.candles || [];
 
   const toPoints = useCallback((ticks: any[]): PriceChartPoint[] =>
     ticks
@@ -58,12 +68,11 @@ export default function TickChart({ symbol, maxDataPoints = 100, compact = false
       }),
   []);
 
-  // Fetch symbol-specific decimal places from Deriv active_symbols
+  // Fetch symbol-specific decimal places
   useEffect(() => {
     if (!symbol) return;
     const initial = derivWS.decimalPlacesFor(symbol);
     setDecimalPlaces(initial);
-
     const cleanup = derivWS.onSymbols((symbols: any[]) => {
       const sym = symbols.find((s) => s.symbol === symbol);
       if (sym?.decimalPlaces != null) setDecimalPlaces(sym.decimalPlaces);
@@ -71,10 +80,7 @@ export default function TickChart({ symbol, maxDataPoints = 100, compact = false
     return cleanup;
   }, [symbol]);
 
-  // Seed from the persistent rolling cache when available so history does not
-  // restart on page navigation. Fall back to a one-time server history fetch
-  // only when there is nothing cached yet (first visit). Also resets local
-  // state on symbol change.
+  // Seed from persistent rolling cache on symbol change
   useEffect(() => {
     bufferRef.current = [];
     setVisibleData([]);
@@ -88,11 +94,13 @@ export default function TickChart({ symbol, maxDataPoints = 100, compact = false
         setInitialLoad(true);
       }
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [symbol, connected]);
 
-  // Initial history load - prepend to buffer once (only when nothing cached)
-  const historyQuery = trpc.market.getHistory.useQuery({ symbol, limit: HISTORY_LIMIT }, { enabled: Boolean(symbol) && !initialLoad && connected });
+  // Initial history load
+  const historyQuery = trpc.market.getHistory.useQuery(
+    { symbol, limit: HISTORY_LIMIT },
+    { enabled: Boolean(symbol) && !initialLoad && connected }
+  );
   useEffect(() => {
     const ticks = historyQuery.data?.ticks;
     if (!ticks || !ticks.length || initialLoad) return;
@@ -100,7 +108,7 @@ export default function TickChart({ symbol, maxDataPoints = 100, compact = false
       const epochSec = t.epoch || Math.floor((t.timestamp || Date.now()) / 1000);
       return {
         epoch: epochSec,
-        time: new Date(epochSec * 1000).toLocaleTimeString(),
+        time: new Date(epochSec * 1000).toISOString().slice(11, 19),
         price: Number(t.price),
       };
     });
@@ -112,13 +120,11 @@ export default function TickChart({ symbol, maxDataPoints = 100, compact = false
     }
   }, [historyQuery.data, symbol, maxDataPoints, timeframe, initialLoad]);
 
-  // Live subscription - append to buffer, rolling window (never restarts)
+  // Live tick subscription — always runs so we have real-time data
   useEffect(() => {
     if (!symbol || !initialLoad) return;
     derivWS.markBackground(symbol);
 
-    // If the live service buffer has newer ticks than our cache, adopt them so
-    // the rolling window stays contiguous across navigation.
     const buffered = derivWS.getRecentTicks(symbol, MAX_BUFFER);
     if (buffered.length > bufferRef.current.length) {
       const hist = toPoints(buffered);
@@ -159,31 +165,39 @@ export default function TickChart({ symbol, maxDataPoints = 100, compact = false
     };
   }, [symbol, timeframe, initialLoad, toPoints]);
 
-  // Update visible window when timeframe changes — PriceChart owns the viewport
-  // now (wheel zoom + drag pan), so we just hand it the full buffer. The pill
-  // presets (25/50/100/200) reseed visibleBars inside PriceChart.
+  // Update visible window when timeframe changes
   useEffect(() => {
     if (bufferRef.current.length) {
       setVisibleData(bufferRef.current.slice(-MAX_BUFFER));
     }
   }, [timeframe]);
 
-  const isSynthetic = isSyntheticIndexSymbol(symbol);
+  const handleTimeframeOptionChange = useCallback((opt: TimeframeOption) => {
+    setActiveTimeframe(opt);
+  }, []);
+
+  // Use server candles if available, otherwise aggregate from live ticks
+  const candles = useMemo(() => {
+    if (serverCandles.length > 0) return serverCandles;
+    return aggregateCandles(bufferRef.current, activeTimeframe.granularity);
+  }, [serverCandles, bufferRef.current.length, activeTimeframe.granularity]);
 
   return (
     <PriceChart
       data={visibleData}
+      candles={candles.length > 0 ? candles : undefined}
       error={error}
       symbol={symbol}
       decimalPlaces={decimalPlaces}
       compact={compact}
       fillHeight={fillHeight}
-      defaultMode={isSynthetic ? "line" : "candle"}
-      timeframes={[25, 50, 100, 200]}
-      timeframe={timeframe}
+      defaultMode="candle"
+      timeframeOptions={TIMEFRAME_OPTIONS}
+      activeTimeframe={activeTimeframe}
+      onTimeframeOptionChange={handleTimeframeOptionChange}
       maxBars={MAX_BUFFER}
-      onTimeframeChange={setTimeframe}
       followLabel="Return to live"
+      markers={markers}
     />
   );
 }

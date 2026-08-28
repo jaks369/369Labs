@@ -11,8 +11,45 @@ export interface PriceChartPoint {
   price: number;
 }
 
+export interface CandleData {
+  epoch: number;
+  open: number;
+  high: number;
+  low: number;
+  close: number;
+}
+
+export interface AnalysisMarker {
+  /** Price level for horizontal line */
+  price: number;
+  /** Label text */
+  label: string;
+  /** Color */
+  color: string;
+  /** Line style: "solid" | "dashed" | "dotted" */
+  style?: "solid" | "dashed" | "dotted";
+}
+
+export interface TimeframeOption {
+  label: string;
+  /** Granularity in seconds for candles */
+  granularity: number;
+  /** Number of candles to fetch */
+  count: number;
+}
+
+export const TIMEFRAME_OPTIONS: TimeframeOption[] = [
+  { label: "1m", granularity: 60, count: 60 },
+  { label: "5m", granularity: 300, count: 60 },
+  { label: "15m", granularity: 900, count: 60 },
+  { label: "1h", granularity: 3600, count: 48 },
+  { label: "4h", granularity: 14400, count: 30 },
+];
+
 interface PriceChartProps {
   data: PriceChartPoint[];
+  /** Real OHLC candle data from Deriv candles API. When provided, used instead of aggregating ticks. */
+  candles?: CandleData[];
   error?: string | null;
   symbol?: string;
   decimalPlaces?: number;
@@ -24,12 +61,18 @@ interface PriceChartProps {
   timeframes?: number[];
   timeframe?: number;
   onTimeframeChange?: (t: number) => void;
+  /** Time-based timeframe options for proper candle intervals. */
+  timeframeOptions?: TimeframeOption[];
+  activeTimeframe?: TimeframeOption;
+  onTimeframeOptionChange?: (opt: TimeframeOption) => void;
   maxBars?: number;
   fitOnDataChange?: boolean;
   heightClass?: string;
   showStats?: boolean;
   followLabel?: string;
   fillHeight?: boolean;
+  /** Analysis markers to overlay on the chart (entry, SL, TP lines). */
+  markers?: AnalysisMarker[];
 }
 
 /**
@@ -54,19 +97,9 @@ function aggregateToCandles(data: PriceChartPoint[], windowSec: number): Candles
     .map(([time, bar]) => ({ time: time as Time, open: bar.open, high: bar.high, low: bar.low, close: bar.close }));
 }
 
-function niceScale(min: number, max: number, ticks: number) {
-  const range = max - min || max * 0.01 || 1;
-  const rough = range / ticks;
-  const mag = Math.pow(10, Math.floor(Math.log10(rough)));
-  const norm = rough / mag;
-  const step = (norm <= 1.5 ? 1 : norm <= 3.5 ? 2 : norm <= 7.5 ? 5 : 10) * mag;
-  const start = Math.floor(min / step) * step;
-  const end = Math.ceil(max / step) * step;
-  return { start, end, step };
-}
-
 export default function PriceChart({
   data,
+  candles,
   error = null,
   symbol,
   decimalPlaces = 3,
@@ -77,20 +110,29 @@ export default function PriceChart({
   timeframes,
   timeframe,
   onTimeframeChange,
-  maxBars = 2000,
-  fitOnDataChange = false,
+  timeframeOptions,
+  activeTimeframe,
+  onTimeframeOptionChange,
   heightClass,
   showStats = !compact,
-  followLabel = "Return to live",
   fillHeight = false,
+  markers,
 }: PriceChartProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
   const seriesRef = useRef<ISeriesApi<any, Time> | null>(null);
+  const markerLinesRef = useRef<any[]>([]);
   const [mode, setMode] = useState<"candle" | "line" | "area">(initialModeProp ?? defaultMode);
   const [fullscreen, setFullscreen] = useState(false);
 
   const ohlc = (() => {
+    // Use real candle data if available
+    if (candles && candles.length) {
+      const last = candles[candles.length - 1];
+      const high = Math.max(...candles.map((c) => c.high));
+      const low = Math.min(...candles.map((c) => c.low));
+      return { open: candles[0].open, high, low, close: last.close };
+    }
     if (!data.length) return null;
     const open = data[0].price;
     const high = Math.max(...data.map((d) => d.price));
@@ -166,55 +208,81 @@ export default function PriceChart({
     };
   }, []);
 
-  // Sync data to chart — incremental updates, not full re-creation
-  const prevDataLenRef = useRef(0);
+  // Sync data to chart — full re-creation on mode/candle source changes
+  const prevKeyRef = useRef("");
   useEffect(() => {
     const chart = chartRef.current;
     if (!chart) return;
 
-    // Create series once per mode
-    if (!seriesRef.current) {
-      if (mode === "candle") {
-        const candleData = aggregateToCandles(data, 5);
-        const candleSeries = chart.addSeries(CandlestickSeries, {
-          upColor: "#34e0a1",
-          downColor: "#f43f5e",
-          borderVisible: false,
-          wickUpColor: "#34e0a1",
-          wickDownColor: "#f43f5e",
-        });
-        candleSeries.setData(candleData);
-        seriesRef.current = candleSeries;
-      } else {
-        const lineData: LineData<Time>[] = data.map((d) => ({
-          time: d.epoch as Time,
-          value: d.price,
-        }));
-        const seen = new Set<number>();
-        const deduped = lineData.filter((d) => {
-          if (seen.has(d.time as number)) return false;
-          seen.add(d.time as number);
-          return true;
-        });
-        const lineSeries = chart.addSeries(LineSeries, {
-          color: "#2dd4bf",
-          lineWidth: 2,
-          crosshairMarkerVisible: true,
-          crosshairMarkerRadius: 4,
-        });
-        lineSeries.setData(deduped);
-        seriesRef.current = lineSeries;
-      }
-      prevDataLenRef.current = data.length;
-      chart.timeScale().scrollToRealTime();
-      return;
+    // Build key to detect real changes (avoid unnecessary rebuilds)
+    const dataKey = `${mode}-${data.length}-${candles?.length || 0}`;
+    if (dataKey === prevKeyRef.current) return;
+    prevKeyRef.current = dataKey;
+
+    // Remove old series
+    if (seriesRef.current) {
+      chart.removeSeries(seriesRef.current);
+      seriesRef.current = null;
     }
 
-    // Only the last point changed → incrementally update (smooth like Deriv)
+    if (mode === "candle") {
+      let candleData: CandlestickData<Time>[];
+      if (candles && candles.length) {
+        // Use real OHLC candle data from Deriv
+        candleData = candles.map((c) => ({
+          time: c.epoch as Time,
+          open: c.open,
+          high: c.high,
+          low: c.low,
+          close: c.close,
+        }));
+      } else {
+        // Aggregate from ticks
+        candleData = aggregateToCandles(data, 5);
+      }
+      const candleSeries = chart.addSeries(CandlestickSeries, {
+        upColor: "#34e0a1",
+        downColor: "#f43f5e",
+        borderVisible: false,
+        wickUpColor: "#34e0a1",
+        wickDownColor: "#f43f5e",
+      });
+      candleSeries.setData(candleData);
+      seriesRef.current = candleSeries;
+    } else {
+      const lineData: LineData<Time>[] = data.map((d) => ({
+        time: d.epoch as Time,
+        value: d.price,
+      }));
+      const seen = new Set<number>();
+      const deduped = lineData.filter((d) => {
+        if (seen.has(d.time as number)) return false;
+        seen.add(d.time as number);
+        return true;
+      });
+      const lineSeries = chart.addSeries(LineSeries, {
+        color: "#2dd4bf",
+        lineWidth: 2,
+        crosshairMarkerVisible: true,
+        crosshairMarkerRadius: 4,
+      });
+      lineSeries.setData(deduped);
+      seriesRef.current = lineSeries;
+    }
+
+    chart.timeScale().scrollToRealTime();
+  }, [data, candles, mode]);
+
+  // Incremental update: when only the last tick changes, smooth-update the chart
+  const prevDataLenRef = useRef(0);
+  useEffect(() => {
+    const chart = chartRef.current;
+    if (!chart || !seriesRef.current) return;
+    if (candles && candles.length) return; // Don't incrementally update when using real candles
+
     if (data.length === prevDataLenRef.current + 1 && data.length > 0) {
       const latest = data[data.length - 1];
       if (mode === "candle") {
-        // Update the latest candle with the current tick price
         const candleData = aggregateToCandles(data.slice(-5), 5);
         if (candleData.length > 0) {
           seriesRef.current.update(candleData[candleData.length - 1]);
@@ -222,28 +290,50 @@ export default function PriceChart({
       } else {
         seriesRef.current.update({ time: latest.epoch as Time, value: latest.price });
       }
-      prevDataLenRef.current = data.length;
       chart.timeScale().scrollToRealTime();
     }
+    prevDataLenRef.current = data.length;
+  }, [data, mode, candles]);
 
-    // Only the last point changed → incrementally update (smooth like Deriv)
-    if (data.length === prevDataLenRef.current + 1 && data.length > 0) {
-      const latest = data[data.length - 1];
-      if (mode === "candle") {
-        // Update the latest candle with the current tick price
-        const candleData = aggregateToCandles(data.slice(-5), 5); // last few ticks make the last candle
-        if (candleData.length > 0) {
-          seriesRef.current.update(candleData[candleData.length - 1]);
-        }
-      } else {
-        seriesRef.current.update({ time: latest.epoch as Time, value: latest.price });
+  // Draw analysis marker lines
+  useEffect(() => {
+    const chart = chartRef.current;
+    if (!chart) return;
+
+    // Remove old marker lines
+    for (const line of markerLinesRef.current) {
+      try { chart.removeSeries(line); } catch {}
+    }
+    markerLinesRef.current = [];
+
+    if (!markers || !markers.length || !seriesRef.current) return;
+
+    // We need at least some data to know the time range
+    const chartData = candles?.length ? candles : data;
+    if (!chartData.length) return;
+
+    const firstEpoch = candles?.length ? candles[0].epoch : data[0]?.epoch;
+    const lastEpoch = candles?.length ? candles[candles.length - 1].epoch : data[data.length - 1]?.epoch;
+    if (!firstEpoch || !lastEpoch) return;
+
+    for (const m of markers) {
+      const lineStyle = m.style === "dashed" ? 2 : m.style === "dotted" ? 1 : 0;
+      // Create a price line using the series priceLine API
+      if (seriesRef.current) {
+        const priceLine = (seriesRef.current as any).createPriceLine({
+          price: m.price,
+          color: m.color,
+          lineWidth: 1,
+          lineStyle,
+          axisLabelVisible: true,
+          title: m.label,
+        });
+        markerLinesRef.current.push(priceLine);
       }
-      prevDataLenRef.current = data.length;
-      chart.timeScale().scrollToRealTime();
     }
-  }, [data, mode, decimalPlaces]);
+  }, [markers, candles, data]);
 
-  // Full re-create on mode change (removes all series, starts fresh)
+  // Full re-create on mode change
   useEffect(() => {
     const chart = chartRef.current;
     if (!chart) return;
@@ -251,9 +341,7 @@ export default function PriceChart({
       chart.removeSeries(seriesRef.current);
       seriesRef.current = null;
     }
-    if (!data.length) return;
-    // Trigger full build via the sync effect above
-    prevDataLenRef.current = data.length;
+    prevKeyRef.current = ""; // Force rebuild
   }, [mode]);
 
   // Mode toggle
@@ -268,12 +356,29 @@ export default function PriceChart({
       {/* Chart toolbar */}
       <div className="flex items-center justify-between gap-2 px-1 pb-2 shrink-0">
         <div className="flex items-center gap-1">
-          {timeframes?.map((t) => (
+          {/* Time-based timeframe buttons (proper candle intervals) */}
+          {timeframeOptions?.map((opt) => (
+            <button
+              key={opt.label}
+              onClick={() => onTimeframeOptionChange?.(opt)}
+              className={`px-2 py-0.5 rounded text-[10px] font-bold transition-colors cursor-pointer ${
+                activeTimeframe?.label === opt.label
+                  ? "bg-[var(--accent-soft)] text-[var(--accent-hover)] border border-[var(--accent-border)]"
+                  : "text-[var(--text-muted)] hover:text-[var(--text-primary)] border border-transparent"
+              }`}
+            >
+              {opt.label}
+            </button>
+          ))}
+          {/* Fallback: data-point presets for tick charts */}
+          {!timeframeOptions && timeframes?.map((t) => (
             <button
               key={t}
               onClick={() => onTimeframeChange?.(t)}
               className={`px-2 py-0.5 rounded text-[10px] font-bold transition-colors cursor-pointer ${
-                timeframe === t ? "bg-[var(--accent-soft)] text-[var(--accent-hover)] border border-[var(--accent-border)]" : "text-[var(--text-muted)] hover:text-[var(--text-primary)] border border-transparent"
+                timeframe === t
+                  ? "bg-[var(--accent-soft)] text-[var(--accent-hover)] border border-[var(--accent-border)]"
+                  : "text-[var(--text-muted)] hover:text-[var(--text-primary)] border border-transparent"
               }`}
             >
               {t}
@@ -307,7 +412,7 @@ export default function PriceChart({
             <p className="text-[var(--text-muted)] text-xs text-center max-w-md">The symbol <span className="font-mono text-[var(--accent)]">{symbol}</span> ({getSymbolDisplayName(symbol || "")}) may not be available. Try selecting a different symbol.</p>
           </div>
         )}
-        {!data.length && !error && (
+        {!data.length && !candles?.length && !error && (
           <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-2">
             <div className="w-10 h-10 rounded-full bg-[var(--border-subtle)] shimmer" />
             <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-widest">Awaiting data</p>
