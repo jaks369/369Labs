@@ -243,8 +243,8 @@ function NavDrawer({
 
   return (
     <div className="fixed inset-0 z-50">
-      <div className="animate-modal-backdrop absolute inset-0 bg-[#0A0C10]/80 backdrop-blur-md" onClick={onClose} />
-      <div className="absolute inset-y-0 left-0 w-[280px] max-w-[82vw] flex flex-col shadow-2xl animate-slideInLeft bg-[#0A0C10] border-r border-[var(--border)]" style={{ borderRadius: 0 }}>
+      <div className="animate-modal-backdrop absolute inset-0 bg-[var(--surface-dim)]/80 backdrop-blur-md" onClick={onClose} />
+      <div className="absolute inset-y-0 left-0 w-[280px] max-w-[82vw] flex flex-col shadow-2xl animate-slideInLeft bg-[var(--surface-dim)] border-r border-[var(--border)]" style={{ borderRadius: 0 }}>
         {/* Aurora glow bleeding through the glass */}
         <div className="pointer-events-none absolute -top-16 -left-16 w-56 h-56 rounded-full opacity-40" style={{ background: "radial-gradient(circle, rgba(45,212,191,0.55) 0%, rgba(167,139,250,0.35) 45%, transparent 70%)", filter: "blur(28px)" }} />
         <div className="pointer-events-none absolute -bottom-20 -right-12 w-56 h-56 rounded-full opacity-30" style={{ background: "radial-gradient(circle, rgba(232,121,249,0.5) 0%, rgba(167,139,250,0.3) 45%, transparent 70%)", filter: "blur(28px)" }} />
@@ -451,7 +451,7 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
                 </Avatar>
               </button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-52 bg-[var(--surface-secondary)] border-[var(--border)] text-[var(--text-primary)] shadow-lg">
+            <DropdownMenuContent align="end" className="w-52 bg-[var(--surface-dim)] border-[var(--border)] text-[var(--text-primary)] shadow-lg">
               <DropdownMenuItem onClick={() => setLocation("/settings?tab=profile")} className="cursor-pointer text-[var(--text-primary)] focus:bg-white/[0.05]">
                 <User className="mr-2 h-4 w-4" />
                 <span>Profile</span>

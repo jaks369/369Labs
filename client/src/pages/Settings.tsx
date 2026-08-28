@@ -375,7 +375,7 @@ export default function Settings() {
                     {(profileName || user?.name || "T").charAt(0).toUpperCase()}
                   </div>
                 )}
-                <Camera className="w-4 h-4 text-[var(--text-muted)] absolute -bottom-1 -right-1 bg-[var(--card)] rounded-full p-0.5 border border-[var(--border)]" />
+                <Camera className="w-4 h-4 text-[var(--text-muted)] absolute -bottom-1 -right-1 bg-[var(--surface-dim)] rounded-full p-0.5 border border-[var(--border)]" />
               </div>
               <div className="flex-1">
                 <label className="text-xs text-[var(--text-muted)] uppercase tracking-wider block mb-1">Avatar URL</label>

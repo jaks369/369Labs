@@ -40,6 +40,12 @@ export default function ServerStatusBanner() {
     return unsub;
   }, [queryClient]);
 
+  // Push page content down when banner is visible to prevent overlap.
+  useEffect(() => {
+    document.body.style.paddingTop = visible ? "36px" : "";
+    return () => { document.body.style.paddingTop = ""; };
+  }, [visible]);
+
   if (!visible) return null;
 
   return (

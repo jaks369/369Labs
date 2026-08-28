@@ -338,7 +338,7 @@ export default function MobileTerminal() {
           ).map(([label, v]) => (
             <div key={label} className="text-center rounded-md bg-[var(--surface-dim)] border border-[var(--border)] py-1">
               <div className="text-[9px] uppercase tracking-widest text-[var(--text-muted)] font-bold">{label}</div>
-              <div className="text-xs font-mono tabular-nums font-bold text-[var(--text-primary)]">{v !== undefined ? Number(v).toFixed(decimalPlaces) : "—"}</div>
+              <div className="text-xs font-mono tabular-nums font-bold text-[var(--text-primary)] truncate min-w-0">{v !== undefined ? Number(v).toFixed(Math.min(decimalPlaces, 3)) : "—"}</div>
             </div>
           ))}
         </div>
@@ -348,7 +348,7 @@ export default function MobileTerminal() {
             <button
               key={tf.label}
               onClick={() => setTimeframe(i)}
-              className={`flex-1 py-3 rounded-md text-[11px] font-bold transition-colors cursor-pointer min-h-[44px] ${timeframe === i ? "bg-[var(--accent)] text-black" : "bg-white/5 text-[var(--text-muted)]"}`}
+              className={`flex-1 py-3 rounded-md text-[11px] font-bold transition-colors cursor-pointer min-h-[44px] ${timeframe === i ? "bg-[var(--accent-soft)] text-[var(--accent-hover)]" : "bg-white/5 text-[var(--text-muted)]"}`}
             >
               {tf.label}
             </button>
@@ -417,7 +417,7 @@ export default function MobileTerminal() {
                           setShowSymbolPicker(false);
                           setSymbolSearch("");
                         }}
-                        className={`text-left px-2.5 py-3 rounded-lg cursor-pointer min-h-[44px] ${symbol === s.symbol ? "bg-[var(--accent)] text-black border border-transparent" : "bg-white/5 text-[var(--text-secondary)] border border-transparent"}`}
+                        className={`text-left px-2.5 py-3 rounded-lg cursor-pointer min-h-[44px] ${symbol === s.symbol ? "bg-[var(--accent-soft)] text-[var(--accent-hover)] border border-transparent" : "bg-white/5 text-[var(--text-secondary)] border border-transparent"}`}
                       >
                         <span className="block font-semibold text-xs truncate" title={s.displayName}>{s.displayName}</span>
                         <span className="text-[9px] font-mono text-[var(--text-muted)]">{s.symbol}</span>
@@ -474,7 +474,7 @@ export default function MobileTerminal() {
               <button
                 key={p}
                 onClick={() => setStake(p)}
-                className={`flex-1 py-3 rounded-md text-caption font-bold cursor-pointer min-h-[44px] ${stake === p ? "bg-[var(--accent)] text-black" : "bg-[var(--surface-secondary)] text-[var(--text-muted)]"}`}
+                className={`flex-1 py-3 rounded-md text-caption font-bold cursor-pointer min-h-[44px] ${stake === p ? "bg-[var(--accent-soft)] text-[var(--accent-hover)]" : "bg-[var(--surface-secondary)] text-[var(--text-muted)]"}`}
               >
                 ${p}
               </button>

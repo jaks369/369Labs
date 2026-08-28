@@ -66,7 +66,7 @@ export default function DurationSelector({ value, unit, onChange }: DurationSele
           {open && (
             <>
               <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
-              <div className="absolute left-0 top-full mt-1 z-50 min-w-[9rem] rounded-lg border border-[var(--border)] bg-[var(--bg-elevated)] p-1 shadow-2xl">
+              <div className="absolute left-0 top-full mt-1 z-50 min-w-[9rem] rounded-lg border border-[var(--border)] bg-[var(--surface-dim)] p-1 shadow-2xl">
                 {DURATION_OPTIONS.map((o) => (
                   <button
                     key={o.unit}

@@ -272,7 +272,7 @@ export default function Workflow() {
                     <ChevronDown className={`w-4 h-4 transition-transform ${menuOpen === w.id ? "rotate-180" : ""}`} />
                   </button>
                   {menuOpen === w.id && (
-                    <div className="absolute bottom-full left-0 right-0 mb-1 bg-[var(--surface-secondary)] border border-[var(--border)] rounded-lg shadow-xl z-10 max-h-60 overflow-y-auto">
+                    <div className="absolute bottom-full left-0 right-0 mb-1 bg-[var(--surface-dim)] border border-[var(--border)] rounded-lg shadow-xl z-10 max-h-60 overflow-y-auto">
                       {SYMBOLS.map((s) => (
                         <button key={s} onClick={() => { setSymbol(s); setMenuOpen(null); }} className={`w-full px-3 py-2 text-left text-sm ${symbol === s ? "bg-[var(--accent-soft)] text-[var(--accent)]" : "text-white hover:bg-white/10"}`}>
                           {getSymbolDisplayName(s)}

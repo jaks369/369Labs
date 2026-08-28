@@ -301,7 +301,7 @@ export default function DigitTrader() {
               <span>{getSymbolDisplayName(activeSymbol) || activeSymbol}</span>
             </button>
             {symbolPickerOpen && (
-              <div className="absolute top-full left-0 right-0 mt-1 bg-[var(--card)] border border-[var(--border)] rounded-lg shadow-lg z-20 max-h-60 overflow-auto">
+              <div className="absolute top-full left-0 right-0 mt-1 bg-[var(--surface-dim)] border border-[var(--border)] rounded-lg shadow-lg z-20 max-h-60 overflow-auto">
                 {symbolOptions.map((o) => (
                   <button
                     key={o.value}

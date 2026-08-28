@@ -35,6 +35,8 @@
   --color-cyan: var(--cyan);
   --color-green: var(--green);
   --color-red: var(--red);
+  --color-amber: var(--amber);
+  --color-blue: var(--blue);
   --color-sidebar: var(--sidebar);
   --color-sidebar-foreground: var(--sidebar-foreground);
   --color-sidebar-primary: var(--sidebar-primary);
@@ -107,6 +109,11 @@
   --amber-rgb: 245, 158, 11;
   --amber-soft: rgba(245, 158, 11, 0.10);
   --amber-border: rgba(245, 158, 11, 0.24);
+
+  /* Blue / Info palette */
+  --blue: #3b82f6;
+  --blue-soft: rgba(59, 130, 246, 0.10);
+  --blue-border: rgba(59, 130, 246, 0.24);
 
   /* Typography scale — modular scale (1.25 ratio) */
   --text-xs: 0.625rem;    /* 10px */
@@ -220,6 +227,15 @@
   --red-rgb: 234, 57, 67;
   --red-soft: rgba(234, 57, 67, 0.08);
   --red-border: rgba(234, 57, 67, 0.18);
+
+  --amber: #D97706;
+  --amber-rgb: 217, 119, 6;
+  --amber-soft: rgba(217, 119, 6, 0.08);
+  --amber-border: rgba(217, 119, 6, 0.18);
+
+  --blue: #2563EB;
+  --blue-soft: rgba(37, 99, 235, 0.08);
+  --blue-border: rgba(37, 99, 235, 0.18);
 
   --shadow-sm: 0 1px 3px rgba(0,0,0,0.08);
   --shadow-md: 0 2px 8px rgba(0,0,0,0.06);

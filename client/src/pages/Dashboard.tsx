@@ -826,7 +826,7 @@ export default function Dashboard() {
               <div className="border-b border-[rgba(255,255,255,0.12)] shrink-0" style={{ background: "rgba(255,120,40,0.14)" }}>
                 <div className="flex items-center justify-between gap-3 px-3 py-1.5">
                   <div className="flex items-center gap-2 min-w-0">
-                    <Loader2 className={`w-3 h-3 shrink-0 ${recordFillPending || reconciling ? "animate-spin" : ""} text-[#ffb56b]`} />
+                    <Loader2 className={`w-3 h-3 shrink-0 ${recordFillPending || reconciling ? "animate-spin" : ""} text-[var(--amber)]`} />
                     <span className="text-[11px] font-semibold text-white truncate">
                       {pendingRecords.length} contract{pendingRecords.length > 1 ? "s" : ""} placed but not yet recorded
                     </span>
@@ -850,7 +850,7 @@ export default function Dashboard() {
                   </div>
                 </div>
                 {lastRecordError && (
-                  <p className="px-3 pb-1.5 text-[10px] text-[#ffb56b] truncate" title={lastRecordError}>
+                  <p className="px-3 pb-1.5 text-[10px] text-[var(--amber)] truncate" title={lastRecordError}>
                     Recording failed: {lastRecordError}
                   </p>
                 )}
