@@ -1,13 +1,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import { ChevronDown } from "lucide-react";
 import { createPortal } from "react-dom";
-
-export type ContractCategory =
-  | "rise_fall"
-  | "over_under"
-  | "even_odd"
-  | "digits"
-  | "accumulator";
+import type { ContractCategory } from "@shared/contractAvailability";
 
 export interface ContractSelection {
   category: ContractCategory;
@@ -26,6 +20,7 @@ interface ContractTypeSelectorProps {
 
 const CATEGORIES: { id: ContractCategory; label: string; icon: string; desc: string }[] = [
   { id: "rise_fall", label: "Rise/Fall", icon: "↗", desc: "Will price go up or down?" },
+  { id: "higher_lower", label: "Higher/Lower", icon: "⇔", desc: "Predict exit vs a fixed strike price" },
   { id: "over_under", label: "Over/Under", icon: "↑↓", desc: "Last digit above or below barrier" },
   { id: "even_odd", label: "Even/Odd", icon: "◧", desc: "Last digit is even or odd" },
   { id: "digits", label: "Digits", icon: "0-9", desc: "Last digit matches or differs" },
@@ -70,6 +65,7 @@ export default function ContractTypeSelector({ selection, onChange }: ContractTy
   const setCat = (category: ContractCategory) => {
     const base: ContractSelection = { category };
     if (category === "rise_fall") base.direction = "rise";
+    if (category === "higher_lower") { base.direction = "rise"; base.barrier = undefined; }
     if (category === "over_under") { base.overUnder = "over"; base.barrier = 5; }
     if (category === "even_odd") base.digitMatch = "match";
     if (category === "digits") { base.digitMatch = "match"; base.digit = 0; }
@@ -150,6 +146,44 @@ export default function ContractTypeSelector({ selection, onChange }: ContractTy
             >
               Fall
             </button>
+          </div>
+        )}
+
+{selection.category === "higher_lower" && (
+          <div className="space-y-2">
+            <div className="flex rounded-lg bg-white/5 p-0.5">
+              <button
+                onClick={() => onChange({ ...selection, direction: "rise" })}
+                className={`flex-1 py-3 text-center text-xs font-bold rounded-md transition-all min-h-[36px] ${
+                  selection.direction === "rise"
+                    ? "bg-[var(--green)] text-white shadow-sm"
+                    : "text-[var(--text-secondary)] hover:text-white"
+                }`}
+              >
+                Higher
+              </button>
+              <button
+                onClick={() => onChange({ ...selection, direction: "fall" })}
+                className={`flex-1 py-3 text-center text-xs font-bold rounded-md transition-all min-h-[36px] ${
+                  selection.direction === "fall"
+                    ? "bg-[var(--red)] text-white shadow-sm"
+                    : "text-[var(--text-secondary)] hover:text-white"
+                }`}
+              >
+                Lower
+              </button>
+            </div>
+            <div>
+              <label className="text-[9px] font-bold text-[var(--text-muted)] uppercase">Strike Price</label>
+              <input
+                type="number"
+                step="any"
+                value={selection.barrier ?? ""}
+                onChange={(e) => onChange({ ...selection, barrier: e.target.value ? parseFloat(e.target.value) : undefined })}
+                placeholder="e.g. 2470.00"
+                className="mt-1 w-full px-2 py-1.5 rounded text-xs font-mono bg-white/5 border border-[var(--border)] text-white placeholder-[var(--text-muted)] focus:border-[var(--accent)] focus:outline-none"
+              />
+            </div>
           </div>
         )}
 

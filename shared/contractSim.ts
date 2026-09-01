@@ -18,6 +18,10 @@ export function actionToContractType(strategy: any): { contractType: string; bar
       return { contractType: "CALL" };
     case "buy_fall":
       return { contractType: "PUT" };
+    case "buy_higher":
+      return { contractType: "CALL", barrier };
+    case "buy_lower":
+      return { contractType: "PUT", barrier };
     case "buy_even":
       return { contractType: "DIGITEVEN" };
     case "buy_odd":
@@ -44,13 +48,27 @@ export function isDigitContract(contractType: string): boolean {
 // Determine the outcome of a contract given the entry and exit (next) price.
 // For rise/fall, a flat tick (exit === entry) is a draw/refund on Deriv and is
 // reported as neither win nor loss — use "draw" to exclude it from win-rate math.
+// For higher/lower (CALL/PUT with barrier), the barrier is a fixed strike price:
+// CALL wins if exit > barrier, PUT wins if exit < barrier. Flat at barrier = draw.
 export function simulateOutcome(entryPrice: number, exitPrice: number, contractType: string, barrier?: number, decimals?: number): SimOutcome | "draw" {
   const d = decimals ?? 2;
   switch (contractType) {
     case "CALL":
+      // Higher/Lower: barrier present → exit must clear barrier
+      if (barrier !== undefined && barrier !== null) {
+        if (exitPrice === barrier) return "draw";
+        return exitPrice > barrier ? "win" : "loss";
+      }
+      // Rise/Fall: exit must beat entry
       if (exitPrice === entryPrice) return "draw";
       return exitPrice > entryPrice ? "win" : "loss";
     case "PUT":
+      // Higher/Lower: barrier present → exit must clear barrier downward
+      if (barrier !== undefined && barrier !== null) {
+        if (exitPrice === barrier) return "draw";
+        return exitPrice < barrier ? "win" : "loss";
+      }
+      // Rise/Fall: exit must beat entry downward
       if (exitPrice === entryPrice) return "draw";
       return exitPrice < entryPrice ? "win" : "loss";
     case "DIGITEVEN":

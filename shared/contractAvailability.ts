@@ -13,6 +13,7 @@ import { isSyntheticIndexSymbol } from "./symbols";
 
 export type ContractCategory =
   | "rise_fall"
+  | "higher_lower"
   | "over_under"
   | "even_odd"
   | "digits"
@@ -27,6 +28,7 @@ export interface ContractCategoryMeta {
 
 export const ALL_CONTRACT_CATEGORIES: ContractCategoryMeta[] = [
   { id: "rise_fall", label: "Rise/Fall", icon: "↗", description: "Will price go up or down?" },
+  { id: "higher_lower", label: "Higher/Lower", icon: "⇔", description: "Predict exit vs a fixed strike price" },
   { id: "over_under", label: "Over/Under", icon: "↑↓", description: "Last digit above or below barrier" },
   { id: "even_odd", label: "Even/Odd", icon: "◧", description: "Last digit is even or odd" },
   { id: "digits", label: "Digits", icon: "0-9", description: "Last digit matches or differs" },
@@ -38,16 +40,16 @@ export const ALL_CONTRACT_CATEGORIES: ContractCategoryMeta[] = [
  *
  * Rules (matching Deriv's actual API availability):
  * - Synthetic indices (R_*, 1HZ*, BOOM*, CRASH*): ALL categories
- * - Forex (frx*): Rise/Fall only
- * - Crypto (cry*): Rise/Fall only
- * - Stock indices (stx*): Rise/Fall only
+ * - Forex (frx*): Rise/Fall + Higher/Lower
+ * - Crypto (cry*): Rise/Fall + Higher/Lower
+ * - Stock indices (stx*): Rise/Fall + Higher/Lower
  */
 export function getAvailableCategories(symbol: string): ContractCategory[] {
   if (isSyntheticIndexSymbol(symbol)) {
-    return ["rise_fall", "over_under", "even_odd", "digits", "accumulator"];
+    return ["rise_fall", "higher_lower", "over_under", "even_odd", "digits", "accumulator"];
   }
-  // Real-world symbols: only Rise/Fall (multipliers not shown in digit-trader UI)
-  return ["rise_fall"];
+  // Real-world symbols: Rise/Fall + Higher/Lower (fixed strike)
+  return ["rise_fall", "higher_lower"];
 }
 
 /**

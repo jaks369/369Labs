@@ -397,6 +397,7 @@ export default function Dashboard() {
     }
     const map: Record<string, string> = {
       rise_fall: direction === "fall" ? "PUT" : "CALL",
+      higher_lower: direction === "fall" ? "PUT" : "CALL",
       over_under: contract.overUnder === "under" ? "DIGITUNDER" : "DIGITOVER",
       even_odd: contract.digitMatch === "differ" ? "DIGITODD" : "DIGITEVEN",
       digits: contract.digitMatch === "differ" ? "DIGITDIFF" : "DIGITMATCH",
@@ -415,6 +416,7 @@ export default function Dashboard() {
         contractType: contractType as any,
         amount: stake,
         ...(isAccumulator ? { growthRate: contract.growthRate ?? 1 } : { duration, durationUnit }),
+        ...(contract.category === "higher_lower" && contract.barrier !== undefined ? { barrier: contract.barrier } : {}),
         ...(contract.category === "over_under" && contract.barrier !== undefined ? { barrier: contract.barrier } : {}),
         ...(contract.category === "digits" && contract.digit !== undefined ? { barrier: contract.digit } : {}),
         ...(stopLoss > 0 ? { stopLoss } : {}),
@@ -869,6 +871,7 @@ export default function Dashboard() {
             <div className="flex items-center gap-1 px-3 py-1.5 border-b border-[rgba(255,255,255,0.08)] shrink-0 overflow-x-auto scrollbar-none" style={{ background: 'transparent' }}>
               {([
                 { id: "rise_fall", label: "Rise/Fall" },
+                { id: "higher_lower", label: "Higher/Lower" },
                 { id: "over_under", label: "Over/Under" },
                 { id: "even_odd", label: "Even/Odd" },
                 { id: "digits", label: "Digits" },
@@ -881,6 +884,7 @@ export default function Dashboard() {
                   onClick={() => {
                     const base: ContractSelection = { category: t.id };
                     if (t.id === "rise_fall") base.direction = "rise";
+                    if (t.id === "higher_lower") { base.direction = "rise"; base.barrier = undefined; }
                     if (t.id === "over_under") { base.overUnder = "over"; base.barrier = 5; }
                     if (t.id === "even_odd") base.digitMatch = "match";
                     if (t.id === "digits") { base.digitMatch = "match"; base.digit = 0; }
@@ -1219,6 +1223,7 @@ export default function Dashboard() {
             <div className="grid grid-cols-2 gap-1.5">
               {([
                 { id: "rise_fall", label: "Rise / Fall", desc: "Predict if price goes up or down" },
+                { id: "higher_lower", label: "Higher / Lower", desc: "Predict exit vs a fixed strike price" },
                 { id: "over_under", label: "Over / Under", desc: "Last digit above or below barrier" },
                 { id: "even_odd", label: "Even / Odd", desc: "Last digit is even or odd" },
                 { id: "digits", label: "Matches / Differs", desc: "Last digit matches or differs" },
@@ -1231,6 +1236,7 @@ export default function Dashboard() {
                   onClick={() => {
                     const base: ContractSelection = { category: t.id };
                     if (t.id === "rise_fall") base.direction = "rise";
+                    if (t.id === "higher_lower") { base.direction = "rise"; base.barrier = undefined; }
                     if (t.id === "over_under") { base.overUnder = "over"; base.barrier = 5; }
                     if (t.id === "even_odd") base.digitMatch = "match";
                     if (t.id === "digits") { base.digitMatch = "match"; base.digit = 0; }

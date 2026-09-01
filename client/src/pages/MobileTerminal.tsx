@@ -252,7 +252,7 @@ export default function MobileTerminal() {
   );
 
   const selectedDisplay = symbols.find((s) => s.symbol === symbol)?.displayName || symbol;
-  const isRiseFall = contract.category === "rise_fall";
+  const isRiseFall = contract.category === "rise_fall" || contract.category === "higher_lower";
   const accountBadge = accountType === "real" ? "REAL" : accountType === "demo" ? "DEMO" : !derivWS.isAuthorized() ? "NO TOKEN" : "LIVE";
 
   const buyLabel = (() => {
@@ -531,7 +531,9 @@ export default function MobileTerminal() {
               ) : (
                 <TrendingUp className="w-4 h-4" />
               )}
-              {buyLabel}
+              {contract.category === "higher_lower"
+                ? (contract.direction === "fall" ? "Buy Lower" : "Buy Higher")
+                : buyLabel}
             </button>
           ) : (
             <button

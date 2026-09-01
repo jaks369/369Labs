@@ -37,6 +37,7 @@ export interface TradeFill {
 export function mapContractType(contract: ContractSelection, direction?: "rise" | "fall"): string | null {
   const map: Record<string, string> = {
     rise_fall: (direction || contract.direction) === "fall" ? "PUT" : "CALL",
+    higher_lower: (direction || contract.direction) === "fall" ? "PUT" : "CALL",
     over_under: contract.overUnder === "under" ? "DIGITUNDER" : "DIGITOVER",
     even_odd: contract.digitMatch === "differ" ? "DIGITODD" : "DIGITEVEN",
     digits: contract.digitMatch === "differ" ? "DIGITDIFF" : "DIGITMATCH",
@@ -102,6 +103,7 @@ export function useTradeExecution(spec: TradeSpec, hooks: UseTradeExecutionHooks
           contractType: contractType as any,
           amount: stake,
           ...(isAccumulator ? { growthRate: contract.growthRate ?? 1 } : { duration, durationUnit }),
+          ...(contract.category === "higher_lower" && contract.barrier !== undefined ? { barrier: contract.barrier } : {}),
           ...(contract.category === "over_under" && contract.barrier !== undefined ? { barrier: contract.barrier } : {}),
           ...(contract.category === "digits" && contract.digit !== undefined ? { barrier: contract.digit } : {}),
           ...(stopLoss > 0 ? { stopLoss } : {}),

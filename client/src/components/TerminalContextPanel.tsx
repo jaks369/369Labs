@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Loader2, Zap, TrendingUp, TrendingDown, Wallet } from "lucide-react";
-import type { ContractSelection, ContractCategory } from "@/components/ContractTypeSelector";
+import type { ContractSelection } from "@/components/ContractTypeSelector";
+import type { ContractCategory } from "@shared/contractAvailability";
 import DurationSelector from "@/components/DurationSelector";
 import type { DurationUnit } from "@/components/DurationSelector";
 import { formatMoney } from "@/lib/format";
@@ -51,13 +52,15 @@ export default function TerminalContextPanel(props: TerminalContextPanelProps) {
     onSelectSymbol,
   } = props;
 
-  const isRiseFall = contract.category === "rise_fall";
-  const isFall = isRiseFall && contract.direction === "fall";
+  const isRiseFall = contract.category === "rise_fall" || contract.category === "higher_lower";
+  const isFall = (contract.category === "rise_fall" && contract.direction === "fall") || (contract.category === "higher_lower" && contract.direction === "fall");
 
   const buyLabel = (() => {
     switch (contract.category) {
       case "rise_fall":
         return contract.direction === "fall" ? "Buy Fall" : "Buy Rise";
+      case "higher_lower":
+        return contract.direction === "fall" ? "Buy Lower" : "Buy Higher";
       case "over_under":
         return `Buy ${contract.overUnder === "under" ? "Under" : "Over"} ${contract.barrier ?? ""}`.replace(/\s+$/g, "");
       case "even_odd":
@@ -69,7 +72,7 @@ export default function TerminalContextPanel(props: TerminalContextPanelProps) {
     }
   })();
 
-  const buyIsDown = isFall || (contract.category === "even_odd" && contract.digitMatch === "differ");
+  const buyIsDown = isFall || (contract.category === "higher_lower" && contract.direction === "fall") || (contract.category === "even_odd" && contract.digitMatch === "differ");
 
   // Live payout quote from Deriv. Payout is not a flat stake*1.95 — it changes
   // with the symbol, direction (Over vs Under) and the selected barrier digit.
@@ -84,6 +87,7 @@ export default function TerminalContextPanel(props: TerminalContextPanelProps) {
     }
     const map: Record<ContractCategory, string> = {
       rise_fall: contract.direction === "fall" ? "PUT" : "CALL",
+      higher_lower: contract.direction === "fall" ? "PUT" : "CALL",
       over_under: contract.overUnder === "under" ? "DIGITUNDER" : "DIGITOVER",
       even_odd: contract.digitMatch === "differ" ? "DIGITODD" : "DIGITEVEN",
       digits: contract.digitMatch === "differ" ? "DIGITDIFF" : "DIGITMATCH",
@@ -91,11 +95,13 @@ export default function TerminalContextPanel(props: TerminalContextPanelProps) {
     };
     const contractType = map[contract.category];
     if (!contractType || !selectedSymbol) return;
-    const barrier = contract.category === "over_under"
+    const barrier = contract.category === "higher_lower"
       ? contract.barrier
-      : contract.category === "digits"
-        ? contract.digit
-        : undefined;
+      : contract.category === "over_under"
+        ? contract.barrier
+        : contract.category === "digits"
+          ? contract.digit
+          : undefined;
     derivWS
       .getPayoutQuote({
         symbol: selectedSymbol,
@@ -163,6 +169,44 @@ export default function TerminalContextPanel(props: TerminalContextPanelProps) {
               >
                 <TrendingDown className="w-3.5 h-3.5" /> Fall
               </button>
+            </div>
+          )}
+
+          {contract.category === "higher_lower" && (
+            <div className="space-y-1.5">
+              <div className="flex rounded-lg bg-white/5 p-0.5">
+                <button
+                  onClick={() => onContractChange({ ...contract, direction: "rise" })}
+                  className={`flex-1 flex items-center justify-center gap-1 py-2 text-[11px] font-bold rounded-md transition-all ${
+                    contract.direction === "rise"
+                      ? "bg-[var(--green)] text-white shadow-sm"
+                      : "text-[var(--text-secondary)] hover:text-white"
+                  }`}
+                >
+                  <TrendingUp className="w-3.5 h-3.5" /> Higher
+                </button>
+                <button
+                  onClick={() => onContractChange({ ...contract, direction: "fall" })}
+                  className={`flex-1 flex items-center justify-center gap-1 py-2 text-[11px] font-bold rounded-md transition-all ${
+                    contract.direction === "fall"
+                      ? "bg-[var(--red)] text-white shadow-sm"
+                      : "text-[var(--text-secondary)] hover:text-white"
+                  }`}
+                >
+                  <TrendingDown className="w-3.5 h-3.5" /> Lower
+                </button>
+              </div>
+              <div>
+                <span className="text-[9px] font-bold text-[var(--text-muted)] uppercase">Strike Price</span>
+                <input
+                  type="number"
+                  step="any"
+                  value={contract.barrier ?? ""}
+                  onChange={(e) => onContractChange({ ...contract, barrier: e.target.value ? parseFloat(e.target.value) : undefined })}
+                  placeholder="e.g. 2470.00"
+                  className="mt-1 w-full px-2 py-1 rounded text-[11px] font-mono bg-white/5 border border-[var(--border)] text-white placeholder-[var(--text-muted)] focus:border-[var(--accent)] focus:outline-none"
+                />
+              </div>
             </div>
           )}
 
