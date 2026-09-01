@@ -17,6 +17,7 @@ import { usePayoutQuote } from "@/hooks/usePayoutQuote";
 import { VOLATILITY_SYMBOLS, getSymbolDisplayName } from "@/lib/symbols";
 import { getDecimalPlaces, lastDigitOf } from "@shared/lastDigit";
 import { validateTrade } from "@shared/tradeValidation";
+import { isSyntheticIndexSymbol } from "@shared/symbols";
 import { formatMoney, formatNumber } from "@/lib/format";
 import { toast } from "@/components/Toast";
 
@@ -53,6 +54,16 @@ export default function MobileTerminal() {
   const [tokenError, setTokenError] = useState<string | null>(null);
   const [showPriceHistory, setShowPriceHistory] = useState(false);
   const [showTiltDetail, setShowTiltDetail] = useState(false);
+
+  // Auto-switch duration unit: tick duration is only offered on synthetic
+  // indices. Forex/crypto/stock indices are time-only — tick duration there
+  // gets rejected by Deriv ("Trading is not offered for this duration").
+  useEffect(() => {
+    if (!isSyntheticIndexSymbol(symbol) && durationUnit === "t") {
+      setDuration(5);
+      setDurationUnit("m");
+    }
+  }, [symbol, durationUnit, setDuration, setDurationUnit]);
 
   const tradesQuery = trpc.trades.list.useQuery({ limit: 50 });
   const saveTradeMutation = trpc.trades.save.useMutation();
@@ -469,7 +480,7 @@ export default function MobileTerminal() {
       {/* Execution */}
       <div className="px-4 mt-2">
         <div className="rounded-xl aurora-glass p-3 space-y-3">
-          <ContractTypeSelector selection={contract} onChange={setContract} />
+          <ContractTypeSelector selection={contract} onChange={setContract} symbol={symbol} />
           <div className="flex items-center gap-2">
             <button
               onClick={() => setStake(Math.max(0.35, Math.round((stake - 0.5) * 100) / 100))}
@@ -510,6 +521,7 @@ export default function MobileTerminal() {
                 value={duration}
                 unit={durationUnit}
                 onChange={(n, u) => { setDuration(n); setDurationUnit(u); }}
+                symbol={symbol}
               />
             </div>
           )}

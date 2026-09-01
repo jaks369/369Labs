@@ -17,6 +17,7 @@ import { useDerivStatus } from "@/hooks/useDerivStatus";
 import DerivTokenModal from "@/components/DerivTokenModal";
 import { ContractSelection } from "@/components/ContractTypeSelector";
 import { getAvailableCategories, type ContractCategory } from "@shared/contractAvailability";
+import { isSyntheticIndexSymbol } from "@shared/symbols";
 import { VOLATILITY_SYMBOLS, getSymbolDisplayName } from "@/lib/symbols";
 import { getDecimalPlaces, lastDigitOf } from "@shared/lastDigit";
 import TerminalContextPanel from "@/components/TerminalContextPanel";
@@ -69,6 +70,15 @@ export default function Dashboard() {
   const [stake, setStake] = usePersistentState<number>("369labs.terminal.stake", 1);
   const [duration, setDuration] = usePersistentState<number>("369labs.terminal.duration", 5);
   const [durationUnit, setDurationUnit] = usePersistentState<DurationUnit>("369labs.terminal.durationUnit", "t");
+  // Auto-switch duration unit: tick-based contracts only exist on synthetic
+  // indices. Forex/crypto/stock indices are time-only — leaving "5 t" selected
+  // makes Deriv reject the buy with "Trading is not offered for this duration".
+  useEffect(() => {
+    if (!isSyntheticIndexSymbol(selectedSymbol) && durationUnit === "t") {
+      setDuration(5);
+      setDurationUnit("m");
+    }
+  }, [selectedSymbol, durationUnit, setDuration, setDurationUnit]);
   const [stopLoss, setStopLoss] = usePersistentState<number>("369labs.terminal.stopLoss", 0);
   const [takeProfit, setTakeProfit] = usePersistentState<number>("369labs.terminal.takeProfit", 0);
   const [tradeBusy, setTradeBusy] = useState(false);

@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { ChevronDown } from "lucide-react";
+import { isSyntheticIndexSymbol } from "@shared/symbols";
 
 export type DurationUnit = "t" | "s" | "m" | "h" | "d";
 
@@ -33,11 +34,25 @@ interface DurationSelectorProps {
   onChange: (value: number, unit: DurationUnit) => void;
   /** Fallback shown when no unit is set yet (derived from props by parent). */
   compact?: boolean;
+  /**
+   * When set, units that Deriv doesn't offer for this symbol are hidden.
+   * Synthetic indices offer tick + time durations; forex/crypto/stock indices
+   * are time-only (ticks would be rejected by Deriv).
+   */
+  symbol?: string;
 }
 
-export default function DurationSelector({ value, unit, onChange }: DurationSelectorProps) {
+export default function DurationSelector({ value, unit, onChange, symbol }: DurationSelectorProps) {
   const [open, setOpen] = useState(false);
-  const opt = DURATION_OPTIONS.find((o) => o.unit === unit) || DURATION_OPTIONS[0];
+
+  const options = useMemo(() => {
+    if (symbol && !isSyntheticIndexSymbol(symbol)) {
+      return DURATION_OPTIONS.filter((o) => o.unit !== "t");
+    }
+    return DURATION_OPTIONS;
+  }, [symbol]);
+
+  const opt = options.find((o) => o.unit === unit) || options[0];
   const clamp = (n: number) => Math.max(opt.min, Math.min(opt.max, Math.round(n)));
 
   const selectUnit = (u: DurationUnit) => {
@@ -67,7 +82,7 @@ export default function DurationSelector({ value, unit, onChange }: DurationSele
             <>
               <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
               <div className="absolute left-0 top-full mt-1 z-50 min-w-[9rem] rounded-lg border border-[var(--border)] bg-[var(--surface-dim)] p-1 shadow-2xl">
-                {DURATION_OPTIONS.map((o) => (
+                {options.map((o) => (
                   <button
                     key={o.unit}
                     type="button"

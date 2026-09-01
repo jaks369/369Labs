@@ -1,7 +1,7 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useMemo } from "react";
 import { ChevronDown } from "lucide-react";
 import { createPortal } from "react-dom";
-import type { ContractCategory } from "@shared/contractAvailability";
+import { getAvailableCategories, type ContractCategory } from "@shared/contractAvailability";
 
 export interface ContractSelection {
   category: ContractCategory;
@@ -16,6 +16,8 @@ export interface ContractSelection {
 interface ContractTypeSelectorProps {
   selection: ContractSelection;
   onChange: (s: ContractSelection) => void;
+  /** Restrict the category list to what Deriv actually offers on this symbol. */
+  symbol?: string;
 }
 
 const CATEGORIES: { id: ContractCategory; label: string; icon: string; desc: string }[] = [
@@ -27,11 +29,29 @@ const CATEGORIES: { id: ContractCategory; label: string; icon: string; desc: str
   { id: "accumulator", label: "Accumulator", icon: "∑", desc: "Growth rate compounding" },
 ];
 
-export default function ContractTypeSelector({ selection, onChange }: ContractTypeSelectorProps) {
+export default function ContractTypeSelector({ selection, onChange, symbol }: ContractTypeSelectorProps) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const portalRef = useRef<HTMLDivElement>(null);
   const [pos, setPos] = useState<{ top: number; left: number; width: number } | null>(null);
+
+  // Restrict to what Deriv offers on this symbol. Without a `symbol` prop we
+  // show everything (keeps the component usable outside a symbol context).
+  const available = useMemo(() => {
+    if (!symbol) return CATEGORIES;
+    const ids = getAvailableCategories(symbol);
+    return CATEGORIES.filter((c) => ids.includes(c.id));
+  }, [symbol]);
+
+  // If the persisted selection is a category this symbol doesn't support,
+  // fall back to the most common contract so we never try to trade a
+  // digit/accumulator contract on a forex/crypto symbol.
+  useEffect(() => {
+    if (symbol && !available.some((c) => c.id === selection.category)) {
+      onChange({ category: "rise_fall", direction: "rise" });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [symbol, available, selection.category]);
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
@@ -60,7 +80,7 @@ export default function ContractTypeSelector({ selection, onChange }: ContractTy
     }
   };
 
-  const current = CATEGORIES.find((c) => c.id === selection.category)!;
+  const current = available.find((c) => c.id === selection.category) ?? available[0] ?? CATEGORIES[0];
 
   const setCat = (category: ContractCategory) => {
     const base: ContractSelection = { category };
@@ -97,7 +117,7 @@ export default function ContractTypeSelector({ selection, onChange }: ContractTy
             style={{ top: pos.top, left: pos.left, width: pos.width }}
           >
             <div className="grid grid-cols-2 gap-1.5">
-              {CATEGORIES.map((c) => (
+              {available.map((c) => (
                 <button
                   key={c.id}
                   onClick={() => setCat(c.id)}

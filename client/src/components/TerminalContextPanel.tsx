@@ -356,6 +356,7 @@ export default function TerminalContextPanel(props: TerminalContextPanelProps) {
                 value={duration ?? 5}
                 unit={durationUnit ?? "t"}
                 onChange={(n, u) => onDurationChange?.(n, u)}
+                symbol={selectedSymbol}
               />
             </div>
           )}

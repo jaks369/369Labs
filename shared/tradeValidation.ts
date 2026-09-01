@@ -9,6 +9,7 @@
 
 import type { ContractSelection } from "@/components/ContractTypeSelector";
 import type { DurationUnit } from "@/components/DurationSelector";
+import { isSyntheticIndexSymbol } from "./symbols";
 
 export interface TradeValidationWarning {
   field: string;
@@ -39,6 +40,15 @@ export function validateTrade(
     warnings.push({
       field: "duration",
       message: "Digit contracts only support tick duration on Deriv",
+    });
+  }
+
+  // Tick duration only exists on synthetic indices. Real-world symbols
+  // (forex/crypto/stock indices) are time-only and would be rejected by Deriv.
+  if (durationUnit === "t" && !isSyntheticIndexSymbol(symbol)) {
+    warnings.push({
+      field: "duration",
+      message: "Tick duration is only available on synthetic indices — use minutes, hours or days",
     });
   }
 
