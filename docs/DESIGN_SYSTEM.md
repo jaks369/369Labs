@@ -91,6 +91,7 @@ Elevation (layered depth replaces border-only grouping):
 - Shell: `DashboardLayout` — fixed sidebar (`w-[280px]`), content in `page-container` (`overflow-x-hidden`).
 - Dashboard grid at `lg`: watchlist 3 / chart 9 / context full-width below; at `xl`: 2 / 7 / 3 with sticky rails.
 - Mobile (<768px): `MobileTabBar` bottom nav (`md:hidden`), stacked single-column grids, `MobileTerminal`.
+- **Mobile vs Desktop trade panel treatment**: Mobile uses `.aurora-glass` (translucent blur + `backdrop-filter`), desktop uses `.terminal-trade-panel` (flush transparent background). This is intentional — mobile trade panels sit as floating cards over chart content (standard mobile pattern), while desktop's are flush with the page layout. Do not reconcile these; the glass treatment is a deliberate mobile UX choice.
 - Data tables: wrap in `overflow-x-auto`; stat strips: `flex flex-wrap` with `min-w-[...]` items; never fixed-width page layouts.
 - Breakpoints verified: 640 / 768 / 1024 / 1280 / 1536 and sub-sm.
 
@@ -109,7 +110,8 @@ Elevation (layered depth replaces border-only grouping):
 
 Shared single source of truth: `shared/contractSim.ts` (+ tests in `shared/contractSim.test.ts`).
 
-- Rule actions map to contract types: `buy_rise→CALL`, `buy_fall→PUT`, `buy_even→DIGITEVEN`, `buy_odd→DIGITODD`, `buy_over→DIGITOVER`, `buy_under→DIGITUNDER`, `buy_digit_match→DIGITMATCH`, `buy_digit_diff→DIGITDIFF`.
+- Rule actions map to contract types: `buy_rise→CALL`, `buy_fall→PUT`, `buy_higher→CALL+barrier`, `buy_lower→PUT+barrier`, `buy_even→DIGITEVEN`, `buy_odd→DIGITODD`, `buy_over→DIGITOVER`, `buy_under→DIGITUNDER`, `buy_digit_match→DIGITMATCH`, `buy_digit_diff→DIGITDIFF`.
+- **Higher/Lower** uses the same CALL/PUT contract types as Rise/Fall, but with a `barrier` (strike price). Higher wins if exit > barrier; Lower wins if exit < barrier. Flat at barrier = draw/refund.
 - Digit barrier comes from `rule.condition.barrier` — never `action.barrier`.
 - Rise/fall on a **flat tick** (`exit === entry`) is a **draw** (refund) — counted as neither win nor loss.
 - Digit contracts are 1-tick; accumulator sends `growth_rate`.

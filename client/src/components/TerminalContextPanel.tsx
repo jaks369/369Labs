@@ -1,4 +1,3 @@
-import { useEffect, useState } from "react";
 import { Loader2, Zap, TrendingUp, TrendingDown, Wallet } from "lucide-react";
 import type { ContractSelection } from "@/components/ContractTypeSelector";
 import type { ContractCategory } from "@shared/contractAvailability";
@@ -7,6 +6,7 @@ import type { DurationUnit } from "@/components/DurationSelector";
 import { formatMoney } from "@/lib/format";
 import { getSymbolDisplayName } from "@/lib/symbols";
 import { derivWS } from "@/services/derivWebSocket";
+import { usePayoutQuote } from "@/hooks/usePayoutQuote";
 
 interface TerminalContextPanelProps {
   selectedSymbol: string;
@@ -74,56 +74,11 @@ export default function TerminalContextPanel(props: TerminalContextPanelProps) {
 
   const buyIsDown = isFall || (contract.category === "higher_lower" && contract.direction === "fall") || (contract.category === "even_odd" && contract.digitMatch === "differ");
 
-  // Live payout quote from Deriv. Payout is not a flat stake*1.95 — it changes
-  // with the symbol, direction (Over vs Under) and the selected barrier digit.
-  const [payoutEst, setPayoutEst] = useState<number | null>(null);
-  const [payoutError, setPayoutError] = useState<string | null>(null);
-  useEffect(() => {
-    let cancelled = false;
-    if (!isAuthorized) {
-      setPayoutEst(null);
-      setPayoutError(null);
-      return;
-    }
-    const map: Record<ContractCategory, string> = {
-      rise_fall: contract.direction === "fall" ? "PUT" : "CALL",
-      higher_lower: contract.direction === "fall" ? "PUT" : "CALL",
-      over_under: contract.overUnder === "under" ? "DIGITUNDER" : "DIGITOVER",
-      even_odd: contract.digitMatch === "differ" ? "DIGITODD" : "DIGITEVEN",
-      digits: contract.digitMatch === "differ" ? "DIGITDIFF" : "DIGITMATCH",
-      accumulator: "ACCU",
-    };
-    const contractType = map[contract.category];
-    if (!contractType || !selectedSymbol) return;
-    const barrier = contract.category === "higher_lower"
-      ? contract.barrier
-      : contract.category === "over_under"
-        ? contract.barrier
-        : contract.category === "digits"
-          ? contract.digit
-          : undefined;
-    derivWS
-      .getPayoutQuote({
-        symbol: selectedSymbol,
-        contractType: contractType as any,
-        amount: stake,
-        ...(contract.category === "accumulator" ? { growthRate: contract.growthRate ?? 1 } : { duration: duration ?? 5, durationUnit: durationUnit ?? "t" }),
-        ...(barrier !== undefined ? { barrier } : {}),
-      })
-      .then((q) => {
-        if (cancelled) return;
-        setPayoutEst(q && q.payout > 0 ? q.payout : null);
-        setPayoutError(null);
-      })
-      .catch((e: any) => {
-        if (cancelled) return;
-        setPayoutEst(null);
-        setPayoutError((e?.message || String(e || "")).slice(0, 120) || null);
-      });
-    return () => { cancelled = true; };
-  }, [selectedSymbol, contract, stake, isAuthorized, duration, durationUnit]);
+  // Live payout quote from Deriv — shared hook computes the real proposal.
+  const { payoutEst, payoutError, payoutLabel } = usePayoutQuote(
+    selectedSymbol, contract, stake, duration ?? 5, durationUnit ?? "t", isAuthorized,
+  );
 
-  const finalPayoutEst = payoutEst !== null && payoutEst > 0 ? formatMoney(payoutEst) : "—";
   const accountBadge =
     accountType === "real" ? "REAL"
     : accountType === "demo" ? "DEMO"
@@ -408,7 +363,7 @@ export default function TerminalContextPanel(props: TerminalContextPanelProps) {
           {/* Payout estimate */}
           <div className="flex items-center justify-between px-2 py-1 rounded bg-[var(--green-soft)] border border-[var(--green)]/20">
             <span className="text-[10px] text-[var(--text-muted)]">Payout (est.)</span>
-            <span className="text-[11px] font-bold font-mono tabular-nums text-[var(--green)]">{finalPayoutEst}</span>
+            <span className="text-[11px] font-bold font-mono tabular-nums text-[var(--green)]">{payoutLabel}</span>
           </div>
           {payoutError && (
             <div className="px-2 py-1 rounded bg-[var(--red-soft)] border border-[var(--red)]/30 text-[9px] font-mono text-[var(--red)] break-words">

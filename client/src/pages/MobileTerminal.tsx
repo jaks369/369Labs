@@ -13,8 +13,10 @@ import type { DurationUnit } from "@/components/DurationSelector";
 import TickChart from "@/components/TickChart";
 import { usePersistentState } from "@/hooks/usePersistentState";
 import { useTradeExecution } from "@/hooks/useTradeExecution";
+import { usePayoutQuote } from "@/hooks/usePayoutQuote";
 import { VOLATILITY_SYMBOLS, getSymbolDisplayName } from "@/lib/symbols";
 import { getDecimalPlaces, lastDigitOf } from "@shared/lastDigit";
+import { validateTrade } from "@shared/tradeValidation";
 import { formatMoney, formatNumber } from "@/lib/format";
 import { toast } from "@/components/Toast";
 
@@ -56,6 +58,7 @@ export default function MobileTerminal() {
   const saveTradeMutation = trpc.trades.save.useMutation();
   const tokenQuery = trpc.deriv.getToken.useQuery();
   const memoryQuery = trpc.memory.get.useQuery();
+  const healthQuery = trpc.trades.health.useQuery(void 0, { refetchInterval: 30000 });
   // Risk awareness where auto-exec users actually live: tilt state and
   // aggregate portfolio heat, both computed server-side.
   const tiltQuery = trpc.tilt.check.useQuery(undefined, { refetchInterval: 60000 });
@@ -251,6 +254,15 @@ export default function MobileTerminal() {
     },
   );
 
+  const { payoutLabel, payoutError } = usePayoutQuote(symbol, contract, stake, duration, durationUnit, derivWS.isAuthorized());
+  const tradeWarnings = validateTrade(contract, duration, durationUnit, symbol);
+  const hasBlockingWarning = tradeWarnings.some((w) => w.field === "barrier" || w.field === "digit");
+
+  const tradeHealth = healthQuery.data;
+  const healthPnl = tradeHealth?.overall.totalPnl ?? 0;
+  const healthSettled = tradeHealth?.settled ?? 0;
+  const healthWinRate = healthSettled ? Math.round(((tradeHealth?.wins ?? 0) / healthSettled) * 100) : 0;
+
   const selectedDisplay = symbols.find((s) => s.symbol === symbol)?.displayName || symbol;
   const isRiseFall = contract.category === "rise_fall" || contract.category === "higher_lower";
   const accountBadge = accountType === "real" ? "REAL" : accountType === "demo" ? "DEMO" : !derivWS.isAuthorized() ? "NO TOKEN" : "LIVE";
@@ -342,6 +354,14 @@ export default function MobileTerminal() {
             </div>
           ))}
         </div>
+        {/* Compact stats: P&L / WR / N — mirrors desktop header strip */}
+        {healthSettled > 0 && (
+          <div className="flex items-center justify-center gap-3 mt-2 text-[10px]">
+            <span className="text-[var(--text-muted)]">P&L <span className={`font-mono font-bold ${healthPnl >= 0 ? "text-[var(--green)]" : "text-[var(--red)]"}`}>{healthPnl >= 0 ? "+" : ""}${healthPnl.toFixed(2)}</span></span>
+            <span className="text-[var(--text-muted)]">WR <span className="font-mono font-bold text-white">{healthWinRate}%</span></span>
+            <span className="text-[var(--text-muted)]">N <span className="font-mono font-bold text-white">{healthSettled}</span></span>
+          </div>
+        )}
         {/* Timeframes */}
         <div className="flex gap-1.5 mt-2">
           {TIMEFRAMES.map((tf, i) => (
@@ -460,7 +480,10 @@ export default function MobileTerminal() {
             <div className="flex-1 text-center">
               <div className="text-[9px] uppercase tracking-widest text-[var(--text-muted)] font-bold">Stake ($)</div>
               <div className="text-lg font-bold font-mono tabular-nums text-[var(--text-primary)]">{formatNumber(stake)}</div>
-              <div className="text-[10px] text-[var(--green)] font-mono">≈ {formatMoney(stake * 1.95)} est.</div>
+              <div className="text-[10px] text-[var(--green)] font-mono">{payoutLabel}</div>
+              {payoutError && (
+                <div className="text-[9px] text-[var(--red)] font-mono mt-0.5 truncate" title={payoutError}>{payoutError}</div>
+              )}
             </div>
             <button
               onClick={() => setStake(Math.round((stake + 0.5) * 100) / 100)}
@@ -516,10 +539,19 @@ export default function MobileTerminal() {
               />
             </label>
           </div>
+          {tradeWarnings.length > 0 && (
+            <div className="space-y-1">
+              {tradeWarnings.map((w, i) => (
+                <div key={i} className="px-2 py-1 rounded bg-[var(--amber)]/10 border border-[var(--amber)]/30 text-[9px] font-bold text-[var(--amber)]">
+                  {w.message}
+                </div>
+              ))}
+            </div>
+          )}
           {isRiseFall ? (
             <button
               onClick={() => placeTrade(contract.direction === "fall" ? "fall" : "rise")}
-              disabled={tradeBusy}
+              disabled={tradeBusy || hasBlockingWarning}
               className={`w-full h-[56px] rounded-xl flex items-center justify-center gap-2 text-sm font-bold text-white transition-all disabled:opacity-60 ${
                 contract.direction === "fall" ? "bg-[var(--red)]" : "bg-[var(--green)]"
               }`}
@@ -538,7 +570,7 @@ export default function MobileTerminal() {
           ) : (
             <button
               onClick={() => placeTrade()}
-              disabled={tradeBusy}
+              disabled={tradeBusy || hasBlockingWarning}
               className="w-full h-[56px] rounded-xl flex items-center justify-center gap-2 text-sm font-bold text-white transition-all disabled:opacity-60"
               style={{ background: "linear-gradient(180deg, var(--accent) 0%, color-mix(in srgb, var(--accent) 85%, black) 100%)" }}
             >
