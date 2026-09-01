@@ -38,6 +38,7 @@ const contractLabels: Record<string, string> = {
   even_odd: "Even / Odd",
   digits: "Digits",
   accumulator: "Accumulator",
+  multiplier: "Multiplier",
 };
 
 export default function Dashboard() {
@@ -412,6 +413,7 @@ export default function Dashboard() {
       even_odd: contract.digitMatch === "differ" ? "DIGITODD" : "DIGITEVEN",
       digits: contract.digitMatch === "differ" ? "DIGITDIFF" : "DIGITMATCH",
       accumulator: "ACCU",
+      multiplier: direction === "fall" ? "MULTDOWN" : "MULTUP",
     };
     const contractType = map[contract.category];
     if (!contractType) {
@@ -421,11 +423,14 @@ export default function Dashboard() {
     setTradeBusy(true);
     try {
       const isAccumulator = contract.category === "accumulator";
+      const isMultiplier = contract.category === "multiplier";
       const purchase = await derivWS.purchaseContract({
         symbol: selectedSymbol,
         contractType: contractType as any,
         amount: stake,
-        ...(isAccumulator ? { growthRate: contract.growthRate ?? 1 } : { duration, durationUnit }),
+        ...(isAccumulator ? { growthRate: contract.growthRate ?? 1 }
+          : isMultiplier ? { multiplier: contract.multiplier ?? 100 }
+          : { duration, durationUnit }),
         ...(contract.category === "higher_lower" && contract.barrier !== undefined ? { barrier: contract.barrier } : {}),
         ...(contract.category === "over_under" && contract.barrier !== undefined ? { barrier: contract.barrier } : {}),
         ...(contract.category === "digits" && contract.digit !== undefined ? { barrier: contract.digit } : {}),
@@ -886,6 +891,7 @@ export default function Dashboard() {
                 { id: "even_odd", label: "Even/Odd" },
                 { id: "digits", label: "Digits" },
                 { id: "accumulator", label: "Accumulators" },
+                { id: "multiplier", label: "Multiplier" },
               ] as const)
                 .filter((t) => availableCategories.includes(t.id as ContractCategory))
                 .map((t) => (
@@ -899,6 +905,7 @@ export default function Dashboard() {
                     if (t.id === "even_odd") base.digitMatch = "match";
                     if (t.id === "digits") { base.digitMatch = "match"; base.digit = 0; }
                     if (t.id === "accumulator") base.growthRate = 1;
+                    if (t.id === "multiplier") { base.direction = "rise"; base.multiplier = 100; }
                     setContract(base);
                   }}
                   className={`trade-type-tab shrink-0 ${contract.category === t.id ? "active" : ""}`}
@@ -1238,6 +1245,7 @@ export default function Dashboard() {
                 { id: "even_odd", label: "Even / Odd", desc: "Last digit is even or odd" },
                 { id: "digits", label: "Matches / Differs", desc: "Last digit matches or differs" },
                 { id: "accumulator", label: "Accumulator", desc: "Compounding tick trades" },
+                { id: "multiplier", label: "Multiplier", desc: "Leveraged win/loss with SL/TP" },
               ] as const)
                 .filter((t) => availableCategories.includes(t.id as ContractCategory))
                 .map((t) => (
@@ -1251,6 +1259,7 @@ export default function Dashboard() {
                     if (t.id === "even_odd") base.digitMatch = "match";
                     if (t.id === "digits") { base.digitMatch = "match"; base.digit = 0; }
                     if (t.id === "accumulator") base.growthRate = 1;
+                    if (t.id === "multiplier") { base.direction = "rise"; base.multiplier = 100; }
                     setContract(base);
                     setTradeTypePopupOpen(false);
                   }}

@@ -52,8 +52,8 @@ export default function TerminalContextPanel(props: TerminalContextPanelProps) {
     onSelectSymbol,
   } = props;
 
-  const isRiseFall = contract.category === "rise_fall" || contract.category === "higher_lower";
-  const isFall = (contract.category === "rise_fall" && contract.direction === "fall") || (contract.category === "higher_lower" && contract.direction === "fall");
+  const isRiseFall = contract.category === "rise_fall" || contract.category === "higher_lower" || contract.category === "multiplier";
+  const isFall = (contract.category === "rise_fall" && contract.direction === "fall") || (contract.category === "higher_lower" && contract.direction === "fall") || (contract.category === "multiplier" && contract.direction === "fall");
 
   const buyLabel = (() => {
     switch (contract.category) {
@@ -67,6 +67,8 @@ export default function TerminalContextPanel(props: TerminalContextPanelProps) {
         return contract.digitMatch === "differ" ? "Buy Odd" : "Buy Even";
       case "digits":
         return `${contract.digitMatch === "differ" ? "Buy Differs" : "Buy Matches"} ${contract.digit ?? ""}`.replace(/\s+$/g, "");
+      case "multiplier":
+        return `Buy ${contract.direction === "fall" ? "Down" : "Up"} ${contract.multiplier ?? 100}×`;
       default:
         return "Buy Accumulator";
     }
@@ -301,6 +303,51 @@ export default function TerminalContextPanel(props: TerminalContextPanelProps) {
             </div>
           )}
 
+          {contract.category === "multiplier" && (
+            <div className="space-y-1.5">
+              <div className="flex rounded-lg bg-white/5 p-0.5">
+                <button
+                  onClick={() => onContractChange({ ...contract, direction: "rise" })}
+                  className={`flex-1 flex items-center justify-center gap-1 py-2 text-[11px] font-bold rounded-md transition-all ${
+                    contract.direction === "rise"
+                      ? "bg-[var(--green)] text-white shadow-sm"
+                      : "text-[var(--text-secondary)] hover:text-white"
+                  }`}
+                >
+                  <TrendingUp className="w-3.5 h-3.5" /> Up
+                </button>
+                <button
+                  onClick={() => onContractChange({ ...contract, direction: "fall" })}
+                  className={`flex-1 flex items-center justify-center gap-1 py-2 text-[11px] font-bold rounded-md transition-all ${
+                    contract.direction === "fall"
+                      ? "bg-[var(--red)] text-white shadow-sm"
+                      : "text-[var(--text-secondary)] hover:text-white"
+                  }`}
+                >
+                  <TrendingDown className="w-3.5 h-3.5" /> Down
+                </button>
+              </div>
+              <div>
+                <span className="text-[9px] font-bold text-[var(--text-muted)] uppercase">Multiplier</span>
+                <div className="grid grid-cols-5 gap-1 mt-1">
+                  {[100, 200, 300, 500, 800].map((m) => (
+                    <button
+                      key={m}
+                      onClick={() => onContractChange({ ...contract, multiplier: m })}
+                      className="min-w-0 py-2 rounded-lg text-[10px] font-bold transition-all"
+                      style={{
+                        background: contract.multiplier === m ? "var(--accent)" : "var(--card)",
+                        color: contract.multiplier === m ? "white" : "var(--text-secondary)",
+                      }}
+                    >
+                      {m}×
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Stake stepper */}
           <div>
             <div className="flex items-center justify-between mb-1">
@@ -345,8 +392,9 @@ export default function TerminalContextPanel(props: TerminalContextPanelProps) {
           </div>
 
           {/* Duration selector — Deriv-style unit dropdown + value stepper.
-              Hidden for accumulators (they have no end duration, only growth). */}
-          {contract.category !== "accumulator" && (
+              Hidden for accumulators (no end duration, only growth) and
+              multipliers (open-ended, closed by SL/TP). */}
+          {contract.category !== "accumulator" && contract.category !== "multiplier" && (
             <div>
               <div className="flex items-center justify-between mb-1">
                 <span className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-wider">Duration</span>

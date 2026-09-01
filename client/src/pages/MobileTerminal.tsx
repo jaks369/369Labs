@@ -267,7 +267,7 @@ export default function MobileTerminal() {
 
   const { payoutLabel, payoutError } = usePayoutQuote(symbol, contract, stake, duration, durationUnit, derivWS.isAuthorized());
   const tradeWarnings = validateTrade(contract, duration, durationUnit, symbol);
-  const hasBlockingWarning = tradeWarnings.some((w) => w.field === "barrier" || w.field === "digit");
+  const hasBlockingWarning = tradeWarnings.some((w) => w.field === "barrier" || w.field === "digit" || w.field === "multiplier");
 
   const tradeHealth = healthQuery.data;
   const healthPnl = tradeHealth?.overall.totalPnl ?? 0;
@@ -275,7 +275,7 @@ export default function MobileTerminal() {
   const healthWinRate = healthSettled ? Math.round(((tradeHealth?.wins ?? 0) / healthSettled) * 100) : 0;
 
   const selectedDisplay = symbols.find((s) => s.symbol === symbol)?.displayName || symbol;
-  const isRiseFall = contract.category === "rise_fall" || contract.category === "higher_lower";
+  const isRiseFall = contract.category === "rise_fall" || contract.category === "higher_lower" || contract.category === "multiplier";
   const accountBadge = accountType === "real" ? "REAL" : accountType === "demo" ? "DEMO" : !derivWS.isAuthorized() ? "NO TOKEN" : "LIVE";
 
   const buyLabel = (() => {
@@ -285,6 +285,7 @@ export default function MobileTerminal() {
       case "even_odd": return "Buy";
       case "digits": return "Buy";
       case "accumulator": return "Buy";
+      case "multiplier": return `Buy ${contract.direction === "fall" ? "Down" : "Up"} ${contract.multiplier ?? 100}×`;
       default: return "Buy";
     }
   })();
@@ -514,7 +515,7 @@ export default function MobileTerminal() {
               </button>
             ))}
           </div>
-          {contract.category !== "accumulator" && (
+          {contract.category !== "accumulator" && contract.category !== "multiplier" && (
             <div>
               <div className="text-[9px] uppercase tracking-widest text-[var(--text-muted)] font-bold mb-1">Duration</div>
               <DurationSelector

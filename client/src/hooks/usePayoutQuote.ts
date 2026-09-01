@@ -44,6 +44,7 @@ export function usePayoutQuote(
       even_odd: contract.digitMatch === "differ" ? "DIGITODD" : "DIGITEVEN",
       digits: contract.digitMatch === "differ" ? "DIGITDIFF" : "DIGITMATCH",
       accumulator: "ACCU",
+      multiplier: contract.direction === "fall" ? "MULTDOWN" : "MULTUP",
     };
     const contractType = map[contract.category];
     if (!contractType || !selectedSymbol) return;
@@ -59,7 +60,9 @@ export function usePayoutQuote(
         symbol: selectedSymbol,
         contractType: contractType as any,
         amount: stake,
-        ...(contract.category === "accumulator" ? { growthRate: contract.growthRate ?? 1 } : { duration, durationUnit }),
+        ...(contract.category === "accumulator" ? { growthRate: contract.growthRate ?? 1 }
+          : contract.category === "multiplier" ? { multiplier: contract.multiplier ?? 100 }
+          : { duration, durationUnit }),
         ...(barrier !== undefined ? { barrier } : {}),
       })
       .then((q) => {

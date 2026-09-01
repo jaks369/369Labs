@@ -42,6 +42,7 @@ export function mapContractType(contract: ContractSelection, direction?: "rise" 
     even_odd: contract.digitMatch === "differ" ? "DIGITODD" : "DIGITEVEN",
     digits: contract.digitMatch === "differ" ? "DIGITDIFF" : "DIGITMATCH",
     accumulator: "ACCU",
+    multiplier: (direction || contract.direction) === "fall" ? "MULTDOWN" : "MULTUP",
   };
   return map[contract.category] ?? null;
 }
@@ -98,11 +99,14 @@ export function useTradeExecution(spec: TradeSpec, hooks: UseTradeExecutionHooks
       try {
         const { symbol, contract, stake, duration, durationUnit, stopLoss, takeProfit } = spec;
         const isAccumulator = contract.category === "accumulator";
+        const isMultiplier = contract.category === "multiplier";
         const purchase = await derivWS.purchaseContract({
           symbol,
           contractType: contractType as any,
           amount: stake,
-          ...(isAccumulator ? { growthRate: contract.growthRate ?? 1 } : { duration, durationUnit }),
+          ...(isAccumulator ? { growthRate: contract.growthRate ?? 1 }
+            : isMultiplier ? { multiplier: contract.multiplier ?? 100 }
+            : { duration, durationUnit }),
           ...(contract.category === "higher_lower" && contract.barrier !== undefined ? { barrier: contract.barrier } : {}),
           ...(contract.category === "over_under" && contract.barrier !== undefined ? { barrier: contract.barrier } : {}),
           ...(contract.category === "digits" && contract.digit !== undefined ? { barrier: contract.digit } : {}),

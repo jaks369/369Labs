@@ -11,6 +11,7 @@ export interface ContractSelection {
   digit?: number;
   digitMatch?: "match" | "differ";
   growthRate?: number;
+  multiplier?: number;
 }
 
 interface ContractTypeSelectorProps {
@@ -27,6 +28,7 @@ const CATEGORIES: { id: ContractCategory; label: string; icon: string; desc: str
   { id: "even_odd", label: "Even/Odd", icon: "◧", desc: "Last digit is even or odd" },
   { id: "digits", label: "Digits", icon: "0-9", desc: "Last digit matches or differs" },
   { id: "accumulator", label: "Accumulator", icon: "∑", desc: "Growth rate compounding" },
+  { id: "multiplier", label: "Multiplier", icon: "×", desc: "Leveraged win/loss with SL/TP" },
 ];
 
 export default function ContractTypeSelector({ selection, onChange, symbol }: ContractTypeSelectorProps) {
@@ -90,6 +92,7 @@ export default function ContractTypeSelector({ selection, onChange, symbol }: Co
     if (category === "even_odd") base.digitMatch = "match";
     if (category === "digits") { base.digitMatch = "match"; base.digit = 0; }
     if (category === "accumulator") base.growthRate = 1;
+    if (category === "multiplier") { base.direction = "rise"; base.multiplier = 100; }
     onChange(base);
     setOpen(false);
   };
@@ -339,6 +342,51 @@ export default function ContractTypeSelector({ selection, onChange, symbol }: Co
                   {rate}%
                 </button>
               ))}
+            </div>
+          </div>
+        )}
+
+        {selection.category === "multiplier" && (
+          <div className="space-y-2">
+            <div className="flex rounded-lg bg-white/5 p-0.5">
+              <button
+                onClick={() => onChange({ ...selection, direction: "rise" })}
+                className={`flex-1 py-3 text-center text-xs font-bold rounded-md transition-all min-h-[36px] ${
+                  selection.direction === "rise"
+                    ? "bg-[var(--green)] text-white shadow-sm"
+                    : "text-[var(--text-secondary)] hover:text-white"
+                }`}
+              >
+                Up
+              </button>
+              <button
+                onClick={() => onChange({ ...selection, direction: "fall" })}
+                className={`flex-1 py-3 text-center text-xs font-bold rounded-md transition-all min-h-[36px] ${
+                  selection.direction === "fall"
+                    ? "bg-[var(--red)] text-white shadow-sm"
+                    : "text-[var(--text-secondary)] hover:text-white"
+                }`}
+              >
+                Down
+              </button>
+            </div>
+            <div>
+              <label className="text-[9px] font-bold text-[var(--text-muted)] uppercase">Multiplier</label>
+              <div className="grid grid-cols-5 gap-1 mt-1.5">
+                {[100, 200, 300, 500, 800].map((m) => (
+                  <button
+                    key={m}
+                    onClick={() => onChange({ ...selection, multiplier: m })}
+                    className="py-2.5 rounded-lg text-[10px] font-bold transition-all"
+                    style={{
+                      background: selection.multiplier === m ? "var(--accent)" : "var(--card)",
+                      color: selection.multiplier === m ? "white" : "var(--text-secondary)",
+                    }}
+                  >
+                    {m}×
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
         )}

@@ -14,7 +14,7 @@ export interface TickStreamListener {
   onConnect?: () => void;
   onDisconnect?: () => void;
 }
-export type DerivContractType = "CALL" | "PUT" | "DIGITEVEN" | "DIGITODD" | "DIGITOVER" | "DIGITUNDER" | "DIGITMATCH" | "DIGITDIFF" | "ACCU";
+export type DerivContractType = "CALL" | "PUT" | "DIGITEVEN" | "DIGITODD" | "DIGITOVER" | "DIGITUNDER" | "DIGITMATCH" | "DIGITDIFF" | "ACCU" | "MULTUP" | "MULTDOWN";
 
 export interface PurchaseParams {
   symbol: string;
@@ -24,6 +24,7 @@ export interface PurchaseParams {
   durationUnit?: "t" | "s" | "m" | "h" | "d";
   barrier?: number;
   growthRate?: number;
+  multiplier?: number;
   stopLoss?: number;
   takeProfit?: number;
 }
@@ -516,6 +517,7 @@ class DerivWebSocketService {
     duration?: number;
     durationUnit?: "t" | "s" | "m" | "h" | "d";
     growthRate?: number;
+    multiplier?: number;
     barrier?: number | string;
     stopLoss?: number;
     takeProfit?: number;
@@ -529,7 +531,11 @@ class DerivWebSocketService {
       contract_type: params.contractType,
       currency: this.accountCurrency,
       underlying_symbol: params.symbol,
-      ...(params.growthRate !== undefined ? { growth_rate: params.growthRate } : { duration: params.duration, duration_unit: params.durationUnit || "t" }),
+      ...(
+        params.growthRate !== undefined ? { growth_rate: params.growthRate }
+        : params.multiplier !== undefined ? { multiplier: params.multiplier }
+        : { duration: params.duration, duration_unit: params.durationUnit || "t" }
+      ),
       ...(params.barrier !== undefined ? { barrier: String(params.barrier) } : {}),
       ...buildLimitOrder(params.contractType, params.stopLoss, params.takeProfit),
     };
@@ -650,7 +656,11 @@ class DerivWebSocketService {
         contract_type: params.contractType,
         currency: this.accountCurrency,
         underlying_symbol: params.symbol,
-        ...(params.growthRate !== undefined ? { growth_rate: params.growthRate } : { duration: params.duration, duration_unit: params.durationUnit || "t" }),
+        ...(
+          params.growthRate !== undefined ? { growth_rate: params.growthRate }
+          : params.multiplier !== undefined ? { multiplier: params.multiplier }
+          : { duration: params.duration, duration_unit: params.durationUnit || "t" }
+        ),
         ...(params.barrier !== undefined ? { barrier: String(params.barrier) } : {}),
         ...buildLimitOrder(params.contractType, params.stopLoss, params.takeProfit),
       };
@@ -692,6 +702,7 @@ class DerivWebSocketService {
     if (!this.ws || this.ws.readyState !== WebSocket.OPEN) throw new Error("WebSocket not connected");
     let proposalPayload: Record<string, any> = { proposal: 1, amount: params.amount, basis: "stake", contract_type: params.contractType, currency: this.accountCurrency };
     if (params.growthRate !== undefined) proposalPayload.growth_rate = params.growthRate;
+    else if (params.multiplier !== undefined) proposalPayload.multiplier = params.multiplier;
     else {
       proposalPayload.duration = params.duration;
       proposalPayload.duration_unit = params.durationUnit || "t";

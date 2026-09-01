@@ -17,7 +17,8 @@ export type ContractCategory =
   | "over_under"
   | "even_odd"
   | "digits"
-  | "accumulator";
+  | "accumulator"
+  | "multiplier";
 
 export interface ContractCategoryMeta {
   id: ContractCategory;
@@ -33,23 +34,34 @@ export const ALL_CONTRACT_CATEGORIES: ContractCategoryMeta[] = [
   { id: "even_odd", label: "Even/Odd", icon: "◧", description: "Last digit is even or odd" },
   { id: "digits", label: "Digits", icon: "0-9", description: "Last digit matches or differs" },
   { id: "accumulator", label: "Accumulator", icon: "∑", description: "Growth rate compounding" },
+  { id: "multiplier", label: "Multiplier", icon: "×", description: "Leveraged win/loss with optional SL/TP" },
 ];
 
 /**
  * Get available contract categories for a given symbol.
  *
- * Rules (matching Deriv's actual API availability):
+ * Rules (matching Deriv's actual API availability — verified against the live
+ * `contracts_for` endpoint Aug 2026):
  * - Synthetic indices (R_*, 1HZ*, BOOM*, CRASH*): ALL categories
- * - Forex (frx*): Rise/Fall + Higher/Lower
- * - Crypto (cry*): Rise/Fall + Higher/Lower
- * - Stock indices (stx*): Rise/Fall + Higher/Lower
+ * - Forex (frx*): Rise/Fall, Higher/Lower and Multiplier
+ * - Crypto (cry*): Multiplier ONLY (Deriv offers no Rise/Fall on crypto)
+ * - Stock indices (stx*): Rise/Fall + Higher/Lower (fixed strike)
  */
 export function getAvailableCategories(symbol: string): ContractCategory[] {
   if (isSyntheticIndexSymbol(symbol)) {
     return ["rise_fall", "higher_lower", "over_under", "even_odd", "digits", "accumulator"];
   }
-  // Real-world symbols: Rise/Fall + Higher/Lower (fixed strike)
-  return ["rise_fall", "higher_lower"];
+  const s = symbol.toUpperCase();
+  if (s.startsWith("CRY")) {
+    // Deriv's `contracts_for` returns only MULTUP/MULTDOWN for cryptos. Showing
+    // Rise/Fall there made every Buy tape get rejected with "Trading is not
+    // offered for this duration" — crypto is multiplier-only.
+    return ["multiplier"];
+  }
+  // Forex: Rise/Fall + Higher/Lower + Multiplier. Stock indices: fixed strike.
+  return s.startsWith("FRX")
+    ? ["rise_fall", "higher_lower", "multiplier"]
+    : ["rise_fall", "higher_lower"];
 }
 
 /**

@@ -29,6 +29,19 @@ export function validateTrade(
   const warnings: TradeValidationWarning[] = [];
   const category = contract.category;
 
+  // Multiplier: open-ended contract closed by SL/TP — duration is never sent,
+  // so no duration validation applies (crypto is multiplier-only and
+  // non-synthetic, which would otherwise trip the tick warning below).
+  if (category === "multiplier") {
+    if (contract.multiplier === undefined || contract.multiplier === null) {
+      warnings.push({
+        field: "multiplier",
+        message: "Select a multiplier before trading",
+      });
+    }
+    return warnings;
+  }
+
   // Accumulator: duration is meaningless (no end duration, only growth rate)
   if (category === "accumulator" && durationUnit !== "t") {
     // Accumulators don't use duration at all — not an error, but clarify
